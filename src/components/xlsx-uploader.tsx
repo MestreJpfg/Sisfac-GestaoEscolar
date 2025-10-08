@@ -4,25 +4,26 @@ import { useRef, useState, useCallback, type DragEvent } from "react";
 import * as XLSX from "xlsx";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
-import { UploadCloud } from "lucide-react";
+import { Loader2, UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type DataItem } from "./data-viewer";
 import { format } from 'date-fns';
+import { useFirestore } from "@/firebase";
+import { collection, writeBatch, doc } from "firebase/firestore";
 
 interface XlsxUploaderProps {
-  onUpload: (data: DataItem[], headers: string[]) => void;
-  setLoading: (loading: boolean) => void;
+  onUploadComplete: () => void;
 }
 
-export default function XlsxUploader({ onUpload, setLoading }: XlsxUploaderProps) {
+export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const firestore = useFirestore();
 
-  const handleFile = useCallback((file: File) => {
-    if (!file) {
-      return;
-    }
+  const handleFile = useCallback(async (file: File) => {
+    if (!file) return;
 
     if (!file.name.endsWith('.xlsx')) {
       toast({
@@ -33,10 +34,10 @@ export default function XlsxUploader({ onUpload, setLoading }: XlsxUploaderProps
       return;
     }
 
-    setLoading(true);
+    setIsLoading(true);
     const reader = new FileReader();
 
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const data = e.target?.result;
         if (!data) throw new Error("Não foi possível ler os dados do arquivo.");
@@ -53,14 +54,14 @@ export default function XlsxUploader({ onUpload, setLoading }: XlsxUploaderProps
                 title: "Planilha Vazia",
                 description: "Sua planilha parece estar vazia.",
             });
-            setLoading(false);
+            setIsLoading(false);
             return;
         }
 
         const headers = json[0].map(h => String(h));
         const rows = json.slice(1);
 
-        const processedData: DataItem[] = rows.map(row => {
+        const processedData: Omit<DataItem, 'id'>[] = rows.map(row => {
           const mainItem = String(row[3] || ''); // 4th column
           const subItems = row
             .map((cell, index) => {
@@ -94,7 +95,7 @@ export default function XlsxUploader({ onUpload, setLoading }: XlsxUploaderProps
           return {
             mainItem,
             subItems,
-            allColumns: allColumns
+            allColumns
           };
         }).filter(item => item.mainItem);
 
@@ -105,7 +106,20 @@ export default function XlsxUploader({ onUpload, setLoading }: XlsxUploaderProps
             description: "Não foram encontrados dados válidos na 4ª coluna para exibir.",
           });
         } else {
-          onUpload(processedData, headers);
+            if (firestore) {
+                const batch = writeBatch(firestore);
+                const studentsCollection = collection(firestore, "students");
+                processedData.forEach((studentData) => {
+                    const docRef = doc(studentsCollection);
+                    batch.set(docRef, studentData);
+                });
+                await batch.commit();
+                toast({
+                    title: "Sucesso!",
+                    description: "Os dados da planilha foram salvos no banco de dados.",
+                });
+                onUploadComplete();
+            }
         }
       } catch (error) {
         console.error(error);
@@ -115,7 +129,7 @@ export default function XlsxUploader({ onUpload, setLoading }: XlsxUploaderProps
           description: "Ocorreu um erro ao processar seu arquivo. Ele pode estar corrompido.",
         });
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
     
@@ -125,11 +139,11 @@ export default function XlsxUploader({ onUpload, setLoading }: XlsxUploaderProps
             title: "Erro de Leitura de Arquivo",
             description: "Não foi possível ler o arquivo selecionado.",
         });
-        setLoading(false);
+        setIsLoading(false);
     };
 
     reader.readAsArrayBuffer(file);
-  }, [onUpload, setLoading, toast]);
+  }, [onUploadComplete, toast, firestore]);
 
   const handleDrag = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -153,6 +167,15 @@ export default function XlsxUploader({ onUpload, setLoading }: XlsxUploaderProps
   const handleClick = () => {
     inputRef.current?.click();
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Processando e salvando seu arquivo...</p>
+      </div>
+    );
+  }
 
   return (
     <Card 

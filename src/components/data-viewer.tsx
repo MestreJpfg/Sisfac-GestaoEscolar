@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search } from "lucide-react";
 
 export interface DataItem {
+  id: string;
   mainItem: string;
   subItems: { label: string; value: string }[];
   allColumns: string[];
@@ -15,7 +16,6 @@ export interface DataItem {
 
 interface DataViewerProps {
   data: DataItem[];
-  columnHeaders: string[];
 }
 
 export default function DataViewer({ data }: DataViewerProps) {
@@ -44,8 +44,8 @@ export default function DataViewer({ data }: DataViewerProps) {
           <h3 className="text-lg font-semibold mb-4 text-foreground">Visualização dos Dados</h3>
           <ScrollArea className="h-96 w-full rounded-md border">
             <Accordion type="single" collapsible className="w-full p-4">
-              {filteredData.map((item, index) => (
-                <AccordionItem value={`item-${index}`} key={index}>
+              {filteredData.map((item) => (
+                <AccordionItem value={item.id} key={item.id}>
                   <AccordionTrigger>{item.mainItem}</AccordionTrigger>
                   <AccordionContent>
                     <ul className="space-y-2 pl-4">

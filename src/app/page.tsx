@@ -6,21 +6,28 @@ import DataViewer from "@/components/data-viewer";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, query } from "firebase/firestore";
 
 export default function Home() {
-  const [data, setData] = useState<DataItem[] | null>(null);
-  const [columnHeaders, setColumnHeaders] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [showUploader, setShowUploader] = useState(false);
+  const firestore = useFirestore();
 
-  const handleReset = () => {
-    setData(null);
-    setColumnHeaders([]);
+  const studentsCollection = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, "students"));
+  }, [firestore]);
+
+  const { data: students, isLoading: isLoadingData, error } = useCollection<DataItem>(studentsCollection);
+  
+  const handleUploadComplete = () => {
+    setShowUploader(false);
   };
 
-  const handleUpload = (uploadedData: DataItem[], headers: string[]) => {
-    setData(uploadedData);
-    setColumnHeaders(headers);
-  }
+  const data = students;
+  const isLoading = isLoadingData;
+  
+  const hasData = data && data.length > 0;
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-12 lg:p-24 bg-background">
@@ -38,17 +45,23 @@ export default function Home() {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <p className="mt-4 text-muted-foreground">Processando seu arquivo...</p>
+              <p className="mt-4 text-muted-foreground">Carregando dados...</p>
             </div>
-          ) : data ? (
+          ) : error ? (
+            <div className="text-destructive text-center">
+              <p>Ocorreu um erro ao carregar os dados.</p>
+              <p>{error.message}</p>
+            </div>
+          )
+          : showUploader || !hasData ? (
+            <XlsxUploader onUploadComplete={handleUploadComplete} />
+          ) : (
             <div className="space-y-4">
-              <DataViewer data={data} columnHeaders={columnHeaders} />
-              <Button onClick={handleReset} className="w-full" variant="outline">
-                Carregar Outro Arquivo
+              <DataViewer data={data} />
+              <Button onClick={() => setShowUploader(true)} className="w-full" variant="outline">
+                Carregar Novo Arquivo
               </Button>
             </div>
-          ) : (
-            <XlsxUploader onUpload={handleUpload} setLoading={setIsLoading} />
           )}
         </div>
       </div>
