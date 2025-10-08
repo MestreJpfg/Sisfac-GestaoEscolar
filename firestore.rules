@@ -1,0 +1,103 @@
+/**
+ * @fileoverview Firestore Security Rules for the XLSX Viewer application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for XLSX upload sessions and their associated data. Each user can only access data associated with their own user ID.
+ *
+ * Data Structure:
+ * - All data is nested under `/users/{userId}`.
+ * - User profiles are stored at `/users/{userId}`.
+ * - XLSX upload sessions are stored at `/users/{userId}/uploadSessions/{uploadSessionId}`.
+ * - XLSX data extracted from the files are stored at `/users/{userId}/uploadSessions/{uploadSessionId}/data/{dataId}`.
+ *
+ * Key Security Decisions:
+ * - Users can only create, read, update, and delete their own data.
+ * - Listing other users' data is forbidden.
+ * - Data is denormalized with `userId` and `uploadSessionId` fields to simplify security rules and avoid costly `get()` operations.
+ * - All write operations are restricted to authenticated users.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Protects user profiles, allowing only the owner to read and write.
+     * @path /users/{userId}
+     * @allow (create) - Authenticated user with UID 'user_abc' can create their profile document at /users/user_abc if request.auth.uid == 'user_abc'.
+     * @allow (get) - Authenticated user with UID 'user_abc' can read their profile document at /users/user_abc.
+     * @allow (update) - Authenticated user with UID 'user_abc' can update their profile document at /users/user_abc.
+     * @allow (delete) - Authenticated user with UID 'user_abc' can delete their profile document at /users/user_abc.
+     * @deny (create) - Authenticated user with UID 'user_xyz' cannot create a profile document at /users/user_abc.
+     * @deny (get) - Authenticated user with UID 'user_xyz' cannot read the profile document at /users/user_abc.
+     * @deny (update) - Authenticated user with UID 'user_xyz' cannot update the profile document at /users/user_abc.
+     * @deny (delete) - Authenticated user with UID 'user_xyz' cannot delete the profile document at /users/user_abc.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isSignedIn() && isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isSignedIn() && isExistingOwner(userId);
+    }
+
+    /**
+     * @description Protects XLSX upload sessions, allowing only the owner to read and write.
+     * @path /users/{userId}/uploadSessions/{uploadSessionId}
+     * @allow (create) - Authenticated user with UID 'user_abc' can create an upload session at /users/user_abc/uploadSessions/session_1 if request.auth.uid == 'user_abc'.
+     * @allow (get) - Authenticated user with UID 'user_abc' can read the upload session at /users/user_abc/uploadSessions/session_1.
+     * @allow (list) - Authenticated user with UID 'user_abc' can list upload sessions under /users/user_abc/uploadSessions.
+     * @allow (update) - Authenticated user with UID 'user_abc' can update their upload session at /users/user_abc/uploadSessions/session_1.
+     * @allow (delete) - Authenticated user with UID 'user_abc' can delete their upload session at /users/user_abc/uploadSessions/session_1.
+     * @deny (create) - Authenticated user with UID 'user_xyz' cannot create an upload session at /users/user_abc/uploadSessions/session_1.
+     * @deny (get) - Authenticated user with UID 'user_xyz' cannot read the upload session at /users/user_abc/uploadSessions/session_1.
+     * @deny (list) - Authenticated user with UID 'user_xyz' cannot list upload sessions under /users/user_abc/uploadSessions.
+     * @deny (update) - Authenticated user with UID 'user_xyz' cannot update the upload session at /users/user_abc/uploadSessions/session_1.
+     * @deny (delete) - Authenticated user with UID 'user_xyz' cannot delete the upload session at /users/user_abc/uploadSessions/session_1.
+     * @principle Enforces document ownership for writes and restricts listing to the owner.
+     */
+    match /users/{userId}/uploadSessions/{uploadSessionId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isSignedIn() && isExistingOwner(userId) && resource.data.userId == userId;
+      allow delete: if isSignedIn() && isExistingOwner(userId);
+    }
+
+    /**
+     * @description Protects XLSX data, allowing only the owner to read and write.
+     * @path /users/{userId}/uploadSessions/{uploadSessionId}/data/{dataId}
+     * @allow (create) - Authenticated user with UID 'user_abc' can create data at /users/user_abc/uploadSessions/session_1/data/data_1 if request.auth.uid == 'user_abc'.
+     * @allow (get) - Authenticated user with UID 'user_abc' can read the data at /users/user_abc/uploadSessions/session_1/data/data_1.
+     * @allow (list) - Authenticated user with UID 'user_abc' can list data under /users/user_abc/uploadSessions/session_1/data.
+     * @allow (update) - Authenticated user with UID 'user_abc' can update their data at /users/user_abc/uploadSessions/session_1/data/data_1.
+     * @allow (delete) - Authenticated user with UID 'user_abc' can delete their data at /users/user_abc/uploadSessions/session_1/data/data_1.
+     * @deny (create) - Authenticated user with UID 'user_xyz' cannot create data at /users/user_abc/uploadSessions/session_1/data/data_1.
+     * @deny (get) - Authenticated user with UID 'user_xyz' cannot read the data at /users/user_abc/uploadSessions/session_1/data/data_1.
+     * @deny (list) - Authenticated user with UID 'user_xyz' cannot list data under /users/user_abc/uploadSessions/session_1/data.
+     * @deny (update) - Authenticated user with UID 'user_xyz' cannot update the data at /users/user_abc/uploadSessions/session_1/data/data_1.
+     * @deny (delete) - Authenticated user with UID 'user_xyz' cannot delete the data at /users/user_abc/uploadSessions/session_1/data/data_1.
+     * @principle Enforces document ownership for writes and restricts listing to the owner.
+     */
+    match /users/{userId}/uploadSessions/{uploadSessionId}/data/{dataId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.uploadSessionId == uploadSessionId;
+      allow update: if isSignedIn() && isExistingOwner(userId) && resource.data.uploadSessionId == uploadSessionId;
+      allow delete: if isSignedIn() && isExistingOwner(userId);
+    }
+  }
+
+  // Helper functions
+  function isSignedIn() {
+    return request.auth != null;
+  }
+
+  function isOwner(userId) {
+    return request.auth.uid == userId;
+  }
+
+  function isExistingOwner(userId) {
+    return isOwner(userId) && resource != null;
+  }
+}
