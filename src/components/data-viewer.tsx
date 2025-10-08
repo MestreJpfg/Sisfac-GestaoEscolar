@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search } from "lucide-react";
+import { Search, Printer } from "lucide-react";
+import { Button } from "./ui/button";
 
 export interface DataItem {
   mainItem: string;
@@ -20,10 +21,23 @@ interface DataViewerProps {
 
 export default function DataViewer({ data, columnHeaders }: DataViewerProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const printableRef = useRef<HTMLDivElement>(null);
 
   const filteredData = data.filter((item) =>
     item.mainItem.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handlePrint = (item: DataItem) => {
+    if (printableRef.current) {
+        let content = `<h1>${item.mainItem}</h1><ul>`;
+        item.subItems.forEach(sub => {
+            content += `<li><strong>${sub.label}:</strong> ${sub.value}</li>`;
+        });
+        content += '</ul>';
+        printableRef.current.innerHTML = content;
+        window.print();
+    }
+  };
 
   return (
     <Card>
@@ -48,6 +62,11 @@ export default function DataViewer({ data, columnHeaders }: DataViewerProps) {
                 <AccordionItem value={`item-${index}`} key={index}>
                   <AccordionTrigger>{item.mainItem}</AccordionTrigger>
                   <AccordionContent>
+                    <div className="flex justify-end mb-2">
+                        <Button variant="ghost" size="icon" onClick={() => handlePrint(item)}>
+                            <Printer className="h-5 w-5" />
+                        </Button>
+                    </div>
                     <ul className="space-y-2 pl-4">
                       {item.subItems.map((sub, subIndex) => (
                         <li key={subIndex} className="text-sm">
@@ -63,6 +82,7 @@ export default function DataViewer({ data, columnHeaders }: DataViewerProps) {
           </ScrollArea>
         </div>
       </CardContent>
+      <div ref={printableRef} className="printable-content"></div>
     </Card>
   );
 }
