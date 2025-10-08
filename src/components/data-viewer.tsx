@@ -22,13 +22,13 @@ export default function DataViewer({ data }: DataViewerProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredData = data.filter((item) =>
-    item.mainItem?.toLowerCase().includes(searchTerm.toLowerCase())
+    (item.mainItem || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-primary">Dados Extraídos</CardTitle>
+        <CardTitle className="text-primary">Nome do Aluno</CardTitle>
         <div className="relative mt-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
