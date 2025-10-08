@@ -4,11 +4,11 @@
 
 @layer base {
   :root {
-    --background: hsl(222.2 84% 4.9%);
+    --background: hsl(0 0% 7.1%);
     --foreground: hsl(210 40% 98%);
-    --card: hsl(222.2 84% 4.9%);
+    --card: hsl(0 0% 7.1%);
     --card-foreground: hsl(210 40% 98%);
-    --popover: hsl(222.2 84% 4.9%);
+    --popover: hsl(0 0% 7.1%);
     --popover-foreground: hsl(210 40% 98%);
     --primary: hsl(217.2 91.2% 59.8%);
     --primary-foreground: hsl(210 40% 98%);
@@ -29,7 +29,7 @@
     --chart-4: hsl(280 65% 60%);
     --chart-5: hsl(340 75% 55%);
     --radius: 0.5rem;
-    --sidebar-background: hsl(222.2 84% 4.9%);
+    --sidebar-background: hsl(0 0% 7.1%);
     --sidebar-foreground: hsl(210 40% 98%);
     --sidebar-primary: hsl(210 40% 98%);
     --sidebar-primary-foreground: hsl(222.2 47.4% 11.2%);
@@ -40,11 +40,11 @@
   }
 
   .dark {
-    --background: hsl(222.2 84% 4.9%);
+    --background: hsl(0 0% 7.1%);
     --foreground: hsl(210 40% 98%);
-    --card: hsl(222.2 84% 4.9%);
+    --card: hsl(0 0% 7.1%);
     --card-foreground: hsl(210 40% 98%);
-    --popover: hsl(222.2 84% 4.9%);
+    --popover: hsl(0 0% 7.1%);
     --popover-foreground: hsl(210 40% 98%);
     --primary: hsl(217.2 91.2% 59.8%);
     --primary-foreground: hsl(210 40% 98%);
@@ -64,7 +64,7 @@
     --chart-3: hsl(30 80% 55%);
     --chart-4: hsl(280 65% 60%);
     --chart-5: hsl(340 75% 55%);
-    --sidebar-background: hsl(222.2 84% 4.9%);
+    --sidebar-background: hsl(0 0% 7.1%);
     --sidebar-foreground: hsl(210 40% 98%);
     --sidebar-primary: hsl(210 40% 98%);
     --sidebar-primary-foreground: hsl(222.2 47.4% 11.2%);
