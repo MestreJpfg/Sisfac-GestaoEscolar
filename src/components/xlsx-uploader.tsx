@@ -67,7 +67,7 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
         
-        const json: (string | number | Date)[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        const json: (string | number | Date | undefined)[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: undefined });
         
         if (json.length < 1) {
             toast({
@@ -79,31 +79,33 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
             return;
         }
 
-        const headers = json[0].map(h => String(h));
+        const headers = json[0].map(h => String(h ?? ''));
         const rows = json.slice(1);
 
         const processedData: Omit<DataItem, 'id'>[] = rows.map(row => {
-          const mainItem = String(row[3] || '000'); // 4th column
+          const mainItem = String(row[3] ?? '000'); // 4th column
           const subItems = row
             .map((cell, index) => {
               if (index === 3) return null;
               
               let value = '';
+              const cellValue = cell ?? '000';
+
               if (index === 8) { // 9th column for fraction
-                const num = Number(cell);
+                const num = Number(cellValue);
                 if (!isNaN(num)) {
                     value = toFraction(num);
                 } else {
-                    value = String(cell || '000');
+                    value = String(cellValue);
                 }
-              } else if (cell instanceof Date) {
+              } else if (cellValue instanceof Date) {
                   if (index === 11) { // 12th column
-                      value = format(cell, 'dd/MM/yyyy');
+                      value = format(cellValue, 'dd/MM/yyyy');
                   } else {
-                      value = cell.toISOString();
+                      value = cellValue.toISOString();
                   }
               } else {
-                  value = String(cell || '000');
+                  value = String(cellValue);
               }
 
               return {
@@ -114,17 +116,18 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
             .filter((item): item is { label: string; value: string } => item !== null);
           
           const allColumns = row.map((cell, index) => {
+            const cellValue = cell ?? '000';
             if (index === 8) { // 9th column
-              const num = Number(cell);
+              const num = Number(cellValue);
               if (!isNaN(num)) {
                   return toFraction(num);
               }
-              return String(cell || '000');
+              return String(cellValue);
             }
-            if (index === 11 && cell instanceof Date) {
-              return format(cell, 'dd/MM/yyyy');
+            if (index === 11 && cellValue instanceof Date) {
+              return format(cellValue, 'dd/MM/yyyy');
             }
-            return String(cell || '000');
+            return String(cellValue);
           });
 
           return {
@@ -146,7 +149,11 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
                 const studentsCollection = collection(firestore, "students");
                 processedData.forEach((studentData) => {
                     const docRef = doc(studentsCollection);
-                    batch.set(docRef, studentData);
+                    // Firestore doesn't support 'undefined'. Convert to 'null'.
+                    const sanitizedData = JSON.parse(JSON.stringify(studentData, (key, value) =>
+                      value === undefined ? null : value
+                    ));
+                    batch.set(docRef, sanitizedData);
                 });
                 await batch.commit();
                 toast({
