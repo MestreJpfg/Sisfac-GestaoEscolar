@@ -1,15 +1,11 @@
 "use client";
 
-import { useState, useRef } from "react";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, FileDown } from "lucide-react";
-import { Button } from "./ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { Search } from "lucide-react";
 
 export interface DataItem {
   mainItem: string;
@@ -22,74 +18,12 @@ interface DataViewerProps {
   columnHeaders: string[];
 }
 
-export default function DataViewer({ data, columnHeaders }: DataViewerProps) {
+export default function DataViewer({ data }: DataViewerProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const { toast } = useToast();
 
   const filteredData = data.filter((item) =>
     item.mainItem.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const handleExportToPdf = (item: DataItem) => {
-    const exportContentId = `export-content-${item.mainItem.replace(/\s+/g, '-')}`;
-
-    const contentToExport = document.createElement('div');
-    contentToExport.id = exportContentId;
-    contentToExport.className = "p-4 bg-background text-foreground";
-    contentToExport.style.width = '210mm'; // A4 width
-    contentToExport.style.position = 'absolute';
-    contentToExport.style.left = '-9999px';
-    
-    let innerHTML = `<h1 class="text-2xl font-bold mb-4 text-primary">${item.mainItem}</h1><ul class="list-none p-0">`;
-    item.subItems.forEach(sub => {
-        innerHTML += `<li class="mb-2 text-base"><strong class="font-semibold text-muted-foreground">${sub.label}:</strong><span class="ml-2">${sub.value}</span></li>`;
-    });
-    innerHTML += '</ul>';
-    contentToExport.innerHTML = innerHTML;
-    
-    document.body.appendChild(contentToExport);
-
-    html2canvas(contentToExport, { 
-      scale: 2,
-      useCORS: true, 
-      backgroundColor: 'hsl(var(--background))'
-    }).then(canvas => {
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const canvasWidth = canvas.width;
-      const canvasHeight = canvas.height;
-      const ratio = canvasWidth / canvasHeight;
-      
-      const widthInPdf = pdfWidth - 20; // A4 with margin
-      const heightInPdf = widthInPdf / ratio;
-      
-      let finalHeight = heightInPdf;
-      if(heightInPdf > pdfHeight - 20) {
-        finalHeight = pdfHeight - 20;
-      }
-
-      pdf.addImage(imgData, 'PNG', 10, 10, widthInPdf, finalHeight);
-      pdf.save(`${item.mainItem}.pdf`);
-      
-      document.body.removeChild(contentToExport);
-
-      toast({
-        title: "Exportado com Sucesso",
-        description: `Os dados de ${item.mainItem} foram exportados para PDF.`,
-      });
-
-    }).catch(err => {
-        console.error("Could not generate PDF", err);
-        toast({
-            variant: "destructive",
-            title: "Erro na Exportação",
-            description: "Não foi possível exportar os dados para PDF.",
-        });
-        document.body.removeChild(contentToExport);
-    });
-  };
 
   return (
     <Card>
@@ -114,11 +48,6 @@ export default function DataViewer({ data, columnHeaders }: DataViewerProps) {
                 <AccordionItem value={`item-${index}`} key={index}>
                   <AccordionTrigger>{item.mainItem}</AccordionTrigger>
                   <AccordionContent>
-                    <div className="flex justify-end mb-2">
-                        <Button variant="ghost" size="icon" onClick={() => handleExportToPdf(item)} title="Exportar para PDF">
-                            <FileDown className="h-5 w-5" />
-                        </Button>
-                    </div>
                     <ul className="space-y-2 pl-4">
                       {item.subItems.map((sub, subIndex) => (
                         <li key={subIndex} className="text-sm">
