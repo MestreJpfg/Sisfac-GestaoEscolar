@@ -27,7 +27,7 @@ export default function Home() {
       <div className="w-full max-w-4xl mx-auto">
         <header className="text-center mb-8">
           <h1 className="text-4xl font-bold tracking-tight text-primary font-headline">
-            XLSX Viewer
+            Gestão de Alunos 2025
           </h1>
           <p className="text-muted-foreground mt-2">
             Importe uma planilha para visualizar os dados de forma estruturada.
