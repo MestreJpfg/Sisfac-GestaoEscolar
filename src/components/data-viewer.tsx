@@ -22,7 +22,7 @@ export default function DataViewer({ data }: DataViewerProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredData = data.filter((item) =>
-    item.mainItem.toLowerCase().includes(searchTerm.toLowerCase())
+    item.mainItem?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
