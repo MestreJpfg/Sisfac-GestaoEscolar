@@ -41,7 +41,7 @@ export default function Home() {
             Gestão de Alunos 2025
           </h1>
           <p className="text-muted-foreground mt-2">
-            Importe uma planilha para visualizar os dados de forma estruturada.
+            Localize as informações sobre um Aluno matriculado
           </p>
         </header>
 
