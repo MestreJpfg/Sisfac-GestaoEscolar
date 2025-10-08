@@ -6,9 +6,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { type DataItem } from "./data-viewer";
 
 interface XlsxUploaderProps {
-  onUpload: (data: string[]) => void;
+  onUpload: (data: DataItem[], headers: string[]) => void;
   setLoading: (loading: boolean) => void;
 }
 
@@ -25,8 +26,8 @@ export default function XlsxUploader({ onUpload, setLoading }: XlsxUploaderProps
     if (!file.name.endsWith('.xlsx')) {
       toast({
         variant: "destructive",
-        title: "Invalid File Type",
-        description: "Please upload a valid .xlsx file.",
+        title: "Tipo de Arquivo Inválido",
+        description: "Por favor, envie um arquivo .xlsx válido.",
       });
       return;
     }
@@ -37,7 +38,7 @@ export default function XlsxUploader({ onUpload, setLoading }: XlsxUploaderProps
     reader.onload = (e) => {
       try {
         const data = e.target?.result;
-        if (!data) throw new Error("Could not read file data.");
+        if (!data) throw new Error("Não foi possível ler os dados do arquivo.");
         
         const workbook = XLSX.read(data, { type: 'array' });
         const firstSheetName = workbook.SheetNames[0];
@@ -45,26 +46,53 @@ export default function XlsxUploader({ onUpload, setLoading }: XlsxUploaderProps
         
         const json: (string | number)[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
         
-        const columnData = json
-          .map(row => row[0])
-          .filter(cell => cell !== null && cell !== undefined)
-          .map(cell => String(cell));
+        if (json.length < 1) {
+            toast({
+                variant: "destructive",
+                title: "Planilha Vazia",
+                description: "Sua planilha parece estar vazia.",
+            });
+            setLoading(false);
+            return;
+        }
 
-        if (columnData.length === 0) {
+        const headers = json[0].map(h => String(h));
+        const rows = json.slice(1);
+
+        const processedData: DataItem[] = rows.map(row => {
+          const mainItem = String(row[3] || ''); // 4th column
+          const subItems = row
+            .map((cell, index) => {
+              if (index === 3) return null;
+              return {
+                label: headers[index] || `Coluna ${index + 1}`,
+                value: String(cell || ''),
+              };
+            })
+            .filter((item): item is { label: string; value: string } => item !== null);
+          
+          return {
+            mainItem,
+            subItems,
+            allColumns: row.map(cell => String(cell || ''))
+          };
+        }).filter(item => item.mainItem);
+
+        if (processedData.length === 0) {
           toast({
             variant: "destructive",
-            title: "Empty Column",
-            description: "The first column of your spreadsheet appears to be empty.",
+            title: "Nenhum Dado Encontrado",
+            description: "Não foram encontrados dados válidos na 4ª coluna para exibir.",
           });
         } else {
-          onUpload(columnData);
+          onUpload(processedData, headers);
         }
       } catch (error) {
         console.error(error);
         toast({
           variant: "destructive",
-          title: "Processing Error",
-          description: "There was an error processing your file. It might be corrupted.",
+          title: "Erro de Processamento",
+          description: "Ocorreu um erro ao processar seu arquivo. Ele pode estar corrompido.",
         });
       } finally {
         setLoading(false);
@@ -74,8 +102,8 @@ export default function XlsxUploader({ onUpload, setLoading }: XlsxUploaderProps
     reader.onerror = () => {
         toast({
             variant: "destructive",
-            title: "File Read Error",
-            description: "Could not read the selected file.",
+            title: "Erro de Leitura de Arquivo",
+            description: "Não foi possível ler o arquivo selecionado.",
         });
         setLoading(false);
     };
@@ -109,7 +137,7 @@ export default function XlsxUploader({ onUpload, setLoading }: XlsxUploaderProps
   return (
     <Card 
       className={cn(
-        "border-2 border-dashed border-border transition-all duration-200",
+        "border-2 border-dashed border-border transition-all duration-200 bg-card",
         isDragging ? "border-primary bg-accent/20" : "hover:border-muted-foreground"
       )}
     >
@@ -125,10 +153,10 @@ export default function XlsxUploader({ onUpload, setLoading }: XlsxUploaderProps
           <UploadCloud className="w-16 h-16 text-muted-foreground" />
           <div className="flex flex-col items-center">
             <p className="font-semibold text-foreground">
-              <span className="text-primary">Click to upload</span> or drag and drop
+              <span className="text-primary">Clique para enviar</span> ou arraste e solte
             </p>
             <p className="text-sm text-muted-foreground">
-              XLSX files only
+              Apenas arquivos XLSX
             </p>
           </div>
           <input
