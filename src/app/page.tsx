@@ -24,7 +24,11 @@ export default function Home() {
     setShowUploader(false);
   };
 
-  const data = students;
+  const sortedData = students
+    ? [...students].sort((a, b) => (a.mainItem || "").localeCompare(b.mainItem || ""))
+    : [];
+
+  const data = sortedData;
   const isLoading = isLoadingData;
   
   const hasData = data && data.length > 0;
