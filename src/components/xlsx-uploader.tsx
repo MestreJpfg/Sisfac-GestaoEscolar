@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type DataItem } from "./data-viewer";
+import { format } from 'date-fns';
 
 interface XlsxUploaderProps {
   onUpload: (data: DataItem[], headers: string[]) => void;
@@ -40,11 +41,11 @@ export default function XlsxUploader({ onUpload, setLoading }: XlsxUploaderProps
         const data = e.target?.result;
         if (!data) throw new Error("Não foi possível ler os dados do arquivo.");
         
-        const workbook = XLSX.read(data, { type: 'array' });
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
         
-        const json: (string | number)[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        const json: (string | number | Date)[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
         
         if (json.length < 1) {
             toast({
@@ -64,17 +65,36 @@ export default function XlsxUploader({ onUpload, setLoading }: XlsxUploaderProps
           const subItems = row
             .map((cell, index) => {
               if (index === 3) return null;
+              
+              let value = '';
+              if (cell instanceof Date) {
+                  if (index === 11) { // 12th column
+                      value = format(cell, 'dd/MM/yyyy');
+                  } else {
+                      value = cell.toISOString();
+                  }
+              } else {
+                  value = String(cell || '');
+              }
+
               return {
                 label: headers[index] || `Coluna ${index + 1}`,
-                value: String(cell || ''),
+                value: value,
               };
             })
             .filter((item): item is { label: string; value: string } => item !== null);
           
+          const allColumns = row.map((cell, index) => {
+            if (index === 11 && cell instanceof Date) {
+              return format(cell, 'dd/MM/yyyy');
+            }
+            return String(cell || '');
+          });
+
           return {
             mainItem,
             subItems,
-            allColumns: row.map(cell => String(cell || ''))
+            allColumns: allColumns
           };
         }).filter(item => item.mainItem);
 
