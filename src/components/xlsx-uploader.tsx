@@ -25,11 +25,11 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
   const handleFile = useCallback(async (file: File) => {
     if (!file) return;
 
-    if (!file.name.endsWith('.xlsx')) {
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.csv')) {
       toast({
         variant: "destructive",
         title: "Tipo de Arquivo Inválido",
-        description: "Por favor, envie um arquivo .xlsx válido.",
+        description: "Por favor, envie um arquivo .xlsx ou .csv válido.",
       });
       return;
     }
@@ -199,13 +199,13 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
               <span className="text-primary">Clique para enviar</span> ou arraste e solte
             </p>
             <p className="text-sm text-muted-foreground">
-              Apenas arquivos XLSX
+              Arquivos XLSX e CSV
             </p>
           </div>
           <input
             ref={inputRef}
             type="file"
-            accept=".xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+            accept=".xlsx, .csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, text/csv"
             className="hidden"
             onChange={(e) => e.target.files && handleFile(e.target.files[0])}
           />
