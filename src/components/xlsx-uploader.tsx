@@ -15,6 +15,27 @@ interface XlsxUploaderProps {
   onUploadComplete: () => void;
 }
 
+function toFraction(decimal: number) {
+    if (decimal === 0) return "0";
+    if (decimal === 1) return "1";
+
+    let bestNumerator = 1;
+    let bestDenominator = 1;
+    let minError = Math.abs(decimal - 1);
+
+    for (let denominator = 1; denominator <= 100; denominator++) {
+        const numerator = Math.round(decimal * denominator);
+        if (numerator === 0) continue;
+        const error = Math.abs(decimal - numerator / denominator);
+        if (error < minError) {
+            minError = error;
+            bestNumerator = numerator;
+            bestDenominator = denominator;
+        }
+    }
+    return `${bestNumerator}/${bestDenominator}`;
+}
+
 export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -68,7 +89,14 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
               if (index === 3) return null;
               
               let value = '';
-              if (cell instanceof Date) {
+              if (index === 8) { // 9th column for fraction
+                const num = Number(cell);
+                if (!isNaN(num)) {
+                    value = toFraction(num);
+                } else {
+                    value = String(cell || '0');
+                }
+              } else if (cell instanceof Date) {
                   if (index === 11) { // 12th column
                       value = format(cell, 'dd/MM/yyyy');
                   } else {
@@ -86,6 +114,13 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
             .filter((item): item is { label: string; value: string } => item !== null);
           
           const allColumns = row.map((cell, index) => {
+            if (index === 8) { // 9th column
+              const num = Number(cell);
+              if (!isNaN(num)) {
+                  return toFraction(num);
+              }
+              return String(cell || '0');
+            }
             if (index === 11 && cell instanceof Date) {
               return format(cell, 'dd/MM/yyyy');
             }
