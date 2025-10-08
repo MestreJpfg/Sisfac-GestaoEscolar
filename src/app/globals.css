@@ -5,17 +5,17 @@
 @layer base {
   :root {
     --background: hsl(0 0% 7.1%);
-    --foreground: hsl(209, 87%, 28%);
+    --foreground: hsl(180, 7%, 3%);
     --card: hsl(0 0% 7.1%);
-    --card-foreground: hsl(210 30% 85%);
+    --card-foreground: hsl(235, 67%, 4%);
     --popover: hsl(0 0% 7.1%);
-    --popover-foreground: hsl(210 30% 85%);
+    --popover-foreground: hsl(210, 43%, 3%);
     --primary: hsl(180 91% 59%);
     --primary-foreground: hsl(0 0% 7.1%);
     --secondary: hsl(217.2 32.6% 17.5%);
-    --secondary-foreground: hsl(210 30% 85%);
+    --secondary-foreground: hsl(209, 19%, 26%);
     --muted: hsl(217.2 32.6% 17.5%);
-    --muted-foreground: hsl(215 20.2% 65.1%);
+    --muted-foreground: hsl(215, 15%, 22%);
     --accent: hsl(180 91% 59%);
     --accent-foreground: hsl(0 0% 7.1%);
     --destructive: hsl(0 62.8% 30.6%);
