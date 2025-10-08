@@ -83,7 +83,7 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
         const rows = json.slice(1);
 
         const processedData: Omit<DataItem, 'id'>[] = rows.map(row => {
-          const mainItem = String(row[3] || ''); // 4th column
+          const mainItem = String(row[3] || '000'); // 4th column
           const subItems = row
             .map((cell, index) => {
               if (index === 3) return null;
@@ -94,7 +94,7 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
                 if (!isNaN(num)) {
                     value = toFraction(num);
                 } else {
-                    value = String(cell || '0');
+                    value = String(cell || '000');
                 }
               } else if (cell instanceof Date) {
                   if (index === 11) { // 12th column
@@ -103,7 +103,7 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
                       value = cell.toISOString();
                   }
               } else {
-                  value = String(cell || '');
+                  value = String(cell || '000');
               }
 
               return {
@@ -119,12 +119,12 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
               if (!isNaN(num)) {
                   return toFraction(num);
               }
-              return String(cell || '0');
+              return String(cell || '000');
             }
             if (index === 11 && cell instanceof Date) {
               return format(cell, 'dd/MM/yyyy');
             }
-            return String(cell || '');
+            return String(cell || '000');
           });
 
           return {
