@@ -49,7 +49,7 @@ export default function DataViewer({ data }: DataViewerProps) {
                   <AccordionTrigger>{item.mainItem}</AccordionTrigger>
                   <AccordionContent>
                     <ul className="space-y-2 pl-4">
-                      {item.subItems.map((sub, subIndex) => (
+                      {item.subItems && item.subItems.map((sub, subIndex) => (
                         <li key={subIndex} className="text-sm">
                           <span className="font-semibold text-muted-foreground">{sub.label}:</span>
                           <span className="ml-2 text-foreground">{sub.value}</span>
