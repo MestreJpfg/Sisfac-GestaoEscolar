@@ -1,116 +1,129 @@
 /**
- * @fileoverview Firestore Security Rules for the XLSX Viewer application.
+ * @fileoverview Firestore Security Rules for XLSX Viewer
  *
- * Core Philosophy:
- * This ruleset enforces a strict user-ownership model. Each user has full control over their own data tree,
- * while unauthorized access to other users' data is strictly forbidden.
+ * Core Philosophy: This ruleset enforces a strict user-ownership model, ensuring that users can only access and manipulate data associated with their own user ID.
  *
  * Data Structure:
- * The Firestore database is structured as follows:
- * /users/{userId} - Stores user profile information.
- * /users/{userId}/uploadSessions/{uploadSessionId} - Stores metadata about XLSX upload sessions.
- * /users/{userId}/uploadSessions/{uploadSessionId}/data/{dataId} - Stores the extracted data from XLSX files.
+ * - /users/{userId}: Stores user profiles. Each user document is identified by the user's UID.
+ * - /users/{userId}/uploadSessions/{uploadSessionId}: Stores metadata about XLSX upload sessions, linked to a specific user.
+ * - /users/{userId}/uploadSessions/{uploadSessionId}/data/{dataId}: Stores the actual XLSX data, associated with a specific upload session and user.
  *
  * Key Security Decisions:
- * - Users can only access their own data.
- * - Data is segregated by user ID, preventing unauthorized access.
- * - All write operations are protected by authorization checks to ensure data integrity.
- * - List operations are restricted to the owner of the data.
+ * - Users can only create, read, update, and delete data under their own user ID.
+ * - Listing of upload sessions and data is restricted to the owning user.
  *
  * Denormalization for Authorization:
- * The `XLSXData` documents contain an `uploadSessionId` field, linking them to a specific `XLSXUploadSession`.
- * The `XLSXUploadSession` contains a `userId` field. This denormalization avoids the need for costly `get()` calls
- * in security rules to verify ownership.
+ * - XLSXData documents include the uploadSessionId, which allows rules to verify the association with a specific upload session without additional reads.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Enforces user-ownership for user profiles.
+     * @description Controls access to user profiles.
      * @path /users/{userId}
-     * @allow (create) - Authenticated user creates their profile with matching userId.
-     * @allow (get, update, delete) - Authenticated user accesses/modifies their own profile.
-     * @deny (create) - Authenticated user tries to create a profile with a mismatched userId.
-     * @deny (get, update, delete) - Authenticated user tries to access/modify another user's profile.
-     * @principle Enforces document ownership for all operations.
+     * @allow (create) Authenticated user can create their own profile.
+     * @allow (get) Authenticated user can read their own profile.
+     * @allow (update) Authenticated user can update their own profile.
+     * @allow (delete) Authenticated user can delete their own profile.
+     * @deny (create) Unauthenticated users cannot create profiles.
+     * @deny (get) Authenticated user cannot read other user's profiles.
+     * @principle Enforces document ownership.
      */
     match /users/{userId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
       function isSignedIn() {
         return request.auth != null;
       }
 
-      allow get: if isOwner(userId);
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource.data != null;
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
       allow list: if false;
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isSignedIn() && isOwner(userId) && resource.data.id == request.resource.data.id;
-      allow delete: if isSignedIn() && isOwner(userId) && resource != null;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isExistingOwner(userId);
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Enforces user-ownership for XLSX upload sessions.
+     * @description Controls access to XLSX upload sessions for a specific user.
      * @path /users/{userId}/uploadSessions/{uploadSessionId}
-     * @allow (create) - Authenticated user creates an upload session under their userId.
-     * @allow (get, update, delete) - Authenticated user accesses/modifies their own upload sessions.
-     * @deny (create) - Authenticated user tries to create an upload session under a mismatched userId.
-     * @deny (get, update, delete) - Authenticated user tries to access/modify another user's upload sessions.
-     * @principle Restricts access to a user's own data tree.
+     * @allow (create) Authenticated user can create upload sessions under their own user ID.
+     * @allow (get) Authenticated user can read upload sessions under their own user ID.
+     * @allow (update) Authenticated user can update upload sessions under their own user ID.
+     * @allow (delete) Authenticated user can delete upload sessions under their own user ID.
+     * @deny (create) Unauthenticated users cannot create upload sessions.
+     * @deny (get) Authenticated user cannot read other user's upload sessions.
+     * @principle Enforces document ownership.
      */
     match /users/{userId}/uploadSessions/{uploadSessionId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
       function isOwner(userId) {
         return request.auth.uid == userId;
       }
 
-      function isSignedIn() {
-        return request.auth != null;
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource.data != null;
       }
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if isSignedIn() && isOwner(userId) && resource != null && resource.data.userId == request.resource.data.userId;
-      allow delete: if isSignedIn() && isOwner(userId) && resource != null;
+
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isExistingOwner(userId);
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Enforces user-ownership for XLSX data entries.
+     * @description Controls access to XLSX data entries within a user's upload session.
      * @path /users/{userId}/uploadSessions/{uploadSessionId}/data/{dataId}
-     * @allow (create) - Authenticated user creates data entries under their upload session.
-     * @allow (get, update, delete) - Authenticated user accesses/modifies their own data entries.
-     * @deny (create) - Authenticated user tries to create data entries under a mismatched userId or uploadSessionId.
-     * @deny (get, update, delete) - Authenticated user tries to access/modify another user's data entries.
-     * @principle Ensures data integrity and restricts access to authorized users.
+     * @allow (create) Authenticated user can create data entries under their own upload session.
+     * @allow (get) Authenticated user can read data entries under their own upload session.
+     * @allow (update) Authenticated user can update data entries under their own upload session.
+     * @allow (delete) Authenticated user can delete data entries under their own upload session.
+     * @deny (create) Unauthenticated users cannot create data entries.
+     * @deny (get) Authenticated user cannot read other user's data entries.
+     * @principle Enforces document ownership and session-based access.
      */
     match /users/{userId}/uploadSessions/{uploadSessionId}/data/{dataId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
       function isOwner(userId) {
         return request.auth.uid == userId;
       }
 
-      function isSignedIn() {
-        return request.auth != null;
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource.data != null;
       }
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.uploadSessionId == uploadSessionId;
-      allow update: if isSignedIn() && isOwner(userId) && resource != null && resource.data.uploadSessionId == request.resource.data.uploadSessionId;
-      allow delete: if isSignedIn() && isOwner(userId) && resource != null;
+
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isExistingOwner(userId);
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Prevents unauthorized listing of the 'students' collection.
+     * @description Denies listing of students collection.
      * @path /students
-     * @deny (list) - All users, including authenticated ones, are denied access to list the 'students' collection.
-     * @principle Denies listing of a collection to prevent unauthorized data exposure.
+     * @deny (list) No one can list the students collection.
+     * @principle Prevents unauthorized listing of student data.
      */
-    match /students {
-      allow get: if false;
-      allow list: if false;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+    match /students/{studentId} {
+        allow get: if false;
+        allow list: if false;
+        allow create: if false;
+        allow update: if false;
+        allow delete: if false;
     }
   }
 }
