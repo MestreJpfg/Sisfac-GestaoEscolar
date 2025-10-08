@@ -5,24 +5,24 @@
 @layer base {
   :root {
     --background: rgb(18, 18, 18);
-    --foreground: rgb(5, 10, 10);
+    --foreground: rgb(214, 219, 226);
     --card: rgb(18, 18, 18);
-    --card-foreground: rgb(1, 0, 20);
+    --card-foreground: rgb(214, 219, 226);
     --popover: rgb(18, 18, 18);
-    --popover-foreground: rgb(0, 7, 15);
-    --primary: rgb(13, 237, 237);
-    --primary-foreground: rgb(18, 18, 18);
+    --popover-foreground: rgb(214, 219, 226);
+    --primary: rgb(59, 130, 246);
+    --primary-foreground: rgb(255, 255, 255);
     --secondary: rgb(30, 41, 59);
-    --secondary-foreground: rgb(56, 68, 79);
+    --secondary-foreground: rgb(214, 219, 226);
     --muted: rgb(30, 41, 59);
-    --muted-foreground: rgb(48, 56, 66);
-    --accent: rgb(13, 237, 237);
-    --accent-foreground: rgb(18, 18, 18);
+    --muted-foreground: rgb(151, 158, 172);
+    --accent: rgb(96, 165, 250);
+    --accent-foreground: rgb(255, 255, 255);
     --destructive: rgb(117, 44, 44);
     --destructive-foreground: rgb(248, 250, 252);
     --border: rgb(30, 41, 59);
     --input: rgb(30, 41, 59);
-    --ring: rgb(13, 237, 237);
+    --ring: rgb(96, 165, 250);
     --chart-1: rgb(38, 77, 217);
     --chart-2: rgb(28, 191, 115);
     --chart-3: rgb(235, 153, 25);
@@ -31,12 +31,12 @@
     --radius: 0.5rem;
     --sidebar-background: rgb(18, 18, 18);
     --sidebar-foreground: rgb(214, 219, 226);
-    --sidebar-primary: rgb(13, 237, 237);
-    --sidebar-primary-foreground: rgb(18, 18, 18);
+    --sidebar-primary: rgb(59, 130, 246);
+    --sidebar-primary-foreground: rgb(255, 255, 255);
     --sidebar-accent: rgb(30, 41, 59);
     --sidebar-accent-foreground: rgb(214, 219, 226);
     --sidebar-border: rgb(30, 41, 59);
-    --sidebar-ring: rgb(13, 237, 237);
+    --sidebar-ring: rgb(96, 165, 250);
   }
 
   .dark {
@@ -46,19 +46,19 @@
     --card-foreground: rgb(214, 219, 226);
     --popover: rgb(18, 18, 18);
     --popover-foreground: rgb(214, 219, 226);
-    --primary: rgb(13, 237, 237);
-    --primary-foreground: rgb(18, 18, 18);
+    --primary: rgb(59, 130, 246);
+    --primary-foreground: rgb(255, 255, 255);
     --secondary: rgb(30, 41, 59);
     --secondary-foreground: rgb(214, 219, 226);
     --muted: rgb(30, 41, 59);
     --muted-foreground: rgb(151, 158, 172);
-    --accent: rgb(13, 237, 237);
-    --accent-foreground: rgb(18, 18, 18);
+    --accent: rgb(96, 165, 250);
+    --accent-foreground: rgb(255, 255, 255);
     --destructive: rgb(117, 44, 44);
     --destructive-foreground: rgb(248, 250, 252);
     --border: rgb(30, 41, 59);
     --input: rgb(30, 41, 59);
-    --ring: rgb(13, 237, 237);
+    --ring: rgb(96, 165, 250);
     --chart-1: rgb(38, 77, 217);
     --chart-2: rgb(28, 191, 115);
     --chart-3: rgb(235, 153, 25);
@@ -66,12 +66,12 @@
     --chart-5: rgb(224, 56, 110);
     --sidebar-background: rgb(18, 18, 18);
     --sidebar-foreground: rgb(214, 219, 226);
-    --sidebar-primary: rgb(13, 237, 237);
-    --sidebar-primary-foreground: rgb(18, 18, 18);
+    --sidebar-primary: rgb(59, 130, 246);
+    --sidebar-primary-foreground: rgb(255, 255, 255);
     --sidebar-accent: rgb(30, 41, 59);
     --sidebar-accent-foreground: rgb(214, 219, 226);
     --sidebar-border: rgb(30, 41, 59);
-    --sidebar-ring: rgb(13, 237, 237);
+    --sidebar-ring: rgb(96, 165, 250);
   }
 }
 
