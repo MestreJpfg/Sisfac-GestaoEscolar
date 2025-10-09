@@ -21,6 +21,9 @@ interface DataViewerProps {
 }
 
 const getSerieFromItem = (item: DataItem): string | undefined => {
+  if (!item.subItems) {
+    return undefined;
+  }
   const serieItem = item.subItems.find(sub => sub.label.toLowerCase().includes('série'));
   return serieItem?.value;
 }
