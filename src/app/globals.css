@@ -5,15 +5,15 @@
 @layer base {
   :root {
     --background: rgb(18, 18, 18);
-    --foreground: rgb(214, 219, 226);
+    --foreground: rgb(255, 165, 0);
     --card: rgb(18, 18, 18);
-    --card-foreground: rgb(214, 219, 226);
+    --card-foreground: rgb(255, 165, 0);
     --popover: rgb(18, 18, 18);
-    --popover-foreground: rgb(214, 219, 226);
+    --popover-foreground: rgb(255, 165, 0);
     --primary: rgb(59, 130, 246);
     --primary-foreground: rgb(255, 255, 255);
     --secondary: rgb(30, 41, 59);
-    --secondary-foreground: rgb(214, 219, 226);
+    --secondary-foreground: rgb(255, 165, 0);
     --muted: rgb(30, 41, 59);
     --muted-foreground: rgb(151, 158, 172);
     --accent: rgb(96, 165, 250);
@@ -41,15 +41,15 @@
 
   .dark {
     --background: rgb(18, 18, 18);
-    --foreground: rgb(214, 219, 226);
+    --foreground: rgb(255, 165, 0);
     --card: rgb(18, 18, 18);
-    --card-foreground: rgb(214, 219, 226);
+    --card-foreground: rgb(255, 165, 0);
     --popover: rgb(18, 18, 18);
-    --popover-foreground: rgb(214, 219, 226);
+    --popover-foreground: rgb(255, 165, 0);
     --primary: rgb(59, 130, 246);
     --primary-foreground: rgb(255, 255, 255);
     --secondary: rgb(30, 41, 59);
-    --secondary-foreground: rgb(214, 219, 226);
+    --secondary-foreground: rgb(255, 165, 0);
     --muted: rgb(30, 41, 59);
     --muted-foreground: rgb(151, 158, 172);
     --accent: rgb(96, 165, 250);
