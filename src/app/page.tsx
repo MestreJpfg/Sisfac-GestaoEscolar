@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import XlsxUploader from "@/components/xlsx-uploader";
 import DataViewer from "@/components/data-viewer";
 import { Button } from "@/components/ui/button";
@@ -8,10 +9,13 @@ import { Loader2 } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, query } from "firebase/firestore";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export default function Home() {
   const [showUploader, setShowUploader] = useState(false);
   const firestore = useFirestore();
+
+  const logo = PlaceHolderImages.find(img => img.id === 'app-logo');
 
   const studentsCollection = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -36,7 +40,19 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-12 lg:p-24 bg-background">
       <div className="w-full max-w-4xl mx-auto">
-        <header className="text-center mb-8">
+        <header className="text-center mb-8 flex flex-col items-center">
+          {logo && (
+            <div className="mb-4">
+              <Image
+                src={logo.imageUrl}
+                alt={logo.description}
+                width={150}
+                height={50}
+                data-ai-hint={logo.imageHint}
+                className="rounded-md"
+              />
+            </div>
+          )}
           <h1 className="text-4xl font-bold tracking-tight text-primary font-headline">
             Gestão de Alunos 2025
           </h1>
