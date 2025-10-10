@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search } from "lucide-react";
+import { Search, Pencil } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import EditStudentForm from "./edit-student-form";
 
 export interface DataItem {
   id: string;
@@ -31,6 +32,7 @@ const getSerieFromItem = (item: DataItem): string | undefined => {
 export default function DataViewer({ data }: DataViewerProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSerie, setSelectedSerie] = useState<string>("all");
+  const [editingStudent, setEditingStudent] = useState<DataItem | null>(null);
 
   const series = useMemo(() => {
     const allSeries = data.reduce((acc, item) => {
@@ -54,59 +56,78 @@ export default function DataViewer({ data }: DataViewerProps) {
     return matchesSearchTerm && serie === selectedSerie;
   });
 
+  const handleEditComplete = () => {
+    setEditingStudent(null);
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-primary">Alunos Matriculados</CardTitle>
-        <div className="grid sm:grid-cols-2 gap-4 mt-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              placeholder="Pesquisar aluno..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-full"
-            />
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-primary">Alunos Matriculados</CardTitle>
+          <div className="grid sm:grid-cols-2 gap-4 mt-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                placeholder="Pesquisar aluno..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-full"
+              />
+            </div>
+            <div className="flex flex-col space-y-1.5">
+              <Select value={selectedSerie} onValueChange={setSelectedSerie}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por série..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Mostrar todas as séries</SelectItem>
+                  {series.map(serie => (
+                    <SelectItem key={serie} value={serie}>{serie}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className="flex flex-col space-y-1.5">
-            <Select value={selectedSerie} onValueChange={setSelectedSerie}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filtrar por série..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Mostrar todas as séries</SelectItem>
-                {series.map(serie => (
-                  <SelectItem key={serie} value={serie}>{serie}</SelectItem>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div>
+            <h3 className="text-lg font-semibold mb-4 text-foreground">Visualização dos Dados</h3>
+            <ScrollArea className="h-96 w-full rounded-md border">
+              <Accordion type="single" collapsible className="w-full p-4">
+                {filteredData.map((item) => (
+                  <AccordionItem value={item.id} key={item.id}>
+                    <AccordionTrigger>{item.mainItem}</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="flex justify-end mb-2">
+                        <Button variant="ghost" size="icon" onClick={() => setEditingStudent(item)}>
+                          <Pencil className="h-4 w-4" />
+                          <span className="sr-only">Editar</span>
+                        </Button>
+                      </div>
+                      <ul className="space-y-2 pl-4">
+                        {item.subItems && item.subItems.map((sub, subIndex) => (
+                          <li key={subIndex} className="text-sm">
+                            <span className="font-semibold text-muted-foreground">{sub.label}:</span>
+                            <span className="ml-2 text-foreground">{sub.value}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </AccordionContent>
+                  </AccordionItem>
                 ))}
-              </SelectContent>
-            </Select>
+              </Accordion>
+            </ScrollArea>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div>
-          <h3 className="text-lg font-semibold mb-4 text-foreground">Visualização dos Dados</h3>
-          <ScrollArea className="h-96 w-full rounded-md border">
-            <Accordion type="single" collapsible className="w-full p-4">
-              {filteredData.map((item) => (
-                <AccordionItem value={item.id} key={item.id}>
-                  <AccordionTrigger>{item.mainItem}</AccordionTrigger>
-                  <AccordionContent>
-                    <ul className="space-y-2 pl-4">
-                      {item.subItems && item.subItems.map((sub, subIndex) => (
-                        <li key={subIndex} className="text-sm">
-                          <span className="font-semibold text-muted-foreground">{sub.label}:</span>
-                          <span className="ml-2 text-foreground">{sub.value}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </ScrollArea>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+      {editingStudent && (
+        <EditStudentForm
+          student={editingStudent}
+          onClose={() => setEditingStudent(null)}
+          onEditComplete={handleEditComplete}
+        />
+      )}
+    </>
   );
 }
