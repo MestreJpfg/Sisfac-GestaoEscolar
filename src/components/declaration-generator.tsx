@@ -83,6 +83,19 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
                 >
                     Declaro que <strong>{nomeCompleto}</strong>, nascido em {dataNascimento}, é aluno regularmente matriculado nesta Unidade Escolar, no {serie} {turma} {turno}, no ano letivo de {anoAtual}.
                 </div>
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: '45%',
+                        left: '1cm',
+                        right: '1cm',
+                        fontFamily: 'Arial',
+                        fontSize: '13pt',
+                        lineHeight: '1.5',
+                    }}
+                >
+                    Observações:
+                </div>
             </div>
         </div>
       </div>
