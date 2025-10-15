@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { Button } from '@/components/ui/button';
@@ -50,14 +50,10 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
     pdf.save(`${nomeCompleto}.pdf`);
     onClose();
   };
-  
-  useEffect(() => {
-    handleExportToPdf();
-  }, []);
 
   return (
     <>
-      {/* Hidden Dialog to render content for PDF generation */}
+      {/* Hidden Div to render content for PDF generation */}
       <div className="fixed -left-[9999px] -top-[9999px]">
         <div ref={declarationRef} className="w-[210mm] h-[297mm] bg-white text-black p-0 m-0 relative">
             <Image
@@ -90,17 +86,20 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
       <Dialog open={true} onOpenChange={onClose}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Gerando Declaração</DialogTitle>
+            <DialogTitle>Gerar Declaração</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p>A declaração para {student.mainItem} está sendo gerada e o download começará em breve.</p>
+            <p>Clique em "Exportar PDF" para gerar e baixar a declaração para {student.mainItem}.</p>
           </div>
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="secondary" onClick={onClose}>
-                Fechar
+                Cancelar
               </Button>
             </DialogClose>
+            <Button type="button" onClick={handleExportToPdf}>
+              Exportar PDF
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
