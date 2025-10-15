@@ -36,6 +36,8 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
   const turma = getStudentValue('turma');
   const turno = getStudentValue('turno');
   const anoAtual = new Date().getFullYear();
+  const dataAtual = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+
 
   const handleExportToPdf = async () => {
     if (!declarationRef.current) return;
@@ -95,6 +97,19 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
                     }}
                 >
                     Observações:
+                </div>
+                 <div
+                    style={{
+                        position: 'absolute',
+                        top: '70%',
+                        left: '1cm',
+                        right: '1cm',
+                        fontFamily: 'Arial',
+                        fontSize: '13pt',
+                        textAlign: 'right',
+                    }}
+                >
+                    Fortaleza, {dataAtual}
                 </div>
             </div>
         </div>
