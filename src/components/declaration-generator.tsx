@@ -64,7 +64,7 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
                 src="/declaracao-template.png"
                 alt="Declaração de Matrícula"
                 layout="fill"
-                objectFit="contain"
+                objectFit="cover"
             />
             <div className="absolute top-0 left-0 w-full h-full p-[1cm]" style={{ boxSizing: 'border-box' }}>
                 <div
