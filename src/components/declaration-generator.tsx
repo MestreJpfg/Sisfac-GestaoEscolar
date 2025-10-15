@@ -13,7 +13,6 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { type DataItem } from './data-viewer';
-import Image from 'next/image';
 
 interface DeclarationGeneratorProps {
   student: DataItem;
@@ -56,11 +55,17 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
       {/* Hidden Div to render content for PDF generation */}
       <div className="fixed -left-[9999px] -top-[9999px]">
         <div ref={declarationRef} className="w-[210mm] h-[297mm] bg-white text-black p-0 m-0 relative">
-            <Image
+            <img
                 src="/declaracao-template.png"
                 alt="Declaração de Matrícula"
-                layout="fill"
-                objectFit="cover"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'fill'
+                }}
             />
             <div className="absolute top-0 left-0 w-full h-full p-[1cm]" style={{ boxSizing: 'border-box' }}>
                 <div
