@@ -71,7 +71,7 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
                 <div
                     style={{
                         position: 'absolute',
-                        top: '40%',
+                        top: '30%',
                         left: '1cm',
                         right: '1cm',
                         fontFamily: 'Arial',
