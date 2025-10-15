@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Pencil } from "lucide-react";
+import { Search, Pencil, FileText } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import EditStudentForm from "./edit-student-form";
+import DeclarationGenerator from "./declaration-generator";
 
 export interface DataItem {
   id: string;
@@ -33,6 +34,7 @@ export default function DataViewer({ data }: DataViewerProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSerie, setSelectedSerie] = useState<string>("all");
   const [editingStudent, setEditingStudent] = useState<DataItem | null>(null);
+  const [declarationStudent, setDeclarationStudent] = useState<DataItem | null>(null);
 
   const series = useMemo(() => {
     const allSeries = data.reduce((acc, item) => {
@@ -99,7 +101,11 @@ export default function DataViewer({ data }: DataViewerProps) {
                   <AccordionItem value={item.id} key={item.id}>
                     <AccordionTrigger>{item.mainItem}</AccordionTrigger>
                     <AccordionContent>
-                      <div className="flex justify-end mb-2">
+                      <div className="flex justify-end mb-2 space-x-2">
+                        <Button variant="ghost" size="icon" onClick={() => setDeclarationStudent(item)}>
+                          <FileText className="h-4 w-4" />
+                          <span className="sr-only">Gerar Declaração</span>
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => setEditingStudent(item)}>
                           <Pencil className="h-4 w-4" />
                           <span className="sr-only">Editar</span>
@@ -126,6 +132,12 @@ export default function DataViewer({ data }: DataViewerProps) {
           student={editingStudent}
           onClose={() => setEditingStudent(null)}
           onEditComplete={handleEditComplete}
+        />
+      )}
+      {declarationStudent && (
+        <DeclarationGenerator
+          student={declarationStudent}
+          onClose={() => setDeclarationStudent(null)}
         />
       )}
     </>
