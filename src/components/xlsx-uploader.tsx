@@ -6,34 +6,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { type DataItem } from "./data-viewer";
 import { format } from 'date-fns';
 import { useFirestore } from "@/firebase";
 import { collection, writeBatch, doc } from "firebase/firestore";
 
 interface XlsxUploaderProps {
   onUploadComplete: () => void;
-}
-
-function toFraction(decimal: number) {
-    if (decimal === 0) return "0";
-    if (decimal === 1) return "1";
-
-    let bestNumerator = 1;
-    let bestDenominator = 1;
-    let minError = Math.abs(decimal - 1);
-
-    for (let denominator = 1; denominator <= 100; denominator++) {
-        const numerator = Math.round(decimal * denominator);
-        if (numerator === 0) continue;
-        const error = Math.abs(decimal - numerator / denominator);
-        if (error < minError) {
-            minError = error;
-            bestNumerator = numerator;
-            bestDenominator = denominator;
-        }
-    }
-    return `${bestNumerator}/${bestDenominator}`;
 }
 
 export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
@@ -44,17 +22,19 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
   const firestore = useFirestore();
 
   const processAndSaveFile = async (file: File) => {
+    setIsLoading(true);
+
     if (!firestore) {
       toast({
         variant: 'destructive',
         title: 'Erro de Conexão',
         description: 'Não foi possível conectar ao banco de dados.',
       });
+      setIsLoading(false);
       return;
     }
 
     const reader = new FileReader();
-
     reader.onload = async (e) => {
       try {
         const data = e.target?.result;
@@ -64,116 +44,89 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
         
-        const json: (string | number | Date | undefined)[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: undefined });
+        // Using `defval: null` to handle empty cells gracefully
+        const json: (string | number | Date | null)[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null });
         
-        if (json.length < 1) {
+        if (json.length < 2) {
             toast({
                 variant: "destructive",
-                title: "Planilha Vazia",
-                description: "Sua planilha parece estar vazia.",
+                title: "Planilha Inválida",
+                description: "A planilha precisa conter um cabeçalho e ao menos uma linha de dados.",
             });
             setIsLoading(false);
             return;
         }
 
-        const headers = json[0].map(h => String(h ?? ''));
+        const headers = json[0].map(h => String(h ?? '').trim());
+        const studentNameHeader = headers[3] || "Nome Completo"; // Assuming 4th column is student name
+        headers[3] = "Nome Completo"; // Standardize the name column header
+
         const rows = json.slice(1);
 
-        const processedData: Omit<DataItem, 'id'>[] = rows.map(row => {
-          const mainItem = String(row[3] ?? '000'); // 4th column
-          const subItems = row
-            .map((cell, index) => {
-              if (index === 3) return null;
-              
-              let value = '';
-              const cellValue = cell ?? '000';
+        const processedData = rows.map(row => {
+          const rowData: Record<string, string> = {};
+          headers.forEach((header, index) => {
+            if (!header) return; // Skip columns with no header
 
-              if (index === 8) { // 9th column for fraction
-                const num = Number(cellValue);
-                if (!isNaN(num)) {
-                    value = toFraction(num);
-                } else {
-                    value = String(cellValue);
-                }
-              } else if (cellValue instanceof Date) {
-                  if (index === 11) { // 12th column
-                      value = format(cellValue, 'dd/MM/yyyy');
-                  } else {
-                      value = cellValue.toISOString();
-                  }
+            const cellValue = row[index];
+            let value = '';
+
+            if (cellValue instanceof Date) {
+              // Check if it's the 12th column (index 11)
+              if (index === 11) { 
+                value = format(cellValue, 'dd/MM/yyyy');
               } else {
-                  value = String(cellValue);
+                value = cellValue.toISOString();
               }
-
-              return {
-                label: headers[index] || `Coluna ${index + 1}`,
-                value: value,
-              };
-            })
-            .filter((item): item is { label: string; value: string } => item !== null);
-          
-          const allColumns = row.map((cell, index) => {
-            const cellValue = cell ?? '000';
-            if (index === 8) { // 9th column
-              const num = Number(cellValue);
-              if (!isNaN(num)) {
-                  return toFraction(num);
-              }
-              return String(cellValue);
+            } else if (cellValue !== null && cellValue !== undefined) {
+              value = String(cellValue);
             }
-            if (index === 11 && cellValue instanceof Date) {
-              return format(cellValue, 'dd/MM/yyyy');
-            }
-            return String(cellValue);
+            
+            rowData[header] = value;
           });
-
-          return {
-            mainItem,
-            subItems,
-            allColumns
-          };
-        }).filter(item => item.mainItem);
+          return { data: rowData };
+        }).filter(item => item.data[studentNameHeader]); // Filter out rows without a student name
 
         if (processedData.length === 0) {
           toast({
             variant: "destructive",
-            title: "Nenhum Dado Encontrado",
-            description: "Não foram encontrados dados válidos na 4ª coluna para exibir.",
+            title: "Nenhum Dado Válido",
+            description: `Não foram encontrados dados válidos na coluna "${studentNameHeader}".`,
           });
         } else {
             const batch = writeBatch(firestore);
             const studentsCollection = collection(firestore, "students");
-            processedData.forEach((studentData) => {
+            processedData.forEach((student) => {
                 const docRef = doc(studentsCollection);
-                // Firestore doesn't support 'undefined'. Convert to 'null'.
-                const sanitizedData = JSON.parse(JSON.stringify(studentData, (key, value) =>
-                  value === undefined ? null : value
-                ));
-                batch.set(docRef, sanitizedData);
+                batch.set(docRef, student);
             });
             await batch.commit();
             toast({
                 title: "Sucesso!",
-                description: "Os dados da planilha foram salvos no banco de dados.",
+                description: `${processedData.length} registros de alunos foram salvos no banco de dados.`,
             });
             onUploadComplete();
         }
       } catch (error) {
-        console.error(error);
+        console.error("Error processing file:", error);
         toast({
           variant: "destructive",
           title: "Erro de Processamento",
-          description: "Ocorreu um erro ao processar seu arquivo. Ele pode estar corrompido.",
+          description: "Ocorreu um erro ao processar seu arquivo. Verifique o formato e tente novamente.",
         });
       } finally {
         setIsLoading(false);
+        // Reset file input to allow re-uploading the same file
+        if(inputRef.current) {
+          inputRef.current.value = "";
+        }
       }
     };
     
     reader.onerror = () => {
         toast({
             variant: "destructive",
-            title: "Erro de Leitura de Arquivo",
+            title: "Erro de Leitura",
             description: "Não foi possível ler o arquivo selecionado.",
         });
         setIsLoading(false);
@@ -182,7 +135,7 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
     reader.readAsArrayBuffer(file);
   }
 
-  const handleFile = useCallback(async (file: File | null) => {
+  const handleFileChange = (file: File | null) => {
     if (!file) return;
 
     if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.csv')) {
@@ -193,11 +146,8 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
       });
       return;
     }
-
-    setIsLoading(true);
-    await processAndSaveFile(file);
-
-  }, [firestore, onUploadComplete, toast]);
+    processAndSaveFile(file);
+  };
 
   const handleDrag = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -214,9 +164,9 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
     e.stopPropagation();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFile(e.dataTransfer.files[0]);
+      handleFileChange(e.dataTransfer.files[0]);
     }
-  }, [handleFile]);
+  }, []);
   
   const handleClick = () => {
     inputRef.current?.click();
@@ -261,7 +211,7 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
             type="file"
             accept=".xlsx, .csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, text/csv"
             className="hidden"
-            onChange={(e) => handleFile(e.target.files ? e.target.files[0] : null)}
+            onChange={(e) => handleFileChange(e.target.files ? e.target.files[0] : null)}
           />
         </div>
       </CardContent>

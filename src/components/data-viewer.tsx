@@ -13,24 +13,24 @@ import DeclarationGenerator from "./declaration-generator";
 
 export interface DataItem {
   id: string;
-  mainItem: string;
-  subItems: { label: string; value: string }[];
-  allColumns: string[];
+  data: Record<string, string>;
 }
 
 interface DataViewerProps {
   data: DataItem[];
+  onEditComplete: () => void;
 }
 
 const getSerieFromItem = (item: DataItem): string | undefined => {
-  if (!item.subItems) {
-    return undefined;
-  }
-  const serieItem = item.subItems.find(sub => sub.label.toLowerCase().includes('serie'));
-  return serieItem?.value;
+  const serieKey = Object.keys(item.data).find(k => k.toLowerCase().includes('serie'));
+  return serieKey ? item.data[serieKey] : undefined;
 }
 
-export default function DataViewer({ data }: DataViewerProps) {
+const getStudentName = (item: DataItem): string => {
+  return item.data['Nome Completo'] || 'Aluno sem nome';
+}
+
+export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSerie, setSelectedSerie] = useState<string>("all");
   const [editingStudent, setEditingStudent] = useState<DataItem | null>(null);
@@ -47,8 +47,9 @@ export default function DataViewer({ data }: DataViewerProps) {
     return Array.from(allSeries).sort();
   }, [data]);
 
-  const filteredData = data.filter((item) => {
-    const matchesSearchTerm = (item.mainItem || "").toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredData = useMemo(() => data.filter((item) => {
+    const studentName = getStudentName(item).toLowerCase();
+    const matchesSearchTerm = studentName.includes(searchTerm.toLowerCase());
     
     if (selectedSerie === "all") {
       return matchesSearchTerm;
@@ -56,10 +57,11 @@ export default function DataViewer({ data }: DataViewerProps) {
     
     const serie = getSerieFromItem(item);
     return matchesSearchTerm && serie === selectedSerie;
-  });
+  }), [data, searchTerm, selectedSerie]);
 
   const handleEditComplete = () => {
     setEditingStudent(null);
+    onEditComplete();
   };
 
   return (
@@ -99,7 +101,7 @@ export default function DataViewer({ data }: DataViewerProps) {
               <Accordion type="single" collapsible className="w-full p-4">
                 {filteredData.map((item) => (
                   <AccordionItem value={item.id} key={item.id}>
-                    <AccordionTrigger>{item.mainItem}</AccordionTrigger>
+                    <AccordionTrigger>{getStudentName(item)}</AccordionTrigger>
                     <AccordionContent>
                       <div className="flex justify-end mb-2 space-x-2">
                         <Button variant="ghost" size="icon" onClick={() => setDeclarationStudent(item)}>
@@ -112,10 +114,10 @@ export default function DataViewer({ data }: DataViewerProps) {
                         </Button>
                       </div>
                       <ul className="space-y-2 pl-4">
-                        {item.subItems && item.subItems.map((sub, subIndex) => (
-                          <li key={subIndex} className="text-sm">
-                            <span className="font-semibold text-muted-foreground">{sub.label}:</span>
-                            <span className="ml-2 text-foreground break-all">{sub.value}</span>
+                        {Object.entries(item.data).map(([label, value]) => (
+                          <li key={label} className="text-sm">
+                            <span className="font-semibold text-muted-foreground">{label}:</span>
+                            <span className="ml-2 text-foreground break-all">{value}</span>
                           </li>
                         ))}
                       </ul>

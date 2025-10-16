@@ -31,14 +31,11 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
   }, []);
 
   const getStudentValue = (label: string): string => {
-    if (label.toLowerCase() === 'nome completo') {
-      return student.mainItem;
-    }
-    const item = student.subItems.find(sub => sub.label.toLowerCase() === label.toLowerCase());
-    return item?.value || '';
+    const key = Object.keys(student.data).find(k => k.toLowerCase() === label.toLowerCase());
+    return key ? student.data[key] : '';
   };
   
-  const nomeCompleto = student.mainItem;
+  const nomeCompleto = getStudentValue('nome completo');
   const dataNascimento = getStudentValue('data nascimento');
   const serie = getStudentValue('serie');
   const turma = getStudentValue('turma');
@@ -127,7 +124,7 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
             <DialogTitle>Gerar Declaração</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p>Clique em "Exportar PDF" para gerar e baixar a declaração para {student.mainItem}.</p>
+            <p>Clique em "Exportar PDF" para gerar e baixar a declaração para <strong>{nomeCompleto}</strong>.</p>
           </div>
           <DialogFooter>
             <DialogClose asChild>

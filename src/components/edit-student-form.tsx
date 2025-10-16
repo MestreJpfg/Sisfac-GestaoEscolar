@@ -32,12 +32,7 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
   const { toast } = useToast();
 
   useEffect(() => {
-    const initialData = student.subItems.reduce((acc, item) => {
-      acc[item.label] = item.value;
-      return acc;
-    }, {} as Record<string, string>);
-    initialData['Nome do Aluno'] = student.mainItem;
-    setFormData(initialData);
+    setFormData(student.data || {});
   }, [student]);
 
   const handleInputChange = (label: string, value: string) => {
@@ -55,15 +50,8 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
     try {
       const studentRef = doc(firestore, "students", student.id);
       
-      const newMainItem = formData['Nome do Aluno'] || student.mainItem;
-      const newSubItems = student.subItems.map(item => ({
-        ...item,
-        value: formData[item.label] !== undefined ? formData[item.label] : item.value,
-      }));
-
       await updateDoc(studentRef, {
-        mainItem: newMainItem,
-        subItems: newSubItems
+        data: formData
       });
 
       toast({
@@ -87,31 +75,20 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="w-[95%] sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Editar Aluno: {student.mainItem}</DialogTitle>
+          <DialogTitle>Editar Aluno: {student.data['Nome Completo'] || ''}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <ScrollArea className="h-96 pr-6">
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-                <Label htmlFor="mainItem" className="sm:text-right">
-                  Nome do Aluno
-                </Label>
-                <Input
-                  id="mainItem"
-                  value={formData['Nome do Aluno'] || ''}
-                  onChange={(e) => handleInputChange('Nome do Aluno', e.target.value)}
-                  className="sm:col-span-3"
-                />
-              </div>
-              {student.subItems.map((item, index) => (
+              {Object.keys(student.data).map((key, index) => (
                 <div key={index} className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-                  <Label htmlFor={`subItem-${index}`} className="sm:text-right">
-                    {item.label}
+                  <Label htmlFor={`item-${index}`} className="sm:text-right break-words">
+                    {key}
                   </Label>
                   <Input
-                    id={`subItem-${index}`}
-                    value={formData[item.label] || ''}
-                    onChange={(e) => handleInputChange(item.label, e.target.value)}
+                    id={`item-${index}`}
+                    value={formData[key] || ''}
+                    onChange={(e) => handleInputChange(key, e.target.value)}
                     className="sm:col-span-3"
                   />
                 </div>
