@@ -85,46 +85,46 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] md:max-w-lg">
+      <DialogContent className="w-[95%] sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Editar Aluno: {student.mainItem}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <ScrollArea className="h-96 pr-6">
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="mainItem" className="text-right">
+              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
+                <Label htmlFor="mainItem" className="sm:text-right">
                   Nome do Aluno
                 </Label>
                 <Input
                   id="mainItem"
                   value={formData['Nome do Aluno'] || ''}
                   onChange={(e) => handleInputChange('Nome do Aluno', e.target.value)}
-                  className="col-span-3"
+                  className="sm:col-span-3"
                 />
               </div>
               {student.subItems.map((item, index) => (
-                <div key={index} className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor={`subItem-${index}`} className="text-right">
+                <div key={index} className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
+                  <Label htmlFor={`subItem-${index}`} className="sm:text-right">
                     {item.label}
                   </Label>
                   <Input
                     id={`subItem-${index}`}
                     value={formData[item.label] || ''}
                     onChange={(e) => handleInputChange(item.label, e.target.value)}
-                    className="col-span-3"
+                    className="sm:col-span-3"
                   />
                 </div>
               ))}
             </div>
           </ScrollArea>
-          <DialogFooter className="mt-4">
+          <DialogFooter className="mt-4 flex-col sm:flex-row space-y-2 sm:space-y-0">
             <DialogClose asChild>
-              <Button type="button" variant="secondary" onClick={onClose}>
+              <Button type="button" variant="secondary" onClick={onClose} className="w-full sm:w-auto">
                 Cancelar
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Salvar Alterações
             </Button>

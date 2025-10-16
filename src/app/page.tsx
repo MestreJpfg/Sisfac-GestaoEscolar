@@ -35,7 +35,7 @@ export default function Home() {
   const hasData = data && data.length > 0;
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 md:p-12 lg:p-24 bg-background">
+    <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 md:p-8 bg-background">
       <div className="w-full max-w-4xl mx-auto">
         <header className="text-center mb-8 flex flex-col items-center">
           <div className="mb-4">
@@ -47,10 +47,10 @@ export default function Home() {
               className="rounded-md"
             />
           </div>
-          <h1 className="text-4xl font-bold tracking-tight text-primary font-headline">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary font-headline">
             Gestão de Alunos 2025
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-muted-foreground mt-2 text-sm sm:text-base">
             Localize as informações sobre um Aluno matriculado
           </p>
         </header>

@@ -67,7 +67,7 @@ export default function DataViewer({ data }: DataViewerProps) {
       <Card>
         <CardHeader>
           <CardTitle className="text-primary">Alunos Matriculados</CardTitle>
-          <div className="grid sm:grid-cols-2 gap-4 mt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
@@ -115,7 +115,7 @@ export default function DataViewer({ data }: DataViewerProps) {
                         {item.subItems && item.subItems.map((sub, subIndex) => (
                           <li key={subIndex} className="text-sm">
                             <span className="font-semibold text-muted-foreground">{sub.label}:</span>
-                            <span className="ml-2 text-foreground">{sub.value}</span>
+                            <span className="ml-2 text-foreground break-all">{sub.value}</span>
                           </li>
                         ))}
                       </ul>
