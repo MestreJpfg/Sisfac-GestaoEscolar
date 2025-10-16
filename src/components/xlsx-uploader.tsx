@@ -57,8 +57,11 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
         }
 
         const headers = json[0].map(h => String(h ?? '').trim());
-        const studentNameHeader = headers[3] || "Nome Completo";
-        headers[3] = "Nome Completo";
+        const studentNameHeader = "Nome Completo";
+        if (!headers.includes(studentNameHeader) && headers.length > 3) {
+          headers[3] = studentNameHeader;
+        }
+
 
         const rows = json.slice(1);
 
@@ -71,6 +74,7 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
             let value = '';
 
             if (cellValue instanceof Date) {
+              // Assuming column with index 11 is a date that needs dd/MM/yyyy format
               if (index === 11) { 
                 value = format(cellValue, 'dd/MM/yyyy');
               } else {
@@ -171,7 +175,7 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFileChange(e.dataTransfer.files[0]);
     }
-  }, [handleFileChange]);
+  }, [processAndSaveFile]);
   
   const handleClick = () => {
     inputRef.current?.click();
