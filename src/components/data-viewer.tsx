@@ -22,12 +22,15 @@ interface DataViewerProps {
 }
 
 const getSerieFromItem = (item: DataItem): string | undefined => {
+  if (!item.data) {
+    return undefined;
+  }
   const serieKey = Object.keys(item.data).find(k => k.toLowerCase().includes('serie'));
   return serieKey ? item.data[serieKey] : undefined;
 }
 
 const getStudentName = (item: DataItem): string => {
-  return item.data['Nome Completo'] || 'Aluno sem nome';
+  return item.data?.['Nome Completo'] || 'Aluno sem nome';
 }
 
 export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
@@ -114,7 +117,7 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
                         </Button>
                       </div>
                       <ul className="space-y-2 pl-4">
-                        {Object.entries(item.data).map(([label, value]) => (
+                        {item.data && Object.entries(item.data).map(([label, value]) => (
                           <li key={label} className="text-sm">
                             <span className="font-semibold text-muted-foreground">{label}:</span>
                             <span className="ml-2 text-foreground break-all">{value}</span>
