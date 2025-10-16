@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,14 @@ interface DeclarationGeneratorProps {
 
 const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) => {
   const declarationRef = useRef<HTMLDivElement>(null);
+  const [currentYear, setCurrentYear] = useState('');
+  const [currentDate, setCurrentDate] = useState('');
+
+  useEffect(() => {
+    const now = new Date();
+    setCurrentYear(now.getFullYear().toString());
+    setCurrentDate(now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }));
+  }, []);
 
   const getStudentValue = (label: string): string => {
     if (label.toLowerCase() === 'nome completo') {
@@ -35,9 +43,6 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
   const serie = getStudentValue('serie');
   const turma = getStudentValue('turma');
   const turno = getStudentValue('turno');
-  const anoAtual = new Date().getFullYear();
-  const dataAtual = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
-
 
   const handleExportToPdf = async () => {
     if (!declarationRef.current) return;
@@ -83,7 +88,7 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
                         textIndent: '1cm',
                     }}
                 >
-                    Declaro que <strong>{nomeCompleto}</strong>, nascido em {dataNascimento}, é aluno regularmente matriculado nesta Unidade Escolar, no {serie} {turma} {turno}, no ano letivo de {anoAtual}.
+                    Declaro que <strong>{nomeCompleto}</strong>, nascido em {dataNascimento}, é aluno regularmente matriculado nesta Unidade Escolar, no {serie} {turma} {turno}, no ano letivo de {currentYear}.
                 </div>
                 <div
                     style={{
@@ -109,7 +114,7 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
                         textAlign: 'right',
                     }}
                 >
-                    Fortaleza, {dataAtual}
+                    Fortaleza, {currentDate}
                 </div>
             </div>
         </div>
