@@ -8,7 +8,7 @@ import { Loader2, UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
 import { useFirestore } from "@/firebase";
-import { collection, writeBatch, doc } from "firebase/firestore";
+import { collection, writeBatch, doc, getDocs, query } from "firebase/firestore";
 
 interface XlsxUploaderProps {
   onUploadComplete: () => void;
@@ -96,14 +96,25 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
         } else {
             const batch = writeBatch(firestore);
             const studentsCollection = collection(firestore, "students");
+            
+            // 1. Fetch all existing documents to delete them
+            const existingStudentsSnapshot = await getDocs(query(studentsCollection));
+            existingStudentsSnapshot.forEach(doc => {
+              batch.delete(doc.ref);
+            });
+
+            // 2. Add new documents to the batch
             processedData.forEach((student) => {
                 const docRef = doc(studentsCollection);
                 batch.set(docRef, student);
             });
+
+            // 3. Commit the atomic operation
             await batch.commit();
+            
             toast({
                 title: "Sucesso!",
-                description: `${processedData.length} registros de alunos foram salvos no banco de dados.`,
+                description: `Dados anteriores removidos e ${processedData.length} novos registros foram salvos.`,
             });
             onUploadComplete();
         }
@@ -166,7 +177,7 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFileChange(e.dataTransfer.files[0]);
     }
-  }, []);
+  }, [handleFileChange]);
   
   const handleClick = () => {
     inputRef.current?.click();
@@ -176,7 +187,7 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
     return (
       <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Processando e salvando seu arquivo...</p>
+        <p className="mt-4 text-muted-foreground">Limpando dados antigos e salvando o novo arquivo...</p>
       </div>
     );
   }
