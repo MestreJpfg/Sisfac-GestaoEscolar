@@ -43,19 +43,16 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
 
-  const handleFile = useCallback(async (file: File) => {
-    if (!file) return;
-
-    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.csv')) {
+  const processAndSaveFile = async (file: File) => {
+    if (!firestore) {
       toast({
-        variant: "destructive",
-        title: "Tipo de Arquivo Inválido",
-        description: "Por favor, envie um arquivo .xlsx ou .csv válido.",
+        variant: 'destructive',
+        title: 'Erro de Conexão',
+        description: 'Não foi possível conectar ao banco de dados.',
       });
       return;
     }
 
-    setIsLoading(true);
     const reader = new FileReader();
 
     reader.onload = async (e) => {
@@ -144,24 +141,22 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
             description: "Não foram encontrados dados válidos na 4ª coluna para exibir.",
           });
         } else {
-            if (firestore) {
-                const batch = writeBatch(firestore);
-                const studentsCollection = collection(firestore, "students");
-                processedData.forEach((studentData) => {
-                    const docRef = doc(studentsCollection);
-                    // Firestore doesn't support 'undefined'. Convert to 'null'.
-                    const sanitizedData = JSON.parse(JSON.stringify(studentData, (key, value) =>
-                      value === undefined ? null : value
-                    ));
-                    batch.set(docRef, sanitizedData);
-                });
-                await batch.commit();
-                toast({
-                    title: "Sucesso!",
-                    description: "Os dados da planilha foram salvos no banco de dados.",
-                });
-                onUploadComplete();
-            }
+            const batch = writeBatch(firestore);
+            const studentsCollection = collection(firestore, "students");
+            processedData.forEach((studentData) => {
+                const docRef = doc(studentsCollection);
+                // Firestore doesn't support 'undefined'. Convert to 'null'.
+                const sanitizedData = JSON.parse(JSON.stringify(studentData, (key, value) =>
+                  value === undefined ? null : value
+                ));
+                batch.set(docRef, sanitizedData);
+            });
+            await batch.commit();
+            toast({
+                title: "Sucesso!",
+                description: "Os dados da planilha foram salvos no banco de dados.",
+            });
+            onUploadComplete();
         }
       } catch (error) {
         console.error(error);
@@ -185,7 +180,24 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
     };
 
     reader.readAsArrayBuffer(file);
-  }, [onUploadComplete, toast, firestore]);
+  }
+
+  const handleFile = useCallback(async (file: File | null) => {
+    if (!file) return;
+
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.csv')) {
+      toast({
+        variant: "destructive",
+        title: "Tipo de Arquivo Inválido",
+        description: "Por favor, envie um arquivo .xlsx ou .csv válido.",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    await processAndSaveFile(file);
+
+  }, [firestore, onUploadComplete, toast]);
 
   const handleDrag = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -249,7 +261,7 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
             type="file"
             accept=".xlsx, .csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, text/csv"
             className="hidden"
-            onChange={(e) => e.target.files && handleFile(e.target.files[0])}
+            onChange={(e) => handleFile(e.target.files ? e.target.files[0] : null)}
           />
         </div>
       </CardContent>
