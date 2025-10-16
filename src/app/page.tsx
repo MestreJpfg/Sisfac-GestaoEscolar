@@ -73,12 +73,10 @@ export default function Home() {
   
     setIsLoading(true);
     try {
-      // 1. Fetch all documents
       const studentsCollection = collection(firestore, "students");
       const q = query(studentsCollection);
       const querySnapshot = await getDocs(q);
       
-      // 2. Delete all documents in a batch
       if (!querySnapshot.empty) {
         const batch = writeBatch(firestore);
         querySnapshot.forEach(doc => {
@@ -87,7 +85,6 @@ export default function Home() {
         await batch.commit();
       }
   
-      // 3. Clear local state
       setData([]);
       
       toast({

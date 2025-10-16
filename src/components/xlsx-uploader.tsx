@@ -44,7 +44,6 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
         
-        // Using `defval: null` to handle empty cells gracefully
         const json: (string | number | Date | null)[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null });
         
         if (json.length < 2) {
@@ -58,21 +57,20 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
         }
 
         const headers = json[0].map(h => String(h ?? '').trim());
-        const studentNameHeader = headers[3] || "Nome Completo"; // Assuming 4th column is student name
-        headers[3] = "Nome Completo"; // Standardize the name column header
+        const studentNameHeader = headers[3] || "Nome Completo";
+        headers[3] = "Nome Completo";
 
         const rows = json.slice(1);
 
         const processedData = rows.map(row => {
           const rowData: Record<string, string> = {};
           headers.forEach((header, index) => {
-            if (!header) return; // Skip columns with no header
+            if (!header) return;
 
             const cellValue = row[index];
             let value = '';
 
             if (cellValue instanceof Date) {
-              // Check if it's the 12th column (index 11)
               if (index === 11) { 
                 value = format(cellValue, 'dd/MM/yyyy');
               } else {
@@ -85,7 +83,7 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
             rowData[header] = value;
           });
           return { data: rowData };
-        }).filter(item => item.data[studentNameHeader]); // Filter out rows without a student name
+        }).filter(item => item.data[studentNameHeader]);
 
         if (processedData.length === 0) {
           toast({
@@ -97,19 +95,16 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
             const batch = writeBatch(firestore);
             const studentsCollection = collection(firestore, "students");
             
-            // 1. Fetch all existing documents to delete them
             const existingStudentsSnapshot = await getDocs(query(studentsCollection));
             existingStudentsSnapshot.forEach(doc => {
               batch.delete(doc.ref);
             });
 
-            // 2. Add new documents to the batch
             processedData.forEach((student) => {
                 const docRef = doc(studentsCollection);
                 batch.set(docRef, student);
             });
 
-            // 3. Commit the atomic operation
             await batch.commit();
             
             toast({
@@ -127,7 +122,6 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
         });
       } finally {
         setIsLoading(false);
-        // Reset file input to allow re-uploading the same file
         if(inputRef.current) {
           inputRef.current.value = "";
         }
