@@ -32,7 +32,11 @@ export default function Home() {
       });
       
       // Sort data alphabetically by student name
-      studentsData.sort((a, b) => (a.data['Nome Completo'] || "").localeCompare(a.data['Nome Completo'] || ""));
+      studentsData.sort((a, b) => {
+        const nameA = a.data ? a.data['Nome Completo'] || "" : "";
+        const nameB = b.data ? b.data['Nome Completo'] || "" : "";
+        return nameA.localeCompare(nameB);
+      });
 
       setData(studentsData);
     } catch (err: any) {
