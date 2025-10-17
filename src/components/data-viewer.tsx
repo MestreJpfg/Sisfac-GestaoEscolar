@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import EditStudentForm from "./edit-student-form";
 import DeclarationGenerator from "./declaration-generator";
+import { cn } from "@/lib/utils";
 
 export interface SubItem {
   label: string;
@@ -124,24 +125,24 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
                   <AccordionItem value={item.id} key={item.id}>
                     <AccordionTrigger>{getStudentName(item)}</AccordionTrigger>
                     <AccordionContent>
-                      <div className="flex justify-end mb-2 space-x-2">
-                        <Button variant="ghost" size="icon" onClick={() => setDeclarationStudent(item)}>
-                          <FileText className="h-4 w-4" />
-                          <span className="sr-only">Gerar Declaração</span>
+                      <div className="flex justify-end mb-4 space-x-2">
+                        <Button variant="outline" size="sm" onClick={() => setDeclarationStudent(item)}>
+                          <FileText className="mr-2 h-4 w-4" />
+                          Declaração
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setEditingStudent(item)}>
-                          <Pencil className="h-4 w-4" />
-                          <span className="sr-only">Editar</span>
+                        <Button variant="outline" size="sm" onClick={() => setEditingStudent(item)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Editar
                         </Button>
                       </div>
-                      <ul className="space-y-2 pl-4">
-                        {item.subItems && Array.isArray(item.subItems) ? item.subItems.map((subItem) => (
-                          <li key={subItem.label} className="text-sm">
-                            <span className="font-semibold text-muted-foreground">{subItem.label}:</span>
-                            <span className="ml-2 text-foreground break-all">{subItem.value}</span>
-                          </li>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 p-4 bg-muted/30 rounded-md border">
+                        {item.subItems && Array.isArray(item.subItems) ? item.subItems.map((subItem, index) => (
+                          <div key={subItem.label} className={cn("flex flex-col", subItem.value ? 'opacity-100' : 'opacity-50')}>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate" title={subItem.label}>{subItem.label}</p>
+                            <p className="text-sm text-foreground break-words">{subItem.value || "Não informado"}</p>
+                          </div>
                         )) : null}
-                      </ul>
+                      </div>
                     </AccordionContent>
                   </AccordionItem>
                 ))}
