@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,13 +45,13 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
   const handleExportToPdf = async () => {
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pagedisclaimer.pageSize.getHeight();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
     
     // Adiciona a imagem de fundo (template)
     const img = new Image();
     img.src = '/declaracao-template.png';
     img.onload = () => {
-      pdf.addImage(img, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
+      pdf.addImage(img, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'MEDIUM');
       
       // Adiciona o texto sobre a imagem
       pdf.setFont('helvetica', 'normal');
@@ -93,8 +93,6 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
 
   return (
     <>
-      {/* O div oculto para renderização não é mais necessário */}
-      
       {/* Visible Dialog to inform the user */}
       <Dialog open={true} onOpenChange={onClose}>
         <DialogContent>
