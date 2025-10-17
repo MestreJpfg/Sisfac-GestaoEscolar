@@ -45,8 +45,15 @@ export default function AiAssistant() {
     setIsLoading(true);
 
     try {
+      // Convert the frontend message format to the format expected by the Genkit flow.
+      // The role 'bot' used in the frontend state must be mapped to 'model' for the AI history.
+      const history = messages.map(m => ({
+        role: m.role === 'bot' ? 'model' : 'user',
+        content: [{ text: m.text }]
+      }));
+      
       const assistantInput: KnowledgeAssistantInput = {
-        history: messages.map(m => ({ role: m.role, content: [{ text: m.text }]})),
+        history,
         prompt: input
       };
       
