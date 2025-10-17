@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
@@ -46,13 +46,6 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
   const [selectedSerie, setSelectedSerie] = useState<string>("all");
   const [editingStudent, setEditingStudent] = useState<DataItem | null>(null);
   const [declarationStudent, setDeclarationStudent] = useState<DataItem | null>(null);
-  const [currentDateTime, setCurrentDateTime] = useState('');
-
-  useEffect(() => {
-    setCurrentDateTime(new Date().toLocaleDateString('pt-BR', {
-      dateStyle: 'full',
-    }));
-  }, []);
 
   const series = useMemo(() => {
     const allSeries = data.reduce((acc, item) => {
@@ -116,9 +109,6 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
           <div>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-foreground">Informações do Aluno</h3>
-              {currentDateTime && (
-                <p className="text-sm text-muted-foreground text-right">{currentDateTime}</p>
-              )}
             </div>
             <ScrollArea className="h-96 w-full rounded-md border">
               <Accordion type="single" collapsible className="w-full p-4">
