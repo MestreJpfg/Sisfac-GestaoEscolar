@@ -13,6 +13,8 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { type DataItem } from './data-viewer';
+import { useIsMobile } from '@/hooks/use-mobile';
+
 
 interface DeclarationGeneratorProps {
   student: DataItem;
@@ -23,6 +25,8 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
   const [currentYear, setCurrentYear] = useState('');
   const [currentDate, setCurrentDate] = useState('');
   const [isClient, setIsClient] = useState(false);
+  const isMobile = useIsMobile();
+
 
   useEffect(() => {
     setIsClient(true);
@@ -71,8 +75,20 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
 
       const dateYPosition = 210;
       pdf.text(`Fortaleza, ${currentDate}`, pdfWidth - rightMargin, dateYPosition, { align: 'right' });
+      
+      const fileName = `Declaracao_${nomeCompleto.replace(/ /g, '_')}.pdf`;
 
-      pdf.save(`Declaracao_${nomeCompleto.replace(/ /g, '_')}.pdf`);
+      if (isMobile && navigator.share) {
+        const pdfBlob = pdf.output('blob');
+        const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+        navigator.share({
+          files: [pdfFile],
+          title: `Declaração de ${nomeCompleto}`,
+          text: `Segue em anexo a declaração para ${nomeCompleto}.`,
+        }).catch((error) => console.log('Erro ao compartilhar:', error));
+      } else {
+        pdf.save(fileName);
+      }
       onClose();
     };
 
@@ -108,7 +124,7 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
               </Button>
             </DialogClose>
             <Button type="button" onClick={handleExportToPdf}>
-              Exportar PDF
+              {isMobile ? 'Partilhar PDF' : 'Exportar PDF'}
             </Button>
           </DialogFooter>
         </DialogContent>
