@@ -59,28 +59,24 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
       pdf.setTextColor(0, 0, 0);
       pdf.setFontSize(12);
 
-      let yPosition = 95;
-      const text1 = `Declaramos, para os devidos fins, que o(a) aluno(a) ${nomeCompleto}, nascido(a) em ${dataNascimento}, está regularmente matriculado(a) nesta Unidade Escolar no ano letivo de ${currentYear}, cursando o ${serie} - Turma ${turma}, no período da ${turno}.`;
-      
-      const leftMargin = 25;
+      const leftMargin = 20;
       const rightMargin = 20;
       const textWidth = pdfWidth - leftMargin - rightMargin;
+      let yPosition = 65; 
+      
+      const text1 = `Declaramos, para os devidos fins, que o(a) aluno(a) ${nomeCompleto}, nascido(a) em ${dataNascimento}, está regularmente matriculado(a) nesta Unidade Escolar no ano letivo de ${currentYear}, cursando o ${serie} - Turma ${turma}, no período da ${turno}.`;
       
       const textLines1 = pdf.splitTextToSize(text1, textWidth);
       pdf.text(textLines1, leftMargin, yPosition, { align: 'left', lineHeightFactor: 1.5 });
       
-      yPosition += pdf.getTextDimensions(textLines1, { lineHeightFactor: 1.5 }).h + 10;
-      
-      const text2 = "Por ser verdade, firmamos a presente declaração.";
-      const textLines2 = pdf.splitTextToSize(text2, textWidth);
-      pdf.text(textLines2, leftMargin, yPosition, { align: 'left', lineHeightFactor: 1.5 });
-      
-      const dateYPosition = 250;
-      pdf.text(`Fortaleza, ${currentDate}`, pdfWidth / 2, dateYPosition, { align: 'center' });
+      yPosition += pdf.getTextDimensions(textLines1, { lineHeightFactor: 1.5 }).h + (4 * 5); // 4 linhas abaixo
 
-      const signatureYPosition = dateYPosition + 20;
-      pdf.line(pdfWidth / 2 - 50, signatureYPosition, pdfWidth / 2 + 50, signatureYPosition);
-      pdf.text("Direção Escolar", pdfWidth / 2, signatureYPosition + 5, { align: 'center' });
+      const obsText = "Obs: Frequência Bimestral em 100%";
+      const obsLines = pdf.splitTextToSize(obsText, textWidth);
+      pdf.text(obsLines, leftMargin, yPosition, { align: 'left', lineHeightFactor: 1.5 });
+
+      const dateYPosition = 210;
+      pdf.text(`Fortaleza, ${currentDate}`, pdf.internal.pageSize.getWidth() - rightMargin, dateYPosition, { align: 'right' });
 
       pdf.save(fileName);
       onClose();
@@ -92,7 +88,6 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
       img.onload = generatePdfContent;
       img.onerror = () => {
         console.error("Erro ao carregar a imagem do template. Gerando PDF sem imagem.");
-        // Call generatePdfContent anyway to create the PDF without the image
         generatePdfContent(); 
       };
     }
