@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -5,6 +6,17 @@ import Image from "next/image";
 import XlsxUploader from "@/components/xlsx-uploader";
 import DataViewer from "@/components/data-viewer";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
 import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from "@/firebase";
@@ -19,6 +31,9 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [randomQuote, setRandomQuote] = useState<{ quote: string; author: string } | null>(null);
+  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
@@ -108,6 +123,22 @@ export default function Home() {
     setIsLoading(false);
   };
 
+  const handleConfirmClear = () => {
+    if (passwordInput === "2910") {
+      setIsClearConfirmOpen(false);
+      setPasswordInput("");
+      handleClearAndReload();
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Senha Incorreta",
+        description: "A senha para limpar os dados está incorreta. A operação foi cancelada.",
+      });
+      setPasswordInput("");
+    }
+  };
+
+
   const hasData = data && data.length > 0;
 
   return (
@@ -155,7 +186,7 @@ export default function Home() {
             ) : (
               <div className="space-y-4">
                 <DataViewer data={data} onEditComplete={fetchData} />
-                 <Button onClick={handleClearAndReload} className="w-full" variant="outline">
+                 <Button onClick={() => setIsClearConfirmOpen(true)} className="w-full" variant="outline">
                   <Trash2 className="mr-2 h-4 w-4" />
                   Limpar dados e carregar novo arquivo
                 </Button>
@@ -165,6 +196,42 @@ export default function Home() {
         </div>
       </main>
       <AiAssistant />
+       <Dialog open={isClearConfirmOpen} onOpenChange={setIsClearConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Limpeza de Dados</DialogTitle>
+            <DialogDescription>
+              Esta ação removerá permanentemente todos os dados dos alunos. Para confirmar, por favor, insira a senha de 4 dígitos.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="password">Senha de Confirmação</Label>
+            <Input
+              id="password"
+              type="password"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              maxLength={4}
+              placeholder="****"
+              className="mt-2"
+            />
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" onClick={() => setPasswordInput("")}>
+                Cancelar
+              </Button>
+            </DialogClose>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmClear}
+            >
+              Confirmar e Limpar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
