@@ -15,16 +15,14 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Sparkles } from 'lucide-react';
 import { studentDataAssistant } from '@/ai/flows/studentDataAssistant';
-import { type DataItem } from './data-viewer';
 import { Card, CardContent } from './ui/card';
 
 interface AiAssistantProps {
   isOpen: boolean;
   onClose: () => void;
-  studentData: DataItem[];
 }
 
-export default function AiAssistant({ isOpen, onClose, studentData }: AiAssistantProps) {
+export default function AiAssistant({ isOpen, onClose }: AiAssistantProps) {
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState('');
@@ -44,6 +42,7 @@ export default function AiAssistant({ isOpen, onClose, studentData }: AiAssistan
     setResponse('');
 
     try {
+      // The flow now only expects the query.
       const result = await studentDataAssistant({ query });
       setResponse(result);
     } catch (error) {

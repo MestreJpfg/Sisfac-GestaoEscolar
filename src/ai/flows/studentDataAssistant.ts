@@ -24,14 +24,14 @@ export async function studentDataAssistant(input: StudentDataAssistantInput): Pr
   return studentDataAssistantFlow(input);
 }
 
-const prompt = ai.definePrompt({
+// This prompt now takes a simple string.
+const studentDataAssistantPrompt = ai.definePrompt({
   name: 'studentDataAssistantPrompt',
-  input: { schema: StudentDataAssistantInputSchema },
   prompt: `You are a helpful general-purpose assistant.
   The current date is ${new Date().toLocaleDateString('pt-BR')}.
 
   User's Question:
-  "{{{query}}}"
+  "{{{prompt}}}"
 
   Provide a clear and concise answer using your general knowledge.
   `,
@@ -44,7 +44,8 @@ const studentDataAssistantFlow = ai.defineFlow(
     outputSchema: StudentDataAssistantOutputSchema,
   },
   async (input) => {
-    const { output } = await prompt(input);
+    // We pass the query as a simple string to the prompt.
+    const { output } = await studentDataAssistantPrompt(input.query);
     
     // Handle cases where the model might return a null or undefined output
     if (output === null || output === undefined) {

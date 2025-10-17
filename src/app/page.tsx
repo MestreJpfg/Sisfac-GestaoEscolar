@@ -158,13 +158,10 @@ export default function Home() {
           </div>
         </div>
       </main>
-      {hasData && (
-        <AiAssistant
-          isOpen={isAssistantOpen}
-          onClose={() => setIsAssistantOpen(false)}
-          studentData={data}
-        />
-      )}
+      <AiAssistant
+        isOpen={isAssistantOpen}
+        onClose={() => setIsAssistantOpen(false)}
+      />
     </>
   );
 }
