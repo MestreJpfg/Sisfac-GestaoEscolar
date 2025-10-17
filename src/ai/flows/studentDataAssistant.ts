@@ -64,6 +64,10 @@ const studentDataAssistantFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await prompt(input);
-    return output!;
+    // Handle cases where the model might return a null or undefined output
+    if (output === null || output === undefined) {
+        return "Desculpe, não consegui encontrar uma resposta para sua pergunta.";
+    }
+    return output;
   }
 );
