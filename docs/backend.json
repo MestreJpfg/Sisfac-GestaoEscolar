@@ -5,16 +5,21 @@
       "type": "object",
       "description": "Represents a student's data imported from an XLSX file.",
       "properties": {
-        "data": {
+        "mainItem": {
+          "type": "string",
+          "description": "The main identifying information for the student, typically their full name."
+        },
+        "subItems": {
           "type": "object",
-          "description": "A map of key-value pairs representing the student's information from the spreadsheet.",
+          "description": "A map of key-value pairs representing other information from the spreadsheet.",
           "additionalProperties": {
             "type": "string"
           }
         }
       },
       "required": [
-        "data"
+        "mainItem",
+        "subItems"
       ]
     }
   },

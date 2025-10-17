@@ -13,7 +13,8 @@ import DeclarationGenerator from "./declaration-generator";
 
 export interface DataItem {
   id: string;
-  data: Record<string, string>;
+  mainItem: string;
+  subItems: Record<string, string>;
 }
 
 interface DataViewerProps {
@@ -22,15 +23,15 @@ interface DataViewerProps {
 }
 
 const getSerieFromItem = (item: DataItem): string | undefined => {
-  if (!item.data) {
+  if (!item.subItems) {
     return undefined;
   }
-  const serieKey = Object.keys(item.data).find(k => k.toLowerCase().includes('serie'));
-  return serieKey ? item.data[serieKey] : undefined;
+  const serieKey = Object.keys(item.subItems).find(k => k.toLowerCase().includes('serie'));
+  return serieKey ? item.subItems[serieKey] : undefined;
 }
 
 const getStudentName = (item: DataItem): string => {
-  return item.data?.['Nome Completo'] || 'Aluno sem nome';
+  return item.mainItem || 'Aluno sem nome';
 }
 
 export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
@@ -117,7 +118,7 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
                         </Button>
                       </div>
                       <ul className="space-y-2 pl-4">
-                        {item.data && Object.entries(item.data).map(([label, value]) => (
+                        {item.subItems && Object.entries(item.subItems).map(([label, value]) => (
                           <li key={label} className="text-sm">
                             <span className="font-semibold text-muted-foreground">{label}:</span>
                             <span className="ml-2 text-foreground break-all">{value}</span>

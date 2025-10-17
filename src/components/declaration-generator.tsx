@@ -33,12 +33,12 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
   }, []);
 
   const getStudentValue = (label: string): string => {
-    if (!student.data) return '';
-    const key = Object.keys(student.data).find(k => k.toLowerCase() === label.toLowerCase());
-    return key ? student.data[key] : '';
+    if (!student.subItems) return '';
+    const key = Object.keys(student.subItems).find(k => k.toLowerCase() === label.toLowerCase());
+    return key ? student.subItems[key] : '';
   };
   
-  const nomeCompleto = getStudentValue('nome completo');
+  const nomeCompleto = student.mainItem;
   const dataNascimento = getStudentValue('data nascimento');
   const serie = getStudentValue('serie');
   const turma = getStudentValue('turma');

@@ -35,8 +35,8 @@ export default function Home() {
       });
       
       studentsData.sort((a, b) => {
-        const nameA = a.data ? a.data['Nome Completo'] || "" : "";
-        const nameB = b.data ? b.data['Nome Completo'] || "" : "";
+        const nameA = a.mainItem || "";
+        const nameB = b.mainItem || "";
         return nameA.localeCompare(nameB);
       });
 

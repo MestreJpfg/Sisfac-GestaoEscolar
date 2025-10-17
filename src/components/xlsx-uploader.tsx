@@ -58,23 +58,23 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
         }
 
         const headers = json[0].map(h => String(h ?? '').trim());
-        const studentNameHeader = "Nome Completo";
-        if (!headers.includes(studentNameHeader) && headers.length > 3) {
-          headers[3] = studentNameHeader;
-        }
-
+        const mainItemHeaderIndex = 3; // Coluna 4 (index 3) "NOME DE REGISTRO CIVIL"
+        headers[mainItemHeaderIndex] = "NOME DE REGISTRO CIVIL";
+        
         const rows = json.slice(1);
 
         const processedData = rows.map(row => {
-          const rowData: Record<string, string> = {};
+          const mainItem = String(row[mainItemHeaderIndex] || '');
+          const subItems: Record<string, string> = {};
+
           headers.forEach((header, index) => {
-            if (!header) return;
+            if (!header || index === mainItemHeaderIndex) return;
 
             const cellValue = row[index];
             let value = '';
 
             if (cellValue instanceof Date) {
-              if (index === 11) { 
+              if (index === 11) { // Assuming index 11 is a date that needs dd/MM/yyyy format
                 value = format(cellValue, 'dd/MM/yyyy');
               } else {
                 value = cellValue.toISOString();
@@ -83,16 +83,16 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
               value = String(cellValue);
             }
             
-            rowData[header] = value;
+            subItems[header] = value;
           });
-          return { data: rowData };
-        }).filter(item => item.data[studentNameHeader]);
+          return { mainItem, subItems };
+        }).filter(item => item.mainItem);
 
         if (processedData.length === 0) {
           toast({
             variant: "destructive",
             title: "Nenhum Dado Válido",
-            description: `Não foram encontrados dados válidos na coluna "${studentNameHeader}".`,
+            description: `Não foram encontrados dados válidos na coluna "NOME DE REGISTRO CIVIL".`,
           });
         } else {
             const studentsCollection = collection(firestore, "users", user.uid, "students");
@@ -179,7 +179,7 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFileChange(e.dataTransfer.files[0]);
     }
-  }, [processAndSaveFile]);
+  }, []);
   
   const handleClick = () => {
     inputRef.current?.click();
