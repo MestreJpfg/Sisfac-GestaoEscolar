@@ -56,23 +56,20 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
     const generatePdfContent = () => {
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(0, 0, 0);
+      pdf.setFontSize(12);
 
       // Corpo do texto
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'normal');
-      
       const text1 = `Declaramos, para os devidos fins, que o(a) aluno(a) ${nomeCompleto}, nascido(a) em ${dataNascimento}, está regularmente matriculado(a) nesta Unidade Escolar no ano letivo de ${currentYear}, cursando o ${serie} - Turma ${turma}, no período da ${turno}.`;
-      const textLines1 = pdf.splitTextToSize(text1, textWidth); 
-      
-      let yPosition = 95;
+      const textLines1 = pdf.splitTextToSize(text1, textWidth);
 
+      let yPosition = 95;
       pdf.text(textLines1, leftMargin, yPosition, { align: 'left', lineHeightFactor: 1.5 });
-      yPosition += pdf.getTextDimensions(textLines1, { lineHeightFactor: 1.5 }).h + (10 * 4); 
+      yPosition += pdf.getTextDimensions(textLines1, { lineHeightFactor: 1.5 }).h + (10 * 4);
 
       const observationText = "Obs: Frequência Bimestral em 100%";
       pdf.text(observationText, leftMargin, yPosition);
 
-      const dateYPosition = 230;
+      const dateYPosition = 210;
       pdf.text(`Fortaleza, ${currentDate}`, pdfWidth - rightMargin, dateYPosition, { align: 'right' });
 
       pdf.save(`Declaracao_${nomeCompleto.replace(/ /g, '_')}.pdf`);
