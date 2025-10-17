@@ -13,5 +13,7 @@ import { ai } from './genkit';
 
 // Import all flows here so they are discoverable by the developer UI.
 import './flows/knowledgeAssistant';
+import './flows/studentDataAssistant';
+
 
 dev(ai);

@@ -8,6 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Bot, User, CornerDownLeft, Loader2 } from "lucide-react";
 import { knowledgeAssistant } from "@/ai/flows/knowledgeAssistant";
+import type { KnowledgeAssistantInput } from "@/ai/flows/studentDataAssistant";
+
 
 interface Message {
   role: "user" | "bot";
@@ -44,10 +46,12 @@ export default function AiAssistant() {
     setIsLoading(true);
 
     try {
-      const response = await knowledgeAssistant({
+      const assistantInput: KnowledgeAssistantInput = {
         history: messages.map(m => ({ role: m.role, content: [{ text: m.text }]})),
         prompt: input
-      });
+      };
+      
+      const response = await knowledgeAssistant(assistantInput);
 
       if (response.reply) {
         const botMessage: Message = { role: "bot", text: response.reply };

@@ -1,36 +1,17 @@
+'use server';
+
 /**
- * @fileoverview Defines a Genkit flow for a general-purpose knowledge assistant.
- *
- * This file sets up a conversational AI that can answer questions on a wide
- * range of topics like daily life, news, jokes, and games.
- *
- * It exports:
- * - `knowledgeAssistant`: The main server function to be called from the client.
- * - `KnowledgeAssistantInput`: The Zod schema for the flow's input.
- * - `KnowledgeAssistantOutput`: The Zod schema for the flow's output.
+ * @fileoverview Define a Genkit flow for a general-purpose knowledge assistant.
+ * This file contains the server-side logic for the AI assistant.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'zod';
-
-// Define the schema for the history of the conversation.
-const HistoryItemSchema = z.object({
-  role: z.enum(['user', 'bot']),
-  content: z.array(z.object({ text: z.string() })),
-});
-
-// Define the Zod schema for the flow's input.
-export const KnowledgeAssistantInput = z.object({
-  history: z.array(HistoryItemSchema).optional(),
-  prompt: z.string(),
-});
-export type KnowledgeAssistantInput = z.infer<typeof KnowledgeAssistantInput>;
-
-// Define the Zod schema for the flow's output.
-export const KnowledgeAssistantOutput = z.object({
-  reply: z.string(),
-});
-export type KnowledgeAssistantOutput = z.infer<typeof KnowledgeAssistantOutput>;
+import {
+  KnowledgeAssistantInput,
+  KnowledgeAssistantOutput,
+  KnowledgeAssistantInputSchema,
+  KnowledgeAssistantOutputSchema
+} from './studentDataAssistant';
 
 // Define the main prompt for the AI assistant.
 const knowledgeAssistantPrompt = ai.definePrompt(
@@ -40,7 +21,7 @@ const knowledgeAssistantPrompt = ai.definePrompt(
     system:
       'Você é um assistente de IA amigável e prestativo. Sua tarefa é conversar com o usuário sobre uma variedade de tópicos, como cotidiano, notícias, piadas, jogos e muito mais. Responda de forma concisa e envolvente. Você deve ser capaz de manter uma conversa fluida e natural.',
     output: {
-      schema: KnowledgeAssistantOutput,
+      schema: KnowledgeAssistantOutputSchema,
     },
   },
   async (input: KnowledgeAssistantInput) => {
@@ -57,13 +38,12 @@ const knowledgeAssistantPrompt = ai.definePrompt(
   }
 );
 
-
 // Define the main Genkit flow.
 const knowledgeAssistantFlow = ai.defineFlow(
   {
     name: 'knowledgeAssistantFlow',
-    inputSchema: KnowledgeAssistantInput,
-    outputSchema: KnowledgeAssistantOutput,
+    inputSchema: KnowledgeAssistantInputSchema,
+    outputSchema: KnowledgeAssistantOutputSchema,
   },
   async (input) => {
     // Call the prompt with the validated input.
