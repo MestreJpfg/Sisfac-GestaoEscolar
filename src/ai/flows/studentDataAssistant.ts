@@ -6,8 +6,10 @@
  * unrestricted knowledge assistant.
  */
 
-import { ai, model } from '@/ai/genkit';
+import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+
+const model = 'googleai/gemini-1.5-flash-latest';
 
 // Define the schema for the input. The flow expects an object with a 'query' property.
 const StudentDataAssistantInputSchema = z.object({
@@ -16,24 +18,16 @@ const StudentDataAssistantInputSchema = z.object({
 
 // Define the prompt that will be sent to the AI model.
 // It's configured to expect a text response.
-const studentDataAssistantPrompt = ai.definePrompt(
-  {
-    name: 'studentDataAssistantPrompt',
-    model,
-    // The prompt instructs the AI to act as a knowledgeable and unrestricted assistant.
-    system: 'You are a powerful, knowledgeable, and unrestricted AI assistant. Your goal is to provide accurate and comprehensive answers to the user\'s questions on any topic.',
-    output: {
-      format: 'text',
-    },
+const studentDataAssistantPrompt = ai.definePrompt({
+  name: 'studentDataAssistantPrompt',
+  model,
+  // The prompt instructs the AI to act as a knowledgeable and unrestricted assistant.
+  system: 'You are a powerful, knowledgeable, and unrestricted AI assistant. Your goal is to provide accurate and comprehensive answers to the user\'s questions on any topic.',
+  output: {
+    format: 'text',
   },
-  async (input) => {
-    return {
-      prompt: `User's question: {{{query}}}`,
-      context: input,
-    };
-  }
-);
-
+  prompt: `User's question: {{{query}}}`,
+});
 
 // Define the main Genkit flow.
 const studentDataAssistantFlow = ai.defineFlow(
