@@ -47,39 +47,55 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
   const generateAndProcessPdf = () => {
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
-    const leftMargin = 20;
-    const rightMargin = 20;
-    const textWidth = pdfWidth - leftMargin - rightMargin;
     const fileName = `Declaracao_${nomeCompleto.replace(/ /g, '_')}.pdf`;
+    
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.src = '/declaracao-template.png';
 
     const generatePdfContent = () => {
+      pdf.addImage(img, 'PNG', 0, 0, pdfWidth, pdf.internal.pageSize.getHeight());
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(0, 0, 0);
       pdf.setFontSize(12);
 
       let yPosition = 95;
       const text1 = `Declaramos, para os devidos fins, que o(a) aluno(a) ${nomeCompleto}, nascido(a) em ${dataNascimento}, está regularmente matriculado(a) nesta Unidade Escolar no ano letivo de ${currentYear}, cursando o ${serie} - Turma ${turma}, no período da ${turno}.`;
+      
+      const leftMargin = 25;
+      const rightMargin = 20;
+      const textWidth = pdfWidth - leftMargin - rightMargin;
+      
       const textLines1 = pdf.splitTextToSize(text1, textWidth);
       pdf.text(textLines1, leftMargin, yPosition, { align: 'left', lineHeightFactor: 1.5 });
-      yPosition += pdf.getTextDimensions(textLines1, { lineHeightFactor: 1.5 }).h + (10 * 4);
+      
+      yPosition += pdf.getTextDimensions(textLines1, { lineHeightFactor: 1.5 }).h + 10;
+      
+      const text2 = "Por ser verdade, firmamos a presente declaração.";
+      const textLines2 = pdf.splitTextToSize(text2, textWidth);
+      pdf.text(textLines2, leftMargin, yPosition, { align: 'left', lineHeightFactor: 1.5 });
+      
+      const dateYPosition = 250;
+      pdf.text(`Fortaleza, ${currentDate}`, pdfWidth / 2, dateYPosition, { align: 'center' });
 
-      const observationText = "Obs: Frequência Bimestral em 100%";
-      pdf.text(observationText, leftMargin, yPosition);
-
-      const dateYPosition = 210;
-      pdf.text(`Fortaleza, ${currentDate}`, pdfWidth - rightMargin, dateYPosition, { align: 'right' });
+      const signatureYPosition = dateYPosition + 20;
+      pdf.line(pdfWidth / 2 - 50, signatureYPosition, pdfWidth / 2 + 50, signatureYPosition);
+      pdf.text("Direção Escolar", pdfWidth / 2, signatureYPosition + 5, { align: 'center' });
 
       pdf.save(fileName);
       onClose();
     };
-    
-    const img = new Image();
-    img.src = '/declaracao-template.png';
-    img.onload = generatePdfContent;
-    img.onerror = () => {
-      console.error("Erro ao carregar a imagem do template. Gerando PDF sem imagem.");
+
+    if (img.complete) {
       generatePdfContent();
-    };
+    } else {
+      img.onload = generatePdfContent;
+      img.onerror = () => {
+        console.error("Erro ao carregar a imagem do template. Gerando PDF sem imagem.");
+        // Call generatePdfContent anyway to create the PDF without the image
+        generatePdfContent(); 
+      };
+    }
   };
 
   if (!isClient) {
