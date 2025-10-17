@@ -23,14 +23,17 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
   const declarationRef = useRef<HTMLDivElement>(null);
   const [currentYear, setCurrentYear] = useState('');
   const [currentDate, setCurrentDate] = useState('');
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const now = new Date();
     setCurrentYear(now.getFullYear().toString());
     setCurrentDate(now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }));
   }, []);
 
   const getStudentValue = (label: string): string => {
+    if (!student.data) return '';
     const key = Object.keys(student.data).find(k => k.toLowerCase() === label.toLowerCase());
     return key ? student.data[key] : '';
   };
@@ -53,6 +56,10 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
     pdf.save(`${nomeCompleto}.pdf`);
     onClose();
   };
+
+  if (!isClient) {
+    return null; // Don't render anything on the server or during initial hydration
+  }
 
   return (
     <>
