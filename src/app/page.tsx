@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import XlsxUploader from "@/components/xlsx-uploader";
 import DataViewer from "@/components/data-viewer";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
-import { useFirestore } from "@/firebase";
+import { useFirestore, useUser } from "@/firebase";
 import { collection, getDocs, query, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2 } from "lucide-react";
@@ -17,13 +17,14 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
   const { toast } = useToast();
 
-  const fetchData = async () => {
-    if (!firestore) return;
+  const fetchData = useCallback(async () => {
+    if (!firestore || !user) return;
     setIsLoading(true);
     try {
-      const studentsCollection = collection(firestore, "students");
+      const studentsCollection = collection(firestore, "users", user.uid, "students");
       const q = query(studentsCollection);
       const querySnapshot = await getDocs(q);
       const studentsData: DataItem[] = [];
@@ -31,7 +32,6 @@ export default function Home() {
         studentsData.push({ id: doc.id, ...doc.data() } as DataItem);
       });
       
-      // Sort data alphabetically by student name
       studentsData.sort((a, b) => {
         const nameA = a.data ? a.data['Nome Completo'] || "" : "";
         const nameB = b.data ? b.data['Nome Completo'] || "" : "";
@@ -45,16 +45,18 @@ export default function Home() {
       toast({
         variant: "destructive",
         title: "Erro ao carregar dados",
-        description: "Não foi possível buscar as informações dos alunos.",
+        description: err.message || "Não foi possível buscar as informações dos alunos.",
       });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [firestore, user, toast]);
 
   useEffect(() => {
-    fetchData();
-  }, [firestore]);
+    if (!isUserLoading) {
+      fetchData();
+    }
+  }, [isUserLoading, fetchData]);
 
 
   const handleUploadComplete = () => {
@@ -62,18 +64,18 @@ export default function Home() {
   };
 
   const handleClearAndReload = async () => {
-    if (!firestore) {
+    if (!firestore || !user) {
       toast({
         variant: "destructive",
         title: "Erro de Conexão",
-        description: "O serviço do banco de dados não está disponível.",
+        description: "O serviço do banco de dados não está disponível ou você não está autenticado.",
       });
       return;
     }
   
     setIsLoading(true);
     try {
-      const studentsCollection = collection(firestore, "students");
+      const studentsCollection = collection(firestore, "users", user.uid, "students");
       const q = query(studentsCollection);
       const querySnapshot = await getDocs(q);
       
@@ -92,7 +94,7 @@ export default function Home() {
         description: "Os dados anteriores foram limpos. Você já pode carregar um novo arquivo.",
       });
 
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error clearing data:", err);
       toast({
         variant: "destructive",
@@ -128,7 +130,7 @@ export default function Home() {
         </header>
 
         <div className="w-full">
-          {isLoading ? (
+          {isLoading || isUserLoading ? (
             <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
               <p className="mt-4 text-muted-foreground">Carregando dados...</p>

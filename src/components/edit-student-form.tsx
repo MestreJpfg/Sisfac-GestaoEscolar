@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { doc, updateDoc } from "firebase/firestore";
-import { useFirestore } from "@/firebase";
+import { useFirestore, useUser } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,6 +29,7 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -41,14 +42,14 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firestore) {
-      toast({ variant: "destructive", title: "Erro", description: "O serviço do banco de dados não está disponível." });
+    if (!firestore || !user) {
+      toast({ variant: "destructive", title: "Erro", description: "O serviço do banco de dados não está disponível ou o usuário não está autenticado." });
       return;
     }
 
     setIsLoading(true);
     try {
-      const studentRef = doc(firestore, "students", student.id);
+      const studentRef = doc(firestore, "users", user.uid, "students", student.id);
       
       await updateDoc(studentRef, {
         data: formData

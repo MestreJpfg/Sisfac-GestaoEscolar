@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
-import { useFirestore } from "@/firebase";
+import { useFirestore, useUser } from "@/firebase";
 import { collection, writeBatch, doc, getDocs, query } from "firebase/firestore";
 
 interface XlsxUploaderProps {
@@ -20,15 +20,16 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
+  const { user } = useUser();
 
   const processAndSaveFile = async (file: File) => {
     setIsLoading(true);
 
-    if (!firestore) {
+    if (!firestore || !user) {
       toast({
         variant: 'destructive',
         title: 'Erro de Conexão',
-        description: 'Não foi possível conectar ao banco de dados.',
+        description: 'Não foi possível conectar ao banco de dados ou usuário não autenticado.',
       });
       setIsLoading(false);
       return;
@@ -97,7 +98,7 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
           });
         } else {
             const batch = writeBatch(firestore);
-            const studentsCollection = collection(firestore, "students");
+            const studentsCollection = collection(firestore, "users", user.uid, "students");
             
             const existingStudentsSnapshot = await getDocs(query(studentsCollection));
             existingStudentsSnapshot.forEach(doc => {
