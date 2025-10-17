@@ -46,18 +46,18 @@ const knowledgeAssistantFlow = ai.defineFlow(
     }));
 
     // Call the prompt with the validated input and history.
-    const { output } = await knowledgeAssistantPrompt(
+    const result = await knowledgeAssistantPrompt(
       { prompt: input.prompt },
       { history }
     );
 
     // If the model returns a null or undefined output, return a default error message.
-    if (output === null || output === undefined) {
+    if (!result || !result.reply) {
       return {
         reply: 'Desculpe, não consegui processar sua pergunta. Tente novamente.',
       };
     }
-    return output;
+    return result;
   }
 );
 
