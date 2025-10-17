@@ -40,14 +40,18 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
   const nomeCompleto = student.mainItem;
   const dataNascimento = getStudentValue('data nascimento');
   const serie = getStudentValue('serie');
-  const turma = getStudentValue('turma');
+  const turma = getStudentValue('classe'); // Corrigido para usar 'classe'
   const turno = getStudentValue('turno');
 
   const handleExportToPdf = async () => {
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
     
+    const leftMargin = 30;
+    const rightMargin = 30;
+    const textWidth = pdfWidth - leftMargin - rightMargin;
+    const paragraphIndent = 10; // 1cm
+
     const img = new Image();
     img.src = '/declaracao-template.png';
 
@@ -64,35 +68,39 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
       pdf.setFontSize(12);
       pdf.setFont('helvetica', 'normal');
       
-      const text = `Declaramos, para os devidos fins, que o(a) aluno(a) ${nomeCompleto}, nascido(a) em ${dataNascimento}, está regularmente matriculado(a) nesta Unidade Escolar no ano letivo de ${currentYear}, cursando o ${serie} - Turma ${turma}, no período da ${turno}.`;
-
-      const leftMargin = 30;
-      const rightMargin = 30;
-      const textWidth = pdfWidth - leftMargin - rightMargin;
+      const text1 = `Declaramos, para os devidos fins, que o(a) aluno(a) ${nomeCompleto}, nascido(a) em ${dataNascimento}, está regularmente matriculado(a) nesta Unidade Escolar no ano letivo de ${currentYear}, cursando o ${serie} - Turma ${turma}, no período da ${turno}.`;
+      const text2 = 'Por ser verdade, firmamos a presente declaração.';
       
-      const textLines = pdf.splitTextToSize(text, textWidth); 
-      pdf.text(textLines, leftMargin, 110, { align: 'justify', lineHeightFactor: 1.5 });
-
-      const textHeight = pdf.getTextDimensions(textLines).h;
-
-      pdf.text('Por ser verdade, firmamos a presente declaração.', leftMargin, 110 + textHeight + 10, { align: 'justify' });
+      const textLines1 = pdf.splitTextToSize(text1, textWidth - paragraphIndent); 
+      const textLines2 = pdf.splitTextToSize(text2, textWidth - paragraphIndent); 
       
-      // Data
-      pdf.text(`Fortaleza, ${currentDate}`, pdfWidth - rightMargin, pdfHeight - 80, { align: 'right' });
+      let yPosition = 110;
+
+      // Primeiro parágrafo com indentação
+      pdf.text(textLines1, leftMargin + paragraphIndent, yPosition, { align: 'left', lineHeightFactor: 1.5 });
+      yPosition += pdf.getTextDimensions(textLines1, { lineHeightFactor: 1.5 }).h + 5;
+
+      // Segundo parágrafo com indentação
+      pdf.text(textLines2, leftMargin + paragraphIndent, yPosition, { align: 'left', lineHeightFactor: 1.5 });
+      yPosition += pdf.getTextDimensions(textLines2, { lineHeightFactor: 1.5 }).h;
+      
+      // Data (Ajustada para alinhar à direita da área de texto)
+      const dateYPosition = yPosition + 20;
+      pdf.text(`Fortaleza, ${currentDate}`, leftMargin + textWidth, dateYPosition, { align: 'right' });
 
       // Linha para assinatura
-      const signatureLineY = pdfHeight - 60;
+      const signatureY = dateYPosition + 20;
       pdf.setLineWidth(0.5);
-      pdf.line(pdfWidth / 2 - 40, signatureLineY, pdfWidth / 2 + 40, signatureLineY);
+      pdf.line(pdfWidth / 2 - 40, signatureY, pdfWidth / 2 + 40, signatureY);
       pdf.setFontSize(10);
-      pdf.text('Direção Escolar', pdfWidth / 2, signatureLineY + 5, { align: 'center' });
+      pdf.text('Direção Escolar', pdfWidth / 2, signatureY + 5, { align: 'center' });
 
       pdf.save(`Declaracao_${nomeCompleto.replace(/ /g, '_')}.pdf`);
       onClose();
     };
 
     img.onload = () => {
-      pdf.addImage(img, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'MEDIUM');
+      pdf.addImage(img, 'JPEG', 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight(), undefined, 'MEDIUM');
       generatePdfContent();
     };
 
