@@ -6,6 +6,7 @@
  */
 
 import { ai } from '@/ai/genkit';
+import { z } from 'zod';
 import {
   KnowledgeAssistantInput,
   KnowledgeAssistantOutput,
@@ -19,23 +20,15 @@ const knowledgeAssistantPrompt = ai.definePrompt(
     name: 'knowledgeAssistantPrompt',
     // Instructions for the model on how to behave.
     system:
-      'Você é um assistente de IA amigável e prestativo. Sua tarefa é conversar com o usuário sobre uma variedade de tópicos, como cotidiano, notícias, piadas, jogos e muito mais. Responda de forma concisa e envolvente. Você deve ser capaz de manter uma conversa fluida e natural.',
+      'Você é um assistente de IA amigável e prestativo. Sua tarefa é conversar com o usuário sobre uma variedade de tópicos, como cotidiano, notícias, piadas, jogos e mais. Responda de forma concisa e envolvente. Você deve ser capaz de manter uma conversa fluida e natural.',
+    input: {
+      schema: z.object({ prompt: z.string() }),
+    },
     output: {
       schema: KnowledgeAssistantOutputSchema,
     },
   },
-  async (input: KnowledgeAssistantInput) => {
-    // Dynamically build the prompt history.
-    const history = (input.history ?? []).map(item => ({
-      role: item.role,
-      content: item.content,
-    }));
-
-    return {
-      history,
-      prompt: input.prompt,
-    };
-  }
+  async (input) => `{{{prompt}}}`
 );
 
 // Define the main Genkit flow.
@@ -46,8 +39,17 @@ const knowledgeAssistantFlow = ai.defineFlow(
     outputSchema: KnowledgeAssistantOutputSchema,
   },
   async (input) => {
-    // Call the prompt with the validated input.
-    const { output } = await knowledgeAssistantPrompt(input);
+    // Dynamically build the prompt history.
+    const history = (input.history ?? []).map(item => ({
+      role: item.role,
+      content: item.content,
+    }));
+
+    // Call the prompt with the validated input and history.
+    const { output } = await knowledgeAssistantPrompt(
+      { prompt: input.prompt },
+      { history }
+    );
 
     // If the model returns a null or undefined output, return a default error message.
     if (output === null || output === undefined) {
