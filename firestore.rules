@@ -1,40 +1,108 @@
+/**
+ * @fileoverview Firestore Security Rules for Prototyping.
+ *
+ * Core Philosophy:
+ * This ruleset prioritizes strict user-ownership and secure access. It assumes all data
+ * under `/users/{userId}` is private to that user, unless explicitly defined otherwise.
+ * Data shape validation is minimized to allow for rapid prototyping and iteration.
+ *
+ * Data Structure:
+ * Data is primarily nested under the `/users/{userId}` collection, representing
+ * user-specific data trees.
+ *
+ * Key Security Decisions:
+ * - Strict User Ownership: All data under `/users/{userId}` is accessible only to the
+ *   authenticated user with the matching UID.
+ * - No User Listing: Listing the `/users` collection is explicitly denied for security reasons.
+ * - Denormalization for Authorization:  Rules are structured to avoid costly `get()` calls
+ *   by ensuring authorization information is directly available within the document.
+ */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Enforces user-ownership for XLSX files stored under each user's dedicated path.
-     * @path /users/{userId}/xlsx_files/{fileId}
-     * @allow (create) - User 'user123' can create a new XLSX file under /users/user123/xlsx_files/file456 if request.auth.uid == 'user123' and the file's 'id' field also equals 'file456'.
-     * @allow (get, list) - User 'user123' can read/list XLSX files under /users/user123/xlsx_files/{fileId} if request.auth.uid == 'user123'.
-     * @allow (update, delete) - User 'user123' can update/delete XLSX file under /users/user123/xlsx_files/file456 if request.auth.uid == 'user123' and the file exists.
-     * @deny (create) - User 'user456' cannot create a new XLSX file under /users/user123/xlsx_files/file456, because request.auth.uid != 'user123'.
-     * @deny (get, list) - User 'user456' cannot read/list XLSX files under /users/user123/xlsx_files/{fileId}, because request.auth.uid != 'user123'.
-     * @deny (update, delete) - User 'user456' cannot update/delete XLSX file under /users/user123/xlsx_files/file456, because request.auth.uid != 'user123'.
-     * @principle Enforces document ownership for all operations.
+     * @description Root-level access restrictions. Listing all users is forbidden.
+     * @path /users
+     * @allow (get) Anyone can attempt to get a user document; the document-level rules will control access.
+     * @deny (list) Listing all user documents is forbidden.
+     * @principle Prevents unauthorized enumeration of user accounts.
      */
-    match /users/{userId}/xlsx_files/{fileId} {
-      // Helpers
-      function isSignedIn() {
-        return request.auth != null;
-      }
+    match /users {
+      allow get: if true;
+      allow list: if false;
+    }
 
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
-      // Read Permissions
-      allow get: if isSignedIn() && isOwner(userId);
-      allow list: if isSignedIn() && isOwner(userId);
-
-      // Write Permissions
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == fileId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+    /**
+     * @description Enforces user-specific data access for the /users/{userId} document.
+     * @path /users/{userId}
+     * @allow (create) A user can create their own document if the userId matches their auth UID.
+     * @allow (get) A user can get their own document if the userId matches their auth UID.
+     * @allow (update) A user can update their own document if the userId matches their auth UID and the document exists.
+     * @allow (delete) A user can delete their own document if the userId matches their auth UID and the document exists.
+     * @deny (create) A user cannot create a document with a userId that does not match their auth UID.
+     * @deny (get) A user cannot get a document with a userId that does not match their auth UID.
+     * @deny (update) A user cannot update a document with a userId that does not match their auth UID.
+     * @deny (delete) A user cannot delete a document with a userId that does not match their auth UID.
+     * @principle Enforces strict user-ownership.
+     */
+    match /users/{userId} {
+      allow create: if isOwner(userId);
+      allow get: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
       allow delete: if isExistingOwner(userId);
+      allow list: if false; // Listing all users is not permitted
+    }
+
+    /**
+     * @description Manages access to student data for a specific user.
+     * @path /users/{userId}/students/{studentId}
+     * @allow (create) A user can create a student document under their userId.
+     * @allow (get) A user can retrieve their own student document.
+     * @allow (list) A user can list their own student documents.
+     * @allow (update) A user can update a student document under their userId if the document exists.
+     * @allow (delete) A user can delete a student document under their userId if the document exists.
+     * @deny (create) A user cannot create a student document under another user's ID.
+     * @deny (get) A user cannot retrieve a student document under another user's ID.
+     * @deny (list) A user cannot list student documents under another user's ID.
+     * @deny (update) A user cannot update a student document under another user's ID.
+     * @deny (delete) A user cannot delete a student document under another user's ID.
+     * @principle Enforces user-specific data access.
+     */
+    match /users/{userId}/students/{studentId} {
+      allow create: if isOwner(userId);
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    // --- Helper Functions ---
+
+    /**
+     * @description Checks if the request is authenticated.
+     * @return {bool} True if the request is authenticated, false otherwise.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the authenticated user is the owner of the resource.
+     * @param {string} userId The user ID to compare with the authenticated user's UID.
+     * @return {bool} True if the authenticated user's UID matches the provided userId, false otherwise.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * @description Checks if the authenticated user is the owner of an existing resource.
+     * @param {string} userId The user ID to compare with the authenticated user's UID.
+     * @return {bool} True if the authenticated user's UID matches the provided userId and the resource exists, false otherwise.
+     */
+    function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
     }
   }
 }
