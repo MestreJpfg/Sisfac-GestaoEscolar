@@ -67,11 +67,11 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
       const text = `Declaramos, para os devidos fins, que o(a) aluno(a) ${nomeCompleto}, nascido(a) em ${dataNascimento}, está regularmente matriculado(a) nesta Unidade Escolar no ano letivo de ${currentYear}, cursando o ${serie} - Turma ${turma}, no período da ${turno}.`;
 
       const textLines = pdf.splitTextToSize(text, pdfWidth - 50); // Margens de 2.5cm
-      pdf.text(textLines, 25, 110, { align: 'justify', lineHeightFactor: 1.5 });
+      pdf.text(textLines, 5, 110, { align: 'justify', lineHeightFactor: 1.5 });
 
       const textHeight = pdf.getTextDimensions(textLines).h;
 
-      pdf.text('Por ser verdade, firmamos a presente declaração.', 25, 110 + textHeight + 10, { align: 'justify' });
+      pdf.text('Por ser verdade, firmamos a presente declaração.', 5, 110 + textHeight + 10, { align: 'justify' });
       
       // Data
       pdf.text(`Fortaleza, ${currentDate}`, pdfWidth - 25, pdfHeight - 80, { align: 'right' });
