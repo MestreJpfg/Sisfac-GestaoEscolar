@@ -86,7 +86,7 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
       <Card>
         <CardHeader>
           {currentDateTime && (
-            <p className="text-sm text-muted-foreground text-right">{currentDateTime}</p>
+            <p className="text-sm text-muted-foreground mb-2">{currentDateTime}</p>
           )}
           <CardTitle className="text-primary">Alunos Matriculados</CardTitle>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
