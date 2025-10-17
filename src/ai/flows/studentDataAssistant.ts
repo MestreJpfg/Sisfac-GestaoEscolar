@@ -31,7 +31,7 @@ const prompt = ai.definePrompt({
   prompt: `You are a helpful assistant. Your primary task is to answer questions based on the provided student data, but you can also answer general questions.
   The current date is ${new Date().toLocaleDateString('pt-BR')}.
 
-  If the question is about the students, analyze the student data provided in the JSON format below to answer.
+  First, analyze the student data provided in the JSON format below to answer the user's question.
 
   Student Data:
   {{{json studentData}}}
@@ -39,7 +39,8 @@ const prompt = ai.definePrompt({
   User's Question:
   "{{{query}}}"
 
-  Provide a clear and concise answer. If the data is insufficient to answer a student-related question, state that. For general questions, use your own knowledge.
+  Provide a clear and concise answer based on the data. If the data is insufficient to answer a student-related question, state that. 
+  If the question is clearly not about the student data (e.g., "what is the capital of France?"), then use your general knowledge to answer.
   `,
 });
 
