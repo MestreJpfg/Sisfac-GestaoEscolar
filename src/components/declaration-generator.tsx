@@ -67,7 +67,7 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
       let yPosition = 95; // Posição inicial Y ajustada (subiu)
 
       // Primeiro parágrafo sem indentação
-      pdf.text(textLines1, leftMargin, yPosition, { align: 'left', lineHeightFactor: 1.5 });
+      pdf.text(textLines1, leftMargin, yPosition, { align: 'justify', lineHeightFactor: 1.5 });
       yPosition += pdf.getTextDimensions(textLines1, { lineHeightFactor: 1.5 }).h + (10 * 4); // 4 linhas abaixo
 
       // Adiciona observação
