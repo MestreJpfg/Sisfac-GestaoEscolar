@@ -5,17 +5,19 @@ import Image from "next/image";
 import XlsxUploader from "@/components/xlsx-uploader";
 import DataViewer from "@/components/data-viewer";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
 import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from "@/firebase";
 import { collection, getDocs, query, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2 } from "lucide-react";
+import AiAssistant from "@/components/ai-assistant";
 
 export default function Home() {
   const [data, setData] = useState<DataItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
@@ -52,7 +54,7 @@ export default function Home() {
       setIsLoading(false);
     });
 
-  }, [firestore, user, toast]);
+  }, [firestore, user]);
 
   useEffect(() => {
     if (!isUserLoading && user && firestore) {
@@ -103,51 +105,66 @@ export default function Home() {
   const hasData = data && data.length > 0;
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 md:p-8 bg-background">
-      <div className="w-full max-w-4xl mx-auto">
-        <header className="text-center mb-8 flex flex-col items-center">
-          <div className="mb-4">
-            <Image
-              src="/logoyuri.png"
-              alt="Logo"
-              width={150}
-              height={50}
-              className="rounded-md"
-            />
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary font-headline">
-            Gestão de Alunos 2025
-          </h1>
-          <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-            Localize as informações sobre um Aluno matriculado
-          </p>
-        </header>
+    <>
+      <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 md:p-8 bg-background">
+        <div className="w-full max-w-4xl mx-auto">
+          <header className="text-center mb-8 flex flex-col items-center">
+            <div className="mb-4">
+              <Image
+                src="/logoyuri.png"
+                alt="Logo"
+                width={150}
+                height={50}
+                className="rounded-md"
+              />
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary font-headline">
+              Gestão de Alunos 2025
+            </h1>
+            <p className="text-muted-foreground mt-2 text-sm sm:text-base">
+              Localize as informações sobre um Aluno matriculado
+            </p>
+          </header>
 
-        <div className="w-full">
-          {isLoading || isUserLoading ? (
-            <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <p className="mt-4 text-muted-foreground">Carregando dados...</p>
-            </div>
-          ) : error ? (
-            <div className="text-destructive text-center p-8 bg-destructive/10 rounded-lg">
-              <p className="font-bold">Ocorreu um erro ao carregar os dados.</p>
-              <p className="text-sm">{error.message}</p>
-            </div>
-          )
-          : !hasData ? (
-            <XlsxUploader onUploadComplete={handleUploadComplete} />
-          ) : (
-            <div className="space-y-4">
-              <DataViewer data={data} onEditComplete={fetchData} />
-               <Button onClick={handleClearAndReload} className="w-full" variant="outline">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Limpar dados e carregar novo arquivo
-              </Button>
-            </div>
-          )}
+          <div className="w-full">
+            {isLoading || isUserLoading ? (
+              <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <p className="mt-4 text-muted-foreground">Carregando dados...</p>
+              </div>
+            ) : error ? (
+              <div className="text-destructive text-center p-8 bg-destructive/10 rounded-lg">
+                <p className="font-bold">Ocorreu um erro ao carregar os dados.</p>
+                <p className="text-sm">{error.message}</p>
+              </div>
+            )
+            : !hasData ? (
+              <XlsxUploader onUploadComplete={handleUploadComplete} />
+            ) : (
+              <div className="space-y-4">
+                 <div className="flex justify-end">
+                  <Button onClick={() => setIsAssistantOpen(true)}>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Assistente IA
+                  </Button>
+                </div>
+                <DataViewer data={data} onEditComplete={fetchData} />
+                 <Button onClick={handleClearAndReload} className="w-full" variant="outline">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Limpar dados e carregar novo arquivo
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+      {hasData && (
+        <AiAssistant
+          isOpen={isAssistantOpen}
+          onClose={() => setIsAssistantOpen(false)}
+          studentData={data}
+        />
+      )}
+    </>
   );
 }
