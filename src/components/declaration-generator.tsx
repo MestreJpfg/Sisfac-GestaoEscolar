@@ -49,7 +49,6 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
     const leftMargin = 20;
     const rightMargin = 20;
     const textWidth = pdfWidth - leftMargin - rightMargin;
-    const paragraphIndent = 10; // 1cm
 
     const img = new Image();
     img.src = '/declaracao-template.png';
@@ -58,22 +57,17 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(0, 0, 0);
 
-      // Título
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('DECLARAÇÃO', pdfWidth / 2, 90, { align: 'center' });
-
       // Corpo do texto
       pdf.setFontSize(12);
       pdf.setFont('helvetica', 'normal');
       
       const text1 = `Declaramos, para os devidos fins, que o(a) aluno(a) ${nomeCompleto}, nascido(a) em ${dataNascimento}, está regularmente matriculado(a) nesta Unidade Escolar no ano letivo de ${currentYear}, cursando o ${serie} - Turma ${turma}, no período da ${turno}.`;
-      const textLines1 = pdf.splitTextToSize(text1, textWidth - paragraphIndent); 
+      const textLines1 = pdf.splitTextToSize(text1, textWidth); 
       
-      let yPosition = 110;
+      let yPosition = 95; // Posição inicial Y ajustada (subiu)
 
-      // Primeiro parágrafo com indentação
-      pdf.text(textLines1, leftMargin + paragraphIndent, yPosition, { align: 'left', lineHeightFactor: 1.5 });
+      // Primeiro parágrafo sem indentação
+      pdf.text(textLines1, leftMargin, yPosition, { align: 'left', lineHeightFactor: 1.5 });
       yPosition += pdf.getTextDimensions(textLines1, { lineHeightFactor: 1.5 }).h + (10 * 4); // 4 linhas abaixo
 
       // Adiciona observação
