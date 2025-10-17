@@ -18,6 +18,8 @@ import { useToast } from "@/hooks/use-toast";
 import { type DataItem, type SubItem } from "./data-viewer";
 import { Loader2 } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
+import { cn } from "@/lib/utils";
+
 
 interface EditStudentFormProps {
   student: DataItem;
@@ -85,31 +87,33 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <ScrollArea className="max-h-[60vh] pr-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 py-4">
-              <div className="md:col-span-2 grid grid-cols-4 items-center gap-4">
-                 <Label htmlFor="main-item" className="text-right font-semibold text-muted-foreground">
+             <div className="space-y-4 py-4">
+               <div className="space-y-2">
+                 <Label htmlFor="main-item" className="font-semibold text-muted-foreground">
                   NOME DE REGISTRO CIVIL
                 </Label>
                 <Input
                   id="main-item"
                   value={mainItem}
                   onChange={(e) => setMainItem(e.target.value)}
-                  className="col-span-3"
                 />
               </div>
-              {subItems.map((item, index) => (
-                <div key={index} className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor={`item-${index}`} className="text-right truncate text-muted-foreground" title={item.label}>
-                    {item.label}
-                  </Label>
-                  <Input
-                    id={`item-${index}`}
-                    value={item.value || ''}
-                    onChange={(e) => handleSubItemChange(index, e.target.value)}
-                    className="col-span-3"
-                  />
-                </div>
-              ))}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 pt-4">
+                {subItems.map((item, index) => (
+                  <div key={index} className="space-y-2">
+                    <Label htmlFor={`item-${index}`} className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate" title={item.label}>
+                      {item.label}
+                    </Label>
+                    <Input
+                      id={`item-${index}`}
+                      value={item.value || ''}
+                      onChange={(e) => handleSubItemChange(index, e.target.value)}
+                      className={cn(!item.value && 'opacity-70')}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           </ScrollArea>
           <DialogFooter className="mt-6 flex-col sm:flex-row space-y-2 sm:space-y-0">
