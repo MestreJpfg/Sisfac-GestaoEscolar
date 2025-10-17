@@ -62,14 +62,14 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
       const leftMargin = 20;
       const rightMargin = 20;
       const textWidth = pdfWidth - leftMargin - rightMargin;
-      let yPosition = 65; 
+      let yPosition = 85; 
       
       const text1 = `Declaramos, para os devidos fins, que o(a) aluno(a) ${nomeCompleto}, nascido(a) em ${dataNascimento}, está regularmente matriculado(a) nesta Unidade Escolar no ano letivo de ${currentYear}, cursando o ${serie} - Turma ${turma}, no período da ${turno}.`;
       
       const textLines1 = pdf.splitTextToSize(text1, textWidth);
       pdf.text(textLines1, leftMargin, yPosition, { align: 'left', lineHeightFactor: 1.5 });
       
-      yPosition += pdf.getTextDimensions(textLines1, { lineHeightFactor: 1.5 }).h + (4 * 5); // 4 linhas abaixo
+      yPosition += pdf.getTextDimensions(textLines1, { lineHeightFactor: 1.5 }).h + (4 * 5);
 
       const obsText = "Obs: Frequência Bimestral em 100%";
       const obsLines = pdf.splitTextToSize(obsText, textWidth);
