@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
-import { useFirestore, useUser } from "@/firebase";
+import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from "@/firebase";
 import { collection, writeBatch, doc, getDocs, query } from "firebase/firestore";
 
 interface XlsxUploaderProps {
@@ -63,7 +63,6 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
           headers[3] = studentNameHeader;
         }
 
-
         const rows = json.slice(1);
 
         const processedData = rows.map(row => {
@@ -75,7 +74,6 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
             let value = '';
 
             if (cellValue instanceof Date) {
-              // Assuming column with index 11 is a date that needs dd/MM/yyyy format
               if (index === 11) { 
                 value = format(cellValue, 'dd/MM/yyyy');
               } else {
@@ -97,26 +95,31 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
             description: `Não foram encontrados dados válidos na coluna "${studentNameHeader}".`,
           });
         } else {
-            const batch = writeBatch(firestore);
             const studentsCollection = collection(firestore, "users", user.uid, "students");
+            const batch = writeBatch(firestore);
             
-            const existingStudentsSnapshot = await getDocs(query(studentsCollection));
-            existingStudentsSnapshot.forEach(doc => {
-              batch.delete(doc.ref);
-            });
+            const existingDocs = await getDocs(query(studentsCollection));
+            existingDocs.forEach(doc => batch.delete(doc.ref));
 
             processedData.forEach((student) => {
                 const docRef = doc(studentsCollection);
                 batch.set(docRef, student);
             });
 
-            await batch.commit();
-            
-            toast({
-                title: "Sucesso!",
-                description: `Dados anteriores removidos e ${processedData.length} novos registros foram salvos.`,
+            batch.commit().then(() => {
+              toast({
+                  title: "Sucesso!",
+                  description: `Dados anteriores removidos e ${processedData.length} novos registros foram salvos.`,
+              });
+              onUploadComplete();
+            }).catch(err => {
+              const permissionError = new FirestorePermissionError({
+                path: studentsCollection.path,
+                operation: 'write',
+                requestResourceData: processedData
+              });
+              errorEmitter.emit('permission-error', permissionError);
             });
-            onUploadComplete();
         }
       } catch (error) {
         console.error("Error processing file:", error);

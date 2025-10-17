@@ -7,7 +7,7 @@ import DataViewer from "@/components/data-viewer";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
-import { useFirestore, useUser } from "@/firebase";
+import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from "@/firebase";
 import { collection, getDocs, query, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2 } from "lucide-react";
@@ -23,10 +23,12 @@ export default function Home() {
   const fetchData = useCallback(async () => {
     if (!firestore || !user) return;
     setIsLoading(true);
-    try {
-      const studentsCollection = collection(firestore, "users", user.uid, "students");
-      const q = query(studentsCollection);
-      const querySnapshot = await getDocs(q);
+    setError(null);
+
+    const studentsCollection = collection(firestore, "users", user.uid, "students");
+    const q = query(studentsCollection);
+    
+    getDocs(q).then(querySnapshot => {
       const studentsData: DataItem[] = [];
       querySnapshot.forEach((doc) => {
         studentsData.push({ id: doc.id, ...doc.data() } as DataItem);
@@ -39,24 +41,26 @@ export default function Home() {
       });
 
       setData(studentsData);
-    } catch (err: any) {
-      console.error("Error fetching data: ", err);
-      setError(err);
-      toast({
-        variant: "destructive",
-        title: "Erro ao carregar dados",
-        description: err.message || "Não foi possível buscar as informações dos alunos.",
-      });
-    } finally {
       setIsLoading(false);
-    }
+    }).catch(err => {
+      const permissionError = new FirestorePermissionError({
+        path: studentsCollection.path,
+        operation: 'list',
+      });
+      setError(permissionError);
+      errorEmitter.emit('permission-error', permissionError);
+      setIsLoading(false);
+    });
+
   }, [firestore, user, toast]);
 
   useEffect(() => {
-    if (!isUserLoading) {
+    if (!isUserLoading && user && firestore) {
       fetchData();
+    } else if (!isUserLoading) {
+      setIsLoading(false);
     }
-  }, [isUserLoading, fetchData]);
+  }, [isUserLoading, user, firestore, fetchData]);
 
 
   const handleUploadComplete = () => {
@@ -74,36 +78,26 @@ export default function Home() {
     }
   
     setIsLoading(true);
-    try {
-      const studentsCollection = collection(firestore, "users", user.uid, "students");
-      const q = query(studentsCollection);
-      const querySnapshot = await getDocs(q);
-      
-      if (!querySnapshot.empty) {
-        const batch = writeBatch(firestore);
-        querySnapshot.forEach(doc => {
-          batch.delete(doc.ref);
-        });
-        await batch.commit();
-      }
-  
-      setData([]);
-      
-      toast({
-        title: "Dados removidos",
-        description: "Os dados anteriores foram limpos. Você já pode carregar um novo arquivo.",
+    const studentsCollection = collection(firestore, "users", user.uid, "students");
+    const q = query(studentsCollection);
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      const batch = writeBatch(firestore);
+      querySnapshot.forEach(doc => {
+        batch.delete(doc.ref);
       });
-
-    } catch (err: any) {
-      console.error("Error clearing data:", err);
-      toast({
-        variant: "destructive",
-        title: "Erro ao limpar dados",
-        description: "Não foi possível remover os dados existentes.",
-      });
-    } finally {
-      setIsLoading(false);
+      await batch.commit();
     }
+
+    setData([]);
+    
+    toast({
+      title: "Dados removidos",
+      description: "Os dados anteriores foram limpos. Você já pode carregar um novo arquivo.",
+    });
+
+    setIsLoading(false);
   };
 
   const hasData = data && data.length > 0;

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { doc, updateDoc } from "firebase/firestore";
-import { useFirestore, useUser } from "@/firebase";
+import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -48,28 +48,26 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
     }
 
     setIsLoading(true);
-    try {
-      const studentRef = doc(firestore, "users", user.uid, "students", student.id);
+    const studentRef = doc(firestore, "users", user.uid, "students", student.id);
       
-      await updateDoc(studentRef, {
-        data: formData
-      });
-
+    updateDoc(studentRef, {
+      data: formData
+    }).then(() => {
       toast({
         title: "Sucesso!",
         description: "Os dados do aluno foram atualizados.",
       });
       onEditComplete();
-    } catch (error) {
-      console.error("Erro ao atualizar o aluno: ", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao atualizar",
-        description: "Não foi possível salvar as alterações. Tente novamente.",
+    }).catch(error => {
+      const permissionError = new FirestorePermissionError({
+        path: studentRef.path,
+        operation: 'update',
+        requestResourceData: { data: formData }
       });
-    } finally {
+      errorEmitter.emit('permission-error', permissionError);
+    }).finally(() => {
       setIsLoading(false);
-    }
+    });
   };
 
   return (
