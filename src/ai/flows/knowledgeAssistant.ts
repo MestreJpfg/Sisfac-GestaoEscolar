@@ -1,5 +1,3 @@
-'use server';
-
 /**
  * @fileoverview Defines a Genkit flow for a general-purpose knowledge assistant.
  *

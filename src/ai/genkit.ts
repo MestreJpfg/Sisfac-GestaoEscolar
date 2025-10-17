@@ -8,7 +8,7 @@
 
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
-import { next } from '@genkit-ai/next';
+import next from '@genkit-ai/next';
 
 // Initialize the Genkit AI instance with the Google AI plugin.
 // The `next()` plugin enables Genkit to work within the Next.js environment.
