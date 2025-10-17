@@ -11,14 +11,21 @@ import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from "@
 import { collection, getDocs, query, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2 } from "lucide-react";
+import { quotes } from "@/lib/quotes";
 
 export default function Home() {
   const [data, setData] = useState<DataItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [randomQuote, setRandomQuote] = useState<{ quote: string; author: string } | null>(null);
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Select a random quote on client-side mount
+    setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
+  }, []);
 
   const fetchData = useCallback(async () => {
     if (!firestore || !user) return;
@@ -122,6 +129,12 @@ export default function Home() {
             <p className="text-muted-foreground mt-2 text-sm sm:text-base">
               Localize as informações sobre um Aluno matriculado
             </p>
+            {randomQuote && (
+              <blockquote className="mt-4 border-l-2 border-primary pl-4 italic text-sm text-muted-foreground">
+                <p>"{randomQuote.quote}"</p>
+                <cite className="mt-2 block text-right font-semibold not-italic">- {randomQuote.author}</cite>
+              </blockquote>
+            )}
           </header>
 
           <div className="w-full">
