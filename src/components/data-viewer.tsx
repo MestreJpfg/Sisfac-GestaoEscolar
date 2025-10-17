@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
@@ -45,13 +46,6 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
   const [selectedSerie, setSelectedSerie] = useState<string>("all");
   const [editingStudent, setEditingStudent] = useState<DataItem | null>(null);
   const [declarationStudent, setDeclarationStudent] = useState<DataItem | null>(null);
-  const [currentDateTime, setCurrentDateTime] = useState('');
-
-  useEffect(() => {
-    setCurrentDateTime(new Date().toLocaleDateString('pt-BR', {
-      dateStyle: 'full',
-    }));
-  }, []);
 
   const series = useMemo(() => {
     const allSeries = data.reduce((acc, item) => {
@@ -85,9 +79,6 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
     <>
       <Card>
         <CardHeader>
-          {currentDateTime && (
-            <p className="text-sm text-muted-foreground mb-2">{currentDateTime}</p>
-          )}
           <CardTitle className="text-primary">Alunos Matriculados</CardTitle>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div className="relative">

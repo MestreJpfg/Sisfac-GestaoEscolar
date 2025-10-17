@@ -33,6 +33,7 @@ export default function Home() {
   const [randomQuote, setRandomQuote] = useState<{ quote: string; author: string } | null>(null);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
+  const [currentDateTime, setCurrentDateTime] = useState('');
 
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
@@ -41,6 +42,9 @@ export default function Home() {
   useEffect(() => {
     // Select a random quote on client-side mount
     setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
+    setCurrentDateTime(new Date().toLocaleDateString('pt-BR', {
+      dateStyle: 'full',
+    }));
   }, []);
 
   const fetchData = useCallback(async () => {
@@ -164,6 +168,9 @@ export default function Home() {
       <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 md:p-8 bg-background">
         <div className="w-full max-w-4xl mx-auto">
           <header className="text-center mb-8 flex flex-col items-center">
+            {currentDateTime && (
+              <p className="w-full text-right text-xs text-muted-foreground mb-2">{currentDateTime}</p>
+            )}
             <div className="mb-4 flex flex-col items-center">
               <Image
                 src="/logoyuri.png"
