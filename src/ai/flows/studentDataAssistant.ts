@@ -10,15 +10,10 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-// Define the schema for a single student, now as a generic object
-const StudentSchema = z.record(z.any()).describe(
-  "An object representing a single student. Keys are the data fields (like 'Nome Completo', 'Série', 'Data Nascimento'), and values are the corresponding data."
-);
-
-
+// Define the schema for the input, which includes the user's query and the raw student data.
 const StudentDataAssistantInputSchema = z.object({
   query: z.string().describe('The user\'s question about the student data.'),
-  studentData: z.array(StudentSchema).describe('The list of all student data.'),
+  studentData: z.array(z.record(z.any())).describe('The list of all student data as an array of objects.'),
 });
 export type StudentDataAssistantInput = z.infer<typeof StudentDataAssistantInputSchema>;
 
@@ -33,7 +28,6 @@ export async function studentDataAssistant(input: StudentDataAssistantInput): Pr
 const prompt = ai.definePrompt({
   name: 'studentDataAssistantPrompt',
   input: { schema: StudentDataAssistantInputSchema },
-  // REMOVED: output: { schema: StudentDataAssistantOutputSchema },
   prompt: `You are an expert school data assistant. Your task is to answer questions based on the provided student data.
   The current date is ${new Date().toLocaleDateString('pt-BR')}.
 
@@ -57,6 +51,7 @@ const studentDataAssistantFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await prompt(input);
+    
     // Handle cases where the model might return a null or undefined output
     if (output === null || output === undefined) {
         return "Desculpe, não consegui encontrar uma resposta para sua pergunta.";
