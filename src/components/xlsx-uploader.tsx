@@ -74,7 +74,9 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
             let value = '';
 
             if (cellValue instanceof Date) {
-              if (index === 11) { // Assuming index 11 is a date that needs dd/MM/yyyy format
+              // Ajuste para formatar datas específicas, se necessário
+              // Ex: Coluna de nascimento com índice 11
+              if (index === 11) { // Supondo que o índice 11 seja uma data que precisa do formato dd/MM/yyyy
                 value = format(cellValue, 'dd/MM/yyyy');
               } else {
                 value = cellValue.toISOString();
@@ -179,7 +181,7 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFileChange(e.dataTransfer.files[0]);
     }
-  }, []);
+  }, [handleFileChange]);
   
   const handleClick = () => {
     inputRef.current?.click();
