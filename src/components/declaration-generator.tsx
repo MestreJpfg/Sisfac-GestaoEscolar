@@ -68,22 +68,20 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
       pdf.setFont('helvetica', 'normal');
       
       const text1 = `Declaramos, para os devidos fins, que o(a) aluno(a) ${nomeCompleto}, nascido(a) em ${dataNascimento}, está regularmente matriculado(a) nesta Unidade Escolar no ano letivo de ${currentYear}, cursando o ${serie} - Turma ${turma}, no período da ${turno}.`;
-      const text2 = 'Por ser verdade, firmamos a presente declaração.';
-      
       const textLines1 = pdf.splitTextToSize(text1, textWidth - paragraphIndent); 
-      const textLines2 = pdf.splitTextToSize(text2, textWidth - paragraphIndent); 
       
       let yPosition = 110;
 
       // Primeiro parágrafo com indentação
       pdf.text(textLines1, leftMargin + paragraphIndent, yPosition, { align: 'left', lineHeightFactor: 1.5 });
-      yPosition += pdf.getTextDimensions(textLines1, { lineHeightFactor: 1.5 }).h + 10;
+      yPosition += pdf.getTextDimensions(textLines1, { lineHeightFactor: 1.5 }).h + (10 * 4); // 4 linhas abaixo
 
-      // Segundo parágrafo com indentação
-      pdf.text(textLines2, leftMargin + paragraphIndent, yPosition, { align: 'left', lineHeightFactor: 1.5 });
-      
-      // Mover data e assinatura para mais perto do final
-      const dateYPosition = 180;
+      // Adiciona observação
+      const observationText = "Obs: Frequência Bimestral em 100%";
+      pdf.text(observationText, leftMargin, yPosition);
+
+      // Mover data para mais perto do final
+      const dateYPosition = 230;
       pdf.text(`Fortaleza, ${currentDate}`, pdfWidth - rightMargin, dateYPosition, { align: 'right' });
 
       pdf.save(`Declaracao_${nomeCompleto.replace(/ /g, '_')}.pdf`);
