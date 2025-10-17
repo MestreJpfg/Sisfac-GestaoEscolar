@@ -12,8 +12,8 @@ import { z } from 'genkit';
 
 // Define the schema for the input, which includes the user's query and the raw student data.
 const StudentDataAssistantInputSchema = z.object({
-  query: z.string().describe('The user\'s question about the student data.'),
-  studentData: z.array(z.record(z.any())).describe('The list of all student data as an array of objects.'),
+  query: z.string().describe('The user\'s question.'),
+  studentData: z.array(z.record(z.any())).describe('The list of all student data as an array of objects. This is the primary source of information.'),
 });
 export type StudentDataAssistantInput = z.infer<typeof StudentDataAssistantInputSchema>;
 
@@ -28,10 +28,10 @@ export async function studentDataAssistant(input: StudentDataAssistantInput): Pr
 const prompt = ai.definePrompt({
   name: 'studentDataAssistantPrompt',
   input: { schema: StudentDataAssistantInputSchema },
-  prompt: `You are an expert school data assistant. Your task is to answer questions based on the provided student data.
+  prompt: `You are a helpful assistant. Your primary task is to answer questions based on the provided student data, but you can also answer general questions.
   The current date is ${new Date().toLocaleDateString('pt-BR')}.
 
-  Analyze the student data provided in the JSON format below and answer the user's query.
+  If the question is about the students, analyze the student data provided in the JSON format below to answer.
 
   Student Data:
   {{{json studentData}}}
@@ -39,7 +39,7 @@ const prompt = ai.definePrompt({
   User's Question:
   "{{{query}}}"
 
-  Provide a clear and concise answer based only on the data given. If the data is insufficient to answer the question, state that.
+  Provide a clear and concise answer. If the data is insufficient to answer a student-related question, state that. For general questions, use your own knowledge.
   `,
 });
 
