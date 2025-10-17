@@ -88,6 +88,9 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
     <>
       <Card>
         <CardHeader>
+          {currentDateTime && (
+            <p className="text-sm text-muted-foreground text-right">{currentDateTime}</p>
+          )}
           <CardTitle className="text-primary">Alunos Matriculados</CardTitle>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div className="relative">
@@ -118,9 +121,6 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
           <div>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-foreground">Informações do Aluno</h3>
-              {currentDateTime && (
-                <p className="text-sm text-muted-foreground">{currentDateTime}</p>
-              )}
             </div>
             <ScrollArea className="h-96 w-full rounded-md border">
               <Accordion type="single" collapsible className="w-full p-4">
