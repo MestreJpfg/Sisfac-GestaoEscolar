@@ -22,7 +22,10 @@
                 "type": "string"
               }
             },
-            "required": ["label", "value"]
+            "required": [
+              "label",
+              "value"
+            ]
           }
         }
       },
@@ -30,6 +33,20 @@
         "mainItem",
         "subItems"
       ]
+    },
+    "User": {
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the application.",
+      "properties": {
+        "fcmTokens": {
+          "type": "object",
+          "description": "A map of FCM registration tokens for the user's devices. The keys are the tokens.",
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        }
+      }
     }
   },
   "auth": {
@@ -55,6 +72,22 @@
             {
               "name": "studentId",
               "description": "The unique identifier of the student."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user-specific data, such as FCM tokens.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
             }
           ]
         }
