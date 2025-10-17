@@ -18,8 +18,6 @@ export const ai = genkit({
       // You can leave them as is.
     }),
   ],
-  // Log all AI-related activities to the console for debugging.
-  logLevel: 'debug',
   // Enable OpenTelemetry for tracing and monitoring in production.
   enableTracingAndMetrics: true,
 });
