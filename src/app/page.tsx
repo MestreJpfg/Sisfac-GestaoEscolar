@@ -114,12 +114,12 @@ export default function Home() {
       <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 md:p-8 bg-background">
         <div className="w-full max-w-4xl mx-auto">
           <header className="text-center mb-8 flex flex-col items-center">
-            <div className="mb-4">
+            <div className="mb-4 flex flex-col items-center">
               <Image
                 src="/logoyuri.png"
                 alt="Logo"
-                width={150}
-                height={50}
+                width={120}
+                height={40}
                 className="rounded-md"
               />
                {randomQuote && (
