@@ -85,14 +85,14 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
     img.crossOrigin = "Anonymous";
     img.src = '/declaracao-template.png';
 
-    const processPdf = () => {
+    const processPdf = async () => {
       try {
         const pdf = generatePdfInstance(img);
         if (share) {
           const pdfBlob = pdf.output('blob');
           const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
           if (navigator.share && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-            navigator.share({
+            await navigator.share({
               files: [pdfFile],
               title: `Declaração - ${nomeCompleto}`,
             }).catch((error) => {
