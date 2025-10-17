@@ -1,3 +1,5 @@
+'use server';
+
 /**
  * @fileoverview Defines a Genkit flow that acts as a student data specialist.
  * It uses tools to fetch student information from Firestore and answers questions about it.
@@ -28,7 +30,6 @@ const getStudentDataTool = ai.defineTool(
 
 const studentDataPrompt = ai.definePrompt({
   name: 'studentDataPrompt',
-  model: googleAI.model('gemini-pro'),
   system: `You are an expert assistant for a school management system.
 Your role is to answer questions about student data based on the information provided by the 'getStudentData' tool.
 Analyze the user's question and use the data retrieved by the tool to provide a clear and accurate answer.

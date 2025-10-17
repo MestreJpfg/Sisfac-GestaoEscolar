@@ -19,7 +19,6 @@ import { googleAI } from '@genkit-ai/google-genai';
 
 const routerPrompt = ai.definePrompt({
   name: 'routerPrompt',
-  model: googleAI.model('gemini-pro'),
   system: `You are a router. Your job is to determine the user's intent and route them to the appropriate specialist.
   - If the user is asking a question about student data, school information, enrollment, classes, or anything related to student management, respond with the 'student_data' tool.
   - For any other topic, like general conversation, news, jokes, games, etc., respond with the 'knowledge' tool.
@@ -36,7 +35,6 @@ const routerPrompt = ai.definePrompt({
 // Define the main prompt for the AI assistant.
 const knowledgeAssistantPrompt = ai.definePrompt({
   name: 'knowledgeAssistantPrompt',
-  model: googleAI.model('gemini-pro'),
   // Instructions for the model on how to behave.
   system:
     'Você é um assistente de IA amigável e prestativo. Sua tarefa é conversar com o usuário sobre uma variedade de tópicos, como cotidiano, notícias, piadas, jogos e mais. Responda de forma concisa e envolvente. Você deve ser capaz de manter uma conversa fluida e natural.',
