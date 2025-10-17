@@ -62,7 +62,7 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
       const leftMargin = 20;
       const rightMargin = 20;
       const textWidth = pdfWidth - leftMargin - rightMargin;
-      let yPosition = 85; 
+      let yPosition = 100; 
       
       const text1 = `Declaramos, para os devidos fins, que o(a) aluno(a) ${nomeCompleto}, nascido(a) em ${dataNascimento}, está regularmente matriculado(a) nesta Unidade Escolar no ano letivo de ${currentYear}, cursando o ${serie} - Turma ${turma}, no período da ${turno}.`;
       
