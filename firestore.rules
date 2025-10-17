@@ -1,9 +1,40 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+
+    /**
+     * @description Enforces user-ownership for XLSX files stored under each user's dedicated path.
+     * @path /users/{userId}/xlsx_files/{fileId}
+     * @allow (create) - User 'user123' can create a new XLSX file under /users/user123/xlsx_files/file456 if request.auth.uid == 'user123' and the file's 'id' field also equals 'file456'.
+     * @allow (get, list) - User 'user123' can read/list XLSX files under /users/user123/xlsx_files/{fileId} if request.auth.uid == 'user123'.
+     * @allow (update, delete) - User 'user123' can update/delete XLSX file under /users/user123/xlsx_files/file456 if request.auth.uid == 'user123' and the file exists.
+     * @deny (create) - User 'user456' cannot create a new XLSX file under /users/user123/xlsx_files/file456, because request.auth.uid != 'user123'.
+     * @deny (get, list) - User 'user456' cannot read/list XLSX files under /users/user123/xlsx_files/{fileId}, because request.auth.uid != 'user123'.
+     * @deny (update, delete) - User 'user456' cannot update/delete XLSX file under /users/user123/xlsx_files/file456, because request.auth.uid != 'user123'.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/xlsx_files/{fileId} {
+      // Helpers
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      // Read Permissions
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if isSignedIn() && isOwner(userId);
+
+      // Write Permissions
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == fileId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
     }
   }
 }

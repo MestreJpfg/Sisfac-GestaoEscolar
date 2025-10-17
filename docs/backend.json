@@ -1,74 +1,37 @@
 {
   "entities": {
-    "XLSXData": {
+    "XLSXFile": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "XLSXData",
+      "title": "XLSXFile",
       "type": "object",
-      "description": "Represents a row of data extracted from the XLSX file.",
+      "description": "Represents an uploaded XLSX file and its associated data.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the XLSX data entry."
+          "description": "Unique identifier for the XLSX file entity."
         },
-        "column1Value": {
+        "fileName": {
           "type": "string",
-          "description": "The value extracted from the first column of the XLSX file."
+          "description": "The name of the uploaded XLSX file."
         },
-        "uploadSessionId": {
+        "uploadDate": {
           "type": "string",
-          "description": "Reference to the XLSXUploadSession. (Relationship: XLSXUploadSession 1:N XLSXData)"
-        }
-      },
-      "required": [
-        "id",
-        "column1Value",
-        "uploadSessionId"
-      ]
-    },
-    "XLSXUploadSession": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "XLSXUploadSession",
-      "type": "object",
-      "description": "Represents a session for uploading and processing an XLSX file.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the XLSX upload session."
-        },
-        "uploadTimestamp": {
-          "type": "string",
-          "description": "Timestamp indicating when the XLSX file was uploaded.",
+          "description": "The date and time when the file was uploaded.",
           "format": "date-time"
         },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the User that uploaded the file. (Relationship: User 1:N XLSXUploadSession)"
+        "column1Data": {
+          "type": "array",
+          "description": "Array containing data extracted from the first column of the XLSX file.",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [
         "id",
-        "uploadTimestamp",
-        "userId"
-      ]
-    },
-    "User": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "User",
-      "type": "object",
-      "description": "Represents a user of the XLSX Viewer application.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the user."
-        },
-        "userName": {
-          "type": "string",
-          "description": "Username of the user."
-        }
-      },
-      "required": [
-        "id",
-        "userName"
+        "fileName",
+        "uploadDate",
+        "column1Data"
       ]
     }
   },
@@ -81,66 +44,26 @@
   "firestore": {
     "structure": [
       {
-        "path": "/users/{userId}",
+        "path": "/users/{userId}/xlsx_files/{fileId}",
         "definition": {
-          "entityName": "User",
+          "entityName": "XLSXFile",
           "schema": {
-            "$ref": "#/backend/entities/User"
+            "$ref": "#/backend/entities/XLSXFile"
           },
-          "description": "Stores user information. This collection is path-based owned, enabling simple ownership rules.",
+          "description": "Stores XLSX files uploaded by a specific user. Enables path-based ownership for secure access control.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/uploadSessions/{uploadSessionId}",
-        "definition": {
-          "entityName": "XLSXUploadSession",
-          "schema": {
-            "$ref": "#/backend/entities/XLSXUploadSession"
-          },
-          "description": "Stores XLSX upload session metadata. Includes the userId to enable list operations to be protected.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
+              "description": "The unique identifier of the user who owns the XLSX file."
             },
             {
-              "name": "uploadSessionId",
-              "description": "The unique identifier for the XLSX upload session."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/uploadSessions/{uploadSessionId}/data/{dataId}",
-        "definition": {
-          "entityName": "XLSXData",
-          "schema": {
-            "$ref": "#/backend/entities/XLSXData"
-          },
-          "description": "Stores data extracted from the XLSX file. Includes denormalized 'uploadSessionId' for authorization independence. This allows atomic creation of XLSXData documents within a user's session without requiring a `get()` operation.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "uploadSessionId",
-              "description": "The unique identifier for the XLSX upload session."
-            },
-            {
-              "name": "dataId",
-              "description": "The unique identifier for the XLSX data entry."
+              "name": "fileId",
+              "description": "The unique identifier of the XLSX file."
             }
           ]
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to store XLSX upload sessions and the data extracted from the uploaded XLSX files. It uses path-based ownership for user-specific data and ensures authorization independence by associating data entries with their respective upload sessions and the user who initiated the upload. Each user has their own collection of upload sessions, and each session contains the data extracted from the uploaded XLSX file.\n\nAuthorization Independence: The `XLSXData` documents contain an `uploadSessionId` field, which links them to a specific `XLSXUploadSession`. The `XLSXUploadSession` contains a `userId` field. This denormalization eliminates the need for `get()` calls in security rules to verify ownership.\n\nQAPs: The structure supports secure `list` operations because data is segregated by user ID and upload session ID. A user can only list XLSX upload sessions and associated data under their own user ID path. The path-based ownership model inherently prevents unauthorized access to other users' data. The structure avoids mixing data with different access needs in the same collection."
+    "reasoning": "Given the requirement for users to upload XLSX files and display data from the first column in a list view, and the error 'Missing or insufficient permissions', the data structure should prioritize security by scoping file uploads to individual users. This ensures that users can only access their own uploaded files. To achieve Authorization Independence and enable secure list operations (QAPs), each file will be stored under a user-specific collection. This eliminates the need for complex rules that rely on parent document checks (`get()` calls)."
   }
 }
