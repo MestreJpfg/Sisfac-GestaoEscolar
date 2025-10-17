@@ -14,8 +14,6 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { type DataItem } from './data-viewer';
-import { useIsMobile } from '@/hooks/use-mobile';
-
 
 interface DeclarationGeneratorProps {
   student: DataItem;
@@ -26,22 +24,12 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
   const [currentYear, setCurrentYear] = useState('');
   const [currentDate, setCurrentDate] = useState('');
   const [isClient, setIsClient] = useState(false);
-  const [canShareFiles, setCanShareFiles] = useState(false);
-  const isMobile = useIsMobile();
-
 
   useEffect(() => {
     setIsClient(true);
     const now = new Date();
     setCurrentYear(now.getFullYear().toString());
     setCurrentDate(now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }));
-
-    // Check for file sharing support
-    const dummyFile = new File([''], 'test.pdf', { type: 'application/pdf' });
-    if (navigator.canShare && navigator.canShare({ files: [dummyFile] })) {
-      setCanShareFiles(true);
-    }
-
   }, []);
 
   const getStudentValue = (label: string): string => {
@@ -56,7 +44,7 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
   const turma = getStudentValue('classe');
   const turno = getStudentValue('turno');
 
-  const generateAndProcessPdf = (action: 'share' | 'download') => {
+  const generateAndProcessPdf = () => {
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const leftMargin = 20;
@@ -64,7 +52,7 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
     const textWidth = pdfWidth - leftMargin - rightMargin;
     const fileName = `Declaracao_${nomeCompleto.replace(/ /g, '_')}.pdf`;
 
-    const generatePdfContent = async () => {
+    const generatePdfContent = () => {
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(0, 0, 0);
       pdf.setFontSize(12);
@@ -81,24 +69,7 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
       const dateYPosition = 210;
       pdf.text(`Fortaleza, ${currentDate}`, pdfWidth - rightMargin, dateYPosition, { align: 'right' });
 
-      if (action === 'share' && isMobile && canShareFiles) {
-        try {
-          const pdfBlob = pdf.output('blob');
-          const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
-
-          await navigator.share({
-            files: [pdfFile],
-            title: `Declaração de ${nomeCompleto}`,
-            text: `Segue em anexo a declaração para ${nomeCompleto}.`,
-          });
-        } catch (error) {
-          console.log('Erro ao compartilhar ou partilha cancelada:', error);
-          // Fallback to download if sharing fails
-          pdf.save(fileName);
-        }
-      } else {
-        pdf.save(fileName);
-      }
+      pdf.save(fileName);
       onClose();
     };
     
@@ -122,30 +93,18 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
           <DialogHeader>
             <DialogTitle>Gerar Declaração</DialogTitle>
             <DialogDescription>
-              {isMobile && canShareFiles
-                ? `Partilhe ou baixe a declaração para ${nomeCompleto}.`
-                : `Clique em "Exportar PDF" para gerar e baixar a declaração para ${nomeCompleto}.`}
+              Clique em "Exportar PDF" para gerar e baixar a declaração para {nomeCompleto}.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col sm:flex-row sm:justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={onClose}>
-              Cancelar
+            <DialogClose asChild>
+                <Button type="button" variant="secondary" onClick={onClose}>
+                Cancelar
+                </Button>
+            </DialogClose>
+            <Button type="button" onClick={generateAndProcessPdf}>
+              Exportar PDF
             </Button>
-            
-            {isMobile && canShareFiles ? (
-              <>
-                <Button type="button" onClick={() => generateAndProcessPdf('download')}>
-                  Apenas Baixar
-                </Button>
-                <Button type="button" onClick={() => generateAndProcessPdf('share')}>
-                  Partilhar
-                </Button>
-              </>
-            ) : (
-              <Button type="button" onClick={() => generateAndProcessPdf('download')}>
-                Exportar PDF
-              </Button>
-            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
