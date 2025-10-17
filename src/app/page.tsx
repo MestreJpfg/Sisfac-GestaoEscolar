@@ -5,19 +5,17 @@ import Image from "next/image";
 import XlsxUploader from "@/components/xlsx-uploader";
 import DataViewer from "@/components/data-viewer";
 import { Button } from "@/components/ui/button";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
 import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from "@/firebase";
 import { collection, getDocs, query, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2 } from "lucide-react";
-import AiAssistant from "@/components/ai-assistant";
 
 export default function Home() {
   const [data, setData] = useState<DataItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
@@ -142,12 +140,6 @@ export default function Home() {
               <XlsxUploader onUploadComplete={handleUploadComplete} />
             ) : (
               <div className="space-y-4">
-                 <div className="flex justify-end">
-                  <Button onClick={() => setIsAssistantOpen(true)}>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Assistente IA
-                  </Button>
-                </div>
                 <DataViewer data={data} onEditComplete={fetchData} />
                  <Button onClick={handleClearAndReload} className="w-full" variant="outline">
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -158,10 +150,6 @@ export default function Home() {
           </div>
         </div>
       </main>
-      <AiAssistant
-        isOpen={isAssistantOpen}
-        onClose={() => setIsAssistantOpen(false)}
-      />
     </>
   );
 }
