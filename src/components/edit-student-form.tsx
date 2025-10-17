@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { doc, updateDoc } from "firebase/firestore";
-import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from "@/firebase";
+import { useFirestore, useUser, errorEmitter, FirestorePermissionError, updateDocumentNonBlocking } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -65,22 +65,16 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
       subItems,
     };
       
-    updateDoc(studentRef, updatedData).then(() => {
-      toast({
-        title: "Sucesso!",
-        description: "Os dados do aluno foram atualizados.",
-      });
-      onEditComplete();
-    }).catch(error => {
-      const permissionError = new FirestorePermissionError({
-        path: studentRef.path,
-        operation: 'update',
-        requestResourceData: updatedData
-      });
-      errorEmitter.emit('permission-error', permissionError);
-    }).finally(() => {
-      setIsLoading(false);
+    // Use non-blocking update
+    updateDocumentNonBlocking(studentRef, updatedData);
+
+    toast({
+      title: "Sucesso!",
+      description: "Os dados do aluno foram atualizados.",
     });
+
+    onEditComplete();
+    setIsLoading(false);
   };
 
   return (

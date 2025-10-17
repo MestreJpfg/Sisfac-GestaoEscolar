@@ -10,10 +10,19 @@
           "description": "The main identifying information for the student, typically their full name."
         },
         "subItems": {
-          "type": "object",
-          "description": "A map of key-value pairs representing other information from the spreadsheet.",
-          "additionalProperties": {
-            "type": "string"
+          "type": "array",
+          "description": "An array of key-value pairs representing other information from the spreadsheet.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              }
+            },
+            "required": ["label", "value"]
           }
         }
       },

@@ -103,24 +103,42 @@ export default function Home() {
     setIsLoading(true);
     const studentsCollection = collection(firestore, "users", user.uid, "students");
     const q = query(studentsCollection);
-    const querySnapshot = await getDocs(q);
     
-    if (!querySnapshot.empty) {
-      const batch = writeBatch(firestore);
-      querySnapshot.forEach(doc => {
-        batch.delete(doc.ref);
-      });
-      await batch.commit();
+    try {
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          const batch = writeBatch(firestore);
+          querySnapshot.forEach(doc => {
+            batch.delete(doc.ref);
+          });
+          
+          batch.commit().catch(err => {
+              const permissionError = new FirestorePermissionError({
+                path: studentsCollection.path,
+                operation: 'delete',
+              });
+              errorEmitter.emit('permission-error', permissionError);
+          });
+        }
+    
+        setData([]);
+        
+        toast({
+          title: "Dados removidos",
+          description: "Os dados anteriores foram limpos. Você já pode carregar um novo arquivo.",
+        });
+    
+    } catch(err) {
+        const permissionError = new FirestorePermissionError({
+            path: studentsCollection.path,
+            operation: 'list',
+        });
+        setError(permissionError);
+        errorEmitter.emit('permission-error', permissionError);
+    } finally {
+        setIsLoading(false);
     }
-
-    setData([]);
-    
-    toast({
-      title: "Dados removidos",
-      description: "Os dados anteriores foram limpos. Você já pode carregar um novo arquivo.",
-    });
-
-    setIsLoading(false);
   };
 
   const handleConfirmClear = () => {

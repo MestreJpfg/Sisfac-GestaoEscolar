@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Bot, User, CornerDownLeft, Loader2 } from "lucide-react";
-import { knowledgeAssistant, type KnowledgeAssistantInput } from "@/ai/flows/knowledgeAssistant";
+import { knowledgeAssistant } from "@/ai/flows/router";
+import type { KnowledgeAssistantInput } from "@/ai/flows/schemas";
 
 
 interface Message {
@@ -52,7 +53,7 @@ export default function AiAssistant() {
       // The role 'bot' is used for the frontend state, 
       // but the Genkit flow will map it to 'model' for the AI history.
       const historyForAI = messages.map(m => ({
-        role: m.role, // Keep 'bot' as is, the flow will handle it
+        role: m.role,
         content: [{ text: m.text }]
       }));
       

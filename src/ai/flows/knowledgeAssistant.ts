@@ -3,36 +3,17 @@
 
 /**
  * @fileoverview Define a Genkit flow for a general-purpose knowledge assistant.
- * This file contains the server-side logic for the AI assistant.
- * It also acts as a router to delegate to other specialized flows.
+ * This flow is responsible for handling general conversation and non-specialized tasks.
  */
 
 import { ai } from '@/ai/genkit';
-import { studentDataAssistantFlow } from './studentDataAssistant';
+import { googleAI } from '@genkit-ai/google-genai';
 import { z } from 'zod';
 import {
-  KnowledgeAssistantInputSchema,
   KnowledgeAssistantOutputSchema,
   type KnowledgeAssistantInput,
   type KnowledgeAssistantOutput,
 } from './schemas';
-import { googleAI } from '@genkit-ai/google-genai';
-
-const routerPrompt = ai.definePrompt({
-  name: 'routerPrompt',
-  model: googleAI.model('gemini-1.5-flash'),
-  system: `You are a router. Your job is to determine the user's intent and route them to the appropriate specialist.
-  - If the user is asking a question about student data, school information, enrollment, classes, or anything related to student management, respond with the 'student_data' tool.
-  - For any other topic, like general conversation, news, jokes, games, etc., respond with the 'knowledge' tool.
-  `,
-  input: { schema: z.object({ prompt: z.string() }) },
-  output: {
-    schema: z.object({
-      route: z.enum(['student_data', 'knowledge']),
-    }),
-  },
-  prompt: `User question: {{{prompt}}}`,
-});
 
 // Define the main prompt for the AI assistant.
 const knowledgeAssistantPrompt = ai.definePrompt({
@@ -50,25 +31,22 @@ const knowledgeAssistantPrompt = ai.definePrompt({
   prompt: `{{{prompt}}}`,
 });
 
-// Define the main Genkit flow.
-const knowledgeAssistantFlow = ai.defineFlow(
+// Define the main Genkit flow for general knowledge.
+export const generalKnowledgeFlow = ai.defineFlow(
   {
-    name: 'knowledgeAssistantFlow',
-    inputSchema: KnowledgeAssistantInputSchema,
+    name: 'generalKnowledgeFlow',
+    inputSchema: z.object({
+        prompt: z.string(),
+        history: z.array(z.any()).optional(),
+    }),
     outputSchema: KnowledgeAssistantOutputSchema,
   },
   async (input) => {
-    // Dynamically build the prompt history.
-    const history = (input.history ?? []).map((item) => ({
-      role: item.role === 'bot' ? 'model' : 'user',
-      content: item.content,
-    }));
 
-    // Route the user's prompt
-    const routeResult = await routerPrompt({ prompt: input.prompt });
-    if (routeResult.output?.route === 'student_data') {
-      return await studentDataAssistantFlow(input);
-    }
+    const history = (input.history ?? []).map((item) => ({
+        role: item.role === 'bot' ? 'model' : 'user',
+        content: item.content,
+    }));
 
     // Call the prompt with the validated input and history.
     const result = await knowledgeAssistantPrompt(
@@ -85,15 +63,3 @@ const knowledgeAssistantFlow = ai.defineFlow(
     return result;
   }
 );
-
-/**
- * Server-side function that wraps the Genkit flow.
- * This is the function that the client-side code will call.
- * @param input The user's prompt and conversation history.
- * @returns The AI's response.
- */
-export async function knowledgeAssistant(
-  input: KnowledgeAssistantInput
-): Promise<KnowledgeAssistantOutput> {
-  return await knowledgeAssistantFlow(input);
-}

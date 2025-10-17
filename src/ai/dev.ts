@@ -12,7 +12,7 @@ import { dev } from 'genkit/dev';
 import { ai } from './genkit';
 
 // Import all flows here so they are discoverable by the developer UI.
-import './flows/knowledgeAssistant';
+import './flows/router';
 import './flows/studentDataAssistant';
 
 
