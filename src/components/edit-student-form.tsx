@@ -93,7 +93,7 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
           <ScrollArea className="max-h-[60vh] pr-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 py-4">
               <div className="md:col-span-2 grid grid-cols-4 items-center gap-4">
-                 <Label htmlFor="main-item" className="text-right font-semibold">
+                 <Label htmlFor="main-item" className="text-right font-semibold text-muted-foreground">
                   NOME DE REGISTRO CIVIL
                 </Label>
                 <Input
@@ -105,7 +105,7 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
               </div>
               {subItems.map((item, index) => (
                 <div key={index} className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor={`item-${index}`} className="text-right truncate" title={item.label}>
+                  <Label htmlFor={`item-${index}`} className="text-right truncate text-muted-foreground" title={item.label}>
                     {item.label}
                   </Label>
                   <Input
