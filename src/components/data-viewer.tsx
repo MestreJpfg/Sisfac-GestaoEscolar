@@ -47,13 +47,9 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
   const [currentDateTime, setCurrentDateTime] = useState('');
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentDateTime(new Date().toLocaleString('pt-BR', {
-        dateStyle: 'full',
-        timeStyle: 'medium',
-      }));
-    }, 1000);
-    return () => clearInterval(timer);
+    setCurrentDateTime(new Date().toLocaleDateString('pt-BR', {
+      dateStyle: 'full',
+    }));
   }, []);
 
   const series = useMemo(() => {
