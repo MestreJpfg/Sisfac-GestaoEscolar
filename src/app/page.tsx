@@ -122,6 +122,12 @@ export default function Home() {
                 height={50}
                 className="rounded-md"
               />
+               {randomQuote && (
+                <blockquote className="mt-4 border-l-2 border-primary pl-4 italic text-xs text-muted-foreground">
+                  <p>"{randomQuote.quote}"</p>
+                  <cite className="mt-2 block text-right font-semibold not-italic">- {randomQuote.author}</cite>
+                </blockquote>
+              )}
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary font-headline">
               Gestão de Alunos 2025
@@ -129,12 +135,6 @@ export default function Home() {
             <p className="text-muted-foreground mt-2 text-sm sm:text-base">
               Localize as informações sobre um Aluno matriculado
             </p>
-            {randomQuote && (
-              <blockquote className="mt-4 border-l-2 border-primary pl-4 italic text-sm text-muted-foreground">
-                <p>"{randomQuote.quote}"</p>
-                <cite className="mt-2 block text-right font-semibold not-italic">- {randomQuote.author}</cite>
-              </blockquote>
-            )}
           </header>
 
           <div className="w-full">
