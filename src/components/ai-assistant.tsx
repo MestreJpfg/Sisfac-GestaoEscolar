@@ -44,21 +44,7 @@ export default function AiAssistant({ isOpen, onClose, studentData }: AiAssistan
     setResponse('');
 
     try {
-      // Transform the data into a simpler format for the AI
-      const simplifiedStudentData = studentData.map(student => {
-        const studentObj: { [key: string]: any } = {
-          'Nome Completo': student.mainItem,
-          id: student.id,
-        };
-        if (Array.isArray(student.subItems)) {
-          student.subItems.forEach(item => {
-            studentObj[item.label] = item.value;
-          });
-        }
-        return studentObj;
-      });
-
-      const result = await studentDataAssistant({ query, studentData: simplifiedStudentData });
+      const result = await studentDataAssistant({ query });
       setResponse(result);
     } catch (error) {
       console.error('AI assistant error:', error);

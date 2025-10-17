@@ -1,8 +1,8 @@
 'use server';
 /**
- * @fileOverview An AI assistant for answering questions about student data.
+ * @fileOverview An AI assistant for answering questions.
  *
- * - studentDataAssistant - A function that handles answering questions about student data.
+ * - studentDataAssistant - A function that handles answering questions.
  * - StudentDataAssistantInput - The input type for the studentDataAssistant function.
  * - StudentDataAssistantOutput - The return type for the studentDataAssistant function.
  */
@@ -10,10 +10,9 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-// Define the schema for the input, which includes the user's query and the raw student data.
+// Define the schema for the input, which only includes the user's query.
 const StudentDataAssistantInputSchema = z.object({
-  query: z.string().describe('The user\'s question.'),
-  studentData: z.array(z.record(z.any())).describe('The list of all student data as an array of objects. This is the primary source of information.'),
+  query: z.string().describe("The user's question."),
 });
 export type StudentDataAssistantInput = z.infer<typeof StudentDataAssistantInputSchema>;
 
