@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,13 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
   const [selectedSerie, setSelectedSerie] = useState<string>("all");
   const [editingStudent, setEditingStudent] = useState<DataItem | null>(null);
   const [declarationStudent, setDeclarationStudent] = useState<DataItem | null>(null);
+  const [currentDateTime, setCurrentDateTime] = useState('');
+
+  useEffect(() => {
+    setCurrentDateTime(new Date().toLocaleDateString('pt-BR', {
+      dateStyle: 'full',
+    }));
+  }, []);
 
   const series = useMemo(() => {
     const allSeries = data.reduce((acc, item) => {
@@ -109,6 +116,9 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
           <div>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-foreground">Informações do Aluno</h3>
+              {currentDateTime && (
+                <p className="text-sm text-muted-foreground text-right">{currentDateTime}</p>
+              )}
             </div>
             <ScrollArea className="h-96 w-full rounded-md border">
               <Accordion type="single" collapsible className="w-full p-4">
@@ -127,7 +137,7 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
                         </Button>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 p-4 bg-muted/30 rounded-md border">
-                        {item.subItems && Array.isArray(item.subItems) ? item.subItems.map((subItem, index) => (
+                        {item.subItems && Array.isArray(item.subItems) ? item.subItems.map((subItem) => (
                           <div key={subItem.label} className={cn("flex flex-col", subItem.value ? 'opacity-100' : 'opacity-50')}>
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate" title={subItem.label}>{subItem.label}</p>
                             <p className="text-sm text-foreground break-words">{subItem.value || "Não informado"}</p>

@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
-import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from "@/firebase";
+import { useFirestore, useUser, errorEmitter, FirestorePermissionError, deleteDocumentNonBlocking } from "@/firebase";
 import { collection, getDocs, query, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2 } from "lucide-react";
@@ -112,18 +112,9 @@ export default function Home() {
         const querySnapshot = await getDocs(q);
         
         if (!querySnapshot.empty) {
-          const batch = writeBatch(firestore);
-          querySnapshot.forEach(doc => {
-            batch.delete(doc.ref);
-          });
-          
-          batch.commit().catch(err => {
-              const permissionError = new FirestorePermissionError({
-                path: studentsCollection.path,
-                operation: 'delete',
-              });
-              errorEmitter.emit('permission-error', permissionError);
-          });
+            querySnapshot.forEach(doc => {
+              deleteDocumentNonBlocking(doc.ref);
+            });
         }
     
         setData([]);
