@@ -33,7 +33,7 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
 
   const getStudentValue = (label: string): string => {
     if (!student.subItems) return '';
-    const item = student.subItems.find(si => si.label.toLowerCase() === label.toLowerCase());
+    const item = student.subItems.find(si => si.label.toLowerCase().includes(label.toLowerCase()));
     return item ? item.value : '';
   };
   
@@ -46,7 +46,6 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
   const handleExportToPdf = async () => {
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
-    
     const leftMargin = 20;
     const rightMargin = 20;
     const textWidth = pdfWidth - leftMargin - rightMargin;
@@ -85,14 +84,7 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
       
       // Mover data e assinatura para mais perto do final
       const dateYPosition = 180;
-      pdf.text(`Fortaleza, ${currentDate}`, leftMargin + textWidth, dateYPosition, { align: 'right' });
-
-      // Linha para assinatura
-      const signatureY = dateYPosition + 20;
-      pdf.setLineWidth(0.5);
-      pdf.line(pdfWidth / 2 - 40, signatureY, pdfWidth / 2 + 40, signatureY);
-      pdf.setFontSize(10);
-      pdf.text('Direção Escolar', pdfWidth / 2, signatureY + 5, { align: 'center' });
+      pdf.text(`Fortaleza, ${currentDate}`, pdfWidth - rightMargin, dateYPosition, { align: 'right' });
 
       pdf.save(`Declaracao_${nomeCompleto.replace(/ /g, '_')}.pdf`);
       onClose();
