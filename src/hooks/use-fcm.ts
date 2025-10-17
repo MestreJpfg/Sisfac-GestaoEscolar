@@ -55,7 +55,7 @@ export function useFcm() {
 
   const requestPermissionAndGetToken = async () => {
     if (!messaging) {
-      console.error('Firebase Messaging is not initialized.');
+      console.error('Firebase Messaging is not initialized. This can happen on the server or if Firebase fails to initialize.');
       toast({
         variant: 'destructive',
         title: 'Erro de Serviço',
@@ -65,11 +65,11 @@ export function useFcm() {
     }
 
     if (!VAPID_KEY) {
-      console.error('VAPID key is missing.');
+      console.error('VAPID key is missing. Please add NEXT_PUBLIC_FCM_VAPID_KEY to your .env file.');
        toast({
         variant: 'destructive',
         title: 'Erro de Configuração',
-        description: 'A chave de segurança para notificações não foi encontrada.',
+        description: 'A chave de segurança para notificações (VAPID key) não foi encontrada.',
       });
       return null;
     }
@@ -79,12 +79,13 @@ export function useFcm() {
       setNotificationPermission(permission); // Update state after user action
       
       if (permission === 'granted') {
+        console.log('Notification permission granted.');
         const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY });
         if (currentToken) {
-          console.log('FCM Token:', currentToken);
+          console.log('FCM Token retrieved:', currentToken);
           return currentToken;
         } else {
-          console.log('No registration token available. Request permission to generate one.');
+          console.warn('No registration token available. Request permission to generate one.');
            toast({
             variant: 'destructive',
             title: 'Token Não Disponível',
@@ -93,15 +94,15 @@ export function useFcm() {
           return null;
         }
       } else {
-        console.log('Unable to get permission to notify.');
+        console.warn('Notification permission denied.');
         toast({
           title: 'Permissão Negada',
-          description: 'Você não receberá notificações.',
+          description: 'Você optou por não receber notificações.',
         });
         return null;
       }
     } catch (err) {
-      console.error('An error occurred while retrieving token. ', err);
+      console.error('An error occurred while retrieving token: ', err);
        toast({
         variant: 'destructive',
         title: 'Erro ao Obter Token',
