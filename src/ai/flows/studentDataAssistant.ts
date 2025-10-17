@@ -9,10 +9,7 @@
 import { ai } from '@/ai/genkit';
 import { getStudentData } from '@/services/student-service';
 import {
-  KnowledgeAssistantInputSchema,
   KnowledgeAssistantOutputSchema,
-  type KnowledgeAssistantInput,
-  type KnowledgeAssistantOutput,
 } from './schemas';
 import { z } from 'zod';
 
@@ -53,27 +50,25 @@ If the data is not available to answer the question, inform the user politely.`,
 export const studentDataAssistantFlow = ai.defineFlow(
   {
     name: 'studentDataAssistantFlow',
-    inputSchema: KnowledgeAssistantInputSchema,
+    inputSchema: z.object({
+      prompt: z.string(),
+      history: z.array(z.any()).optional(),
+    }),
     outputSchema: KnowledgeAssistantOutputSchema,
   },
-  async (input: KnowledgeAssistantInput): Promise<KnowledgeAssistantOutput> => {
-    const history = (input.history ?? []).map((item) => ({
-      role: item.role === 'bot' ? 'model' : 'user',
-      content: item.content,
-    }));
-
+  async (input) => {
     const llmResponse = await studentDataPrompt(
       { prompt: input.prompt },
-      { history }
+      { history: input.history }
     );
 
-    if (!llmResponse || !llmResponse.reply) {
+    if (!llmResponse.output?.reply) {
       return {
         reply:
           'Desculpe, não consegui processar sua pergunta. Tente novamente.',
       };
     }
 
-    return llmResponse;
+    return llmResponse.output;
   }
 );

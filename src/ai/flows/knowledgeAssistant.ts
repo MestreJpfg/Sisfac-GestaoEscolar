@@ -10,7 +10,6 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import {
   KnowledgeAssistantOutputSchema,
-  type KnowledgeAssistantOutput,
 } from './schemas';
 
 // Define the main prompt for the AI assistant.
@@ -40,24 +39,18 @@ export const generalKnowledgeFlow = ai.defineFlow(
     outputSchema: KnowledgeAssistantOutputSchema,
   },
   async (input) => {
-
-    const history = (input.history ?? []).map((item) => ({
-        role: item.role === 'bot' ? 'model' : 'user',
-        content: item.content,
-    }));
-
     // Call the prompt with the validated input and history.
     const result = await knowledgeAssistantPrompt(
       { prompt: input.prompt },
-      { history }
+      { history: input.history }
     );
     
     // If the model returns a null or undefined output, return a default error message.
-    if (!result.reply) {
+    if (!result.output?.reply) {
       return {
         reply: 'Desculpe, não consegui processar sua pergunta. Tente novamente.',
       };
     }
-    return result;
+    return result.output;
   }
 );

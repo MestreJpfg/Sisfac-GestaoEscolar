@@ -52,7 +52,7 @@ const routerFlow = ai.defineFlow(
     const routeResult = await routerPrompt({ prompt: input.prompt });
 
     if (routeResult.output?.route === 'student_data') {
-      return await studentDataAssistantFlow(input);
+      return await studentDataAssistantFlow({ prompt: input.prompt, history });
     }
 
     // Default to the general knowledge flow
