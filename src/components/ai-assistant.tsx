@@ -8,19 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { studentDataAssistant } from '@/ai/flows/studentDataAssistant';
-import { type DataItem } from './data-viewer';
 import { cn } from '@/lib/utils';
-
-interface AiAssistantProps {
-    studentData: DataItem[];
-}
 
 interface Message {
     sender: 'user' | 'ai';
     text: string;
 }
 
-export default function AiAssistant({ studentData }: AiAssistantProps) {
+export default function AiAssistant() {
     const [isOpen, setIsOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [messages, setMessages] = useState<Message[]>([]);
