@@ -54,7 +54,7 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
     img.src = '/declaracao-template.png';
 
     const generatePdfContent = () => {
-      pdf.addImage(img, 'PNG', 0, 0, pdfWidth, pdf.internal.pageSize.getHeight());
+      pdf.addImage(img, 'JPEG', 0, 0, pdfWidth, pdf.internal.pageSize.getHeight(), undefined, 'FAST');
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(0, 0, 0);
       pdf.setFontSize(12);
