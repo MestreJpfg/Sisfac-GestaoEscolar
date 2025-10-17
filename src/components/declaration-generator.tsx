@@ -64,17 +64,14 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
       const text1 = `Declaramos, para os devidos fins, que o(a) aluno(a) ${nomeCompleto}, nascido(a) em ${dataNascimento}, está regularmente matriculado(a) nesta Unidade Escolar no ano letivo de ${currentYear}, cursando o ${serie} - Turma ${turma}, no período da ${turno}.`;
       const textLines1 = pdf.splitTextToSize(text1, textWidth); 
       
-      let yPosition = 95; // Posição inicial Y ajustada (subiu)
+      let yPosition = 95;
 
-      // Primeiro parágrafo sem indentação
-      pdf.text(textLines1, leftMargin, yPosition, { align: 'justify', lineHeightFactor: 1.5 });
-      yPosition += pdf.getTextDimensions(textLines1, { lineHeightFactor: 1.5 }).h + (10 * 4); // 4 linhas abaixo
+      pdf.text(textLines1, leftMargin, yPosition, { align: 'left', lineHeightFactor: 1.5 });
+      yPosition += pdf.getTextDimensions(textLines1, { lineHeightFactor: 1.5 }).h + (10 * 4); 
 
-      // Adiciona observação
       const observationText = "Obs: Frequência Bimestral em 100%";
       pdf.text(observationText, leftMargin, yPosition);
 
-      // Mover data para mais perto do final
       const dateYPosition = 230;
       pdf.text(`Fortaleza, ${currentDate}`, pdfWidth - rightMargin, dateYPosition, { align: 'right' });
 
