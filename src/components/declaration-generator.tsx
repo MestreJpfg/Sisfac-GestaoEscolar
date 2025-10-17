@@ -50,42 +50,52 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
     
     const img = new Image();
     img.src = '/declaracao-template.png';
-    img.onload = () => {
-      pdf.addImage(img, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'MEDIUM');
-      
+
+    const generatePdfContent = () => {
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(13);
       pdf.setTextColor(0, 0, 0);
 
-      const text1 = `Declaro que ${nomeCompleto}, nascido em ${dataNascimento}, é aluno regularmente matriculado nesta Unidade Escolar, no ${serie} ${turma} ${turno}, no ano letivo de ${currentYear}.`;
-      const text2 = 'Por ser verdade, firmo a presente declaração.';
-      
-      const leftMargin = 25; // 2.5cm
-      const rightMargin = 25; // 2.5cm
-      const textWidth = pdfWidth - leftMargin - rightMargin;
-      
-      const splitText1 = pdf.splitTextToSize(text1, textWidth);
-      const splitText2 = pdf.splitTextToSize(text2, textWidth);
+      // Título
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('DECLARAÇÃO', pdfWidth / 2, 90, { align: 'center' });
 
-      const startY = 100;
-      pdf.text(splitText1, leftMargin, startY, { align: 'justify', lineHeightFactor: 1.5 });
+      // Corpo do texto
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'normal');
       
-      const heightText1 = pdf.getTextDimensions(splitText1).h;
-      pdf.text(splitText2, leftMargin, startY + heightText1 + 10, { align: 'justify' });
+      const text = `Declaramos, para os devidos fins, que o(a) aluno(a) ${nomeCompleto}, nascido(a) em ${dataNascimento}, está regularmente matriculado(a) nesta Unidade Escolar no ano letivo de ${currentYear}, cursando o ${serie} - Turma ${turma}, no período da ${turno}.`;
 
-      pdf.text(`Fortaleza, ${currentDate}`, pdfWidth - rightMargin, pdfHeight - 80, { align: 'right' });
+      const textLines = pdf.splitTextToSize(text, pdfWidth - 50); // Margens de 2.5cm
+      pdf.text(textLines, 25, 110, { align: 'justify', lineHeightFactor: 1.5 });
+
+      const textHeight = pdf.getTextDimensions(textLines).h;
+
+      pdf.text('Por ser verdade, firmamos a presente declaração.', 25, 110 + textHeight + 10, { align: 'justify' });
       
-      pdf.save(`${nomeCompleto}.pdf`);
+      // Data
+      pdf.text(`Fortaleza, ${currentDate}`, pdfWidth - 25, pdfHeight - 80, { align: 'right' });
+
+      // Linha para assinatura
+      const signatureLineY = pdfHeight - 60;
+      pdf.setLineWidth(0.5);
+      pdf.line(pdfWidth / 2 - 40, signatureLineY, pdfWidth / 2 + 40, signatureLineY);
+      pdf.setFontSize(10);
+      pdf.text('Direção Escolar', pdfWidth / 2, signatureLineY + 5, { align: 'center' });
+
+      pdf.save(`Declaracao_${nomeCompleto.replace(/ /g, '_')}.pdf`);
       onClose();
     };
+
+    img.onload = () => {
+      pdf.addImage(img, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'MEDIUM');
+      generatePdfContent();
+    };
+
     img.onerror = () => {
-        console.error("Erro ao carregar a imagem do template.");
-        const fallbackText = `Declaro que ${nomeCompleto}, nascido em ${dataNascimento}, é aluno regularmente matriculado nesta Unidade Escolar, no ${serie} ${turma} ${turno}, no ano letivo de ${currentYear}.`;
-        pdf.text(fallbackText, 20, 90, { maxWidth: pdfWidth - 40, align: 'justify' });
-        pdf.text(`Fortaleza, ${currentDate}`, pdfWidth - 20, 150, { align: 'right' });
-        pdf.save(`${nomeCompleto}.pdf`);
-        onClose();
-    }
+        console.error("Erro ao carregar a imagem do template. Gerando PDF sem imagem.");
+        generatePdfContent();
+    };
   };
 
   if (!isClient) {
