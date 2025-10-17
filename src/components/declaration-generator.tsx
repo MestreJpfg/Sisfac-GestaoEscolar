@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -47,64 +48,52 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
     
-    // Adiciona a imagem de fundo (template)
     const img = new Image();
     img.src = '/declaracao-template.png';
     img.onload = () => {
       pdf.addImage(img, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'MEDIUM');
       
-      // Adiciona o texto sobre a imagem
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(13);
       pdf.setTextColor(0, 0, 0);
 
-      // Corpo da declaração
       const text1 = `Declaro que ${nomeCompleto}, nascido em ${dataNascimento}, é aluno regularmente matriculado nesta Unidade Escolar, no ${serie} ${turma} ${turno}, no ano letivo de ${currentYear}.`;
       const text2 = 'Por ser verdade, firmo a presente declaração.';
-      const margin = 25; // 2.5cm
-      const textWidth = pdfWidth - (margin * 2);
+      
+      const leftMargin = 25; // 2.5cm
+      const rightMargin = 25; // 2.5cm
+      const textWidth = pdfWidth - leftMargin - rightMargin;
       
       const splitText1 = pdf.splitTextToSize(text1, textWidth);
       const splitText2 = pdf.splitTextToSize(text2, textWidth);
 
-      const startY = 100; // Posição inicial do texto
-      pdf.text(splitText1, margin, startY, { align: 'justify', lineHeightFactor: 1.5 });
+      const startY = 100;
+      pdf.text(splitText1, leftMargin, startY, { align: 'justify', lineHeightFactor: 1.5 });
       
       const heightText1 = pdf.getTextDimensions(splitText1).h;
-      pdf.text(splitText2, margin, startY + heightText1 + 10, { align: 'justify' });
+      pdf.text(splitText2, leftMargin, startY + heightText1 + 10, { align: 'justify' });
 
-
-      // Data no final
-      pdf.text(`Fortaleza, ${currentDate}`, pdfWidth - margin, pdfHeight - 80, { align: 'right' });
+      pdf.text(`Fortaleza, ${currentDate}`, pdfWidth - rightMargin, pdfHeight - 80, { align: 'right' });
       
       pdf.save(`${nomeCompleto}.pdf`);
       onClose();
     };
     img.onerror = () => {
         console.error("Erro ao carregar a imagem do template.");
-        // Fallback para gerar o PDF sem a imagem de fundo
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(13);
-        pdf.setTextColor(0, 0, 0);
-
-        const text = `Declaro que ${nomeCompleto}, nascido em ${dataNascimento}, é aluno regularmente matriculado nesta Unidade Escolar, no ${serie} ${turma} ${turno}, no ano letivo de ${currentYear}.`;
-        const splitText = pdf.splitTextToSize(text, pdfWidth - 40);
-        pdf.text(splitText, 20, 90, { align: 'justify' });
-
+        const fallbackText = `Declaro que ${nomeCompleto}, nascido em ${dataNascimento}, é aluno regularmente matriculado nesta Unidade Escolar, no ${serie} ${turma} ${turno}, no ano letivo de ${currentYear}.`;
+        pdf.text(fallbackText, 20, 90, { maxWidth: pdfWidth - 40, align: 'justify' });
         pdf.text(`Fortaleza, ${currentDate}`, pdfWidth - 20, 150, { align: 'right' });
-        
         pdf.save(`${nomeCompleto}.pdf`);
         onClose();
     }
   };
 
   if (!isClient) {
-    return null; // Don't render anything on the server or during initial hydration
+    return null;
   }
 
   return (
     <>
-      {/* Visible Dialog to inform the user */}
       <Dialog open={true} onOpenChange={onClose}>
         <DialogContent>
           <DialogHeader>
