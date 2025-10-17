@@ -159,9 +159,6 @@ export default function Home() {
       <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 md:p-8 bg-background">
         <div className="w-full max-w-4xl mx-auto">
           <header className="text-center mb-8 flex flex-col items-center">
-            {currentDateTime && (
-              <p className="w-full text-right text-xs text-muted-foreground mb-2">{currentDateTime}</p>
-            )}
             <div className="mb-4 flex flex-col items-center">
               <Image
                 src="/logoyuri.png"
@@ -170,6 +167,9 @@ export default function Home() {
                 height={40}
                 className="rounded-md"
               />
+              {currentDateTime && (
+              <p className="text-center text-xs text-muted-foreground mt-2">{currentDateTime}</p>
+            )}
                {randomQuote && (
                 <blockquote className="mt-4 border-l-2 border-primary pl-4 italic text-xs text-muted-foreground">
                   <p>"{randomQuote.quote}"</p>
