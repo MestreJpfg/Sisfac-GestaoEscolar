@@ -3,33 +3,48 @@
 /**
  * @fileoverview Define a Genkit flow for a general-purpose knowledge assistant.
  * This file contains the server-side logic for the AI assistant.
+ * It also acts as a router to delegate to other specialized flows.
  */
 
 import { ai } from '@/ai/genkit';
+import { studentDataAssistantFlow } from './studentDataAssistant';
 import { z } from 'zod';
 import {
-  KnowledgeAssistantInput,
-  KnowledgeAssistantOutput,
   KnowledgeAssistantInputSchema,
-  KnowledgeAssistantOutputSchema
-} from './studentDataAssistant';
+  KnowledgeAssistantOutputSchema,
+  type KnowledgeAssistantInput,
+  type KnowledgeAssistantOutput,
+} from './schemas';
+
+const routerPrompt = ai.definePrompt({
+  name: 'routerPrompt',
+  system: `You are a router. Your job is to determine the user's intent and route them to the appropriate specialist.
+  - If the user is asking a question about student data, school information, enrollment, classes, or anything related to student management, respond with the 'student_data' tool.
+  - For any other topic, like general conversation, news, jokes, games, etc., respond with the 'knowledge' tool.
+  `,
+  input: { schema: z.object({ prompt: z.string() }) },
+  output: {
+    schema: z.object({
+      route: z.enum(['student_data', 'knowledge']),
+    }),
+  },
+  prompt: `User question: {{{prompt}}}`,
+});
 
 // Define the main prompt for the AI assistant.
-const knowledgeAssistantPrompt = ai.definePrompt(
-  {
-    name: 'knowledgeAssistantPrompt',
-    // Instructions for the model on how to behave.
-    system:
-      'Você é um assistente de IA amigável e prestativo. Sua tarefa é conversar com o usuário sobre uma variedade de tópicos, como cotidiano, notícias, piadas, jogos e mais. Responda de forma concisa e envolvente. Você deve ser capaz de manter uma conversa fluida e natural.',
-    input: {
-      schema: z.object({ prompt: z.string() }),
-    },
-    output: {
-      schema: KnowledgeAssistantOutputSchema,
-    },
+const knowledgeAssistantPrompt = ai.definePrompt({
+  name: 'knowledgeAssistantPrompt',
+  // Instructions for the model on how to behave.
+  system:
+    'Você é um assistente de IA amigável e prestativo. Sua tarefa é conversar com o usuário sobre uma variedade de tópicos, como cotidiano, notícias, piadas, jogos e mais. Responda de forma concisa e envolvente. Você deve ser capaz de manter uma conversa fluida e natural.',
+  input: {
+    schema: z.object({ prompt: z.string() }),
   },
-  async (input) => `{{{prompt}}}`
-);
+  output: {
+    schema: KnowledgeAssistantOutputSchema,
+  },
+  prompt: `{{{prompt}}}`,
+});
 
 // Define the main Genkit flow.
 const knowledgeAssistantFlow = ai.defineFlow(
@@ -40,19 +55,25 @@ const knowledgeAssistantFlow = ai.defineFlow(
   },
   async (input) => {
     // Dynamically build the prompt history.
-    const history = (input.history ?? []).map(item => ({
+    const history = (input.history ?? []).map((item) => ({
       role: item.role,
       content: item.content,
     }));
+
+    // Route the user's prompt
+    const routeResult = await routerPrompt({ prompt: input.prompt });
+    if (routeResult.output?.route === 'student_data') {
+      return await studentDataAssistantFlow(input);
+    }
 
     // Call the prompt with the validated input and history.
     const result = await knowledgeAssistantPrompt(
       { prompt: input.prompt },
       { history }
     );
-
+    
     // If the model returns a null or undefined output, return a default error message.
-    if (!result || !result.reply) {
+    if (!result.reply) {
       return {
         reply: 'Desculpe, não consegui processar sua pergunta. Tente novamente.',
       };
@@ -67,6 +88,8 @@ const knowledgeAssistantFlow = ai.defineFlow(
  * @param input The user's prompt and conversation history.
  * @returns The AI's response.
  */
-export async function knowledgeAssistant(input: KnowledgeAssistantInput): Promise<KnowledgeAssistantOutput> {
+export async function knowledgeAssistant(
+  input: KnowledgeAssistantInput
+): Promise<KnowledgeAssistantOutput> {
   return await knowledgeAssistantFlow(input);
 }

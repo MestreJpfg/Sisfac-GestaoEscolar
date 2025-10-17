@@ -7,8 +7,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Bot, User, CornerDownLeft, Loader2 } from "lucide-react";
-import { knowledgeAssistant } from "@/ai/flows/knowledgeAssistant";
-import type { KnowledgeAssistantInput } from "@/ai/flows/studentDataAssistant";
+import { knowledgeAssistant, type KnowledgeAssistantInput } from "@/ai/flows/knowledgeAssistant";
 
 
 interface Message {
@@ -75,7 +74,7 @@ export default function AiAssistant() {
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
-          variant="primary"
+          variant="default"
           className="fixed bottom-4 right-4 rounded-full w-16 h-16 shadow-lg z-50"
         >
           <Bot className="w-8 h-8" />
