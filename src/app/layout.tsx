@@ -5,8 +5,8 @@ import { FirebaseClientProvider } from '@/firebase';
 import GoogleAnalytics from '@/components/google-analytics';
 
 export const metadata: Metadata = {
-  title: 'XLSX Viewer',
-  description: 'Upload and view .xlsx files',
+  title: 'Gestão de Alunos',
+  description: 'Upload e visualização de arquivos para gestão de alunos',
 };
 
 export default function RootLayout({
