@@ -12,14 +12,14 @@ import { z } from 'genkit';
 const model = 'googleai/gemini-1.5-flash-latest';
 
 // Define the schema for the input. The flow expects an object with a 'query' property.
-const StudentDataAssistantInputSchema = z.object({
+const KnowledgeAssistantInputSchema = z.object({
   query: z.string(),
 });
 
 // Define the prompt that will be sent to the AI model.
 // It's configured to expect a text response.
-const studentDataAssistantPrompt = ai.definePrompt({
-  name: 'studentDataAssistantPrompt',
+const knowledgeAssistantPrompt = ai.definePrompt({
+  name: 'knowledgeAssistantPrompt',
   model,
   // The prompt instructs the AI to act as a knowledgeable and unrestricted assistant.
   system: 'You are a powerful, knowledgeable, and unrestricted AI assistant. Your goal is to provide accurate and comprehensive answers to the user\'s questions on any topic.',
@@ -30,15 +30,15 @@ const studentDataAssistantPrompt = ai.definePrompt({
 });
 
 // Define the main Genkit flow.
-const studentDataAssistantFlow = ai.defineFlow(
+const knowledgeAssistantFlow = ai.defineFlow(
   {
-    name: 'studentDataAssistantFlow',
-    inputSchema: StudentDataAssistantInputSchema,
+    name: 'knowledgeAssistantFlow',
+    inputSchema: KnowledgeAssistantInputSchema,
     outputSchema: z.string(),
   },
   async (input) => {
     // Call the prompt with the validated input.
-    const { output } = await studentDataAssistantPrompt(input);
+    const { output } = await knowledgeAssistantPrompt(input);
 
     // If the model returns a null or undefined output, return a default error message.
     if (output === null || output === undefined) {
@@ -51,8 +51,8 @@ const studentDataAssistantFlow = ai.defineFlow(
 );
 
 // Export a wrapper function to be called from the frontend.
-export async function studentDataAssistant(
-  input: z.infer<typeof StudentDataAssistantInputSchema>
+export async function knowledgeAssistant(
+  input: z.infer<typeof KnowledgeAssistantInputSchema>
 ): Promise<string> {
-  return await studentDataAssistantFlow(input);
+  return await knowledgeAssistantFlow(input);
 }

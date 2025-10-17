@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { studentDataAssistant } from '@/ai/flows/studentDataAssistant';
+import { knowledgeAssistant } from '@/ai/flows/knowledgeAssistant';
 import { cn } from '@/lib/utils';
 
 interface Message {
@@ -41,7 +41,7 @@ export default function AiAssistant() {
         setIsLoading(true);
 
         try {
-            const aiResponse = await studentDataAssistant({
+            const aiResponse = await knowledgeAssistant({
               query
             });
             
