@@ -10,17 +10,10 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-// Define the schema for a single student, mirroring the DataItem type
-const StudentSchema = z.object({
-  id: z.string(),
-  mainItem: z.string().describe("The student's full name."),
-  subItems: z.array(
-    z.object({
-      label: z.string(),
-      value: z.string(),
-    })
-  ).describe("Other details about the student, like grade, date of birth, etc."),
-});
+// Define the schema for a single student, now as a generic object
+const StudentSchema = z.record(z.any()).describe(
+  "An object representing a single student. Keys are the data fields (like 'Nome Completo', 'Série', 'Data Nascimento'), and values are the corresponding data."
+);
 
 
 const StudentDataAssistantInputSchema = z.object({
