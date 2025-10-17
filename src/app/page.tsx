@@ -17,11 +17,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Loader2, BellRing } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
 import { useFirestore, useUser, errorEmitter, FirestorePermissionError, deleteDocumentNonBlocking } from "@/firebase";
 import { collection, getDocs, query, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
+import { useFcm } from "@/hooks/use-fcm";
 import { Trash2 } from "lucide-react";
 import { quotes } from "@/lib/quotes";
 import AiAssistant from "@/components/ai-assistant";
@@ -38,6 +39,7 @@ export default function Home() {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
+  const { notificationPermission } = useFcm();
 
   useEffect(() => {
     // Select a random quote on client-side mount
@@ -151,6 +153,13 @@ export default function Home() {
     }
   };
 
+  const handleTestNotification = () => {
+    toast({
+      title: "🔔 Notificação de Teste",
+      description: "Se você pode ver isto, o sistema de notificações em primeiro plano está a funcionar!",
+    });
+  };
+
 
   const hasData = data && data.length > 0;
 
@@ -206,6 +215,12 @@ export default function Home() {
                   <Trash2 className="mr-2 h-4 w-4" />
                   Limpar dados e carregar novo arquivo
                 </Button>
+                {notificationPermission === 'granted' && (
+                  <Button onClick={handleTestNotification} className="w-full" variant="secondary">
+                    <BellRing className="mr-2 h-4 w-4" />
+                    Testar Notificação
+                  </Button>
+                )}
               </div>
             )}
           </div>

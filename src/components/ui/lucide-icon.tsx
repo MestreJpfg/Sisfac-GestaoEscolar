@@ -1,5 +1,5 @@
 "use client"
-import { icons } from "lucide-react"
+import { icons, BellRing } from "lucide-react"
 
 export const LucideIcon = ({
   name,
@@ -9,7 +9,8 @@ export const LucideIcon = ({
 } & React.ComponentProps<"svg">) => {
   const Icon = icons[name]
   if (!Icon) {
-    return null
+    // Return a default icon or null if the icon name is not found
+    return <BellRing {...props} />; // Example default
   }
   return <Icon {...props} />
 }
