@@ -59,12 +59,23 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
       pdf.setTextColor(0, 0, 0);
 
       // Corpo da declaração
-      const text = `Declaro que ${nomeCompleto}, nascido em ${dataNascimento}, é aluno regularmente matriculado nesta Unidade Escolar, no ${serie} ${turma} ${turno}, no ano letivo de ${currentYear}.`;
-      const splitText = pdf.splitTextToSize(text, pdfWidth - 40); // 20mm de margem de cada lado
-      pdf.text(splitText, 20, pdfHeight * 0.35, { align: 'justify' });
+      const text1 = `Declaro que ${nomeCompleto}, nascido em ${dataNascimento}, é aluno regularmente matriculado nesta Unidade Escolar, no ${serie} ${turma} ${turno}, no ano letivo de ${currentYear}.`;
+      const text2 = 'Por ser verdade, firmo a presente declaração.';
+      const margin = 25; // 2.5cm
+      const textWidth = pdfWidth - (margin * 2);
+      
+      const splitText1 = pdf.splitTextToSize(text1, textWidth);
+      const splitText2 = pdf.splitTextToSize(text2, textWidth);
+
+      const startY = 100; // Posição inicial do texto
+      pdf.text(splitText1, margin, startY, { align: 'justify', lineHeightFactor: 1.5 });
+      
+      const heightText1 = pdf.getTextDimensions(splitText1).h;
+      pdf.text(splitText2, margin, startY + heightText1 + 10, { align: 'justify' });
+
 
       // Data no final
-      pdf.text(`Fortaleza, ${currentDate}`, pdfWidth - 20, pdfHeight * 0.7, { align: 'right' });
+      pdf.text(`Fortaleza, ${currentDate}`, pdfWidth - margin, pdfHeight - 80, { align: 'right' });
       
       pdf.save(`${nomeCompleto}.pdf`);
       onClose();
