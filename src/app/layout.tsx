@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from '@/firebase';
+import GoogleAnalytics from '@/components/google-analytics';
 
 export const metadata: Metadata = {
   title: 'XLSX Viewer',
@@ -19,6 +20,9 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
+        {process.env.NODE_ENV === "production" && (
+          <GoogleAnalytics ga_id="GA_MEASUREMENT_ID" />
+        )}
       </head>
       <body className="font-body antialiased">
         <FirebaseClientProvider>

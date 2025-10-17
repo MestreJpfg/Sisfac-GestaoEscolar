@@ -11,10 +11,15 @@ import { Button } from "@/components/ui/button";
 import EditStudentForm from "./edit-student-form";
 import DeclarationGenerator from "./declaration-generator";
 
+export interface SubItem {
+  label: string;
+  value: string;
+}
+
 export interface DataItem {
   id: string;
   mainItem: string;
-  subItems: Record<string, string>;
+  subItems: SubItem[];
 }
 
 interface DataViewerProps {
@@ -26,8 +31,8 @@ const getSerieFromItem = (item: DataItem): string | undefined => {
   if (!item.subItems) {
     return undefined;
   }
-  const serieKey = Object.keys(item.subItems).find(k => k.toLowerCase().includes('serie'));
-  return serieKey ? item.subItems[serieKey] : undefined;
+  const serieItem = item.subItems.find(si => si.label.toLowerCase().includes('serie'));
+  return serieItem ? serieItem.value : undefined;
 }
 
 const getStudentName = (item: DataItem): string => {
@@ -118,10 +123,10 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
                         </Button>
                       </div>
                       <ul className="space-y-2 pl-4">
-                        {item.subItems && Object.entries(item.subItems).map(([label, value]) => (
-                          <li key={label} className="text-sm">
-                            <span className="font-semibold text-muted-foreground">{label}:</span>
-                            <span className="ml-2 text-foreground break-all">{value}</span>
+                        {item.subItems && item.subItems.map((subItem) => (
+                          <li key={subItem.label} className="text-sm">
+                            <span className="font-semibold text-muted-foreground">{subItem.label}:</span>
+                            <span className="ml-2 text-foreground break-all">{subItem.value}</span>
                           </li>
                         ))}
                       </ul>

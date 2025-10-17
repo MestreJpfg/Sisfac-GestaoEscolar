@@ -34,8 +34,8 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
 
   const getStudentValue = (label: string): string => {
     if (!student.subItems) return '';
-    const key = Object.keys(student.subItems).find(k => k.toLowerCase() === label.toLowerCase());
-    return key ? student.subItems[key] : '';
+    const item = student.subItems.find(si => si.label.toLowerCase() === label.toLowerCase());
+    return item ? item.value : '';
   };
   
   const nomeCompleto = student.mainItem;

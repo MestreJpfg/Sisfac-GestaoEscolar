@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
 import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from "@/firebase";
 import { collection, writeBatch, doc, getDocs, query } from "firebase/firestore";
+import { type SubItem } from "./data-viewer";
 
 interface XlsxUploaderProps {
   onUploadComplete: () => void;
@@ -59,13 +60,12 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
 
         const headers = json[0].map(h => String(h ?? '').trim());
         const mainItemHeaderIndex = 3; // Coluna 4 (index 3) "NOME DE REGISTRO CIVIL"
-        headers[mainItemHeaderIndex] = "NOME DE REGISTRO CIVIL";
         
         const rows = json.slice(1);
 
         const processedData = rows.map(row => {
           const mainItem = String(row[mainItemHeaderIndex] || '');
-          const subItems: Record<string, string> = {};
+          const subItems: SubItem[] = [];
 
           headers.forEach((header, index) => {
             if (!header || index === mainItemHeaderIndex) return;
@@ -83,7 +83,7 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
               value = String(cellValue);
             }
             
-            subItems[header] = value;
+            subItems.push({ label: header, value: value });
           });
           return { mainItem, subItems };
         }).filter(item => item.mainItem);

@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { type DataItem } from "./data-viewer";
+import { type DataItem, type SubItem } from "./data-viewer";
 import { Loader2 } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 
@@ -27,7 +27,7 @@ interface EditStudentFormProps {
 
 export default function EditStudentForm({ student, onClose, onEditComplete }: EditStudentFormProps) {
   const [mainItem, setMainItem] = useState('');
-  const [subItems, setSubItems] = useState<Record<string, string>>({});
+  const [subItems, setSubItems] = useState<SubItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
   const { user } = useUser();
@@ -35,11 +35,15 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
 
   useEffect(() => {
     setMainItem(student.mainItem || '');
-    setSubItems(student.subItems || {});
+    setSubItems(student.subItems || []);
   }, [student]);
 
-  const handleSubItemChange = (label: string, value: string) => {
-    setSubItems((prev) => ({ ...prev, [label]: value }));
+  const handleSubItemChange = (index: number, value: string) => {
+    setSubItems((prev) => {
+      const newSubItems = [...prev];
+      newSubItems[index] = { ...newSubItems[index], value };
+      return newSubItems;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,40 +81,40 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="w-[95%] sm:max-w-lg">
+      <DialogContent className="w-[95%] sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Editar Aluno: {student.mainItem || ''}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <ScrollArea className="h-96 pr-6">
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-                <Label htmlFor="main-item" className="sm:text-right break-words">
+          <ScrollArea className="max-h-[60vh] pr-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 py-4">
+              <div className="md:col-span-2 grid grid-cols-4 items-center gap-4">
+                 <Label htmlFor="main-item" className="text-right font-semibold">
                   NOME DE REGISTRO CIVIL
                 </Label>
                 <Input
                   id="main-item"
                   value={mainItem}
                   onChange={(e) => setMainItem(e.target.value)}
-                  className="sm:col-span-3"
+                  className="col-span-3"
                 />
               </div>
-              {Object.keys(subItems).map((key, index) => (
-                <div key={index} className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-                  <Label htmlFor={`item-${index}`} className="sm:text-right break-words">
-                    {key}
+              {subItems.map((item, index) => (
+                <div key={index} className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor={`item-${index}`} className="text-right truncate" title={item.label}>
+                    {item.label}
                   </Label>
                   <Input
                     id={`item-${index}`}
-                    value={subItems[key] || ''}
-                    onChange={(e) => handleSubItemChange(key, e.target.value)}
-                    className="sm:col-span-3"
+                    value={item.value || ''}
+                    onChange={(e) => handleSubItemChange(index, e.target.value)}
+                    className="col-span-3"
                   />
                 </div>
               ))}
             </div>
           </ScrollArea>
-          <DialogFooter className="mt-4 flex-col sm:flex-row space-y-2 sm:space-y-0">
+          <DialogFooter className="mt-6 flex-col sm:flex-row space-y-2 sm:space-y-0">
             <DialogClose asChild>
               <Button type="button" variant="secondary" onClick={onClose} className="w-full sm:w-auto">
                 Cancelar

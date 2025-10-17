@@ -1,0 +1,64 @@
+{
+  "entities": {
+    "Student": {
+      "title": "Student",
+      "type": "object",
+      "description": "Represents a student's data imported from an XLSX file.",
+      "properties": {
+        "mainItem": {
+          "type": "string",
+          "description": "The main identifying information for the student, typically their full name."
+        },
+        "subItems": {
+          "type": "array",
+          "description": "An array of key-value pairs representing other information from the spreadsheet.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              }
+            },
+            "required": ["label", "value"]
+          }
+        }
+      },
+      "required": [
+        "mainItem",
+        "subItems"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}/students/{studentId}",
+        "definition": {
+          "entityName": "Student",
+          "schema": {
+            "$ref": "#/backend/entities/Student"
+          },
+          "description": "Stores student data uploaded by a specific user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "studentId",
+              "description": "The unique identifier of the student."
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
