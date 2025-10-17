@@ -2,8 +2,8 @@
 
 import { useEffect } from 'react';
 import { useFcm } from '@/hooks/use-fcm';
-import { useUser, useFirestore } from '@/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { useUser, useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 /**
  * An invisible component that manages the FCM token lifecycle.
@@ -24,16 +24,20 @@ export function FcmTokenManager() {
         // Save the token to Firestore under the user's document
         try {
           const userDocRef = doc(firestore, 'users', user.uid);
-          await setDoc(userDocRef, { fcmTokens: { [token]: true } }, { merge: true });
-          console.log('FCM token saved to Firestore.');
+          // Use non-blocking update to avoid waiting for the write to complete
+          updateDocumentNonBlocking(userDocRef, { fcmTokens: { [token]: true } });
+          console.log('FCM token queued for saving to Firestore.');
         } catch (error) {
-          console.error('Error saving FCM token to Firestore:', error);
+          // This catch block might not be effective for non-blocking calls,
+          // as the error happens in the background. The error is handled
+          // within the non-blocking update function itself.
+          console.error('Error initiating FCM token save to Firestore:', error);
         }
       }
     };
     
     // We only want to run this on the client
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && user && firestore) {
       initFcm();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
