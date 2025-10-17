@@ -40,7 +40,7 @@ export async function studentDataAssistant(input: StudentDataAssistantInput): Pr
 const prompt = ai.definePrompt({
   name: 'studentDataAssistantPrompt',
   input: { schema: StudentDataAssistantInputSchema },
-  output: { schema: StudentDataAssistantOutputSchema },
+  // REMOVED: output: { schema: StudentDataAssistantOutputSchema },
   prompt: `You are an expert school data assistant. Your task is to answer questions based on the provided student data.
   The current date is ${new Date().toLocaleDateString('pt-BR')}.
 
@@ -68,6 +68,6 @@ const studentDataAssistantFlow = ai.defineFlow(
     if (output === null || output === undefined) {
         return "Desculpe, não consegui encontrar uma resposta para sua pergunta.";
     }
-    return output;
+    return output as string;
   }
 );
