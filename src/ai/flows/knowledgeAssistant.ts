@@ -59,7 +59,7 @@ const knowledgeAssistantFlow = ai.defineFlow(
   async (input) => {
     // Dynamically build the prompt history.
     const history = (input.history ?? []).map((item) => ({
-      role: item.role,
+      role: item.role === 'bot' ? 'model' : 'user',
       content: item.content,
     }));
 

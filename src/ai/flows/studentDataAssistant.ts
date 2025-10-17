@@ -58,7 +58,7 @@ export const studentDataAssistantFlow = ai.defineFlow(
   },
   async (input: KnowledgeAssistantInput): Promise<KnowledgeAssistantOutput> => {
     const history = (input.history ?? []).map((item) => ({
-      role: item.role,
+      role: item.role === 'bot' ? 'model' : 'user',
       content: item.content,
     }));
 

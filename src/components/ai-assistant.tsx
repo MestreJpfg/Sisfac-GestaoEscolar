@@ -24,12 +24,16 @@ export default function AiAssistant() {
 
   const scrollToBottom = () => {
     if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTo({
-        top: scrollAreaRef.current.scrollHeight,
-        behavior: "smooth",
-      });
+      const scrollViewport = scrollAreaRef.current.querySelector('div');
+      if (scrollViewport) {
+        scrollViewport.scrollTo({
+          top: scrollViewport.scrollHeight,
+          behavior: "smooth",
+        });
+      }
     }
   };
+  
 
   useEffect(() => {
     scrollToBottom();
@@ -45,15 +49,15 @@ export default function AiAssistant() {
     setIsLoading(true);
 
     try {
-      // Convert the frontend message format to the format expected by the Genkit flow.
-      // The role 'bot' used in the frontend state must be mapped to 'model' for the AI history.
-      const history = messages.map(m => ({
-        role: m.role === 'bot' ? 'model' : 'user',
+      // The role 'bot' is used for the frontend state, 
+      // but the Genkit flow will map it to 'model' for the AI history.
+      const historyForAI = messages.map(m => ({
+        role: m.role, // Keep 'bot' as is, the flow will handle it
         content: [{ text: m.text }]
       }));
       
       const assistantInput: KnowledgeAssistantInput = {
-        history,
+        history: historyForAI,
         prompt: input
       };
       
