@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
@@ -44,6 +44,17 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
   const [selectedSerie, setSelectedSerie] = useState<string>("all");
   const [editingStudent, setEditingStudent] = useState<DataItem | null>(null);
   const [declarationStudent, setDeclarationStudent] = useState<DataItem | null>(null);
+  const [currentDateTime, setCurrentDateTime] = useState('');
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDateTime(new Date().toLocaleString('pt-BR', {
+        dateStyle: 'full',
+        timeStyle: 'medium',
+      }));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const series = useMemo(() => {
     const allSeries = data.reduce((acc, item) => {
@@ -105,7 +116,12 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-foreground">Informações do Aluno</h3>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-foreground">Informações do Aluno</h3>
+              {currentDateTime && (
+                <p className="text-sm text-muted-foreground">{currentDateTime}</p>
+              )}
+            </div>
             <ScrollArea className="h-96 w-full rounded-md border">
               <Accordion type="single" collapsible className="w-full p-4">
                 {filteredData.map((item) => (
