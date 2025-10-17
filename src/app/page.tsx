@@ -12,7 +12,6 @@ import { collection, getDocs, query, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2 } from "lucide-react";
 import { quotes } from "@/lib/quotes";
-import AiAssistant from "@/components/ai-assistant";
 
 export default function Home() {
   const [data, setData] = useState<DataItem[]>([]);
@@ -164,7 +163,6 @@ export default function Home() {
           </div>
         </div>
       </main>
-      <AiAssistant />
     </>
   );
 }
