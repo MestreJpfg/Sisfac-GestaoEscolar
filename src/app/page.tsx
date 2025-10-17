@@ -19,8 +19,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, BellRing } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
-import { useFirestore, useUser, errorEmitter, FirestorePermissionError, deleteDocumentNonBlocking } from "@/firebase";
-import { collection, getDocs, query, writeBatch } from "firebase/firestore";
+import { useFirestore, useUser, errorEmitter, FirestorePermissionError, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
+import { collection, getDocs, query, doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useFcm } from "@/hooks/use-fcm";
 import { Trash2 } from "lucide-react";
@@ -39,10 +39,9 @@ export default function Home() {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
-  const { notificationPermission } = useFcm();
+  const { notificationPermission, requestPermissionAndGetToken } = useFcm();
 
   useEffect(() => {
-    // Select a random quote on client-side mount
     setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
     setCurrentDateTime(new Date().toLocaleDateString('pt-BR', {
       dateStyle: 'full',
@@ -153,13 +152,24 @@ export default function Home() {
     }
   };
 
-  const handleTestNotification = () => {
-    toast({
-      title: "🔔 Notificação de Teste",
-      description: "Se você pode ver isto, o sistema de notificações em primeiro plano está a funcionar!",
-    });
+  const handleNotificationAction = async () => {
+    if (notificationPermission === 'granted') {
+      toast({
+        title: "🔔 Notificação de Teste",
+        description: "Se você pode ver isto, o sistema de notificações em primeiro plano está a funcionar!",
+      });
+    } else {
+      const token = await requestPermissionAndGetToken();
+      if (token && user && firestore) {
+        const userDocRef = doc(firestore, 'users', user.uid);
+        updateDocumentNonBlocking(userDocRef, { fcmTokens: { [token]: true } });
+        toast({
+          title: 'Sucesso!',
+          description: 'As notificações foram ativadas para este dispositivo.'
+        });
+      }
+    }
   };
-
 
   const hasData = data && data.length > 0;
 
@@ -169,6 +179,7 @@ export default function Home() {
         <div className="w-full max-w-4xl mx-auto">
           <header className="text-center mb-8 flex flex-col items-center">
             <div className="mb-4 flex flex-col items-center">
+               <p className="w-full text-center text-xs text-muted-foreground mb-2">{currentDateTime}</p>
               <Image
                 src="/logoyuri.png"
                 alt="Logo"
@@ -176,9 +187,6 @@ export default function Home() {
                 height={40}
                 className="rounded-md"
               />
-              {currentDateTime && (
-              <p className="text-center text-xs text-muted-foreground mt-2">{currentDateTime}</p>
-            )}
                {randomQuote && (
                 <blockquote className="mt-4 border-l-2 border-primary pl-4 italic text-xs text-muted-foreground">
                   <p>"{randomQuote.quote}"</p>
@@ -215,10 +223,10 @@ export default function Home() {
                   <Trash2 className="mr-2 h-4 w-4" />
                   Limpar dados e carregar novo arquivo
                 </Button>
-                {notificationPermission === 'granted' && (
-                  <Button onClick={handleTestNotification} className="w-full" variant="secondary">
+                {notificationPermission !== 'denied' && (
+                  <Button onClick={handleNotificationAction} className="w-full" variant="secondary">
                     <BellRing className="mr-2 h-4 w-4" />
-                    Testar Notificação
+                    {notificationPermission === 'granted' ? 'Testar Notificação' : 'Ativar Notificações'}
                   </Button>
                 )}
               </div>

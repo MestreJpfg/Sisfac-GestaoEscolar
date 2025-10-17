@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getToken, onMessage } from 'firebase/messaging';
 import { useMessaging } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -11,20 +11,23 @@ const VAPID_KEY = process.env.NEXT_PUBLIC_FCM_VAPID_KEY;
 export function useFcm() {
   const messaging = useMessaging();
   const { toast } = useToast();
-  const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'loading'>('loading');
 
-  useEffect(() => {
+  // Function to check and set the initial notification permission status
+  const checkPermission = useCallback(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setNotificationPermission(Notification.permission);
     } else {
-       setNotificationPermission('denied');
+      setNotificationPermission('denied');
     }
   }, []);
-  
+
+  useEffect(() => {
+    checkPermission();
+  }, [checkPermission]);
+
   // Handle incoming foreground messages
   useEffect(() => {
-    // This effect will run only on the client where messaging is available
     if (messaging) {
       const unsubscribe = onMessage(messaging, (payload) => {
         console.log('Foreground message received.', payload);
@@ -37,15 +40,32 @@ export function useFcm() {
     }
   }, [messaging, toast]);
 
+  const registerServiceWorker = useCallback(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/firebase-messaging-sw.js')
+        .then((registration) => {
+          console.log('Service Worker registration successful, scope is:', registration.scope);
+        })
+        .catch((err) => {
+          console.error('Service Worker registration failed:', err);
+        });
+    }
+  }, []);
+
   const requestPermissionAndGetToken = async () => {
     if (!messaging) {
-      console.error('Firebase Messaging is not initialized or not available in this environment.');
-      setNotificationPermission('denied');
+      console.error('Firebase Messaging is not initialized.');
+      toast({
+        variant: 'destructive',
+        title: 'Erro de Serviço',
+        description: 'O serviço de mensagens não está disponível.',
+      });
       return null;
     }
 
     if (!VAPID_KEY) {
-      console.error('VAPID key is missing. Set NEXT_PUBLIC_FCM_VAPID_KEY in your environment variables.');
+      console.error('VAPID key is missing.');
        toast({
         variant: 'destructive',
         title: 'Erro de Configuração',
@@ -56,20 +76,19 @@ export function useFcm() {
     
     try {
       const permission = await Notification.requestPermission();
-      setNotificationPermission(permission);
+      setNotificationPermission(permission); // Update state after user action
       
       if (permission === 'granted') {
         const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY });
         if (currentToken) {
           console.log('FCM Token:', currentToken);
-          setFcmToken(currentToken);
           return currentToken;
         } else {
           console.log('No registration token available. Request permission to generate one.');
            toast({
             variant: 'destructive',
             title: 'Token Não Disponível',
-            description: 'Não foi possível obter o token para notificações.',
+            description: 'Não foi possível obter o token para notificações. Tente novamente.',
           });
           return null;
         }
@@ -92,5 +111,5 @@ export function useFcm() {
     }
   };
 
-  return { fcmToken, notificationPermission, requestPermissionAndGetToken };
+  return { notificationPermission, requestPermissionAndGetToken, registerServiceWorker };
 }
