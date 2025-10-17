@@ -81,12 +81,12 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="w-[95%] sm:max-w-3xl">
+      <DialogContent className="w-[95%] sm:max-w-3xl flex flex-col h-auto max-h-[85vh]">
         <DialogHeader>
           <DialogTitle>Editar Aluno: {student.mainItem || ''}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <ScrollArea className="max-h-[60vh] pr-6">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col">
+          <ScrollArea className="flex-1 pr-6">
              <div className="space-y-4 py-4">
                <div className="space-y-2">
                  <Label htmlFor="main-item" className="font-semibold text-muted-foreground">
@@ -116,7 +116,7 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
               </div>
             </div>
           </ScrollArea>
-          <DialogFooter className="mt-6 flex-col sm:flex-row space-y-2 sm:space-y-0">
+          <DialogFooter className="mt-6 flex-col sm:flex-row space-y-2 sm:space-y-0 border-t pt-4">
             <DialogClose asChild>
               <Button type="button" variant="secondary" onClick={onClose} className="w-full sm:w-auto">
                 Cancelar
