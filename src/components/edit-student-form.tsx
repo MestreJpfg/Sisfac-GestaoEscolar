@@ -35,7 +35,11 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
 
   useEffect(() => {
     setMainItem(student.mainItem || '');
-    setSubItems(student.subItems || []);
+    if (student.subItems && Array.isArray(student.subItems)) {
+      setSubItems(student.subItems);
+    } else {
+      setSubItems([]);
+    }
   }, [student]);
 
   const handleSubItemChange = (index: number, value: string) => {

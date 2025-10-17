@@ -123,12 +123,12 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
                         </Button>
                       </div>
                       <ul className="space-y-2 pl-4">
-                        {item.subItems && Array.isArray(item.subItems) && item.subItems.map((subItem) => (
+                        {item.subItems && Array.isArray(item.subItems) ? item.subItems.map((subItem) => (
                           <li key={subItem.label} className="text-sm">
                             <span className="font-semibold text-muted-foreground">{subItem.label}:</span>
                             <span className="ml-2 text-foreground break-all">{subItem.value}</span>
                           </li>
-                        ))}
+                        )) : null}
                       </ul>
                     </AccordionContent>
                   </AccordionItem>
