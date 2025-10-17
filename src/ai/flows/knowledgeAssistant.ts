@@ -7,18 +7,16 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { googleAI } from '@genkit-ai/google-genai';
 import { z } from 'zod';
 import {
   KnowledgeAssistantOutputSchema,
-  type KnowledgeAssistantInput,
   type KnowledgeAssistantOutput,
 } from './schemas';
 
 // Define the main prompt for the AI assistant.
 const knowledgeAssistantPrompt = ai.definePrompt({
   name: 'knowledgeAssistantPrompt',
-  model: googleAI.model('gemini-1.5-flash'),
+  model: 'gemini-1.5-flash',
   // Instructions for the model on how to behave.
   system:
     'Você é um assistente de IA amigável e prestativo. Sua tarefa é conversar com o usuário sobre uma variedade de tópicos, como cotidiano, notícias, piadas, jogos e mais. Responda de forma concisa e envolvente. Você deve ser capaz de manter uma conversa fluida e natural.',
