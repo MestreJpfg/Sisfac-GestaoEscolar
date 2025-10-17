@@ -40,15 +40,15 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
   const nomeCompleto = student.mainItem;
   const dataNascimento = getStudentValue('data nascimento');
   const serie = getStudentValue('serie');
-  const turma = getStudentValue('classe'); // Corrigido para usar 'classe'
+  const turma = getStudentValue('classe');
   const turno = getStudentValue('turno');
 
   const handleExportToPdf = async () => {
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
     
-    const leftMargin = 30;
-    const rightMargin = 30;
+    const leftMargin = 20;
+    const rightMargin = 20;
     const textWidth = pdfWidth - leftMargin - rightMargin;
     const paragraphIndent = 10; // 1cm
 
@@ -78,14 +78,13 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
 
       // Primeiro parágrafo com indentação
       pdf.text(textLines1, leftMargin + paragraphIndent, yPosition, { align: 'left', lineHeightFactor: 1.5 });
-      yPosition += pdf.getTextDimensions(textLines1, { lineHeightFactor: 1.5 }).h + 5;
+      yPosition += pdf.getTextDimensions(textLines1, { lineHeightFactor: 1.5 }).h + 10;
 
       // Segundo parágrafo com indentação
       pdf.text(textLines2, leftMargin + paragraphIndent, yPosition, { align: 'left', lineHeightFactor: 1.5 });
-      yPosition += pdf.getTextDimensions(textLines2, { lineHeightFactor: 1.5 }).h;
       
-      // Data (Ajustada para alinhar à direita da área de texto)
-      const dateYPosition = yPosition + 20;
+      // Mover data e assinatura para mais perto do final
+      const dateYPosition = 180;
       pdf.text(`Fortaleza, ${currentDate}`, leftMargin + textWidth, dateYPosition, { align: 'right' });
 
       // Linha para assinatura
