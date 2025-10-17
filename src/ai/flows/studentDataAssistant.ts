@@ -70,7 +70,7 @@ export const studentDataAssistantFlow = ai.defineFlow(
     if (!llmResponse || !llmResponse.reply) {
       return {
         reply:
-          'Não foi possível obter uma resposta do assistente de dados do aluno.',
+          'Desculpe, não consegui processar sua pergunta. Tente novamente.',
       };
     }
 
