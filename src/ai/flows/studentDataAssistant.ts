@@ -31,7 +31,7 @@ const studentDataAssistantPrompt = ai.definePrompt({
   The current date is ${new Date().toLocaleDateString('pt-BR')}.
 
   User's Question:
-  "{{{prompt}}}"
+  "{{{query}}}"
 
   Provide a clear and concise answer using your general knowledge.
   `,
@@ -45,7 +45,7 @@ const studentDataAssistantFlow = ai.defineFlow(
   },
   async (input) => {
     // We pass the query as a simple string to the prompt.
-    const { output } = await studentDataAssistantPrompt(input.query);
+    const { output } = await studentDataAssistantPrompt(input);
     
     // Handle cases where the model might return a null or undefined output
     if (output === null || output === undefined) {
