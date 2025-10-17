@@ -15,8 +15,7 @@ const StudentDataAssistantInputSchema = z.object({
 });
 export type StudentDataAssistantInput = z.infer<typeof StudentDataAssistantInputSchema>;
 
-const StudentDataAssistantOutputSchema = z.string().describe("The AI's answer to the user's query.");
-export type StudentDataAssistantOutput = z.infer<typeof StudentDataAssistantOutputSchema>;
+export type StudentDataAssistantOutput = string;
 
 export async function studentDataAssistant(input: StudentDataAssistantInput): Promise<StudentDataAssistantOutput> {
   return studentDataAssistantFlow(input);
@@ -26,7 +25,6 @@ const studentDataAssistantPrompt = ai.definePrompt(
   {
     name: 'studentDataAssistantPrompt',
     input: { schema: StudentDataAssistantInputSchema },
-    output: { schema: StudentDataAssistantOutputSchema },
     prompt: `You are a helpful general purpose AI assistant. Your goal is to provide accurate and helpful answers to the user's query.
 
 User query:
@@ -41,7 +39,7 @@ const studentDataAssistantFlow = ai.defineFlow(
   {
     name: 'studentDataAssistantFlow',
     inputSchema: StudentDataAssistantInputSchema,
-    outputSchema: StudentDataAssistantOutputSchema,
+    outputSchema: z.string(),
   },
   async (input) => {
     const { output } = await studentDataAssistantPrompt(input);
