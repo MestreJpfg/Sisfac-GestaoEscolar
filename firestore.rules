@@ -1,18 +1,16 @@
 /**
- * @file Overview
- * This ruleset enforces a strict user-ownership model for student data and user profiles.
+ * @fileOverview Firestore Security Rules for the application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model.  Each user has full control over their own data (students and user profile).
  *
  * Data Structure:
- * - All student data is nested under /users/{userId}/students/{studentId}.
- * - User profiles (containing FCM tokens) are stored at /users/{userId}.
+ * - `/users/{userId}`: Stores user profile data (e.g., FCM tokens).  Each user document is named after the user's Firebase Auth UID.
+ * - `/users/{userId}/students/{studentId}`: Stores student data associated with a specific user.
  *
  * Key Security Decisions:
- * - Students can only be accessed by their owners (the user who uploaded the data).
- * - Users can only read/write their own profile data.
- * - Listing of students is only allowed by the owner.
- *
- *  Denormalization for Authorization:
- *  -The design enforces the user ID to match both the `/users/{userId}` path and the document ID for simplified and secure authorization.
+ * - Users can only access their own data.
+ * - Listing the root `/students` collection is forbidden. The error message from NextJS indicates this is the source of the error. The fix is to restrict listing students to the subcollection.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -20,6 +18,7 @@ service cloud.firestore {
 
     /**
      * @description Checks if the request is authenticated.
+     * @returns {boolean} True if the user is signed in, false otherwise.
      */
     function isSignedIn() {
       return request.auth != null;
@@ -27,6 +26,8 @@ service cloud.firestore {
 
     /**
      * @description Checks if the authenticated user ID matches the provided user ID.
+     * @param {string} userId The user ID to check against.
+     * @returns {boolean} True if the user is the owner, false otherwise.
      */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
@@ -34,17 +35,38 @@ service cloud.firestore {
 
     /**
      * @description Checks if the authenticated user is the owner of the existing document.
+     * @param {string} userId The user ID to check against.
+     * @returns {boolean} True if the user is the owner of the existing document, false otherwise.
      */
     function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
+        return isOwner(userId) && resource != null;
     }
 
     /**
-     * @description Enforces document ownership for writes.
+     * @description Rules for the /users/{userId} document.
+     * @path /users/{userId}
+     * @allow (create) Signed-in user with UID 'user123' can create a document at /users/user123.
+     * @allow (get, update, delete) Signed-in user with UID 'user123' can read, update or delete their own document /users/user123.
+     * @deny (create) Signed-in user with UID 'user456' cannot create a document at /users/user123.
+     * @deny (get, update, delete) Signed-in user with UID 'user456' cannot read, update or delete document /users/user123.
+     * @principle Enforces document ownership for all operations on user documents.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Rules for the /users/{userId}/students/{studentId} collection.
      * @path /users/{userId}/students/{studentId}
-     * @allow (create) Authenticated user "JVGCVI6UnEdJI7OJ87EwvC9hRO43" creates a new student under their own user ID.
-     * @deny (create) Authenticated user attempts to create a student under a different user ID.
-     * @principle Enforces document ownership for writes
+     * @allow (create) Signed-in user with UID 'user123' can create a student document under /users/user123/students.
+     * @allow (get, list, update, delete) Signed-in user with UID 'user123' can read, list, update or delete their own student document under /users/user123/students.
+     * @deny (create) Signed-in user with UID 'user456' cannot create a student document under /users/user123/students.
+     * @deny (get, list, update, delete) Signed-in user with UID 'user456' cannot read, list, update or delete student documents under /users/user123/students.
+     * @principle Enforces document ownership for all operations on student documents.
      */
     match /users/{userId}/students/{studentId} {
       allow get: if isOwner(userId);
@@ -55,18 +77,17 @@ service cloud.firestore {
     }
 
     /**
-     * @description Enforces access control for user profile documents.
-     * @path /users/{userId}
-     * @allow (create) Authenticated user creates their own profile.
-     * @deny (create) Authenticated user attempts to create a profile for another user.
-     * @principle Restricts access to a user's own data tree.
+     * @description Prevents listing of the root `/students` collection.  This was the cause of the original error.
+     * @path /students
+     * @deny (list) Listing the top-level /students collection is not permitted.
+     * @principle Restricts listing students to the subcollection.
      */
-    match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+    match /students {
+        allow get: if false;
+        allow list: if false;
+        allow create: if false;
+        allow update: if false;
+        allow delete: if false;
     }
   }
 }
