@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useRef, useState, useCallback, type DragEvent } from "react";
@@ -58,25 +59,41 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
             return;
         }
 
-        const headers = json[0].map(h => String(h ?? '').trim());
-        const mainItemHeaderIndex = 3; // Coluna 4 (index 3) "NOME DE REGISTRO CIVIL"
-        
+        const headers = json[0].map(h => String(h ?? '').trim().toUpperCase());
+        const mainItemHeaderIndex = headers.findIndex(h => h === "NOME DE REGISTRO CIVIL");
+        const dateOfBirthHeaderIndex = headers.findIndex(h => h === "DATA NASC");
+
+        if (mainItemHeaderIndex === -1) {
+          toast({
+            variant: "destructive",
+            title: "Coluna não encontrada",
+            description: "A coluna obrigatória 'NOME DE REGISTRO CIVIL' não foi encontrada no arquivo.",
+          });
+          setIsLoading(false);
+          return;
+        }
+
         const rows = json.slice(1);
 
         const processedData = rows.map(row => {
           const mainItem = String(row[mainItemHeaderIndex] || '');
-          const subItems: SubItem[] = [];
+          if (!mainItem) {
+            return null; // Ignora linhas sem nome de aluno
+          }
 
-          headers.forEach((header, index) => {
-            if (!header || index === mainItemHeaderIndex) return;
+          const subItems: SubItem[] = [];
+          const originalHeaders = json[0]; // Mantém os cabeçalhos originais para os labels
+
+          originalHeaders.forEach((header, index) => {
+            const headerStr = String(header ?? '').trim();
+            if (!headerStr || index === mainItemHeaderIndex) return;
 
             const cellValue = row[index];
             let value = '';
 
             if (cellValue instanceof Date) {
-              // Ajuste para formatar datas específicas, se necessário
-              // Ex: Coluna de nascimento com índice 11
-              if (index === 11) { // Supondo que o índice 11 seja uma data que precisa do formato dd/MM/yyyy
+              // Formata a data de nascimento corretamente, não importa a posição da coluna
+              if (index === dateOfBirthHeaderIndex) {
                 value = format(cellValue, 'dd/MM/yyyy');
               } else {
                 value = cellValue.toISOString();
@@ -85,10 +102,10 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
               value = String(cellValue);
             }
             
-            subItems.push({ label: header, value: value });
+            subItems.push({ label: headerStr, value: value });
           });
           return { mainItem, subItems };
-        }).filter(item => item.mainItem);
+        }).filter(item => item !== null) as { mainItem: string; subItems: SubItem[] }[];
 
         if (processedData.length === 0) {
           toast({
@@ -233,3 +250,5 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
     </Card>
   );
 }
+
+    
