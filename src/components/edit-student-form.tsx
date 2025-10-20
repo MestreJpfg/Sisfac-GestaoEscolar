@@ -86,7 +86,7 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
         <DialogHeader>
           <DialogTitle>Editar Aluno: {student.mainItem || ''}</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto pr-6 -mr-6">
+        <ScrollArea className="flex-1 pr-6 -mr-6">
           <form onSubmit={handleSubmit} className="flex flex-col h-full">
             <div className="space-y-4 py-4">
               <div className="space-y-2">
@@ -129,7 +129,7 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
               </Button>
             </DialogFooter>
           </form>
-        </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
