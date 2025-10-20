@@ -112,31 +112,37 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
             </div>
             <ScrollArea className="h-96 w-full rounded-md border">
               <Accordion type="single" collapsible className="w-full p-4">
-                {filteredData.map((item) => (
-                  <AccordionItem value={item.id} key={item.id}>
-                    <AccordionTrigger>{getStudentName(item)}</AccordionTrigger>
-                    <AccordionContent>
-                      <div className="flex justify-end mb-4 space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => setDeclarationStudent(item)}>
-                          <FileText className="mr-2 h-4 w-4" />
-                          Declaração
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => setEditingStudent(item)}>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Editar
-                        </Button>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 p-4 bg-muted/30 rounded-md border">
-                        {item.subItems && Array.isArray(item.subItems) ? item.subItems.map((subItem) => (
-                          <div key={subItem.label} className={cn("flex flex-col", subItem.value ? 'opacity-100' : 'opacity-50')}>
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate" title={subItem.label}>{subItem.label}</p>
-                            <p className="text-sm text-foreground break-words">{subItem.value || "Não informado"}</p>
-                          </div>
-                        )) : null}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
+                {filteredData.length > 0 ? (
+                  filteredData.map((item) => (
+                    <AccordionItem value={item.id} key={item.id}>
+                      <AccordionTrigger>{getStudentName(item)}</AccordionTrigger>
+                      <AccordionContent>
+                        <div className="flex justify-end mb-4 space-x-2">
+                          <Button variant="outline" size="sm" onClick={() => setDeclarationStudent(item)}>
+                            <FileText className="mr-2 h-4 w-4" />
+                            Declaração
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => setEditingStudent(item)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Editar
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 p-4 bg-muted/30 rounded-md border">
+                          {item.subItems && Array.isArray(item.subItems) ? item.subItems.map((subItem) => (
+                            <div key={subItem.label} className={cn("flex flex-col", subItem.value ? 'opacity-100' : 'opacity-50')}>
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate" title={subItem.label}>{subItem.label}</p>
+                              <p className="text-sm text-foreground break-words">{subItem.value || "Não informado"}</p>
+                            </div>
+                          )) : null}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))
+                ) : (
+                  <div className="text-center py-10 text-muted-foreground">
+                    Nenhum aluno encontrado.
+                  </div>
+                )}
               </Accordion>
             </ScrollArea>
           </div>
@@ -158,3 +164,5 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
     </>
   );
 }
+
+    

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import XlsxUploader from "@/components/xlsx-uploader";
 import DataViewer from "@/components/data-viewer";
@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, BellRing } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
-import { useFirestore, useUser, errorEmitter, FirestorePermissionError, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useUser, errorEmitter, FirestorePermissionError, deleteDocumentNonBlocking, updateDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, getDocs, query, doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useFcm } from "@/hooks/use-fcm";
@@ -28,9 +28,6 @@ import { quotes } from "@/lib/quotes";
 import AiAssistant from "@/components/ai-assistant";
 
 export default function Home() {
-  const [data, setData] = useState<DataItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
   const [randomQuote, setRandomQuote] = useState<{ quote: string; author: string } | null>(null);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
@@ -41,6 +38,30 @@ export default function Home() {
   const { toast } = useToast();
   const { notificationPermission, requestPermissionAndGetToken } = useFcm();
 
+  const studentsCollection = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, "students");
+  }, [firestore]);
+
+  const { data: rawData, isLoading, error } = useCollection<DataItem>(studentsCollection);
+
+  const data = useMemo(() => {
+    if (!rawData) return [];
+    return [...rawData].sort((a, b) => {
+      const nameA = a.mainItem || "";
+      const nameB = b.mainItem || "";
+      return nameA.localeCompare(nameB);
+    });
+  }, [rawData]);
+
+  const refetchData = useCallback(() => {
+    // A re-fetch is now handled by re-rendering or by useCollection's real-time nature.
+    // This function can be used to trigger updates if needed, e.g. after an upload.
+    // For now, useCollection handles it. If we needed to imperatively refetch, we could
+    // change the query key, but that is not necessary here.
+  }, []);
+
+
   useEffect(() => {
     setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
     setCurrentDateTime(new Date().toLocaleDateString('pt-BR', {
@@ -48,52 +69,9 @@ export default function Home() {
     }));
   }, []);
 
-  const fetchData = useCallback(async () => {
-    if (!firestore || !user) {
-      return;
-    }
-    
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const studentsCollection = collection(firestore, "students");
-      const q = query(studentsCollection);
-      const querySnapshot = await getDocs(q);
-      
-      const studentsData: DataItem[] = [];
-      querySnapshot.forEach((doc) => {
-        studentsData.push({ id: doc.id, ...doc.data() } as DataItem);
-      });
-      
-      studentsData.sort((a, b) => {
-        const nameA = a.mainItem || "";
-        const nameB = b.mainItem || "";
-        return nameA.localeCompare(nameB);
-      });
-
-      setData(studentsData);
-    } catch (err: any) {
-      console.error("Failed to fetch data:", err);
-      const permissionError = new FirestorePermissionError({
-        path: 'students',
-        operation: 'list',
-      });
-      setError(permissionError);
-      errorEmitter.emit('permission-error', permissionError);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [firestore, user]);
-
-  useEffect(() => {
-    if (!isUserLoading && firestore && user) {
-      fetchData();
-    }
-  }, [isUserLoading, firestore, user, fetchData]);
 
   const handleUploadComplete = () => {
-    fetchData();
+    // Data will update automatically via useCollection
   };
 
   const handleClearAndReload = async () => {
@@ -106,9 +84,8 @@ export default function Home() {
       return;
     }
   
-    setIsLoading(true);
-    const studentsCollection = collection(firestore, "students");
-    const q = query(studentsCollection);
+    const studentsRef = collection(firestore, "students");
+    const q = query(studentsRef);
     
     try {
         const querySnapshot = await getDocs(q);
@@ -118,9 +95,7 @@ export default function Home() {
               deleteDocumentNonBlocking(doc.ref);
             });
         }
-    
-        setData([]);
-        
+            
         toast({
           title: "Dados removidos",
           description: "Os dados anteriores foram limpos. Você já pode carregar um novo arquivo.",
@@ -128,13 +103,10 @@ export default function Home() {
     
     } catch(err) {
         const permissionError = new FirestorePermissionError({
-            path: studentsCollection.path,
+            path: studentsRef.path,
             operation: 'list',
         });
-        setError(permissionError);
         errorEmitter.emit('permission-error', permissionError);
-    } finally {
-        setIsLoading(false);
     }
   };
 
@@ -218,7 +190,7 @@ export default function Home() {
             <XlsxUploader onUploadComplete={handleUploadComplete} />
           ) : (
             <div className="space-y-4">
-              <DataViewer data={data} onEditComplete={fetchData} />
+              <DataViewer data={data} onEditComplete={refetchData} />
                <Button onClick={() => setIsClearConfirmOpen(true)} className="w-full" variant="outline">
                 <Trash2 className="mr-2 h-4 w-4" />
                 Limpar dados e carregar novo arquivo
@@ -273,3 +245,5 @@ export default function Home() {
     </main>
   );
 }
+
+    
