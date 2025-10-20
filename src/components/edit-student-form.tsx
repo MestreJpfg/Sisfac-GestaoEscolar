@@ -86,8 +86,8 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
         <DialogHeader>
           <DialogTitle>Editar Aluno: {student.mainItem || ''}</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="flex-1 pr-6 -mr-6">
-          <form onSubmit={handleSubmit} className="flex flex-col h-full">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+          <ScrollArea className="flex-1 pr-6 -mr-6">
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="main-item" className="font-semibold text-muted-foreground">
@@ -116,20 +116,20 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
                 ))}
               </div>
             </div>
+          </ScrollArea>
             
-            <DialogFooter className="mt-6 flex-col sm:flex-row space-y-2 sm:space-y-0 border-t pt-4 sticky bottom-0 bg-background pb-6">
-              <DialogClose asChild>
-                <Button type="button" variant="secondary" onClick={onClose} className="w-full sm:w-auto">
-                  Cancelar
-                </Button>
-              </DialogClose>
-              <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Salvar Alterações
+          <DialogFooter className="mt-6 flex-col sm:flex-row space-y-2 sm:space-y-0 border-t pt-4 bg-background">
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" onClick={onClose} className="w-full sm:w-auto">
+                Cancelar
               </Button>
-            </DialogFooter>
-          </form>
-        </ScrollArea>
+            </DialogClose>
+            <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Salvar Alterações
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
