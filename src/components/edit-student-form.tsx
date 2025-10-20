@@ -85,36 +85,38 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
         <DialogHeader>
           <DialogTitle>Editar Aluno: {student.mainItem || ''}</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="flex-1 -mx-6">
-          <form onSubmit={handleSubmit} id="edit-student-form" className="space-y-4 px-6 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="main-item" className="font-semibold text-muted-foreground">
-                  NOME DE REGISTRO CIVIL
-                </Label>
-                <Input
-                  id="main-item"
-                  value={mainItem}
-                  onChange={(e) => setMainItem(e.target.value)}
-                />
-              </div>
+        <div className="flex-1 min-h-0">
+          <ScrollArea className="h-full -mx-6">
+            <form onSubmit={handleSubmit} id="edit-student-form" className="space-y-4 px-6 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="main-item" className="font-semibold text-muted-foreground">
+                    NOME DE REGISTRO CIVIL
+                  </Label>
+                  <Input
+                    id="main-item"
+                    value={mainItem}
+                    onChange={(e) => setMainItem(e.target.value)}
+                  />
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 pt-4">
-                {subItems.map((item, index) => (
-                  <div key={`${item.label}-${index}`} className="space-y-2">
-                    <Label htmlFor={`item-${index}`} className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate" title={item.label}>
-                      {item.label}
-                    </Label>
-                    <Input
-                      id={`item-${index}`}
-                      value={item.value || ''}
-                      onChange={(e) => handleSubItemChange(index, e.target.value)}
-                      className={cn(!item.value && 'opacity-70')}
-                    />
-                  </div>
-                ))}
-              </div>
-          </form>
-        </ScrollArea>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 pt-4">
+                  {subItems.map((item, index) => (
+                    <div key={`${item.label}-${index}`} className="space-y-2">
+                      <Label htmlFor={`item-${index}`} className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate" title={item.label}>
+                        {item.label}
+                      </Label>
+                      <Input
+                        id={`item-${index}`}
+                        value={item.value || ''}
+                        onChange={(e) => handleSubItemChange(index, e.target.value)}
+                        className={cn(!item.value && 'opacity-70')}
+                      />
+                    </div>
+                  ))}
+                </div>
+            </form>
+          </ScrollArea>
+        </div>
             
           <DialogFooter className="mt-auto border-t pt-4 bg-background -mx-6 px-6 pb-6">
             <DialogClose asChild>
