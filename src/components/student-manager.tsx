@@ -19,13 +19,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, BellRing, Trash2 } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
-import { useFirestore, useUser, FirestorePermissionError, errorEmitter, updateDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useUser, errorEmitter, updateDocumentNonBlocking } from "@/firebase";
 import { collection, writeBatch, doc, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useFcm } from "@/hooks/use-fcm";
 import { quotes } from "@/lib/quotes";
 import AiAssistant from "@/components/ai-assistant";
 import { useRouter } from "next/navigation";
+import { FirestorePermissionError } from "@/firebase/errors";
 
 interface StudentManagerProps {
   initialData: DataItem[];
@@ -68,7 +69,7 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
     });
     setData(sortedData);
     setIsLoading(false);
-    refreshData();
+    // No need to refresh here, as the client state is now in sync
   };
 
   const handleClearAndReload = async () => {
@@ -90,31 +91,23 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
           title: "Nenhum dado para limpar",
           description: "A base de dados já está vazia.",
         });
+        setData([]); // Ensure client state is also empty
       } else {
         const batch = writeBatch(firestore);
         querySnapshot.forEach(doc => {
           batch.delete(doc.ref);
         });
         
-        // Use a non-blocking commit with error handling
-        batch.commit().catch(error => {
-          // This assumes that a failed batch commit is likely a permission error.
-          // For more complex scenarios, you might need more specific error checking.
-          const permissionError = new FirestorePermissionError({
-            path: studentsRef.path, // The path of the collection being operated on
-            operation: 'write', // The intended operation
-          });
-          errorEmitter.emit('permission-error', permissionError);
-        });
+        await batch.commit()
         
         toast({
           title: "Dados removidos",
-          description: "Os dados anteriores foram limpos. Você já pode carregar um novo arquivo.",
+          description: "A base de dados foi limpa. Pode carregar um novo ficheiro.",
         });
+        setData([]); // Clear client state immediately
       }
     } catch(err: any) {
         // This specific catch block handles errors from getDocs.
-        // It's the most likely source of a "list" permission error.
         const permissionError = new FirestorePermissionError({
             path: studentsRef.path,
             operation: 'list', // getDocs is a 'list' operation
@@ -122,8 +115,7 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
         errorEmitter.emit('permission-error', permissionError);
     } finally {
         setIsClearing(false);
-        setData([]); // Clear client state immediately
-        refreshData(); // Re-fetch server state
+        setIsClearConfirmOpen(false); // Close the dialog
     }
   };
   
@@ -141,7 +133,6 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
 
   const handleConfirmClear = () => {
     if (passwordInput === "2910") {
-      setIsClearConfirmOpen(false);
       setPasswordInput("");
       handleClearAndReload();
     } else {
@@ -151,6 +142,7 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
         description: "A senha para limpar os dados está incorreta. A operação foi cancelada.",
       });
       setPasswordInput("");
+      setIsClearConfirmOpen(false);
     }
   };
 
@@ -175,6 +167,7 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
   };
   
   const isPageLoading = isLoading || isClearing;
+  // The decision to show uploader or viewer is now solely based on the initial data.
   const hasData = data.length > 0;
 
   return (
@@ -254,7 +247,7 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
             </div>
             <DialogFooter>
               <DialogClose asChild>
-                <Button type="button" variant="secondary" onClick={() => setPasswordInput("")}>
+                <Button type="button" variant="secondary" onClick={() => { setPasswordInput(""); setIsClearConfirmOpen(false); }}>
                   Cancelar
                 </Button>
               </DialogClose>
@@ -262,7 +255,9 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
                 type="button"
                 variant="destructive"
                 onClick={handleConfirmClear}
+                disabled={isClearing}
               >
+                {isClearing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Confirmar e Limpar
               </Button>
             </DialogFooter>
@@ -270,6 +265,4 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
         </Dialog>
     </main>
   );
-
-    
-
+}

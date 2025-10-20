@@ -12,7 +12,6 @@ import { FirestorePermissionError } from "@/firebase/errors";
 export default async function Home() {
   const firestore = getFirestoreServer();
   let initialData: DataItem[] = [];
-  let errorLoading: string | null = null;
 
   try {
     const studentData = await getStudentData(firestore);
@@ -23,19 +22,17 @@ export default async function Home() {
         return nameA.localeCompare(nameB);
     });
   } catch (error: any) {
-     // Check for both the client-side custom error and the raw server-side error code.
-     if (error instanceof FirestorePermissionError || error.code === 'permission-denied') {
-      // It's common for this to fail on an empty collection with restrictive read rules.
-      // We can treat this as "no data" and let the client uploader show up.
-      console.log("Permission error on initial server fetch, likely an empty collection. Defaulting to empty data.");
-      initialData = [];
-    } else {
-      console.error("Failed to fetch initial data on server:", error);
-      // We'll pass an empty array and let the client-side try again.
-      // Alternatively, you could render an error state.
-      initialData = [];
-      errorLoading = "Não foi possível carregar os dados iniciais.";
-    }
+     // This can happen if the collection is empty and has restrictive read rules (allow read if true;).
+     // Firestore security rules do not allow listing empty collections if the rule isn't simply `allow read;`.
+     // We treat this as "no data" and let the client uploader show up.
+     if (error.code === 'permission-denied') {
+        console.log("Permission error on initial server fetch, likely an empty collection or restrictive rules. Defaulting to empty data.");
+     } else {
+        console.error("Failed to fetch initial data on server:", error);
+     }
+     // In any error case on the server, we'll start with an empty array
+     // and let the client-side components decide what to do.
+     initialData = [];
   }
 
   // The StudentManager component is a Client Component that will handle all interactivity.
