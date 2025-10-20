@@ -5,22 +5,22 @@ import { useRef, useState, useCallback, type DragEvent } from "react";
 import * as XLSX from "xlsx";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, UploadCloud } from "lucide-react";
+import { UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
-import { useFirestore, errorEmitter, FirestorePermissionError } from "@/firebase";
+import { useFirestore } from "@/firebase";
 import { collection, writeBatch, doc, getDocs, query } from "firebase/firestore";
 import { type DataItem, type SubItem } from "./data-viewer";
 
 interface XlsxUploaderProps {
   onUploadComplete: (data: DataItem[]) => void;
+  setIsLoading: (isLoading: boolean) => void;
 }
 
-export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
+export default function XlsxUploader({ onUploadComplete, setIsLoading }: XlsxUploaderProps) {
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
 
   const processAndSaveFile = async (file: File) => {
@@ -60,8 +60,7 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
 
         const headers = json[0].map(h => String(h ?? '').trim().toUpperCase());
         const mainItemHeaderIndex = headers.findIndex(h => h.includes("NOME"));
-        const dateOfBirthHeaderIndex = headers.findIndex(h => h.includes("DATA NASC"));
-
+        
         if (mainItemHeaderIndex === -1) {
           toast({
             variant: "destructive",
@@ -109,6 +108,7 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
             title: "Nenhum Dado Válido",
             description: `Não foram encontrados dados válidos na coluna "NOME".`,
           });
+          onUploadComplete([]); // Pass empty array to clear view
         } else {
             const studentsCollection = collection(firestore, "students");
             const batch = writeBatch(firestore);
@@ -118,9 +118,11 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
 
             const dataToUpload = processedData.map(({id, ...rest}) => rest);
 
+            const docRefs: string[] = [];
             dataToUpload.forEach((student) => {
                 const docRef = doc(studentsCollection);
                 batch.set(docRef, student);
+                docRefs.push(docRef.id);
             });
 
             await batch.commit();
@@ -129,26 +131,22 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
                 title: "Sucesso!",
                 description: `Dados anteriores removidos e ${processedData.length} novos registros foram salvos.`,
             });
-            // Busca os dados recém salvos para obter os IDs reais
-            const newSnapshot = await getDocs(query(studentsCollection));
-            const newData = newSnapshot.docs.map(doc => ({...doc.data(), id: doc.id } as DataItem));
+            
+            // Reconstruct data with real IDs
+            const newData = processedData.map((item, index) => ({
+              ...item,
+              id: docRefs[index]
+            }));
+
             onUploadComplete(newData);
         }
       } catch (error) {
-        if ((error as any).code === 'permission-denied') {
-            const permissionError = new FirestorePermissionError({
-                path: 'students',
-                operation: 'write',
-            });
-            errorEmitter.emit('permission-error', permissionError);
-        } else {
-            console.error("Error processing file:", error);
-            toast({
-                variant: "destructive",
-                title: "Erro de Processamento",
-                description: "Ocorreu um erro ao processar seu arquivo. Verifique o formato e tente novamente.",
-            });
-        }
+        console.error("Error processing file:", error);
+        toast({
+            variant: "destructive",
+            title: "Erro de Processamento",
+            description: "Ocorreu um erro ao processar seu arquivo. Verifique as permissões do Firestore e o formato do arquivo.",
+        });
       } finally {
         setIsLoading(false);
         if(inputRef.current) {
@@ -200,20 +198,11 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFileChange(e.dataTransfer.files[0]);
     }
-  }, [processAndSaveFile]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   
   const handleClick = () => {
     inputRef.current?.click();
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Limpando dados antigos e salvando o novo arquivo...</p>
-      </div>
-    );
-  }
 
   return (
     <Card 

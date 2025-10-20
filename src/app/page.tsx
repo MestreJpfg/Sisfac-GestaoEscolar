@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import XlsxUploader from "@/components/xlsx-uploader";
 import DataViewer from "@/components/data-viewer";
@@ -19,8 +19,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, BellRing } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
-import { useFirestore, useUser, errorEmitter, FirestorePermissionError, updateDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, getDocs, query, doc, writeBatch } from "firebase/firestore";
+import { useFirestore, useUser, errorEmitter, FirestorePermissionError, updateDocumentNonBlocking } from "@/firebase";
+import { collection, getDocs, query, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useFcm } from "@/hooks/use-fcm";
 import { Trash2 } from "lucide-react";
@@ -29,6 +29,7 @@ import AiAssistant from "@/components/ai-assistant";
 
 export default function Home() {
   const [data, setData] = useState<DataItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [randomQuote, setRandomQuote] = useState<{ quote: string; author: string } | null>(null);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
@@ -36,45 +37,26 @@ export default function Home() {
   const [currentDateTime, setCurrentDateTime] = useState('');
 
   const firestore = useFirestore();
-  const { user, isUserLoading } = useUser();
+  const { user } = useUser();
   const { toast } = useToast();
   const { notificationPermission, requestPermissionAndGetToken } = useFcm();
 
-  const studentsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, "students"));
-  }, [firestore]);
-  const { data: studentData, isLoading: isDataLoading } = useCollection<DataItem>(studentsQuery);
-
-
   useEffect(() => {
+    // This effect runs only on the client, after hydration
     setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
     setCurrentDateTime(new Date().toLocaleDateString('pt-BR', {
       dateStyle: 'full',
     }));
   }, []);
 
-  useEffect(() => {
-    if (studentData) {
-       const sortedData = [...studentData].sort((a, b) => {
-        const nameA = a.mainItem || "";
-        const nameB = b.mainItem || "";
-        return nameA.localeCompare(nameB);
-    });
-      setData(sortedData);
-    } else {
-      setData([]);
-    }
-  }, [studentData]);
-
-
   const handleUploadComplete = (uploadedData: DataItem[]) => {
-     const sortedData = uploadedData.sort((a, b) => {
-        const nameA = a.mainItem || "";
-        const nameB = b.mainItem || "";
-        return nameA.localeCompare(nameB);
+    const sortedData = uploadedData.sort((a, b) => {
+      const nameA = a.mainItem || "";
+      const nameB = b.mainItem || "";
+      return nameA.localeCompare(nameB);
     });
     setData(sortedData);
+    setIsLoading(false);
   };
 
   const handleClearAndReload = async () => {
@@ -90,24 +72,35 @@ export default function Home() {
     const studentsRef = collection(firestore, "students");
     
     try {
-        const querySnapshot = await getDocs(query(studentsRef));
+      const querySnapshot = await getDocs(query(studentsRef));
+      if (querySnapshot.empty) {
+        toast({
+          title: "Nenhum dado para limpar",
+          description: "A base de dados já está vazia.",
+        });
+        setData([]); // Ensure UI is cleared
+      } else {
         const batch = writeBatch(firestore);
         querySnapshot.forEach(doc => {
           batch.delete(doc.ref);
         });
         await batch.commit();
-            
+        
         toast({
           title: "Dados removidos",
           description: "Os dados anteriores foram limpos. Você já pode carregar um novo arquivo.",
         });
-    
+        setData([]); // Clear local state to show uploader
+      }
     } catch(err) {
-        const permissionError = new FirestorePermissionError({
-            path: studentsRef.path,
-            operation: 'delete',
+        // Since we are not using rules that should block this,
+        // we log a more generic error.
+        console.error("Error clearing data:", err);
+        toast({
+          variant: "destructive",
+          title: "Erro ao Limpar",
+          description: "Não foi possível remover os dados. Verifique a consola para mais detalhes."
         });
-        errorEmitter.emit('permission-error', permissionError);
     } finally {
         setIsClearing(false);
     }
@@ -134,21 +127,22 @@ export default function Home() {
         title: "🔔 Notificação de Teste",
         description: "Se você pode ver isto, o sistema de notificações em primeiro plano está a funcionar!",
       });
-    } else {
-      const token = await requestPermissionAndGetToken();
-      if (token && user && firestore) {
-        const userDocRef = doc(firestore, 'users', user.uid);
-        updateDocumentNonBlocking(userDocRef, { fcmTokens: { [token]: true } });
-        toast({
-          title: 'Sucesso!',
-          description: 'As notificações foram ativadas para este dispositivo.'
-        });
-      }
+    } else if (user && firestore) {
+        const token = await requestPermissionAndGetToken();
+        if (token) {
+            const userDocRef = doc(firestore, 'users', user.uid);
+            updateDocumentNonBlocking(userDocRef, { fcmTokens: { [token]: true } });
+            toast({
+            title: 'Sucesso!',
+            description: 'As notificações foram ativadas para este dispositivo.'
+            });
+        }
     }
   };
-
-  const hasData = data && data.length > 0;
-  const isLoading = isUserLoading || isDataLoading || isClearing;
+  
+  // Combines all loading states
+  const isPageLoading = isLoading || isClearing;
+  const hasData = data.length > 0;
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 md:p-8">
@@ -179,14 +173,13 @@ export default function Home() {
         </header>
 
         <div className="w-full">
-          {isLoading ? (
+          {isPageLoading ? (
             <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
               <p className="mt-4 text-muted-foreground">Aguarde...</p>
             </div>
-          )
-          : !hasData ? (
-            <XlsxUploader onUploadComplete={handleUploadComplete} />
+          ) : !hasData ? (
+            <XlsxUploader onUploadComplete={handleUploadComplete} setIsLoading={setIsLoading} />
           ) : (
             <div className="space-y-4">
               <DataViewer data={data} onEditComplete={handleUploadComplete} />
