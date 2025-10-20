@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -18,7 +17,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { type DataItem, type SubItem } from "./data-viewer";
 import { Loader2 } from "lucide-react";
-import { ScrollArea } from "./ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 
@@ -86,9 +84,8 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
         <DialogHeader>
           <DialogTitle>Editar Aluno: {student.mainItem || ''}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
-          <ScrollArea className="flex-1 pr-6 -mr-6">
-            <div className="space-y-4 py-4">
+        <div className="flex-1 overflow-y-auto -mx-6 px-6">
+          <form onSubmit={handleSubmit} id="edit-student-form" className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="main-item" className="font-semibold text-muted-foreground">
                   NOME DE REGISTRO CIVIL
@@ -115,21 +112,20 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
                   </div>
                 ))}
               </div>
-            </div>
-          </ScrollArea>
+          </form>
+        </div>
             
-          <DialogFooter className="mt-6 flex-col sm:flex-row space-y-2 sm:space-y-0 border-t pt-4 bg-background">
+          <DialogFooter className="mt-auto border-t pt-4 bg-background -mx-6 px-6 pb-6">
             <DialogClose asChild>
               <Button type="button" variant="secondary" onClick={onClose} className="w-full sm:w-auto">
                 Cancelar
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
+            <Button type="submit" form="edit-student-form" disabled={isLoading} className="w-full sm:w-auto">
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Salvar Alterações
             </Button>
           </DialogFooter>
-        </form>
       </DialogContent>
     </Dialog>
   );
