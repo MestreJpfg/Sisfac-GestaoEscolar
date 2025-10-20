@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, BellRing, Trash2 } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
-import { useFirestore, useUser, updateDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useUser, updateDocumentNonBlocking, FirestorePermissionError } from "@/firebase";
 import { collection, writeBatch, doc, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useFcm } from "@/hooks/use-fcm";
@@ -49,12 +49,14 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
 
   useEffect(() => {
     setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
-    setCurrentDateTime(new Date().toLocaleDateString('pt-BR', {
-      dateStyle: 'full',
-    }));
+    const now = new Date();
+    const datePart = now.toLocaleDateString('pt-BR', { dateStyle: 'full' });
+    const timePart = now.toLocaleTimeString('pt-BR', { timeStyle: 'short' });
+    setCurrentDateTime(`${datePart} - ${timePart}`);
   }, []);
 
   const refreshData = () => {
+    // This will re-run the Server Component and pass down fresh initialData
     router.refresh();
   }
 
@@ -100,7 +102,13 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
           description: "Os dados anteriores foram limpos. Você já pode carregar um novo arquivo.",
         });
       }
-    } catch(err) {
+    } catch(err: any) {
+        if (err.code === 'permission-denied') {
+            throw new FirestorePermissionError({
+                path: studentsRef.path,
+                operation: 'delete',
+            });
+        }
         console.error("Error clearing data:", err);
         toast({
           variant: "destructive",
@@ -109,14 +117,21 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
         });
     } finally {
         setIsClearing(false);
-        setData([]);
-        refreshData();
+        setData([]); // Clear client state immediately
+        refreshData(); // Re-fetch server state
     }
   };
   
-  const handleEditComplete = (editedData: DataItem[]) => {
-    setData(editedData);
-    refreshData();
+  const handleEditComplete = (updatedStudent: DataItem) => {
+    const updatedData = data.map(item =>
+        item.id === updatedStudent.id ? updatedStudent : item
+    );
+     const sortedData = updatedData.sort((a, b) => {
+        const nameA = a.mainItem || "";
+        const nameB = b.mainItem || "";
+        return nameA.localeCompare(nameB);
+    });
+    setData(sortedData);
   }
 
   const handleConfirmClear = () => {
@@ -144,7 +159,7 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
         const token = await requestPermissionAndGetToken();
         if (token) {
             const userDocRef = doc(firestore, 'users', user.uid);
-            updateDocumentNonBlocking(userDocRef, { fcmTokens: { [token]: true } });
+            updateDocumentNonBlocking(userDocRef, { fcmTokens: { [token]: true } }, { merge: true });
             toast({
             title: 'Sucesso!',
             description: 'As notificações foram ativadas para este dispositivo.'
@@ -176,7 +191,7 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
               </blockquote>
             )}
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary-foreground font-headline">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary [text-shadow:0_2px_10px_hsl(var(--primary)/0.4)] font-headline">
             Gestão de Alunos 2025
           </h1>
           <p className="text-muted-foreground mt-2 text-sm sm:text-base max-w-lg mx-auto">

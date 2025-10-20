@@ -102,7 +102,7 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 pt-4">
                 {subItems.map((item, index) => (
-                  <div key={index} className="space-y-2">
+                  <div key={`${item.label}-${index}`} className="space-y-2">
                     <Label htmlFor={`item-${index}`} className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate" title={item.label}>
                       {item.label}
                     </Label>

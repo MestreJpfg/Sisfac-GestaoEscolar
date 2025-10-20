@@ -141,8 +141,8 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
                                 </Button>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
-                              {item.subItems && Array.isArray(item.subItems) ? item.subItems.map((subItem) => (
-                                <div key={subItem.label} className={cn("flex flex-col", subItem.value ? 'opacity-100' : 'opacity-50')}>
+                              {item.subItems && Array.isArray(item.subItems) ? item.subItems.map((subItem, index) => (
+                                <div key={`${subItem.label}-${index}`} className={cn("flex flex-col", subItem.value ? 'opacity-100' : 'opacity-50')}>
                                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate" title={subItem.label}>{subItem.label}</p>
                                   <p className="text-sm text-foreground break-words">{subItem.value || "Não informado"}</p>
                                 </div>
