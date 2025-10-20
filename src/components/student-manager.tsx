@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, BellRing, Trash2 } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
-import { useFirestore, useUser, FirestorePermissionError, errorEmitter } from "@/firebase";
+import { useFirestore, useUser, FirestorePermissionError, errorEmitter, updateDocumentNonBlocking } from "@/firebase";
 import { collection, writeBatch, doc, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useFcm } from "@/hooks/use-fcm";
@@ -102,7 +102,7 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
           // For more complex scenarios, you might need more specific error checking.
           const permissionError = new FirestorePermissionError({
             path: studentsRef.path, // The path of the collection being operated on
-            operation: 'delete', // The intended operation
+            operation: 'write', // The intended operation
           });
           errorEmitter.emit('permission-error', permissionError);
         });
@@ -113,20 +113,13 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
         });
       }
     } catch(err: any) {
-        if (err.code === 'permission-denied') {
-            const permissionError = new FirestorePermissionError({
-                path: studentsRef.path,
-                operation: 'list', // getDocs is a 'list' operation
-            });
-            errorEmitter.emit('permission-error', permissionError);
-        } else {
-            console.error("Error clearing data:", err);
-            toast({
-              variant: "destructive",
-              title: "Erro ao Limpar",
-              description: "Não foi possível remover os dados. Verifique a consola para mais detalhes."
-            });
-        }
+        // This specific catch block handles errors from getDocs.
+        // It's the most likely source of a "list" permission error.
+        const permissionError = new FirestorePermissionError({
+            path: studentsRef.path,
+            operation: 'list', // getDocs is a 'list' operation
+        });
+        errorEmitter.emit('permission-error', permissionError);
     } finally {
         setIsClearing(false);
         setData([]); // Clear client state immediately
@@ -172,7 +165,6 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
         if (token) {
             const userDocRef = doc(firestore, 'users', user.uid);
             // Non-blocking update. Error is handled by emitter.
-            const { updateDocumentNonBlocking } = await import('@/firebase/non-blocking-updates');
             updateDocumentNonBlocking(userDocRef, { fcmTokens: { [token]: true } }, { merge: true });
             toast({
             title: 'Sucesso!',
@@ -278,4 +270,5 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
         </Dialog>
     </main>
   );
-}
+
+    
