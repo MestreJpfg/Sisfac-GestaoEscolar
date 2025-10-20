@@ -1,91 +1,26 @@
-/**
- * @fileOverview
- * This ruleset enforces a strict user-ownership model for uploaded files and extracted data.
- * All data is nested under /users/{userId}, ensuring only the authenticated user can access their own data.
- *
- * Data Structure:
- * - /users/{userId}/uploadedFiles/{uploadedFileId}: Stores metadata about uploaded XLSX files.
- * - /users/{userId}/extractedData/{extractedDataId}: Stores the extracted data from uploaded XLSX files.
- *
- * Key Security Decisions:
- * - User listing is disallowed.
- * - All write operations are restricted to the owner of the data.
- * - No data shape validation is performed in this prototype, except for relational integrity on `create`.
- */
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * @description Secures uploaded file metadata, allowing only the owner to read and write.
-     * @path /users/{userId}/uploadedFiles/{uploadedFileId}
-     * @allow (create) User A creates a new uploaded file with their userId.
-     *    - Request: auth.uid = "userA", path = "/users/userA/uploadedFiles/file123", data.id = "file123"
-     * @allow (get, update, delete) User A reads, updates, or deletes their own uploaded file.
-     *    - Request: auth.uid = "userA", path = "/users/userA/uploadedFiles/file123"
-     * @deny (create) User A attempts to create an uploaded file for User B.
-     *    - Request: auth.uid = "userA", path = "/users/userB/uploadedFiles/file123"
-     * @deny (get, update, delete) User B attempts to read, update, or delete User A's uploaded file.
-     *    - Request: auth.uid = "userB", path = "/users/userA/uploadedFiles/file123"
-     * @principle Enforces document ownership for writes. Restricts access to a user's own data tree. Validates relational integrity between documents.
-     */
-    match /users/{userId}/uploadedFiles/{uploadedFileId} {
-      // Helper function to check if the user is signed in
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      // Helper function to check if the user is the owner of the document
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      //Helper function to check if the existing user is the owner of the document
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource.data != null;
-      }
-
-      allow get: if isSignedIn() && isOwner(userId);
-      allow list: if isSignedIn() && isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == uploadedFileId;
-      allow update: if isSignedIn() && isExistingOwner(userId);
-      allow delete: if isSignedIn() && isExistingOwner(userId);
+    // Rules for the 'students' collection
+    match /students/{studentId} {
+      // Allow read and write access to any authenticated user (including anonymous).
+      // This is necessary for the main functionalities of the app, like uploading,
+      // viewing, editing, and deleting student data.
+      allow read, write: if request.auth != null;
     }
 
-    /**
-     * @description Secures extracted data, allowing only the owner to read and write.
-     * @path /users/{userId}/extractedData/{extractedDataId}
-     * @allow (create) User A creates new extracted data with their userId.
-     *    - Request: auth.uid = "userA", path = "/users/userA/extractedData/data123", data.id = "data123"
-     * @allow (get, update, delete) User A reads, updates, or deletes their own extracted data.
-     *    - Request: auth.uid = "userA", path = "/users/userA/extractedData/data123"
-     * @deny (create) User A attempts to create extracted data for User B.
-     *    - Request: auth.uid = "userA", path = "/users/userB/extractedData/data123"
-     * @deny (get, update, delete) User B attempts to read, update, or delete User A's extracted data.
-     *    - Request: auth.uid = "userB", path = "/users/userA/extractedData/data123"
-     * @principle Enforces document ownership for writes. Restricts access to a user's own data tree. Validates relational integrity between documents.
-     */
-    match /users/{userId}/extractedData/{extractedDataId} {
-       // Helper function to check if the user is signed in
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      // Helper function to check if the user is the owner of the document
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      //Helper function to check if the existing user is the owner of the document
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource.data != null;
-      }
-
-      allow get: if isSignedIn() && isOwner(userId);
-      allow list: if isSignedIn() && isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == extractedDataId;
-      allow update: if isSignedIn() && isExistingOwner(userId);
-      allow delete: if isSignedIn() && isExistingOwner(userId);
+    // Rules for the 'users' collection
+    match /users/{userId} {
+      // Allow a user to read and write only their own document.
+      // This is important for security, for example, to store FCM tokens
+      // or other user-specific data.
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+
+    // Default rule: Deny all other access to prevent unauthorized operations.
+    // This is implicitly covered by not having other rules, but it's good practice
+    // to remember that access is denied by default.
   }
 }
