@@ -4,31 +4,31 @@
 
 @layer base {
   :root {
-    --background: 0 0% 4%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 4%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 4%;
-    --popover-foreground: 0 0% 98%;
+    --background: 222 83% 4%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 224 71% 4%;
+    --popover-foreground: 215 28% 93%;
     --primary: 39 100% 50%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 222 47% 11%;
-    --secondary-foreground: 39 100% 50%;
-    --muted: 222 47% 11%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
     --muted-foreground: 215 28% 63%;
-    --accent: 217 91% 60%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
-    --border: 222 47% 11%;
-    --input: 222 47% 11%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
     --ring: 217 91% 60%;
+    --radius: 0.5rem;
     --chart-1: 221 83% 53%;
     --chart-2: 161 77% 45%;
     --chart-3: 39 92% 55%;
     --chart-4: 281 77% 64%;
     --chart-5: 345 83% 61%;
-    --radius: 0.5rem;
     --sidebar-background: 0 0% 4%;
     --sidebar-foreground: 215 28% 85%;
     --sidebar-primary: 217 91% 60%;
@@ -40,38 +40,25 @@
   }
 
   .dark {
-    --background: 0 0% 4%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 4%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 4%;
-    --popover-foreground: 0 0% 98%;
+    --background: 222 83% 4%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 224 71% 4%;
+    --popover-foreground: 215 28% 93%;
     --primary: 39 100% 50%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 222 47% 11%;
-    --secondary-foreground: 39 100% 50%;
-    --muted: 222 47% 11%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
     --muted-foreground: 215 28% 63%;
-    --accent: 217 91% 60%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
-    --border: 222 47% 11%;
-    --input: 222 47% 11%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
     --ring: 217 91% 60%;
-    --chart-1: 221 83% 53%;
-    --chart-2: 161 77% 45%;
-    --chart-3: 39 92% 55%;
-    --chart-4: 281 77% 64%;
-    --chart-5: 345 83% 61%;
-    --sidebar-background: 0 0% 4%;
-    --sidebar-foreground: 215 28% 85%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 47% 11%;
-    --sidebar-accent-foreground: 215 28% 85%;
-    --sidebar-border: 222 47% 11%;
-    --sidebar-ring: 217 91% 60%;
   }
 }
 
@@ -80,10 +67,13 @@
     @apply border-border;
   }
   body {
-    @apply text-foreground;
+    @apply bg-background text-foreground;
     background-color: hsl(var(--background));
-    background-image:
-      url("data:image/svg+xml,%3Csvg width='160' height='160' viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='hsl(var(--primary))' fill-opacity='0.05' fill-rule='evenodd'%3E%3C!-- Book --%3E%3Cpath d='M43 22.5c-2 0-3.5 1.5-3.5 3.5v12.5c0 2 1.5 3.5 3.5 3.5h1.5v-19.5h-1.5zm2.5 19.5h1.5v-19.5h-1.5c-2.5 0-4.5 2-4.5 4.5v10.5c0 2.5 2 4.5 4.5 4.5zM22 26v12.5c0 2 1.5 3.5 3.5 3.5h14v-19.5h-14c-2 0-3.5 1.5-3.5 3.5z'/%3E%3C!-- Graduation Cap --%3E%3Cpath d='M62 125l-20-5 20-5 20 5-20 5zm0-11l-20-5v6.5l20 5 20-5v-6.5l-20 5zM82 108v9h-40v-9h-4v13h48v-13h-4z'/%3E%3C!-- Atom --%3E%3Cellipse transform='rotate(45 120 40)' cx='120' cy='40' rx='20' ry='8' stroke='hsl(var(--primary))' stroke-width='1.5' fill='none' /%3E%3Cellipse transform='rotate(-45 120 40)' cx='120' cy='40' rx='20' ry='8' stroke='hsl(var(--primary))' stroke-width='1.5' fill='none' /%3E%3Ccircle cx='120' cy='40' r='3'/%3E%3C!-- Lightbulb --%3E%3Cpath d='M120 120c-5.52 0-10 4.48-10 10v1h20v-1c0-5.52-4.48-10-10-10zm-5 13h10v2h-10v-2zm-2 3h14v2h-14v-2z'/%3E%3C/g%3E%3C/svg%3E");
+    background-image: radial-gradient(
+      ellipse 80% 80% at 50% -20%,
+      hsl(var(--primary) / 0.15),
+      hsl(var(--background) / 0)
+    );
   }
 }
 

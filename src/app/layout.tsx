@@ -1,9 +1,22 @@
 import type {Metadata} from 'next';
+import { Inter, Poppins } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from '@/firebase';
 import GoogleAnalytics from '@/components/google-analytics';
 import { FcmTokenManager } from '@/components/fcm-token-manager';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+});
+
+const poppins = Poppins({
+  subsets: ['latin'],
+  weight: ['400', '600', '700'],
+  variable: '--font-poppins',
+});
+
 
 export const metadata: Metadata = {
   title: 'Gestão de Alunos',
@@ -16,11 +29,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className={`dark ${inter.variable} ${poppins.variable}`}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
         {process.env.NODE_ENV === "production" && (
           <GoogleAnalytics ga_id="GA_MEASUREMENT_ID" />
         )}

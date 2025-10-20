@@ -5,12 +5,13 @@ import { useRef, useState, useCallback, type DragEvent } from "react";
 import * as XLSX from "xlsx";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
-import { UploadCloud } from "lucide-react";
+import { UploadCloud, FileCheck2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
 import { useFirestore } from "@/firebase";
-import { collection, writeBatch, doc, getDocs, query } from "firebase/firestore";
+import { collection, writeBatch, doc, getDocs } from "firebase/firestore";
 import { type DataItem, type SubItem } from "./data-viewer";
+import { Button } from "./ui/button";
 
 interface XlsxUploaderProps {
   onUploadComplete: (data: DataItem[]) => void;
@@ -21,9 +22,23 @@ export default function XlsxUploader({ onUploadComplete, setIsLoading }: XlsxUpl
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+
   const firestore = useFirestore();
 
-  const processAndSaveFile = async (file: File) => {
+  const resetState = () => {
+    setFileName(null);
+    setFile(null);
+    setIsProcessing(false);
+    if(inputRef.current) inputRef.current.value = "";
+  };
+
+  const processAndSaveFile = async () => {
+    if (!file) return;
+
+    setIsProcessing(true);
     setIsLoading(true);
 
     if (!firestore) {
@@ -32,6 +47,7 @@ export default function XlsxUploader({ onUploadComplete, setIsLoading }: XlsxUpl
         title: 'Erro de Conexão',
         description: 'Não foi possível conectar ao banco de dados.',
       });
+      resetState();
       setIsLoading(false);
       return;
     }
@@ -54,6 +70,7 @@ export default function XlsxUploader({ onUploadComplete, setIsLoading }: XlsxUpl
                 title: "Planilha Inválida",
                 description: "A planilha precisa conter um cabeçalho e ao menos uma linha de dados.",
             });
+            resetState();
             setIsLoading(false);
             return;
         }
@@ -67,20 +84,18 @@ export default function XlsxUploader({ onUploadComplete, setIsLoading }: XlsxUpl
             title: "Coluna não encontrada",
             description: "A coluna obrigatória 'NOME' não foi encontrada no arquivo.",
           });
+          resetState();
           setIsLoading(false);
           return;
         }
 
         const rows = json.slice(1);
-
         const processedData = rows.map((row, rowIndex) => {
           const mainItem = String(row[mainItemHeaderIndex] || '');
-          if (!mainItem) {
-            return null; // Ignora linhas sem nome de aluno
-          }
+          if (!mainItem) return null;
 
           const subItems: SubItem[] = [];
-          const originalHeaders = json[0]; // Mantém os cabeçalhos originais para os labels
+          const originalHeaders = json[0];
 
           originalHeaders.forEach((header, index) => {
             const headerStr = String(header ?? '').trim();
@@ -90,7 +105,6 @@ export default function XlsxUploader({ onUploadComplete, setIsLoading }: XlsxUpl
             let value = '';
 
             if (cellValue instanceof Date) {
-              // Sempre formata a data para dd/MM/yyyy
               value = format(cellValue, 'dd/MM/yyyy');
             } else if (cellValue !== null && cellValue !== undefined) {
               value = String(cellValue);
@@ -98,7 +112,6 @@ export default function XlsxUploader({ onUploadComplete, setIsLoading }: XlsxUpl
             
             subItems.push({ label: headerStr, value: value });
           });
-          // A ID será gerada pelo firestore, mas precisamos de uma para a UI antes do refresh
           return { id: `temp-${rowIndex}`, mainItem, subItems };
         }).filter(item => item !== null) as DataItem[];
 
@@ -108,12 +121,12 @@ export default function XlsxUploader({ onUploadComplete, setIsLoading }: XlsxUpl
             title: "Nenhum Dado Válido",
             description: `Não foram encontrados dados válidos na coluna "NOME".`,
           });
-          onUploadComplete([]); // Pass empty array to clear view
+          onUploadComplete([]);
         } else {
             const studentsCollection = collection(firestore, "students");
             const batch = writeBatch(firestore);
             
-            const existingDocs = await getDocs(query(studentsCollection));
+            const existingDocs = await getDocs(studentsCollection);
             existingDocs.forEach(doc => batch.delete(doc.ref));
 
             const dataToUpload = processedData.map(({id, ...rest}) => rest);
@@ -129,15 +142,10 @@ export default function XlsxUploader({ onUploadComplete, setIsLoading }: XlsxUpl
 
             toast({
                 title: "Sucesso!",
-                description: `Dados anteriores removidos e ${processedData.length} novos registros foram salvos.`,
+                description: `${existingDocs.size} registros antigos removidos e ${processedData.length} novos registros foram salvos.`,
             });
             
-            // Reconstruct data with real IDs
-            const newData = processedData.map((item, index) => ({
-              ...item,
-              id: docRefs[index]
-            }));
-
+            const newData = processedData.map((item, index) => ({ ...item, id: docRefs[index] }));
             onUploadComplete(newData);
         }
       } catch (error) {
@@ -145,13 +153,11 @@ export default function XlsxUploader({ onUploadComplete, setIsLoading }: XlsxUpl
         toast({
             variant: "destructive",
             title: "Erro de Processamento",
-            description: "Ocorreu um erro ao processar seu arquivo. Verifique as permissões do Firestore e o formato do arquivo.",
+            description: "Ocorreu um erro ao processar seu arquivo. Verifique o formato do arquivo e as permissões do Firestore.",
         });
+        resetState();
       } finally {
-        setIsLoading(false);
-        if(inputRef.current) {
-          inputRef.current.value = "";
-        }
+        // isLoading is handled by onUploadComplete now.
       }
     };
     
@@ -161,16 +167,17 @@ export default function XlsxUploader({ onUploadComplete, setIsLoading }: XlsxUpl
             title: "Erro de Leitura",
             description: "Não foi possível ler o arquivo selecionado.",
         });
+        resetState();
         setIsLoading(false);
     };
 
     reader.readAsArrayBuffer(file);
   }
 
-  const handleFileChange = (file: File | null) => {
-    if (!file) return;
+  const handleFileSelect = (selectedFile: File | null) => {
+    if (!selectedFile) return;
 
-    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.csv')) {
+    if (!selectedFile.name.endsWith('.xlsx') && !selectedFile.name.endsWith('.csv')) {
       toast({
         variant: "destructive",
         title: "Tipo de Arquivo Inválido",
@@ -178,63 +185,87 @@ export default function XlsxUploader({ onUploadComplete, setIsLoading }: XlsxUpl
       });
       return;
     }
-    processAndSaveFile(file);
+    setFile(selectedFile);
+    setFileName(selectedFile.name);
   };
 
   const handleDrag = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setIsDragging(true);
-    } else if (e.type === "dragleave") {
-      setIsDragging(false);
-    }
-  }, []);
+    if (isProcessing || fileName) return;
+    if (e.type === "dragenter" || e.type === "dragover") setIsDragging(true);
+    else if (e.type === "dragleave") setIsDragging(false);
+  }, [isProcessing, fileName]);
 
   const handleDrop = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    if (isProcessing || fileName) return;
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileChange(e.dataTransfer.files[0]);
+      handleFileSelect(e.dataTransfer.files[0]);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isProcessing, fileName]); // eslint-disable-line react-hooks/exhaustive-deps
   
   const handleClick = () => {
+    if (isProcessing || fileName) return;
     inputRef.current?.click();
   };
 
   return (
     <Card 
       className={cn(
-        "border-2 border-dashed border-border transition-all duration-200 bg-card",
-        isDragging ? "border-primary bg-accent/20" : "hover:border-muted-foreground"
+        "border-2 border-dashed transition-all duration-300",
+        isDragging ? "border-primary bg-primary/10 shadow-2xl" : "border-border",
+        fileName && !isProcessing ? "border-primary bg-primary/5" : ""
       )}
+      onDragEnter={handleDrag}
+      onDragOver={handleDrag}
+      onDragLeave={handleDrag}
+      onDrop={handleDrop}
     >
       <CardContent 
-        className="p-6 text-center cursor-pointer" 
-        onClick={handleClick}
-        onDragEnter={handleDrag}
-        onDragOver={handleDrag}
-        onDragLeave={handleDrag}
-        onDrop={handleDrop}
+        className="p-6 text-center" 
       >
-        <div className="flex flex-col items-center justify-center space-y-4 h-52">
-          <UploadCloud className="w-16 h-16 text-muted-foreground" />
-          <div className="flex flex-col items-center">
-            <p className="font-semibold text-foreground">
-              <span className="text-primary">Clique para enviar</span> ou arraste e solte
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Arquivos XLSX e CSV
-            </p>
-          </div>
+        <div className="flex flex-col items-center justify-center space-y-4 h-64 sm:h-80">
+          
+          {isProcessing ? (
+            <>
+              <Loader2 className="w-16 h-16 text-primary animate-spin" />
+              <p className="font-semibold text-foreground">Processando arquivo...</p>
+              <p className="text-sm text-muted-foreground">{fileName}</p>
+            </>
+          ) : fileName ? (
+            <>
+              <FileCheck2 className="w-16 h-16 text-primary" />
+              <p className="font-semibold text-foreground">Arquivo pronto para carregar</p>
+              <p className="text-sm text-muted-foreground max-w-full truncate">{fileName}</p>
+              <div className="flex gap-2 pt-4">
+                <Button variant="secondary" onClick={resetState}>Cancelar</Button>
+                <Button onClick={processAndSaveFile}>Confirmar e Salvar</Button>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center space-y-4 cursor-pointer" onClick={handleClick}>
+              <UploadCloud className={cn("w-16 h-16 transition-colors", isDragging ? "text-primary" : "text-muted-foreground")} />
+              <div className="flex flex-col items-center">
+                <p className="font-semibold text-foreground">
+                  <span className={cn("transition-colors", isDragging ? "text-primary" : "text-primary/80")}>Clique para enviar</span> ou arraste e solte
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Apenas arquivos .xlsx ou .csv
+                </p>
+              </div>
+            </div>
+          )}
+
           <input
             ref={inputRef}
             type="file"
             accept=".xlsx, .csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, text/csv"
             className="hidden"
-            onChange={(e) => handleFileChange(e.target.files ? e.target.files[0] : null)}
+            onChange={(e) => handleFileSelect(e.target.files ? e.target.files[0] : null)}
+            disabled={isProcessing || !!fileName}
           />
         </div>
       </CardContent>

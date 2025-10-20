@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import XlsxUploader from "@/components/xlsx-uploader";
 import DataViewer from "@/components/data-viewer";
@@ -26,12 +26,14 @@ import { useFcm } from "@/hooks/use-fcm";
 import { quotes } from "@/lib/quotes";
 import AiAssistant from "@/components/ai-assistant";
 import { useRouter } from "next/navigation";
-import { getStudentData } from "@/services/student-service";
 
+interface StudentManagerProps {
+  initialData: DataItem[];
+}
 
-export default function Home() {
-  const [data, setData] = useState<DataItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // Start loading initially
+export default function StudentManager({ initialData }: StudentManagerProps) {
+  const [data, setData] = useState<DataItem[]>(initialData);
+  const [isLoading, setIsLoading] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [randomQuote, setRandomQuote] = useState<{ quote: string; author: string } | null>(null);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
@@ -45,40 +47,16 @@ export default function Home() {
   const router = useRouter();
 
 
-  const fetchExistingData = useCallback(async () => {
-    if (!firestore) return;
-    setIsLoading(true);
-    try {
-        const studentData = await getStudentData(firestore);
-         const sortedData = studentData.sort((a, b) => {
-            const nameA = a.mainItem || "";
-            const nameB = b.mainItem || "";
-            return nameA.localeCompare(nameB);
-        });
-        setData(sortedData);
-    } catch (error) {
-        console.error("Failed to fetch initial data", error);
-        toast({
-            variant: "destructive",
-            title: "Erro ao carregar dados",
-            description: "Não foi possível buscar os dados existentes. Tente atualizar a página.",
-        });
-    } finally {
-        setIsLoading(false);
-    }
-  }, [firestore, toast]);
-
-  useEffect(() => {
-    fetchExistingData();
-  }, [fetchExistingData]);
-
-
   useEffect(() => {
     setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
     setCurrentDateTime(new Date().toLocaleDateString('pt-BR', {
       dateStyle: 'full',
     }));
   }, []);
+
+  const refreshData = () => {
+    router.refresh();
+  }
 
   const handleUploadComplete = (uploadedData: DataItem[]) => {
     const sortedData = uploadedData.sort((a, b) => {
@@ -88,6 +66,7 @@ export default function Home() {
     });
     setData(sortedData);
     setIsLoading(false);
+    refreshData();
   };
 
   const handleClearAndReload = async () => {
@@ -131,16 +110,13 @@ export default function Home() {
     } finally {
         setIsClearing(false);
         setData([]);
+        refreshData();
     }
   };
   
-  const handleEditComplete = (updatedStudent: DataItem) => {
-    setData(prevData => {
-        const updatedData = prevData.map(item =>
-            item.id === updatedStudent.id ? updatedStudent : item
-        );
-        return updatedData;
-    });
+  const handleEditComplete = (editedData: DataItem[]) => {
+    setData(editedData);
+    refreshData();
   }
 
   const handleConfirmClear = () => {

@@ -1,29 +1,33 @@
-import { initializeFirebase } from "@/firebase";
-import { collection, getDocs, query } from "firebase/firestore";
+import { collection, getDocs, query, type Firestore } from "firebase/firestore";
+import { type DataItem } from "@/components/data-viewer";
 
-// This is a server-side only file.
 
 // Helper function to get all student data.
 // NOTE: This is not a Genkit tool. It's a service function that will be
 // wrapped by a tool in the flow.
-export async function getStudentData() {
-  const { firestore } = initializeFirebase();
-
+export async function getStudentData(firestore: Firestore): Promise<DataItem[]> {
   try {
     const studentsCollection = collection(firestore, "students");
     const q = query(studentsCollection);
     const querySnapshot = await getDocs(q);
 
-    const studentsData: any[] = [];
+    const studentsData: DataItem[] = [];
     querySnapshot.forEach((doc) => {
-      studentsData.push({ id: doc.id, ...doc.data() });
+      // Cast the document data to fit the DataItem structure
+      const data = doc.data();
+      const student: DataItem = {
+        id: doc.id,
+        mainItem: data.mainItem,
+        subItems: data.subItems,
+      };
+      studentsData.push(student);
     });
     
     return studentsData;
   } catch (error) {
     console.error("Error fetching student data from Firestore:", error);
-    // It's better to return an empty array or handle the error gracefully
-    // than to let the entire flow fail.
-    return [];
+    // On error, return an empty array to prevent the app from crashing.
+    // This allows the useCollection hook to handle the error state.
+    throw error;
   }
 }

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useEffect, type FormEvent } from "react";
@@ -25,7 +26,7 @@ export default function AiAssistant() {
 
   const scrollToBottom = () => {
     if (scrollAreaRef.current) {
-      const scrollViewport = scrollAreaRef.current.querySelector('div');
+      const scrollViewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
       if (scrollViewport) {
         scrollViewport.scrollTo({
           top: scrollViewport.scrollHeight,
@@ -50,10 +51,8 @@ export default function AiAssistant() {
     setIsLoading(true);
 
     try {
-      // The role 'bot' is used for the frontend state, 
-      // but the Genkit flow will map it to 'model' for the AI history.
       const historyForAI = messages.map(m => ({
-        role: m.role,
+        role: m.role as 'user' | 'bot', // Explicit cast
         content: [{ text: m.text }]
       }));
       
@@ -87,7 +86,7 @@ export default function AiAssistant() {
       <PopoverTrigger asChild>
         <Button
           variant="default"
-          className="fixed bottom-4 right-4 rounded-full w-16 h-16 shadow-lg z-50"
+          className="fixed bottom-4 right-4 rounded-full w-16 h-16 shadow-lg z-50 animate-in fade-in zoom-in-50"
         >
           <Bot className="w-8 h-8" />
         </Button>
@@ -95,12 +94,12 @@ export default function AiAssistant() {
       <PopoverContent
         side="top"
         align="end"
-        className="w-[350px] sm:w-[400px] p-0 border-0 mr-4 mb-2"
+        className="w-[calc(100vw-32px)] sm:w-[400px] p-0 border-0 mr-4 mb-2 bg-transparent shadow-none"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <Card className="flex flex-col h-[500px] shadow-2xl">
+        <Card className="flex flex-col h-[60vh] sm:h-[500px] shadow-2xl bg-card/80 backdrop-blur-lg">
           <CardHeader>
-            <CardTitle className="text-lg font-bold text-primary flex items-center">
+            <CardTitle className="text-lg font-bold text-primary-foreground flex items-center">
               <Bot className="mr-2" />
               Assistente Virtual
             </CardTitle>
@@ -108,6 +107,11 @@ export default function AiAssistant() {
           <CardContent className="flex-1 overflow-hidden">
             <ScrollArea className="h-full" ref={scrollAreaRef}>
               <div className="space-y-4 pr-4">
+                {messages.length === 0 && (
+                  <div className="flex items-center justify-center h-full text-center text-muted-foreground">
+                    <p>Faça uma pergunta sobre os dados dos alunos ou converse sobre qualquer outro tópico.</p>
+                  </div>
+                )}
                 {messages.map((message, index) => (
                   <div
                     key={index}
@@ -121,17 +125,17 @@ export default function AiAssistant() {
                       </div>
                     )}
                     <div
-                      className={`rounded-lg p-3 text-sm max-w-[80%] break-words ${
+                      className={`rounded-lg p-3 text-sm max-w-[85%] break-words ${
                         message.role === "user"
                           ? "bg-primary text-primary-foreground"
-                          : "bg-muted text-muted-foreground"
+                          : "bg-muted text-foreground"
                       }`}
                     >
                       {message.text}
                     </div>
                      {message.role === 'user' && (
-                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                          <User className="w-5 h-5 text-muted-foreground" />
+                      <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+                          <User className="w-5 h-5 text-secondary-foreground" />
                       </div>
                     )}
                   </div>
@@ -154,12 +158,12 @@ export default function AiAssistant() {
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Pergunte-me qualquer coisa..."
+                placeholder="Pergunte-me algo..."
                 disabled={isLoading}
                 className="flex-1"
                 autoComplete="off"
               />
-              <Button type="submit" size="icon" disabled={isLoading}>
+              <Button type="submit" size="icon" disabled={isLoading || !input}>
                 <CornerDownLeft className="w-5 h-5" />
               </Button>
             </form>
