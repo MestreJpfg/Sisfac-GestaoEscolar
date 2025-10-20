@@ -12,7 +12,7 @@ import {
   KnowledgeAssistantOutputSchema,
 } from './schemas';
 import { z } from 'zod';
-import { useFirestore } from '@/firebase';
+import { getFirestoreServer } from '@/firebase/server-init';
 
 const getStudentDataTool = ai.defineTool(
   {
@@ -23,7 +23,7 @@ const getStudentDataTool = ai.defineTool(
   },
   async () => {
     // This now gets data from the global /students collection
-    const firestore = useFirestore();
+    const firestore = getFirestoreServer();
     return await getStudentData(firestore);
   }
 );
