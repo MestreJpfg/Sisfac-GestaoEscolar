@@ -13,6 +13,7 @@ import {
 } from './schemas';
 import { z } from 'zod';
 import { getFirestoreServer } from '@/firebase/server-init';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const getStudentDataTool = ai.defineTool(
   {
@@ -30,7 +31,7 @@ const getStudentDataTool = ai.defineTool(
 
 const studentDataPrompt = ai.definePrompt({
   name: 'studentDataPrompt',
-  model: 'googleai/gemini-1.5-flash-latest',
+  model: googleAI.model('gemini-1.5-flash-latest'),
   system: `You are an expert assistant for a school management system.
 Your role is to answer questions about student data based on the information provided by the 'getStudentData' tool.
 Analyze the user's question and use the data retrieved by the tool to provide a clear and accurate answer.

@@ -17,11 +17,12 @@ import {
   type KnowledgeAssistantOutput,
 } from './schemas';
 import { generalKnowledgeFlow } from './knowledgeAssistant';
+import { googleAI } from '@genkit-ai/google-genai';
 
 
 const routerPrompt = ai.definePrompt({
   name: 'routerPrompt',
-  model: 'googleai/gemini-1.5-flash-latest',
+  model: googleAI.model('gemini-1.5-flash-latest'),
   system: `You are a router. Your job is to determine the user's intent and route them to the appropriate specialist.
   - If the user is asking a question about student data, school information, enrollment, classes, or anything related to student management, respond with the 'student_data' tool.
   - For any other topic, like general conversation, news, jokes, games, etc., respond with the 'knowledge' tool.
