@@ -26,13 +26,9 @@ export async function getStudentData(firestore: Firestore): Promise<DataItem[]> 
     
     return studentsData;
   } catch (error: any) {
-    if (error.code === 'permission-denied') {
-      throw new FirestorePermissionError({
-        path: studentsCollection.path,
-        operation: 'list',
-      });
-    }
-    // For other errors, re-throw them as is.
+    // Re-throw the original error. The caller (Server or Client component)
+    // will be responsible for interpreting it. We cannot throw a client-side
+    // error class from a server-side function.
     throw error;
   }
 }

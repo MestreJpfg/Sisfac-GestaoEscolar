@@ -22,8 +22,9 @@ export default async function Home() {
         const nameB = b.mainItem || "";
         return nameA.localeCompare(nameB);
     });
-  } catch (error) {
-     if (error instanceof FirestorePermissionError) {
+  } catch (error: any) {
+     // Check for both the client-side custom error and the raw server-side error code.
+     if (error instanceof FirestorePermissionError || error.code === 'permission-denied') {
       // It's common for this to fail on an empty collection with restrictive read rules.
       // We can treat this as "no data" and let the client uploader show up.
       console.log("Permission error on initial server fetch, likely an empty collection. Defaulting to empty data.");
