@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { doc, updateDoc } from "firebase/firestore";
-import { useFirestore, useUser, errorEmitter, FirestorePermissionError, updateDocumentNonBlocking } from "@/firebase";
+import { doc } from "firebase/firestore";
+import { useFirestore, useUser, updateDocumentNonBlocking } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
