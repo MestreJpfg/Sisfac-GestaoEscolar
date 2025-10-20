@@ -5,6 +5,7 @@ import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
+import { initiateAnonymousSignIn } from './non-blocking-login';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -79,7 +80,14 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const unsubscribe = onAuthStateChanged(
       auth,
       (firebaseUser) => { // Auth state determined
-        setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
+        if (!firebaseUser) {
+          // If no user is signed in, sign in anonymously.
+          // This is non-blocking. The onAuthStateChanged listener will be
+          // triggered again with the new user state.
+          initiateAnonymousSignIn(auth);
+        } else {
+          setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
+        }
       },
       (error) => { // Auth listener error
         console.error("FirebaseProvider: onAuthStateChanged error:", error);
@@ -153,6 +161,26 @@ export const useFirebaseApp = (): FirebaseApp => {
   const { firebaseApp } = useFirebase();
   return firebaseApp;
 };
+
+/** Hook to access the Firebase Messaging instance. */
+export const useMessaging = () => {
+    const { auth } = useFirebase(); // Or however you get the messaging instance
+    // This is a placeholder. You'd actually get this from your init logic.
+    // For now, let's assume it's part of what useFirebase provides or can be derived.
+    const [messaging, setMessaging] = useState<any>(null);
+
+    useEffect(() => {
+        if (auth) {
+            // Dynamically import messaging to avoid server-side issues
+            import('firebase/messaging').then(({ getMessaging }) => {
+                setMessaging(getMessaging());
+            });
+        }
+    }, [auth]);
+
+    return messaging;
+};
+
 
 type MemoFirebase <T> = T & {__memo?: boolean};
 
