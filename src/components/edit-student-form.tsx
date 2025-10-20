@@ -18,8 +18,6 @@ import { useToast } from "@/hooks/use-toast";
 import { type DataItem, type SubItem } from "./data-viewer";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ScrollArea } from "./ui/scroll-area";
-
 
 interface EditStudentFormProps {
   student: DataItem;
@@ -81,50 +79,46 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="w-[95%] sm:max-w-3xl flex flex-col h-auto max-h-[85vh]">
+      <DialogContent className="w-[95%] sm:max-w-3xl h-[85vh]">
         <DialogHeader>
           <DialogTitle>Editar Aluno: {student.mainItem || ''}</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 min-h-0">
-          <ScrollArea className="h-full -mx-6">
-            <form onSubmit={handleSubmit} id="edit-student-form" className="space-y-4 px-6 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="main-item" className="font-semibold text-muted-foreground">
-                    NOME DE REGISTRO CIVIL
+        <div className="space-y-4 py-4 overflow-y-auto pr-6">
+            <div className="space-y-2">
+              <Label htmlFor="main-item" className="font-semibold text-muted-foreground">
+                NOME DE REGISTRO CIVIL
+              </Label>
+              <Input
+                id="main-item"
+                value={mainItem}
+                onChange={(e) => setMainItem(e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 pt-4">
+              {subItems.map((item, index) => (
+                <div key={`${item.label}-${index}`} className="space-y-2">
+                  <Label htmlFor={`item-${index}`} className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate" title={item.label}>
+                    {item.label}
                   </Label>
                   <Input
-                    id="main-item"
-                    value={mainItem}
-                    onChange={(e) => setMainItem(e.target.value)}
+                    id={`item-${index}`}
+                    value={item.value || ''}
+                    onChange={(e) => handleSubItemChange(index, e.target.value)}
+                    className={cn(!item.value && 'opacity-70')}
                   />
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 pt-4">
-                  {subItems.map((item, index) => (
-                    <div key={`${item.label}-${index}`} className="space-y-2">
-                      <Label htmlFor={`item-${index}`} className="text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate" title={item.label}>
-                        {item.label}
-                      </Label>
-                      <Input
-                        id={`item-${index}`}
-                        value={item.value || ''}
-                        onChange={(e) => handleSubItemChange(index, e.target.value)}
-                        className={cn(!item.value && 'opacity-70')}
-                      />
-                    </div>
-                  ))}
-                </div>
-            </form>
-          </ScrollArea>
+              ))}
+            </div>
         </div>
             
-          <DialogFooter className="mt-auto border-t pt-4 bg-background -mx-6 px-6 pb-6">
+          <DialogFooter className="mt-auto">
             <DialogClose asChild>
-              <Button type="button" variant="secondary" onClick={onClose} className="w-full sm:w-auto">
+              <Button type="button" variant="secondary" onClick={onClose}>
                 Cancelar
               </Button>
             </DialogClose>
-            <Button type="submit" form="edit-student-form" disabled={isLoading} className="w-full sm:w-auto">
+            <Button type="button" onClick={handleSubmit} disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Salvar Alterações
             </Button>
