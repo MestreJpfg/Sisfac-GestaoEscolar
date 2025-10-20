@@ -1,74 +1,15 @@
-/**
- * @fileoverview Firestore Security Rules for Prototyping.
- *
- * Core Philosophy:
- * This ruleset prioritizes rapid prototyping by focusing on authorization and omitting schema validation.
- * It adopts a strict user-ownership model for user-specific data and allows public read access to the 'students' collection, with owner-only write access.
- *
- * Data Structure:
- * - /students/{studentId}: A top-level collection containing student data, publicly readable.
- * - /users/{userId}: A top-level collection containing user-specific data (e.g., FCM tokens), accessible only by the authenticated user.
- *
- * Key Security Decisions:
- * - Users cannot list the /users collection.
- * - Write access to student data is restricted to authenticated users.
- *
- * Denormalization for Authorization:
- * - The 'Student' entity is assumed to contain a denormalized 'ownerId' field. This field must match the authenticated user's UID for write operations.
- *
- * Structural Segregation:
- * - Private user data (FCM tokens) is stored in a separate /users/{userId} collection, ensuring it's not mixed with public student data.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * @description Grants public read access to student data and restricts write access to authenticated users.
-     * @path /students/{studentId}
-     * @allow (get, list): Any user can read student data.
-     * @allow (create, update, delete): Only the owner of the student data (determined by the 'ownerId' field) can modify it.
-     * @deny (create): If the 'ownerId' field in the new document does not match the authenticated user's UID.
-     * @deny (update, delete): If the authenticated user is not the owner of the existing student data.
-     * @principle Allows public reads, but requires user-ownership for all writes.
-     */
+    // Allow any authenticated user to read and write to the students collection
     match /students/{studentId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update: if isSignedIn() && isExistingOwner(resource.data.ownerId);
-      allow delete: if isSignedIn() && isExistingOwner(resource.data.ownerId);
+      allow read, write: if request.auth != null;
     }
 
-    /**
-     * @description Restricts access to user-specific data (e.g., FCM tokens) to the authenticated user.
-     * @path /users/{userId}
-     * @allow (get): Only the user with the matching UID can read their own data.
-     * @allow (create): A user can create their own document with a matching UID.
-     * @allow (update): Only the user with the matching UID can update their own data.
-     * @allow (delete): Only the user with the matching UID can delete their own data.
-     * @deny (list): Users cannot list all user documents.
-     * @deny (create, update, delete): If the request is not made by the user with the matching UID.
-     * @principle Enforces strict user-ownership for all operations on user-specific data.
-     */
+    // Users can only read/write their own data
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
-    }
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
