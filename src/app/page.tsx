@@ -58,8 +58,6 @@ export default function Home() {
         });
         setData(sortedData);
     } catch (error) {
-        // The service already throws the detailed error, so we just rethrow it
-        // for the global error boundary to catch.
         if (error instanceof FirestorePermissionError) {
           throw error;
         }
@@ -82,10 +80,9 @@ export default function Home() {
   useEffect(() => {
     setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
     const now = new Date();
-    setCurrentDateTime(now.toLocaleDateString('pt-BR', {
-      dateStyle: 'full',
-      timeStyle: 'short'
-    }));
+    const datePart = now.toLocaleDateString('pt-BR', { dateStyle: 'full' });
+    const timePart = now.toLocaleTimeString('pt-BR', { timeStyle: 'short' });
+    setCurrentDateTime(`${datePart} - ${timePart}`);
   }, []);
 
   const handleUploadComplete = (uploadedData: DataItem[]) => {
