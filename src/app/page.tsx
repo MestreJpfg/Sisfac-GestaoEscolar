@@ -27,6 +27,7 @@ import { quotes } from "@/lib/quotes";
 import AiAssistant from "@/components/ai-assistant";
 import { useRouter } from "next/navigation";
 import { getStudentData } from "@/services/student-service";
+import { FirestorePermissionError } from "@/firebase";
 
 
 export default function Home() {
@@ -57,6 +58,11 @@ export default function Home() {
         });
         setData(sortedData);
     } catch (error) {
+        // The service already throws the detailed error, so we just rethrow it
+        // for the global error boundary to catch.
+        if (error instanceof FirestorePermissionError) {
+          throw error;
+        }
         console.error("Failed to fetch initial data", error);
         toast({
             variant: "destructive",
@@ -75,8 +81,10 @@ export default function Home() {
 
   useEffect(() => {
     setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
-    setCurrentDateTime(new Date().toLocaleDateString('pt-BR', {
+    const now = new Date();
+    setCurrentDateTime(now.toLocaleDateString('pt-BR', {
       dateStyle: 'full',
+      timeStyle: 'short'
     }));
   }, []);
 
@@ -121,7 +129,13 @@ export default function Home() {
           description: "Os dados anteriores foram limpos. Você já pode carregar um novo arquivo.",
         });
       }
-    } catch(err) {
+    } catch(err: any) {
+        if (err.code === 'permission-denied') {
+            throw new FirestorePermissionError({
+                path: studentsRef.path,
+                operation: 'delete',
+            });
+        }
         console.error("Error clearing data:", err);
         toast({
           variant: "destructive",
