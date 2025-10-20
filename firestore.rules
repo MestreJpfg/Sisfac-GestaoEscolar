@@ -1,51 +1,62 @@
 /**
- * @file Firestore Security Rules
- * @description This ruleset defines access control for the Firestore database.
+ * @fileoverview Firestore Security Rules for Prototyping.
  *
  * Core Philosophy:
- * This ruleset prioritizes secure data access based on a combination of public read access for the 'students' collection
- * and user-ownership for the 'users' collection.  Write access to the 'students' collection is not granted, resolving the
- * the "Missing or insufficient permissions" error reported from the client.
+ * This ruleset prioritizes rapid prototyping by focusing on authorization and omitting schema validation.
+ * It adopts a strict user-ownership model for user-specific data and allows public read access to the 'students' collection, with owner-only write access.
  *
  * Data Structure:
- * - /students/{studentId}: A publicly readable collection containing student data. Write access is disallowed.
- * - /users/{userId}: A user-specific collection for storing user-related data. Access is restricted to the owning user.
+ * - /students/{studentId}: A top-level collection containing student data, publicly readable.
+ * - /users/{userId}: A top-level collection containing user-specific data (e.g., FCM tokens), accessible only by the authenticated user.
  *
  * Key Security Decisions:
- * - Students Collection: The 'students' collection is publicly readable (get, list), but write operations (create, update, delete) are explicitly denied.
- * - Users Collection: The 'users' collection follows an ownership model. Each user can only access their own document.
- * - No user listing is allowed.
+ * - Users cannot list the /users collection.
+ * - Write access to student data is restricted to authenticated users.
+ *
+ * Denormalization for Authorization:
+ * - The 'Student' entity is assumed to contain a denormalized 'ownerId' field. This field must match the authenticated user's UID for write operations.
+ *
+ * Structural Segregation:
+ * - Private user data (FCM tokens) is stored in a separate /users/{userId} collection, ensuring it's not mixed with public student data.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Grants public read access to the 'students' collection but denies all write operations.
+     * @description Grants public read access to student data and restricts write access to authenticated users.
      * @path /students/{studentId}
      * @allow (get, list): Any user can read student data.
-     * @deny (create, update, delete): No user can create, update, or delete student data.
-     * @principle Allows public read access but restricts write access to prevent unauthorized modifications.
+     * @allow (create, update, delete): Only the owner of the student data (determined by the 'ownerId' field) can modify it.
+     * @deny (create): If the 'ownerId' field in the new document does not match the authenticated user's UID.
+     * @deny (update, delete): If the authenticated user is not the owner of the existing student data.
+     * @principle Allows public reads, but requires user-ownership for all writes.
      */
     match /students/{studentId} {
-      allow get, list: if true;
-      allow create, update, delete: if false;
+      allow get: if true;
+      allow list: if true;
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && isExistingOwner(resource.data.ownerId);
+      allow delete: if isSignedIn() && isExistingOwner(resource.data.ownerId);
     }
 
     /**
-     * @description Enforces user-ownership for documents in the 'users' collection.
+     * @description Restricts access to user-specific data (e.g., FCM tokens) to the authenticated user.
      * @path /users/{userId}
-     * @allow (create): A user can create their own document if the userId matches their auth UID.
-     * @allow (get, update, delete): A user can get, update, and delete their own document.
-     * @deny (create, get, update, delete): A user cannot access or modify another user's document.
-     * @principle Enforces strict user-ownership, ensuring users can only manage their own data.
+     * @allow (get): Only the user with the matching UID can read their own data.
+     * @allow (create): A user can create their own document with a matching UID.
+     * @allow (update): Only the user with the matching UID can update their own data.
+     * @allow (delete): Only the user with the matching UID can delete their own data.
+     * @deny (list): Users cannot list all user documents.
+     * @deny (create, update, delete): If the request is not made by the user with the matching UID.
+     * @principle Enforces strict user-ownership for all operations on user-specific data.
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow list: if false;
       allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
     }
 
     function isSignedIn() {
@@ -53,11 +64,11 @@ service cloud.firestore {
     }
 
     function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
+      return request.auth.uid == userId;
     }
 
     function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
+        return isOwner(userId) && resource != null;
     }
   }
 }
