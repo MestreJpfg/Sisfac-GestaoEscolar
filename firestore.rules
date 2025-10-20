@@ -1,70 +1,81 @@
 /**
  * @file Firestore Security Rules
- * @description This ruleset enforces a strict user-ownership model for student data. Each user can only access their own students.
+ * @description This ruleset enforces a strict user-ownership model for all data.
  *
  * Data Structure:
- * - /users/{userId}: Stores user-specific data like FCM tokens.
- * - /users/{userId}/students/{studentId}: Stores student data associated with a specific user.
+ * - All student data is nested under /users/{userId}/students/{studentId}.
+ * - User-specific data (e.g., FCM tokens) is stored at /users/{userId}.
  *
  * Key Security Decisions:
- * - Users can only list students belonging to their own user ID.
- * - Users can only create, update, or delete students under their own user ID.
- * - Users can only read and write their own user document.
+ * - Users can only access their own data.
+ * - Listing of users is disallowed.
+ * - The rules are flexible on data shapes to allow for rapid prototyping, but strictly enforce authorization.
+ * - The 'id' field is validated on create to match the document ID, enforcing path consistency.  This field is immutable on update.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Checks if the request is authenticated.
+     * @description Allows a user to manage their own student data.
+     * @path /users/{userId}/students/{studentId}
+     * @allow (create) User A creates a new student document under their own user ID.
+     * @allow (update) User A updates an existing student document under their own user ID.
+     * @allow (delete) User A deletes a student document under their own user ID.
+     * @deny (create) User A attempts to create a student document under User B's ID.
+     * @deny (update) User A attempts to update a student document under User B's ID.
+     * @deny (delete) User A attempts to delete a student document under User B's ID.
+     * @principle Enforces document ownership and validates relational integrity.
      */
-    function isSignedIn() {
-      return request.auth != null;
+    match /users/{userId}/students/{studentId} {
+      // Allow reads to the owner
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if isSignedIn() && isOwner(userId);
+
+      // Allow create if the user is signed in and the userId matches the path.
+      // Also validate that studentId matches document id.
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == studentId;
+
+      // Allow updates and deletes if the user is the owner and the document exists.
+      // Enforce immutability of the 'id' field.
+      allow update: if isSignedIn() && isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
     /**
-     * @description Checks if the authenticated user's UID matches the provided userId.
-     */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    /**
-     * @description Checks if the authenticated user owns the existing document.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
-
-    /**
-     * @description Rules for user documents.
+     * @description Allows a user to manage their own user data (e.g., FCM tokens).
      * @path /users/{userId}
-     * @allow (create) - A user can create their own user document.
-     * @allow (get, update, delete) - A user can get, update, and delete their own user document.
-     * @deny (create) - A user cannot create a document with a userId that doesn't match their own.
-     * @deny (get, update, delete) - A user cannot access another user's document.
+     * @allow (create) User A creates their own user document.
+     * @allow (update) User A updates their own user document.
+     * @deny (create) User A attempts to create a user document for User B.
+     * @deny (update) User A attempts to update a user document for User B.
      * @principle Enforces document ownership.
      */
     match /users/{userId} {
-      allow get, update, delete: if isExistingOwner(userId);
-      allow create: if isOwner(userId);
-    }
+      // Allow reads to the owner
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if false; // Listing users is disallowed
 
-    /**
-     * @description Rules for student documents nested under a user.
-     * @path /users/{userId}/students/{studentId}
-     * @allow (create) - A user can create a student document under their own user ID.
-     * @allow (get, list, update, delete) - A user can get, list, update, and delete student documents under their own user ID.
-     * @deny (create) - A user cannot create a student document under another user's ID.
-     * @deny (get, list, update, delete) - A user cannot access another user's student documents.
-     * @principle Enforces document ownership and restricts access to a user's own data tree.
-     */
-    match /users/{userId}/students/{studentId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      // Allow create if the user is signed in and the userId matches the path
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+
+      // Allow updates and deletes if the user is the owner and the document exists
+      // Enforce immutability of the 'id' field.
+      allow update: if isSignedIn() && isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
+  }
+
+  // Helper functions
+  function isSignedIn() {
+    return request.auth != null;
+  }
+
+  function isOwner(userId) {
+    return request.auth.uid == userId;
+  }
+
+  function isExistingOwner(userId) {
+    return isOwner(userId) && resource != null;
   }
 }
