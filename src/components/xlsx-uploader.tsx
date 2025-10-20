@@ -123,28 +123,30 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
                 batch.set(docRef, student);
             });
 
-            batch.commit().then(() => {
-              toast({
-                  title: "Sucesso!",
-                  description: `Dados anteriores removidos e ${processedData.length} novos registros foram salvos.`,
-              });
-              onUploadComplete();
-            }).catch(err => {
-              const permissionError = new FirestorePermissionError({
-                path: studentsCollection.path,
-                operation: 'write',
-                requestResourceData: processedData
-              });
-              errorEmitter.emit('permission-error', permissionError);
+            await batch.commit();
+
+            toast({
+                title: "Sucesso!",
+                description: `Dados anteriores removidos e ${processedData.length} novos registros foram salvos.`,
             });
+            onUploadComplete();
         }
       } catch (error) {
-        console.error("Error processing file:", error);
-        toast({
-          variant: "destructive",
-          title: "Erro de Processamento",
-          description: "Ocorreu um erro ao processar seu arquivo. Verifique o formato e tente novamente.",
-        });
+        if ((error as any).code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+                path: 'students',
+                operation: 'write',
+                // We can't easily get the full dataset here, but this is a start
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        } else {
+            console.error("Error processing file:", error);
+            toast({
+                variant: "destructive",
+                title: "Erro de Processamento",
+                description: "Ocorreu um erro ao processar seu arquivo. Verifique o formato e tente novamente.",
+            });
+        }
       } finally {
         setIsLoading(false);
         if(inputRef.current) {
@@ -196,7 +198,7 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFileChange(e.dataTransfer.files[0]);
     }
-  }, [handleFileChange]);
+  }, [processAndSaveFile]);
   
   const handleClick = () => {
     inputRef.current?.click();

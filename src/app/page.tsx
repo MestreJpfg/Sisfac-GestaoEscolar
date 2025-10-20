@@ -49,7 +49,7 @@ export default function Home() {
   }, []);
 
   const fetchData = useCallback(async () => {
-    if (!firestore) {
+    if (!firestore || !user) {
       return;
     }
     
@@ -84,13 +84,13 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
-  }, [firestore]);
+  }, [firestore, user]);
 
   useEffect(() => {
-    if (!isUserLoading && firestore) {
+    if (!isUserLoading && firestore && user) {
       fetchData();
     }
-  }, [isUserLoading, firestore, fetchData]);
+  }, [isUserLoading, firestore, user, fetchData]);
 
   const handleUploadComplete = () => {
     fetchData();
