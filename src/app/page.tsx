@@ -219,7 +219,7 @@ export default function Home() {
               </blockquote>
             )}
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary-foreground font-headline">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary [text-shadow:0_2px_10px_hsl(var(--primary)/0.4)] font-headline">
             Gestão de Alunos 2025
           </h1>
           <p className="text-muted-foreground mt-2 text-sm sm:text-base max-w-lg mx-auto">
