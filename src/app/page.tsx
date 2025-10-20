@@ -40,7 +40,6 @@ export default function Home() {
   const { toast } = useToast();
   const { notificationPermission, requestPermissionAndGetToken } = useFcm();
 
-  // New: Use the useCollection hook to get real-time data from the global 'students' collection
   const studentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, "students"));
@@ -55,7 +54,6 @@ export default function Home() {
     }));
   }, []);
 
-  // New: Update local state whenever Firestore data changes
   useEffect(() => {
     if (studentData) {
        const sortedData = [...studentData].sort((a, b) => {
@@ -70,8 +68,6 @@ export default function Home() {
   }, [studentData]);
 
 
-  // New: This function now just updates the UI state.
-  // The hook will handle the data fetching.
   const handleUploadComplete = (uploadedData: DataItem[]) => {
      const sortedData = uploadedData.sort((a, b) => {
         const nameA = a.mainItem || "";
@@ -248,5 +244,3 @@ export default function Home() {
     </main>
   );
 }
-
-    
