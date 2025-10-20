@@ -31,7 +31,7 @@ const getStudentDataTool = ai.defineTool(
 
 const studentDataPrompt = ai.definePrompt({
   name: 'studentDataPrompt',
-  model: googleAI.model('gemini-1.5-flash-latest'),
+  model: googleAI.model('gemini-1.5-flash'),
   system: `You are an expert assistant for a school management system.
 Your role is to answer questions about student data based on the information provided by the 'getStudentData' tool.
 Analyze the user's question and use the data retrieved by the tool to provide a clear and accurate answer.
