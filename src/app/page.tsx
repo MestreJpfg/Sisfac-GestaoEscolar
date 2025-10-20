@@ -39,18 +39,21 @@ export default function Home() {
   const [currentDateTime, setCurrentDateTime] = useState('');
 
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const { toast } = useToast();
   const { notificationPermission, requestPermissionAndGetToken } = useFcm();
   const router = useRouter();
 
 
   const fetchExistingData = useCallback(async () => {
-    if (!firestore) return;
+    if (!firestore) {
+        console.warn("Firestore not ready, skipping fetch.");
+        return;
+    }
     setIsLoading(true);
     try {
         const studentData = await getStudentData(firestore);
-         const sortedData = studentData.sort((a, b) => {
+        const sortedData = studentData.sort((a, b) => {
             const nameA = a.mainItem || "";
             const nameB = b.mainItem || "";
             return nameA.localeCompare(nameB);
@@ -58,17 +61,17 @@ export default function Home() {
         setData(sortedData);
     } catch (error) {
         if (error instanceof FirestorePermissionError) {
-          // This is a permission error, which for the initial load means the collection is likely empty
-          // or rules are blocking reads for unauthenticated users on an empty collection.
-          // We can treat this as "no data" and show the uploader.
+          // Treat permission error on initial load as "no data".
+          // This is common for empty collections with restrictive read rules.
           setData([]);
         } else {
-          console.error("Failed to fetch initial data", error);
+          console.error("Failed to fetch initial data:", error);
           toast({
               variant: "destructive",
               title: "Erro ao carregar dados",
               description: "Não foi possível buscar os dados existentes. Tente atualizar a página.",
           });
+          setData([]); // Ensure data is cleared on other errors too
         }
     } finally {
         setIsLoading(false);
@@ -76,8 +79,11 @@ export default function Home() {
   }, [firestore, toast]);
 
   useEffect(() => {
-    fetchExistingData();
-  }, [fetchExistingData]);
+    // We wait until Firebase auth is resolved and we have a firestore instance.
+    if (!isUserLoading && firestore) {
+      fetchExistingData();
+    }
+  }, [isUserLoading, firestore, fetchExistingData]);
 
 
   useEffect(() => {
@@ -187,7 +193,7 @@ export default function Home() {
         const token = await requestPermissionAndGetToken();
         if (token) {
             const userDocRef = doc(firestore, 'users', user.uid);
-            updateDocumentNonBlocking(userDocRef, { fcmTokens: { [token]: true } });
+            updateDocumentNonBlocking(userDocRef, { fcmTokens: { [token]: true } }, { merge: true });
             toast({
             title: 'Sucesso!',
             description: 'As notificações foram ativadas para este dispositivo.'
@@ -196,7 +202,9 @@ export default function Home() {
     }
   };
   
-  const isPageLoading = isLoading || isClearing;
+  // Combine isLoading (initial fetch) and isUserLoading.
+  // We should wait for the user to be resolved before deciding what to show.
+  const isPageLoading = isLoading || isUserLoading;
   const hasData = data.length > 0;
 
   return (
