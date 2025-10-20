@@ -34,7 +34,7 @@ interface StudentManagerProps {
 
 export default function StudentManager({ initialData }: StudentManagerProps) {
   const [data, setData] = useState<DataItem[]>(initialData);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(!initialData); // Set loading based on initial data
   const [isClearing, setIsClearing] = useState(false);
   const [randomQuote, setRandomQuote] = useState<{ quote: string; author: string } | null>(null);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
@@ -56,10 +56,12 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
     setCurrentDateTime(`${datePart} - ${timePart}`);
   }, []);
 
-  const refreshData = () => {
-    // This will re-run the Server Component and pass down fresh initialData
-    router.refresh();
-  }
+  // This effect synchronizes the client-side state with the server-provided initialData
+  useEffect(() => {
+    setData(initialData);
+    setIsLoading(false); // Stop loading once initial data is processed
+  }, [initialData]);
+
 
   const handleUploadComplete = (uploadedData: DataItem[]) => {
     const sortedData = uploadedData.sort((a, b) => {
@@ -69,7 +71,6 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
     });
     setData(sortedData);
     setIsLoading(false);
-    // No need to refresh here, as the client state is now in sync
   };
 
   const handleClearAndReload = async () => {
@@ -167,7 +168,7 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
   };
   
   const isPageLoading = isLoading || isClearing;
-  // The decision to show uploader or viewer is now solely based on the initial data.
+  // The decision to show uploader or viewer is now solely based on the client-side `data` state.
   const hasData = data.length > 0;
 
   return (
