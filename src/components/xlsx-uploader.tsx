@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
-import { useFirestore, useUser, errorEmitter, FirestorePermissionError } from "@/firebase";
+import { useFirestore, errorEmitter, FirestorePermissionError } from "@/firebase";
 import { collection, writeBatch, doc, getDocs, query } from "firebase/firestore";
 import { type SubItem } from "./data-viewer";
 
@@ -22,16 +22,15 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
-  const { user } = useUser();
 
   const processAndSaveFile = async (file: File) => {
     setIsLoading(true);
 
-    if (!firestore || !user) {
+    if (!firestore) {
       toast({
         variant: 'destructive',
         title: 'Erro de Conexão',
-        description: 'Não foi possível conectar ao banco de dados ou usuário não autenticado.',
+        description: 'Não foi possível conectar ao banco de dados.',
       });
       setIsLoading(false);
       return;
@@ -86,13 +85,12 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
 
           originalHeaders.forEach((header, index) => {
             const headerStr = String(header ?? '').trim();
-            if (!headerStr || index === mainItemHeaderIndex) return;
+            if (!headerStr) return;
 
             const cellValue = row[index];
             let value = '';
 
             if (cellValue instanceof Date) {
-              // Formata a data de nascimento corretamente, não importa a posição da coluna
               if (index === dateOfBirthHeaderIndex) {
                 value = format(cellValue, 'dd/MM/yyyy');
               } else {
@@ -114,7 +112,7 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
             description: `Não foram encontrados dados válidos na coluna "NOME DE REGISTRO CIVIL".`,
           });
         } else {
-            const studentsCollection = collection(firestore, "users", user.uid, "students");
+            const studentsCollection = collection(firestore, "students");
             const batch = writeBatch(firestore);
             
             const existingDocs = await getDocs(query(studentsCollection));
@@ -250,5 +248,3 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
     </Card>
   );
 }
-
-    

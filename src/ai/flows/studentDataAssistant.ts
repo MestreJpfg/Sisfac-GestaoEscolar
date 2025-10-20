@@ -21,6 +21,7 @@ const getStudentDataTool = ai.defineTool(
     outputSchema: z.any(),
   },
   async () => {
+    // This now gets data from the global /students collection
     return await getStudentData();
   }
 );

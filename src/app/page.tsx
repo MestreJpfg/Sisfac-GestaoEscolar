@@ -49,9 +49,7 @@ export default function Home() {
   }, []);
 
   const fetchData = useCallback(async () => {
-    if (!firestore || !user) {
-      // This case should be handled by the useEffect dependency check,
-      // but as a safeguard, we exit if services are not ready.
+    if (!firestore) {
       return;
     }
     
@@ -59,7 +57,7 @@ export default function Home() {
     setError(null);
     
     try {
-      const studentsCollection = collection(firestore, "users", user.uid, "students");
+      const studentsCollection = collection(firestore, "students");
       const q = query(studentsCollection);
       const querySnapshot = await getDocs(q);
       
@@ -77,48 +75,39 @@ export default function Home() {
       setData(studentsData);
     } catch (err: any) {
       console.error("Failed to fetch data:", err);
-      // Create a contextual error to be emitted for better debugging
       const permissionError = new FirestorePermissionError({
-        path: `users/${user.uid}/students`,
+        path: 'students',
         operation: 'list',
       });
-      setError(permissionError); // Set the error for the UI
-      errorEmitter.emit('permission-error', permissionError); // Emit for global handling
+      setError(permissionError);
+      errorEmitter.emit('permission-error', permissionError);
     } finally {
       setIsLoading(false);
     }
-  }, [firestore, user]);
+  }, [firestore]);
 
   useEffect(() => {
-    // This effect runs when the user or Firestore instance becomes available.
-    // It ensures that we only attempt to fetch data once we have a user.
-    if (!isUserLoading && user && firestore) {
+    if (!isUserLoading && firestore) {
       fetchData();
-    } else if (!isUserLoading && !user) {
-      // If authentication is complete but there is no user, stop loading.
-      // The app will show the uploader by default as `data` will be empty.
-      setIsLoading(false);
     }
-    // The dependency array ensures this effect runs whenever the auth state
-    // or firestore instance changes.
-  }, [isUserLoading, user, firestore, fetchData]);
+  }, [isUserLoading, firestore, fetchData]);
 
   const handleUploadComplete = () => {
     fetchData();
   };
 
   const handleClearAndReload = async () => {
-    if (!firestore || !user) {
+    if (!firestore) {
       toast({
         variant: "destructive",
         title: "Erro de Conexão",
-        description: "O serviço do banco de dados não está disponível ou você não está autenticado.",
+        description: "O serviço do banco de dados não está disponível.",
       });
       return;
     }
   
     setIsLoading(true);
-    const studentsCollection = collection(firestore, "users", user.uid, "students");
+    const studentsCollection = collection(firestore, "students");
     const q = query(studentsCollection);
     
     try {
@@ -186,103 +175,101 @@ export default function Home() {
   const hasData = data && data.length > 0;
 
   return (
-    <>
-      <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 md:p-8 bg-background">
-        <div className="w-full max-w-4xl mx-auto">
-          <header className="text-center mb-8 flex flex-col items-center">
-            <div className="mb-4 flex flex-col items-center">
-              <Image
-                src="/logoyuri.png"
-                alt="Logo"
-                width={120}
-                height={40}
-                className="rounded-md"
-              />
-               <p className="w-full text-center text-xs text-muted-foreground mt-2">{currentDateTime}</p>
-               {randomQuote && (
-                <blockquote className="mt-4 border-l-2 border-primary pl-4 italic text-xs text-muted-foreground">
-                  <p>"{randomQuote.quote}"</p>
-                  <cite className="mt-2 block text-right font-semibold not-italic">- {randomQuote.author}</cite>
-                </blockquote>
-              )}
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary font-headline">
-              Gestão de Alunos 2025
-            </h1>
-            <p className="text-muted-foreground mt-2 text-sm sm:text-base">
-              Localize as informações sobre um Aluno matriculado
-            </p>
-          </header>
-
-          <div className="w-full">
-            {isLoading || isUserLoading ? (
-              <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card">
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="mt-4 text-muted-foreground">Carregando dados...</p>
-              </div>
-            ) : error ? (
-              <div className="text-destructive text-center p-8 bg-destructive/10 rounded-lg">
-                <p className="font-bold">Ocorreu um erro ao carregar os dados.</p>
-                <p className="text-sm">{error.message}</p>
-              </div>
-            )
-            : !hasData ? (
-              <XlsxUploader onUploadComplete={handleUploadComplete} />
-            ) : (
-              <div className="space-y-4">
-                <DataViewer data={data} onEditComplete={fetchData} />
-                 <Button onClick={() => setIsClearConfirmOpen(true)} className="w-full" variant="outline">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Limpar dados e carregar novo arquivo
-                </Button>
-                {notificationPermission !== 'denied' && (
-                  <Button onClick={handleNotificationAction} className="w-full" variant="secondary">
-                    <BellRing className="mr-2 h-4 w-4" />
-                    {notificationPermission === 'granted' ? 'Testar Notificação' : 'Ativar Notificações'}
-                  </Button>
-                )}
-              </div>
+    <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 md:p-8">
+      <div className="w-full max-w-4xl mx-auto">
+        <header className="text-center mb-8 flex flex-col items-center">
+          <div className="mb-4 flex flex-col items-center">
+            <Image
+              src="/logoyuri.png"
+              alt="Logo"
+              width={120}
+              height={40}
+              className="rounded-md"
+            />
+             <p className="w-full text-center text-xs text-muted-foreground mt-2">{currentDateTime}</p>
+             {randomQuote && (
+              <blockquote className="mt-4 border-l-2 border-primary pl-4 italic text-xs text-muted-foreground">
+                <p>"{randomQuote.quote}"</p>
+                <cite className="mt-2 block text-right font-semibold not-italic">- {randomQuote.author}</cite>
+              </blockquote>
             )}
           </div>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary font-headline">
+            Gestão de Alunos 2025
+          </h1>
+          <p className="text-muted-foreground mt-2 text-sm sm:text-base">
+            Localize as informações sobre um Aluno matriculado
+          </p>
+        </header>
+
+        <div className="w-full">
+          {isLoading || isUserLoading ? (
+            <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card">
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+              <p className="mt-4 text-muted-foreground">Carregando dados...</p>
+            </div>
+          ) : error ? (
+            <div className="text-destructive text-center p-8 bg-destructive/10 rounded-lg">
+              <p className="font-bold">Ocorreu um erro ao carregar os dados.</p>
+              <p className="text-sm">{error.message}</p>
+            </div>
+          )
+          : !hasData ? (
+            <XlsxUploader onUploadComplete={handleUploadComplete} />
+          ) : (
+            <div className="space-y-4">
+              <DataViewer data={data} onEditComplete={fetchData} />
+               <Button onClick={() => setIsClearConfirmOpen(true)} className="w-full" variant="outline">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Limpar dados e carregar novo arquivo
+              </Button>
+              {notificationPermission !== 'denied' && user && (
+                <Button onClick={handleNotificationAction} className="w-full" variant="secondary">
+                  <BellRing className="mr-2 h-4 w-4" />
+                  {notificationPermission === 'granted' ? 'Testar Notificação' : 'Ativar Notificações'}
+                </Button>
+              )}
+            </div>
+          )}
         </div>
-      </main>
+      </div>
       <AiAssistant />
        <Dialog open={isClearConfirmOpen} onOpenChange={setIsClearConfirmOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar Limpeza de Dados</DialogTitle>
-            <DialogDescription>
-              Esta ação removerá permanentemente todos os dados dos alunos. Para confirmar, por favor, insira a senha de 4 dígitos.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="password">Senha de Confirmação</Label>
-            <Input
-              id="password"
-              type="password"
-              value={passwordInput}
-              onChange={(e) => setPasswordInput(e.target.value)}
-              maxLength={4}
-              placeholder="****"
-              className="mt-2"
-            />
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="secondary" onClick={() => setPasswordInput("")}>
-                Cancelar
-              </Button>
-            </DialogClose>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={handleConfirmClear}
-            >
-              Confirmar e Limpar
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Confirmar Limpeza de Dados</DialogTitle>
+          <DialogDescription>
+            Esta ação removerá permanentemente todos os dados dos alunos. Para confirmar, por favor, insira a senha de 4 dígitos.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <Label htmlFor="password">Senha de Confirmação</Label>
+          <Input
+            id="password"
+            type="password"
+            value={passwordInput}
+            onChange={(e) => setPasswordInput(e.target.value)}
+            maxLength={4}
+            placeholder="****"
+            className="mt-2"
+          />
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="secondary" onClick={() => setPasswordInput("")}>
+              Cancelar
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+          </DialogClose>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleConfirmClear}
+          >
+            Confirmar e Limpar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </main>
   );
 }
