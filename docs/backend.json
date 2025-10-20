@@ -1,96 +1,114 @@
-
 {
   "entities": {
-    "Student": {
-      "title": "Student",
+    "UploadedFile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UploadedFile",
       "type": "object",
-      "description": "Represents a student's data imported from an XLSX file.",
+      "description": "Represents an uploaded XLSX file and its associated data.",
       "properties": {
-        "mainItem": {
+        "id": {
           "type": "string",
-          "description": "The main identifying information for the student, typically their full name."
+          "description": "Unique identifier for the uploaded file."
         },
-        "subItems": {
+        "fileName": {
+          "type": "string",
+          "description": "The original name of the uploaded XLSX file."
+        },
+        "uploadDate": {
+          "type": "string",
+          "description": "The date and time when the file was uploaded.",
+          "format": "date-time"
+        },
+        "fileSize": {
+          "type": "number",
+          "description": "The size of the uploaded file in bytes."
+        },
+        "extractedDataId": {
+          "type": "string",
+          "description": "Reference to ExtractedData. (Relationship: UploadedFile 1:1 ExtractedData)"
+        }
+      },
+      "required": [
+        "id",
+        "fileName",
+        "uploadDate",
+        "fileSize",
+        "extractedDataId"
+      ]
+    },
+    "ExtractedData": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ExtractedData",
+      "type": "object",
+      "description": "Represents the extracted data from the first column of an XLSX file.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the extracted data."
+        },
+        "data": {
           "type": "array",
-          "description": "An array of key-value pairs representing other information from the spreadsheet.",
+          "description": "An array of strings, each representing a row from the first column of the XLSX file.",
           "items": {
-            "type": "object",
-            "properties": {
-              "label": {
-                "type": "string"
-              },
-              "value": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "label",
-              "value"
-            ]
+            "type": "string"
           }
         }
       },
       "required": [
-        "mainItem",
-        "subItems"
+        "id",
+        "data"
       ]
-    },
-    "User": {
-      "title": "User",
-      "type": "object",
-      "description": "Represents a user of the application, for FCM token storage.",
-      "properties": {
-        "fcmTokens": {
-          "type": "object",
-          "description": "A map of FCM registration tokens for the user's devices. The keys are the tokens.",
-          "additionalProperties": {
-            "type": "boolean"
-          }
-        }
-      }
     }
   },
   "auth": {
     "providers": [
+      "password",
       "anonymous"
     ]
   },
   "firestore": {
     "structure": [
       {
-        "path": "/students/{studentId}",
+        "path": "/users/{userId}/uploadedFiles/{uploadedFileId}",
         "definition": {
-          "entityName": "Student",
+          "entityName": "UploadedFile",
           "schema": {
-            "$ref": "#/backend/entities/Student"
+            "$ref": "#/backend/entities/UploadedFile"
           },
-          "description": "Stores student data in a global, shared collection.",
+          "description": "Stores metadata about uploaded XLSX files. Uses path-based ownership for user-specific data. The `userId` parameter ensures only the owning user can access these documents.",
           "params": [
             {
-              "name": "studentId",
-              "description": "The unique identifier of the student."
+              "name": "userId",
+              "description": "The ID of the user who uploaded the file."
+            },
+            {
+              "name": "uploadedFileId",
+              "description": "The unique ID of the uploaded file."
             }
           ]
         }
       },
       {
-        "path": "/users/{userId}",
+        "path": "/users/{userId}/extractedData/{extractedDataId}",
         "definition": {
-          "entityName": "User",
+          "entityName": "ExtractedData",
           "schema": {
-            "$ref": "#/backend/entities/User"
+            "$ref": "#/backend/entities/ExtractedData"
           },
-          "description": "Stores user-specific data, such as FCM tokens.",
+          "description": "Stores the extracted data from uploaded XLSX files. Uses path-based ownership for user-specific data. The `userId` parameter ensures only the owning user can access these documents.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier of the user."
+              "description": "The ID of the user who owns the extracted data."
+            },
+            {
+              "name": "extractedDataId",
+              "description": "The unique ID of the extracted data."
             }
           ]
         }
       }
-    ]
+    ],
+    "reasoning": "The Firestore structure is designed to provide a secure and scalable solution for the XLSX Viewer application. Each user has a dedicated space for their uploaded files and extracted data, ensuring data isolation and simplifying security rules. The chosen structure prioritizes authorization independence by avoiding `get()` calls in security rules. This is achieved through path-based ownership, where each user has their own collection of files and extracted data. This makes it easier to debug and maintain, and also provides better guarantees about the security of the data. The structure allows for secure list operations because data with different security requirements are stored in separate collections. The data model uses explicit state modeling (through the `id` fields acting as implicit state) and radical consistency in naming conventions."
   }
 }
-
-    

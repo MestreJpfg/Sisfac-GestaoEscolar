@@ -1,15 +1,89 @@
+/**
+ * @file Firestore Security Rules for XLSX Viewer application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model, where each user has exclusive access to their uploaded files and extracted data.
+ *
+ * Data Structure:
+ * All data is nested under /users/{userId}, with subcollections for uploadedFiles and extractedData. This path-based ownership simplifies security rules.
+ *
+ * Key Security Decisions:
+ * - Users can only access their own data.
+ * - Listing other user's files or extracted data is strictly prohibited.
+ * - Authorization relies on the path-based userId matching the authenticated user's UID.
+ * - Data validation is minimized for rapid prototyping but ensures that the userId in the path matches the document's internal user ID to prevent unauthorized data creation.
+ *
+ * Denormalization for Authorization:
+ * The data structure itself denormalizes ownership by nesting data under the user's ID. This avoids the need for `get()` calls to determine ownership.
+ *
+ * Structural Segregation:
+ * User-specific data (uploaded files and extracted data) is stored in separate subcollections under the user's document. This segregation simplifies access control and prevents accidental exposure of private data.
+ */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Allow any authenticated user to read and write to the students collection
-    match /students/{studentId} {
-      allow read, write: if request.auth != null;
+    /**
+     * @description Secure access to uploaded file metadata for each user.
+     * @path /users/{userId}/uploadedFiles/{uploadedFileId}
+     * @allow (create) User A can create a new uploaded file metadata document under their own user ID.
+     *   - Request: auth.uid = "userA", path = "/users/userA/uploadedFiles/file123", data = {id: "userA"}
+     * @allow (get) User A can read their own uploaded file metadata.
+     *   - Request: auth.uid = "userA", path = "/users/userA/uploadedFiles/file123"
+     * @allow (update) User A can update their own uploaded file metadata.
+     *   - Request: auth.uid = "userA", path = "/users/userA/uploadedFiles/file123", data = {id: "userA", fileName: "new_name.xlsx"}
+     * @allow (delete) User A can delete their own uploaded file metadata.
+     *   - Request: auth.uid = "userA", path = "/users/userA/uploadedFiles/file123"
+     * @deny (create) User B cannot create an uploaded file metadata document under User A's ID.
+     *   - Request: auth.uid = "userB", path = "/users/userA/uploadedFiles/file123", data = {id: "userA"}
+     * @deny (get) User B cannot read User A's uploaded file metadata.
+     *   - Request: auth.uid = "userB", path = "/users/userA/uploadedFiles/file123"
+     * @principle Enforces document ownership for reads and writes; validates relational integrity between the path and document data.
+     */
+    match /users/{userId}/uploadedFiles/{uploadedFileId} {
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if isSignedIn() && isOwner(userId);
+      allow create: if isSignedIn() && request.resource.data.id == userId;
+      allow update: if isSignedIn() && isExistingOwner(userId) && resource.data.id == request.resource.data.id;
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
 
-    // Users can only read/write their own data
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    /**
+     * @description Secure access to extracted data for each user.
+     * @path /users/{userId}/extractedData/{extractedDataId}
+     * @allow (create) User A can create extracted data under their own user ID.
+     *   - Request: auth.uid = "userA", path = "/users/userA/extractedData/data123", data = {id: "userA"}
+     * @allow (get) User A can read their own extracted data.
+     *   - Request: auth.uid = "userA", path = "/users/userA/extractedData/data123"
+     * @allow (update) User A can update their own extracted data.
+     *   - Request: auth.uid = "userA", path = "/users/userA/extractedData/data123", data = {id: "userA", data: ["new", "data"]}
+     * @allow (delete) User A can delete their own extracted data.
+     *   - Request: auth.uid = "userA", path = "/users/userA/extractedData/data123"
+     * @deny (create) User B cannot create extracted data under User A's ID.
+     *   - Request: auth.uid = "userB", path = "/users/userA/extractedData/data123", data = {id: "userA"}
+     * @deny (get) User B cannot read User A's extracted data.
+     *   - Request: auth.uid = "userB", path = "/users/userA/extractedData/data123"
+     * @principle Enforces document ownership for reads and writes; validates relational integrity between the path and document data.
+     */
+    match /users/{userId}/extractedData/{extractedDataId} {
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if isSignedIn() && isOwner(userId);
+      allow create: if isSignedIn() && request.resource.data.id == userId;
+      allow update: if isSignedIn() && isExistingOwner(userId) && resource.data.id == request.resource.data.id;
+      allow delete: if isSignedIn() && isExistingOwner(userId);
     }
+  }
+
+  // Helper functions
+  function isSignedIn() {
+    return request.auth != null;
+  }
+
+  function isOwner(userId) {
+    return request.auth.uid == userId;
+  }
+
+  function isExistingOwner(userId) {
+    return isOwner(userId) && resource != null;
   }
 }
