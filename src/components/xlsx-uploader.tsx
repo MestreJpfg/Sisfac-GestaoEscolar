@@ -10,10 +10,10 @@ import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
 import { useFirestore, errorEmitter, FirestorePermissionError } from "@/firebase";
 import { collection, writeBatch, doc, getDocs, query } from "firebase/firestore";
-import { type SubItem } from "./data-viewer";
+import { type DataItem, type SubItem } from "./data-viewer";
 
 interface XlsxUploaderProps {
-  onUploadComplete: () => void;
+  onUploadComplete: (data: DataItem[]) => void;
 }
 
 export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
@@ -59,14 +59,14 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
         }
 
         const headers = json[0].map(h => String(h ?? '').trim().toUpperCase());
-        const mainItemHeaderIndex = headers.findIndex(h => h === "NOME DE REGISTRO CIVIL");
-        const dateOfBirthHeaderIndex = headers.findIndex(h => h === "DATA NASC");
+        const mainItemHeaderIndex = headers.findIndex(h => h.includes("NOME"));
+        const dateOfBirthHeaderIndex = headers.findIndex(h => h.includes("DATA NASC"));
 
         if (mainItemHeaderIndex === -1) {
           toast({
             variant: "destructive",
             title: "Coluna não encontrada",
-            description: "A coluna obrigatória 'NOME DE REGISTRO CIVIL' não foi encontrada no arquivo.",
+            description: "A coluna obrigatória 'NOME' não foi encontrada no arquivo.",
           });
           setIsLoading(false);
           return;
@@ -74,7 +74,7 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
 
         const rows = json.slice(1);
 
-        const processedData = rows.map(row => {
+        const processedData = rows.map((row, rowIndex) => {
           const mainItem = String(row[mainItemHeaderIndex] || '');
           if (!mainItem) {
             return null; // Ignora linhas sem nome de aluno
@@ -91,25 +91,23 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
             let value = '';
 
             if (cellValue instanceof Date) {
-              if (index === dateOfBirthHeaderIndex) {
-                value = format(cellValue, 'dd/MM/yyyy');
-              } else {
-                value = cellValue.toISOString();
-              }
+              // Sempre formata a data para dd/MM/yyyy
+              value = format(cellValue, 'dd/MM/yyyy');
             } else if (cellValue !== null && cellValue !== undefined) {
               value = String(cellValue);
             }
             
             subItems.push({ label: headerStr, value: value });
           });
-          return { mainItem, subItems };
-        }).filter(item => item !== null) as { mainItem: string; subItems: SubItem[] }[];
+          // A ID será gerada pelo firestore, mas precisamos de uma para a UI antes do refresh
+          return { id: `temp-${rowIndex}`, mainItem, subItems };
+        }).filter(item => item !== null) as DataItem[];
 
         if (processedData.length === 0) {
           toast({
             variant: "destructive",
             title: "Nenhum Dado Válido",
-            description: `Não foram encontrados dados válidos na coluna "NOME DE REGISTRO CIVIL".`,
+            description: `Não foram encontrados dados válidos na coluna "NOME".`,
           });
         } else {
             const studentsCollection = collection(firestore, "students");
@@ -118,7 +116,9 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
             const existingDocs = await getDocs(query(studentsCollection));
             existingDocs.forEach(doc => batch.delete(doc.ref));
 
-            processedData.forEach((student) => {
+            const dataToUpload = processedData.map(({id, ...rest}) => rest);
+
+            dataToUpload.forEach((student) => {
                 const docRef = doc(studentsCollection);
                 batch.set(docRef, student);
             });
@@ -129,14 +129,16 @@ export default function XlsxUploader({ onUploadComplete }: XlsxUploaderProps) {
                 title: "Sucesso!",
                 description: `Dados anteriores removidos e ${processedData.length} novos registros foram salvos.`,
             });
-            onUploadComplete();
+            // Busca os dados recém salvos para obter os IDs reais
+            const newSnapshot = await getDocs(query(studentsCollection));
+            const newData = newSnapshot.docs.map(doc => ({...doc.data(), id: doc.id } as DataItem));
+            onUploadComplete(newData);
         }
       } catch (error) {
         if ((error as any).code === 'permission-denied') {
             const permissionError = new FirestorePermissionError({
                 path: 'students',
                 operation: 'write',
-                // We can't easily get the full dataset here, but this is a start
             });
             errorEmitter.emit('permission-error', permissionError);
         } else {

@@ -19,8 +19,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, BellRing } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
-import { useFirestore, useUser, errorEmitter, FirestorePermissionError, deleteDocumentNonBlocking, updateDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, getDocs, query, doc } from "firebase/firestore";
+import { useFirestore, useUser, errorEmitter, FirestorePermissionError, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
+import { collection, getDocs, query, doc, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useFcm } from "@/hooks/use-fcm";
 import { Trash2 } from "lucide-react";
@@ -28,6 +28,8 @@ import { quotes } from "@/lib/quotes";
 import AiAssistant from "@/components/ai-assistant";
 
 export default function Home() {
+  const [data, setData] = useState<DataItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [randomQuote, setRandomQuote] = useState<{ quote: string; author: string } | null>(null);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
@@ -38,40 +40,50 @@ export default function Home() {
   const { toast } = useToast();
   const { notificationPermission, requestPermissionAndGetToken } = useFcm();
 
-  const studentsCollection = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, "students");
+  const fetchExistingData = useCallback(async () => {
+    if (!firestore) return;
+    setIsLoading(true);
+    try {
+      const studentsCollection = collection(firestore, "students");
+      const snapshot = await getDocs(query(studentsCollection));
+      if (!snapshot.empty) {
+        const existingData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as DataItem));
+        const sortedData = existingData.sort((a, b) => {
+            const nameA = a.mainItem || "";
+            const nameB = b.mainItem || "";
+            return nameA.localeCompare(nameB);
+        });
+        setData(sortedData);
+      } else {
+        setData([]);
+      }
+    } catch (error) {
+        const permissionError = new FirestorePermissionError({
+            path: 'students',
+            operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    } finally {
+      setIsLoading(false);
+    }
   }, [firestore]);
 
-  const { data: rawData, isLoading, error } = useCollection<DataItem>(studentsCollection);
-
-  const data = useMemo(() => {
-    if (!rawData) return [];
-    return [...rawData].sort((a, b) => {
-      const nameA = a.mainItem || "";
-      const nameB = b.mainItem || "";
-      return nameA.localeCompare(nameB);
-    });
-  }, [rawData]);
-
-  const refetchData = useCallback(() => {
-    // A re-fetch is now handled by re-rendering or by useCollection's real-time nature.
-    // This function can be used to trigger updates if needed, e.g. after an upload.
-    // For now, useCollection handles it. If we needed to imperatively refetch, we could
-    // change the query key, but that is not necessary here.
-  }, []);
-
-
   useEffect(() => {
+    fetchExistingData();
     setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
     setCurrentDateTime(new Date().toLocaleDateString('pt-BR', {
       dateStyle: 'full',
     }));
-  }, []);
+  }, [fetchExistingData]);
 
 
-  const handleUploadComplete = () => {
-    // Data will update automatically via useCollection
+  const handleUploadComplete = (uploadedData: DataItem[]) => {
+    const sortedData = uploadedData.sort((a, b) => {
+        const nameA = a.mainItem || "";
+        const nameB = b.mainItem || "";
+        return nameA.localeCompare(nameB);
+    });
+    setData(sortedData);
   };
 
   const handleClearAndReload = async () => {
@@ -83,18 +95,19 @@ export default function Home() {
       });
       return;
     }
-  
+    setIsLoading(true);
     const studentsRef = collection(firestore, "students");
     const q = query(studentsRef);
     
     try {
         const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-            querySnapshot.forEach(doc => {
-              deleteDocumentNonBlocking(doc.ref);
-            });
-        }
+        const batch = writeBatch(firestore);
+        querySnapshot.forEach(doc => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+
+        setData([]); // Limpa os dados na UI
             
         toast({
           title: "Dados removidos",
@@ -107,6 +120,8 @@ export default function Home() {
             operation: 'list',
         });
         errorEmitter.emit('permission-error', permissionError);
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -178,19 +193,14 @@ export default function Home() {
           {isLoading || isUserLoading ? (
             <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <p className="mt-4 text-muted-foreground">Carregando dados...</p>
-            </div>
-          ) : error ? (
-            <div className="text-destructive text-center p-8 bg-destructive/10 rounded-lg">
-              <p className="font-bold">Ocorreu um erro ao carregar os dados.</p>
-              <p className="text-sm">{error.message}</p>
+              <p className="mt-4 text-muted-foreground">Carregando...</p>
             </div>
           )
           : !hasData ? (
             <XlsxUploader onUploadComplete={handleUploadComplete} />
           ) : (
             <div className="space-y-4">
-              <DataViewer data={data} onEditComplete={refetchData} />
+              <DataViewer data={data} onEditComplete={fetchExistingData} />
                <Button onClick={() => setIsClearConfirmOpen(true)} className="w-full" variant="outline">
                 <Trash2 className="mr-2 h-4 w-4" />
                 Limpar dados e carregar novo arquivo
@@ -211,7 +221,7 @@ export default function Home() {
         <DialogHeader>
           <DialogTitle>Confirmar Limpeza de Dados</DialogTitle>
           <DialogDescription>
-            Esta ação removerá permanentemente todos os dados dos alunos. Para confirmar, por favor, insira a senha de 4 dígitos.
+            Esta ação removerá permanentemente todos os dados dos alunos da base de dados. Para confirmar, por favor, insira a senha de 4 dígitos.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
@@ -245,5 +255,3 @@ export default function Home() {
     </main>
   );
 }
-
-    
