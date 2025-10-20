@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { type DataItem, type SubItem } from "./data-viewer";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "./ui/scroll-area";
 
 
 interface EditStudentFormProps {
@@ -84,8 +85,8 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
         <DialogHeader>
           <DialogTitle>Editar Aluno: {student.mainItem || ''}</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto -mx-6 px-6">
-          <form onSubmit={handleSubmit} id="edit-student-form" className="space-y-4 py-4">
+        <ScrollArea className="flex-1 -mx-6">
+          <form onSubmit={handleSubmit} id="edit-student-form" className="space-y-4 px-6 py-4">
               <div className="space-y-2">
                 <Label htmlFor="main-item" className="font-semibold text-muted-foreground">
                   NOME DE REGISTRO CIVIL
@@ -113,7 +114,7 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
                 ))}
               </div>
           </form>
-        </div>
+        </ScrollArea>
             
           <DialogFooter className="mt-auto border-t pt-4 bg-background -mx-6 px-6 pb-6">
             <DialogClose asChild>
