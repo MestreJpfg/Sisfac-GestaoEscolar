@@ -49,14 +49,20 @@ export default function Home() {
   }, []);
 
   const fetchData = useCallback(async () => {
-    if (!firestore || !user) return;
+    if (!firestore || !user) {
+      // This case should be handled by the useEffect dependency check,
+      // but as a safeguard, we exit if services are not ready.
+      return;
+    }
+    
     setIsLoading(true);
     setError(null);
-
-    const studentsCollection = collection(firestore, "users", user.uid, "students");
-    const q = query(studentsCollection);
     
-    getDocs(q).then(querySnapshot => {
+    try {
+      const studentsCollection = collection(firestore, "users", user.uid, "students");
+      const q = query(studentsCollection);
+      const querySnapshot = await getDocs(q);
+      
       const studentsData: DataItem[] = [];
       querySnapshot.forEach((doc) => {
         studentsData.push({ id: doc.id, ...doc.data() } as DataItem);
@@ -69,27 +75,33 @@ export default function Home() {
       });
 
       setData(studentsData);
-      setIsLoading(false);
-    }).catch(err => {
+    } catch (err: any) {
+      console.error("Failed to fetch data:", err);
+      // Create a contextual error to be emitted for better debugging
       const permissionError = new FirestorePermissionError({
-        path: studentsCollection.path,
+        path: `users/${user.uid}/students`,
         operation: 'list',
       });
-      setError(permissionError);
-      errorEmitter.emit('permission-error', permissionError);
+      setError(permissionError); // Set the error for the UI
+      errorEmitter.emit('permission-error', permissionError); // Emit for global handling
+    } finally {
       setIsLoading(false);
-    });
-
+    }
   }, [firestore, user]);
 
   useEffect(() => {
+    // This effect runs when the user or Firestore instance becomes available.
+    // It ensures that we only attempt to fetch data once we have a user.
     if (!isUserLoading && user && firestore) {
       fetchData();
-    } else if (!isUserLoading) {
+    } else if (!isUserLoading && !user) {
+      // If authentication is complete but there is no user, stop loading.
+      // The app will show the uploader by default as `data` will be empty.
       setIsLoading(false);
     }
+    // The dependency array ensures this effect runs whenever the auth state
+    // or firestore instance changes.
   }, [isUserLoading, user, firestore, fetchData]);
-
 
   const handleUploadComplete = () => {
     fetchData();
@@ -179,7 +191,6 @@ export default function Home() {
         <div className="w-full max-w-4xl mx-auto">
           <header className="text-center mb-8 flex flex-col items-center">
             <div className="mb-4 flex flex-col items-center">
-               <p className="w-full text-center text-xs text-muted-foreground mb-2">{currentDateTime}</p>
               <Image
                 src="/logoyuri.png"
                 alt="Logo"
@@ -187,6 +198,7 @@ export default function Home() {
                 height={40}
                 className="rounded-md"
               />
+               <p className="w-full text-center text-xs text-muted-foreground mt-2">{currentDateTime}</p>
                {randomQuote && (
                 <blockquote className="mt-4 border-l-2 border-primary pl-4 italic text-xs text-muted-foreground">
                   <p>"{randomQuote.quote}"</p>
