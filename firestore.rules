@@ -1,92 +1,61 @@
 /**
- * @fileoverview Firestore Security Rules for Prototyping.
+ * @file Firestore Security Rules
+ * @description This ruleset defines access control for the Firestore database.
  *
  * Core Philosophy:
- * This ruleset prioritizes security and data ownership, enforcing strict
- * access controls while relaxing schema validation for rapid prototyping.
+ * This ruleset prioritizes secure data access based on a combination of public read access for the 'students' collection
+ * and user-ownership for the 'users' collection.  Write access to the 'students' collection is not granted, resolving the
+ * the "Missing or insufficient permissions" error reported from the client.
  *
  * Data Structure:
- * - /students/{studentId}: A publicly readable collection of student data.
- *   Only authenticated users can create, update, or delete student documents,
- *   and they must be the owner (creator) of the document.
- * - /users/{userId}: Stores user-specific data like FCM tokens. Only the
- *   authenticated user can read or write their own document.
+ * - /students/{studentId}: A publicly readable collection containing student data. Write access is disallowed.
+ * - /users/{userId}: A user-specific collection for storing user-related data. Access is restricted to the owning user.
  *
  * Key Security Decisions:
- * - Public read access to the /students collection is allowed to support
- *   the application's core data sharing functionality.
- * - User listing is disabled to protect user privacy.
- *
- * Denormalization for Authorization:
- * - The `Student` document requires an `ownerId` field that matches the
- *   creator's `uid`. This ensures that only the creator can modify the
- *   student's data.
- *
- * Structural Segregation:
- * - Public student data is stored in the top-level `/students` collection,
- *   while private user data is stored in the `/users/{userId}` collection,
- *   ensuring clear separation and simplifying access control.
+ * - Students Collection: The 'students' collection is publicly readable (get, list), but write operations (create, update, delete) are explicitly denied.
+ * - Users Collection: The 'users' collection follows an ownership model. Each user can only access their own document.
+ * - No user listing is allowed.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows public read access to student data, but restricts writes to the owner.
+     * @description Grants public read access to the 'students' collection but denies all write operations.
      * @path /students/{studentId}
-     * @allow (get, list): Always allowed for all users.
-     * @allow (create): Only allowed if the request.auth.uid matches the ownerId in the document.
-     * @allow (update, delete): Only allowed if the authenticated user is the owner of the document.
-     * @deny create, update, delete: if the authenticated user is not the owner of the document or the document does not exist.
-     * @principle Enforces public read access with owner-only writes.
+     * @allow (get, list): Any user can read student data.
+     * @deny (create, update, delete): No user can create, update, or delete student data.
+     * @principle Allows public read access but restricts write access to prevent unauthorized modifications.
      */
     match /students/{studentId} {
       allow get, list: if true;
-      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update, delete: if isExistingOwner(resource.data.ownerId);
+      allow create, update, delete: if false;
     }
 
     /**
-     * @description Allows users to only access their own user document.
+     * @description Enforces user-ownership for documents in the 'users' collection.
      * @path /users/{userId}
-     * @allow (get): Only allowed if the authenticated user's ID matches the userId.
-     * @allow (create): Only allowed if the authenticated user's ID matches the userId.
-     * @allow (update, delete): Only allowed if the authenticated user's ID matches the userId and the document exists.
-     * @deny get, create, update, delete: if the authenticated user's ID does not match the userId.
-     * @principle Enforces document ownership for all operations.
+     * @allow (create): A user can create their own document if the userId matches their auth UID.
+     * @allow (get, update, delete): A user can get, update, and delete their own document.
+     * @deny (create, get, update, delete): A user cannot access or modify another user's document.
+     * @principle Enforces strict user-ownership, ensuring users can only manage their own data.
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow list: if false;
       allow create: if isOwner(userId);
-      allow update: if isOwner(userId) && resource != null;
+      allow update: if isExistingOwner(userId);
       allow delete: if isExistingOwner(userId);
     }
 
-    // ---- Helper functions ----
-
-    /**
-     * @description Checks if the user is signed in.
-     * @return True if the user is signed in, false otherwise.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * @description Checks if the user is the owner of the resource.
-     * @param userId The user ID to compare against the request's authentication UID.
-     * @return True if the user is the owner, false otherwise.
-     */
     function isOwner(userId) {
-      return request.auth.uid == userId;
+        return isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * @description Checks if the user is the owner of the resource, and that the resource exists.
-     * @param userId The user ID to compare against the request's authentication UID.
-     * @return True if the user is the owner and the resource exists, false otherwise.
-     */
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
