@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, BellRing } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
-import { useFirestore, useUser, errorEmitter, FirestorePermissionError, updateDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useUser, errorEmitter, FirestorePermissionError, updateDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, getDocs, query, doc, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useFcm } from "@/hooks/use-fcm";
@@ -29,7 +29,7 @@ import AiAssistant from "@/components/ai-assistant";
 
 export default function Home() {
   const [data, setData] = useState<DataItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false); // Used for clearing data
+  const [isClearing, setIsClearing] = useState(false);
   const [randomQuote, setRandomQuote] = useState<{ quote: string; author: string } | null>(null);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
@@ -40,17 +40,40 @@ export default function Home() {
   const { toast } = useToast();
   const { notificationPermission, requestPermissionAndGetToken } = useFcm();
 
+  // New: Use the useCollection hook to get real-time data from the global 'students' collection
+  const studentsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, "students"));
+  }, [firestore]);
+  const { data: studentData, isLoading: isDataLoading } = useCollection<DataItem>(studentsQuery);
+
+
   useEffect(() => {
-    // We only set static content on mount now
     setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
     setCurrentDateTime(new Date().toLocaleDateString('pt-BR', {
       dateStyle: 'full',
     }));
   }, []);
 
+  // New: Update local state whenever Firestore data changes
+  useEffect(() => {
+    if (studentData) {
+       const sortedData = [...studentData].sort((a, b) => {
+        const nameA = a.mainItem || "";
+        const nameB = b.mainItem || "";
+        return nameA.localeCompare(nameB);
+    });
+      setData(sortedData);
+    } else {
+      setData([]);
+    }
+  }, [studentData]);
 
+
+  // New: This function now just updates the UI state.
+  // The hook will handle the data fetching.
   const handleUploadComplete = (uploadedData: DataItem[]) => {
-    const sortedData = uploadedData.sort((a, b) => {
+     const sortedData = uploadedData.sort((a, b) => {
         const nameA = a.mainItem || "";
         const nameB = b.mainItem || "";
         return nameA.localeCompare(nameB);
@@ -67,19 +90,16 @@ export default function Home() {
       });
       return;
     }
-    setIsLoading(true);
+    setIsClearing(true);
     const studentsRef = collection(firestore, "students");
-    const q = query(studentsRef);
     
     try {
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await getDocs(query(studentsRef));
         const batch = writeBatch(firestore);
         querySnapshot.forEach(doc => {
           batch.delete(doc.ref);
         });
         await batch.commit();
-
-        setData([]); // Just clear the UI state
             
         toast({
           title: "Dados removidos",
@@ -87,14 +107,13 @@ export default function Home() {
         });
     
     } catch(err) {
-        // This error can still happen if rules are restrictive
         const permissionError = new FirestorePermissionError({
             path: studentsRef.path,
-            operation: 'list', // for getDocs
+            operation: 'delete',
         });
         errorEmitter.emit('permission-error', permissionError);
     } finally {
-        setIsLoading(false);
+        setIsClearing(false);
     }
   };
 
@@ -133,6 +152,7 @@ export default function Home() {
   };
 
   const hasData = data && data.length > 0;
+  const isLoading = isUserLoading || isDataLoading || isClearing;
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 md:p-8">
@@ -163,7 +183,7 @@ export default function Home() {
         </header>
 
         <div className="w-full">
-          {isLoading || isUserLoading ? (
+          {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
               <p className="mt-4 text-muted-foreground">Aguarde...</p>
@@ -228,3 +248,5 @@ export default function Home() {
     </main>
   );
 }
+
+    

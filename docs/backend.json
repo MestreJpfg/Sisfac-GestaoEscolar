@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Student": {
@@ -37,7 +38,7 @@
     "User": {
       "title": "User",
       "type": "object",
-      "description": "Represents a user of the application.",
+      "description": "Represents a user of the application, for FCM token storage.",
       "properties": {
         "fcmTokens": {
           "type": "object",
@@ -57,18 +58,14 @@
   "firestore": {
     "structure": [
       {
-        "path": "/users/{userId}/students/{studentId}",
+        "path": "/students/{studentId}",
         "definition": {
           "entityName": "Student",
           "schema": {
             "$ref": "#/backend/entities/Student"
           },
-          "description": "Stores student data uploaded by a specific user.",
+          "description": "Stores student data in a global, shared collection.",
           "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            },
             {
               "name": "studentId",
               "description": "The unique identifier of the student."
@@ -95,3 +92,5 @@
     ]
   }
 }
+
+    
