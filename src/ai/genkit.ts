@@ -12,7 +12,7 @@ import next from '@genkit-ai/next';
 // The `next()` plugin enables Genkit to work within the Next.js environment.
 export const ai = genkit({
   plugins: [
-    googleAI(),
+    googleAI({ apiKey: process.env.GEMINI_API_KEY }),
     next({
       // These options are required for the Next.js plugin to work correctly.
       // You can leave them as is.
