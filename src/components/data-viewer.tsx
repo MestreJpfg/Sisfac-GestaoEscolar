@@ -26,7 +26,7 @@ export interface DataItem {
 
 interface DataViewerProps {
   data: DataItem[];
-  onEditComplete: (editedData: DataItem[]) => void;
+  onEditComplete: (updatedData: DataItem) => void;
 }
 
 const getSerieFromItem = (item: DataItem): string | undefined => {
@@ -78,10 +78,7 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
 
   const handleEditComplete = (updatedStudent: DataItem) => {
     setEditingStudent(null);
-    const updatedData = data.map(item =>
-      item.id === updatedStudent.id ? updatedStudent : item
-    );
-    onEditComplete(updatedData);
+    onEditComplete(updatedStudent);
   };
 
   return (

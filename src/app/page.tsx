@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, BellRing, Trash2 } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
-import { useFirestore, useUser, updateDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useUser, updateDocumentNonBlocking, FirestorePermissionError } from "@/firebase";
 import { collection, writeBatch, doc, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useFcm } from "@/hooks/use-fcm";
@@ -27,7 +27,6 @@ import { quotes } from "@/lib/quotes";
 import AiAssistant from "@/components/ai-assistant";
 import { useRouter } from "next/navigation";
 import { getStudentData } from "@/services/student-service";
-import { FirestorePermissionError } from "@/firebase";
 
 
 export default function Home() {
@@ -59,14 +58,18 @@ export default function Home() {
         setData(sortedData);
     } catch (error) {
         if (error instanceof FirestorePermissionError) {
-          throw error;
+          // This is a permission error, which for the initial load means the collection is likely empty
+          // or rules are blocking reads for unauthenticated users on an empty collection.
+          // We can treat this as "no data" and show the uploader.
+          setData([]);
+        } else {
+          console.error("Failed to fetch initial data", error);
+          toast({
+              variant: "destructive",
+              title: "Erro ao carregar dados",
+              description: "Não foi possível buscar os dados existentes. Tente atualizar a página.",
+          });
         }
-        console.error("Failed to fetch initial data", error);
-        toast({
-            variant: "destructive",
-            title: "Erro ao carregar dados",
-            description: "Não foi possível buscar os dados existentes. Tente atualizar a página.",
-        });
     } finally {
         setIsLoading(false);
     }
@@ -150,7 +153,12 @@ export default function Home() {
         const updatedData = prevData.map(item =>
             item.id === updatedStudent.id ? updatedStudent : item
         );
-        return updatedData;
+         const sortedData = updatedData.sort((a, b) => {
+            const nameA = a.mainItem || "";
+            const nameB = b.mainItem || "";
+            return nameA.localeCompare(nameB);
+        });
+        return sortedData;
     });
   }
 
