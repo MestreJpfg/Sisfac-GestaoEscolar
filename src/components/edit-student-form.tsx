@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 interface EditStudentFormProps {
   student: DataItem;
   onClose: () => void;
-  onEditComplete: () => void;
+  onEditComplete: (updatedStudent: DataItem) => void;
 }
 
 export default function EditStudentForm({ student, onClose, onEditComplete }: EditStudentFormProps) {
@@ -75,7 +75,8 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
       description: "Os dados do aluno foram atualizados.",
     });
 
-    onEditComplete();
+    // Pass the updated student data back to the parent
+    onEditComplete({ ...student, ...updatedData });
     setIsLoading(false);
   };
 

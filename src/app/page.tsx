@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, BellRing } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
-import { useFirestore, useUser, errorEmitter, FirestorePermissionError, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useUser, errorEmitter, FirestorePermissionError, updateDocumentNonBlocking } from "@/firebase";
 import { collection, getDocs, query, doc, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useFcm } from "@/hooks/use-fcm";
@@ -29,7 +29,7 @@ import AiAssistant from "@/components/ai-assistant";
 
 export default function Home() {
   const [data, setData] = useState<DataItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // Used for clearing data
   const [randomQuote, setRandomQuote] = useState<{ quote: string; author: string } | null>(null);
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
@@ -40,41 +40,13 @@ export default function Home() {
   const { toast } = useToast();
   const { notificationPermission, requestPermissionAndGetToken } = useFcm();
 
-  const fetchExistingData = useCallback(async () => {
-    if (!firestore) return;
-    setIsLoading(true);
-    try {
-      const studentsCollection = collection(firestore, "students");
-      const snapshot = await getDocs(query(studentsCollection));
-      if (!snapshot.empty) {
-        const existingData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as DataItem));
-        const sortedData = existingData.sort((a, b) => {
-            const nameA = a.mainItem || "";
-            const nameB = b.mainItem || "";
-            return nameA.localeCompare(nameB);
-        });
-        setData(sortedData);
-      } else {
-        setData([]);
-      }
-    } catch (error) {
-        const permissionError = new FirestorePermissionError({
-            path: 'students',
-            operation: 'list',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [firestore]);
-
   useEffect(() => {
-    fetchExistingData();
+    // We only set static content on mount now
     setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
     setCurrentDateTime(new Date().toLocaleDateString('pt-BR', {
       dateStyle: 'full',
     }));
-  }, [fetchExistingData]);
+  }, []);
 
 
   const handleUploadComplete = (uploadedData: DataItem[]) => {
@@ -107,7 +79,7 @@ export default function Home() {
         });
         await batch.commit();
 
-        setData([]); // Limpa os dados na UI
+        setData([]); // Just clear the UI state
             
         toast({
           title: "Dados removidos",
@@ -115,9 +87,10 @@ export default function Home() {
         });
     
     } catch(err) {
+        // This error can still happen if rules are restrictive
         const permissionError = new FirestorePermissionError({
             path: studentsRef.path,
-            operation: 'list',
+            operation: 'list', // for getDocs
         });
         errorEmitter.emit('permission-error', permissionError);
     } finally {
@@ -193,14 +166,14 @@ export default function Home() {
           {isLoading || isUserLoading ? (
             <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <p className="mt-4 text-muted-foreground">Carregando...</p>
+              <p className="mt-4 text-muted-foreground">Aguarde...</p>
             </div>
           )
           : !hasData ? (
             <XlsxUploader onUploadComplete={handleUploadComplete} />
           ) : (
             <div className="space-y-4">
-              <DataViewer data={data} onEditComplete={fetchExistingData} />
+              <DataViewer data={data} onEditComplete={handleUploadComplete} />
                <Button onClick={() => setIsClearConfirmOpen(true)} className="w-full" variant="outline">
                 <Trash2 className="mr-2 h-4 w-4" />
                 Limpar dados e carregar novo arquivo
