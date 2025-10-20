@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import XlsxUploader from "@/components/xlsx-uploader";
 import DataViewer from "@/components/data-viewer";
@@ -19,8 +19,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, BellRing, Trash2 } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
-import { useFirestore, useUser, errorEmitter, updateDocumentNonBlocking } from "@/firebase";
-import { collection, writeBatch, doc, getDocs } from "firebase/firestore";
+import { useFirestore, useUser, errorEmitter, updateDocumentNonBlocking, useCollection } from "@/firebase";
+import { collection, writeBatch, doc, getDocs, query } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useFcm } from "@/hooks/use-fcm";
 import { quotes } from "@/lib/quotes";
@@ -28,26 +28,31 @@ import AiAssistant from "@/components/ai-assistant";
 import { useRouter } from "next/navigation";
 import { FirestorePermissionError } from "@/firebase/errors";
 
-interface StudentManagerProps {
-  initialData: DataItem[];
-}
-
-export default function StudentManager({ initialData }: StudentManagerProps) {
-  const [data, setData] = useState<DataItem[]>(initialData);
-  const [isLoading, setIsLoading] = useState(!initialData); // Set loading based on initial data
-  const [isClearing, setIsClearing] = useState(false);
-  const [randomQuote, setRandomQuote] = useState<{ quote: string; author: string } | null>(null);
-  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
-  const [passwordInput, setPasswordInput] = useState("");
-  const [currentDateTime, setCurrentDateTime] = useState('');
-
+export default function StudentManager() {
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const { toast } = useToast();
   const { notificationPermission, requestPermissionAndGetToken } = useFcm();
   const router = useRouter();
 
+  // State for UI management
+  const [isClearing, setIsClearing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [randomQuote, setRandomQuote] = useState<{ quote: string; author: string } | null>(null);
+  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [currentDateTime, setCurrentDateTime] = useState('');
+  
+  // Memoize the query to prevent re-renders
+  const studentsQuery = useMemo(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, "students"));
+  }, [firestore, user]);
 
+  // Fetch data directly on the client using useCollection
+  const { data: studentData, isLoading: isDataLoading, error: dataError } = useCollection<DataItem>(studentsQuery);
+  const [data, setData] = useState<DataItem[]>([]);
+  
   useEffect(() => {
     setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
     const now = new Date();
@@ -56,21 +61,18 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
     setCurrentDateTime(`${datePart} - ${timePart}`);
   }, []);
 
-  // This effect synchronizes the client-side state with the server-provided initialData
   useEffect(() => {
-    setData(initialData);
-    setIsLoading(false); // Stop loading once initial data is processed
-  }, [initialData]);
-
+    if (studentData) {
+      const sorted = [...studentData].sort((a, b) => (a.mainItem || "").localeCompare(b.mainItem || ""));
+      setData(sorted);
+    } else {
+      setData([]);
+    }
+  }, [studentData]);
 
   const handleUploadComplete = (uploadedData: DataItem[]) => {
-    const sortedData = uploadedData.sort((a, b) => {
-      const nameA = a.mainItem || "";
-      const nameB = b.mainItem || "";
-      return nameA.localeCompare(nameB);
-    });
-    setData(sortedData);
-    setIsLoading(false);
+    // useCollection will update the data automatically, but we can stop the uploader's loading state
+    setIsUploading(false);
   };
 
   const handleClearAndReload = async () => {
@@ -92,7 +94,6 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
           title: "Nenhum dado para limpar",
           description: "A base de dados já está vazia.",
         });
-        setData([]); // Ensure client state is also empty
       } else {
         const batch = writeBatch(firestore);
         querySnapshot.forEach(doc => {
@@ -105,13 +106,11 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
           title: "Dados removidos",
           description: "A base de dados foi limpa. Pode carregar um novo ficheiro.",
         });
-        setData([]); // Clear client state immediately
       }
     } catch(err: any) {
-        // This specific catch block handles errors from getDocs.
         const permissionError = new FirestorePermissionError({
             path: studentsRef.path,
-            operation: 'list', // getDocs is a 'list' operation
+            operation: 'list',
         });
         errorEmitter.emit('permission-error', permissionError);
     } finally {
@@ -124,11 +123,7 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
     const updatedData = data.map(item =>
         item.id === updatedStudent.id ? updatedStudent : item
     );
-     const sortedData = updatedData.sort((a, b) => {
-        const nameA = a.mainItem || "";
-        const nameB = b.mainItem || "";
-        return nameA.localeCompare(nameB);
-    });
+     const sortedData = updatedData.sort((a, b) => (a.mainItem || "").localeCompare(b.mainItem || ""));
     setData(sortedData);
   }
 
@@ -157,7 +152,6 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
         const token = await requestPermissionAndGetToken();
         if (token) {
             const userDocRef = doc(firestore, 'users', user.uid);
-            // Non-blocking update. Error is handled by emitter.
             updateDocumentNonBlocking(userDocRef, { fcmTokens: { [token]: true } }, { merge: true });
             toast({
             title: 'Sucesso!',
@@ -167,9 +161,8 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
     }
   };
   
-  const isPageLoading = isLoading || isClearing;
-  // The decision to show uploader or viewer is now solely based on the client-side `data` state.
-  const hasData = data.length > 0;
+  const isPageLoading = isDataLoading || isUserLoading || isClearing || isUploading;
+  const hasData = !isPageLoading && data.length > 0;
 
   return (
     <main className="flex min-h-screen flex-col items-center p-4 sm:p-6 md:p-8">
@@ -203,10 +196,10 @@ export default function StudentManager({ initialData }: StudentManagerProps) {
           {isPageLoading ? (
             <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <p className="mt-4 text-muted-foreground">Aguarde...</p>
+              <p className="mt-4 text-muted-foreground">Aguarde, a carregar dados...</p>
             </div>
           ) : !hasData ? (
-            <XlsxUploader onUploadComplete={handleUploadComplete} setIsLoading={setIsLoading} />
+            <XlsxUploader onUploadComplete={handleUploadComplete} setIsLoading={setIsUploading} />
           ) : (
             <div className="space-y-4">
               <DataViewer data={data} onEditComplete={handleEditComplete} />
