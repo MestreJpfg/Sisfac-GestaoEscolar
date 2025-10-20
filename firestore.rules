@@ -1,57 +1,43 @@
 /**
- * @fileOverview Firestore Security Rules for the application.
- *
- * Core Philosophy:
- * This ruleset enforces a strict user-ownership model.  Each user has full control over their own data (students and user profile).
+ * @file Firestore Security Rules
+ * @description This ruleset enforces a strict user-ownership model for student data and user profiles.
  *
  * Data Structure:
- * - `/users/{userId}`: Stores user profile data (e.g., FCM tokens).  Each user document is named after the user's Firebase Auth UID.
- * - `/users/{userId}/students/{studentId}`: Stores student data associated with a specific user.
+ * - All student data is nested under `/users/{userId}/students/{studentId}`.
+ * - User profile information, including FCM tokens, is stored at `/users/{userId}`.
  *
  * Key Security Decisions:
- * - Users can only access their own data.
- * - Listing the root `/students` collection is forbidden. The error message from NextJS indicates this is the source of the error. The fix is to restrict listing students to the subcollection.
+ * - Users can only access their own student data and user profiles.
+ * - Listing of students is allowed only for the owner.
+ * - Data validation is relaxed to allow for rapid prototyping but enforces basic relational integrity (e.g., user ID consistency).
+ * - No public access is granted.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Checks if the request is authenticated.
-     * @returns {boolean} True if the user is signed in, false otherwise.
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /**
-     * @description Checks if the authenticated user ID matches the provided user ID.
-     * @param {string} userId The user ID to check against.
-     * @returns {boolean} True if the user is the owner, false otherwise.
-     */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    /**
-     * @description Checks if the authenticated user is the owner of the existing document.
-     * @param {string} userId The user ID to check against.
-     * @returns {boolean} True if the user is the owner of the existing document, false otherwise.
-     */
-    function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-    }
-
-    /**
-     * @description Rules for the /users/{userId} document.
+     * @description Controls access to user profile documents. Users can only read and write their own profile data.
      * @path /users/{userId}
-     * @allow (create) Signed-in user with UID 'user123' can create a document at /users/user123.
-     * @allow (get, update, delete) Signed-in user with UID 'user123' can read, update or delete their own document /users/user123.
-     * @deny (create) Signed-in user with UID 'user456' cannot create a document at /users/user123.
-     * @deny (get, update, delete) Signed-in user with UID 'user456' cannot read, update or delete document /users/user123.
-     * @principle Enforces document ownership for all operations on user documents.
+     * @allow (create) User with UID 'user123' can create their own profile document at /users/user123.
+     * @deny (create) User with UID 'user123' cannot create a profile document at /users/anotherUser.
+     * @allow (get) User with UID 'user123' can read their own profile document at /users/user123.
+     * @deny (get) User with UID 'user123' cannot read another user's profile document at /users/anotherUser.
+     * @allow (update) User with UID 'user123' can update their own profile document at /users/user123.
+     * @deny (update) User with UID 'user123' cannot update another user's profile document at /users/anotherUser.
+     * @allow (delete) User with UID 'user123' can delete their own profile document at /users/user123.
+     * @deny (delete) User with UID 'user123' cannot delete another user's profile document at /users/anotherUser.
+     * @principle Enforces document ownership for all operations.
      */
     match /users/{userId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
       allow get: if isOwner(userId);
       allow list: if false;
       allow create: if isOwner(userId);
@@ -60,15 +46,28 @@ service cloud.firestore {
     }
 
     /**
-     * @description Rules for the /users/{userId}/students/{studentId} collection.
+     * @description Manages access to student documents, ensuring users can only access their own student data.
      * @path /users/{userId}/students/{studentId}
-     * @allow (create) Signed-in user with UID 'user123' can create a student document under /users/user123/students.
-     * @allow (get, list, update, delete) Signed-in user with UID 'user123' can read, list, update or delete their own student document under /users/user123/students.
-     * @deny (create) Signed-in user with UID 'user456' cannot create a student document under /users/user123/students.
-     * @deny (get, list, update, delete) Signed-in user with UID 'user456' cannot read, list, update or delete student documents under /users/user123/students.
-     * @principle Enforces document ownership for all operations on student documents.
+     * @allow (create) User with UID 'user123' can create a student document under their ID at /users/user123/students/student456.
+     * @deny (create) User with UID 'user123' cannot create a student document under another user's ID at /users/anotherUser/students/student456.
+     * @allow (get) User with UID 'user123' can read a student document under their ID at /users/user123/students/student456.
+     * @deny (get) User with UID 'user123' cannot read a student document under another user's ID at /users/anotherUser/students/student456.
+     * @allow (list) User with UID 'user123' can list student documents under their ID at /users/user123/students.
+     * @deny (update) User with UID 'user123' cannot update a student document under another user's ID at /users/anotherUser/students/student456.
+     * @allow (update) User with UID 'user123' can update their own student document under their ID at /users/user123/students/student456.
+     * @deny (delete) User with UID 'user123' cannot delete a student document under another user's ID at /users/anotherUser/students/student456.
+     * @allow (delete) User with UID 'user123' can delete their own student document under their ID at /users/user123/students/student456.
+     * @principle Enforces strict document ownership for all operations, validating user ID consistency.
      */
     match /users/{userId}/students/{studentId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
       allow get: if isOwner(userId);
       allow list: if isOwner(userId);
       allow create: if isOwner(userId);
@@ -76,18 +75,22 @@ service cloud.firestore {
       allow delete: if isExistingOwner(userId);
     }
 
-    /**
-     * @description Prevents listing of the root `/students` collection.  This was the cause of the original error.
-     * @path /students
-     * @deny (list) Listing the top-level /students collection is not permitted.
-     * @principle Restricts listing students to the subcollection.
-     */
-    match /students {
+      /**
+       * @description Denies all access to the top-level /students collection. This collection should not be directly accessed.
+       * @path /students
+       * @deny (get) Any user, even if authenticated, cannot get documents from /students.
+       * @deny (list) Any user, even if authenticated, cannot list documents in /students.
+       * @deny (create) Any user, even if authenticated, cannot create documents in /students.
+       * @deny (update) Any user, even if authenticated, cannot update documents in /students.
+       * @deny (delete) Any user, even if authenticated, cannot delete documents in /students.
+       * @principle Prevents direct access to the /students collection, enforcing the user-scoped data model.
+       */
+      match /students {
         allow get: if false;
         allow list: if false;
         allow create: if false;
         allow update: if false;
         allow delete: if false;
-    }
+      }
   }
 }
