@@ -1,18 +1,16 @@
 'use server';
 /**
  * @fileOverview Defines the server-side logic for the AI assistant,
- * including its core Genkit flow.
+ * including its core Genkit flow. This file exports an async function
+ * `assistantFlow` which is a wrapper around the actual Genkit flow.
  */
 
-import { ai, configureGenkitOnce } from '@/ai/genkit';
+import { ai } from '@/ai/genkit';
 import { getFirestoreServer } from '@/firebase/server-init';
 import { collection, getDocs, limit, query } from 'firebase/firestore';
 import { Student } from '@/docs/backend-schema';
 import { AssistantInputSchema, AssistantOutputSchema, type AssistantInput } from './assistant-schema';
 import { Message } from 'genkit';
-
-// Ensure Genkit is configured once before defining flows.
-configureGenkitOnce();
 
 /**
  * Fetches a sample of student names from Firestore.
@@ -39,8 +37,8 @@ async function getStudentSample(): Promise<string> {
   }
 }
 
-// Define the main Genkit flow for the assistant
-export const assistantFlow = ai.defineFlow(
+// Internal Genkit flow definition. This is not exported directly.
+const internalAssistantFlow = ai.defineFlow(
   {
     name: 'assistantFlow',
     inputSchema: AssistantInputSchema,
@@ -59,7 +57,7 @@ export const assistantFlow = ai.defineFlow(
         ${studentSample}
       `;
 
-    // Add the system prompt to the beginning of the history
+    // Add the system prompt and the latest user query to the history
     const historyWithSystemPrompt: Message[] = [
         { role: 'system', content: [{ text: systemPrompt }] },
         ...history,
@@ -68,15 +66,26 @@ export const assistantFlow = ai.defineFlow(
 
     const result = await ai.generate({
       model: 'googleai/gemini-pro',
-      prompt: [], // prompt is now part of history
+      prompt: [], // Prompt is now part of the history object
       history: historyWithSystemPrompt,
       config: {
-        temperature: 0.5, // Adjust for more creative or factual responses
+        temperature: 0.5,
       },
     });
 
     const response = result.text;
-
+    
     return { response };
   }
 );
+
+
+/**
+ * An async wrapper function that can be exported from a 'use server' file.
+ * It takes the client input and invokes the internal Genkit flow.
+ * @param input The user query and conversation history.
+ * @returns The AI model's response.
+ */
+export async function assistantFlow(input: AssistantInput) {
+    return internalAssistantFlow(input);
+}
