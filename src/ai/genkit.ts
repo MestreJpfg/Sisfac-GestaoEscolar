@@ -1,3 +1,4 @@
+'use client';
 /**
  * @fileOverview Initializes and configures the Genkit AI toolkit.
  */
