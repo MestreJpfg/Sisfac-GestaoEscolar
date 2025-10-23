@@ -69,11 +69,11 @@ export async function assistantFlow(input: AssistantInput): Promise<{ response: 
       const historyWithSystemPrompt: Message[] = [
           { role: 'system', content: [{ text: systemPrompt }] },
           ...history,
-          { role: 'user', content: [{ text: query }] }
       ];
 
       const result = await ai.generate({
         model: 'googleai/gemini-pro',
+        prompt: query,
         history: historyWithSystemPrompt,
         config: {
           temperature: 0.5,

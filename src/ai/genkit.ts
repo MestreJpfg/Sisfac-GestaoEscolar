@@ -1,19 +1,16 @@
 /**
  * @fileOverview Initializes and configures the Genkit AI toolkit.
+ * This file creates and exports a single, configured 'ai' instance.
  */
 
+import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
-import { genkit, ai } from 'genkit';
 
-// Configure Genkit with the Google AI plugin.
-// This should be done once per application instance.
-genkit({
+// Initialize and configure the AI instance in one step.
+export const ai = genkit({
   plugins: [
     googleAI(),
   ],
   // Log level is configured via environment variables in Genkit v1.x
   // enableTracingAndMetrics is now on by default in dev.
 });
-
-// Export the configured ai object for use in other modules.
-export { ai };
