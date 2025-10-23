@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import XlsxUploader from "@/components/xlsx-uploader";
 import DataViewer from "@/components/data-viewer";
@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, BellRing, Trash2 } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
-import { useFirestore, useUser, errorEmitter, updateDocumentNonBlocking, useCollection } from "@/firebase";
+import { useFirestore, useUser, errorEmitter, setDocumentNonBlocking, useCollection, useMemoFirebase, commitBatchNonBlocking } from "@/firebase";
 import { collection, writeBatch, doc, getDocs, query } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { useFcm } from "@/hooks/use-fcm";
@@ -43,7 +43,7 @@ export default function StudentManager() {
   const [currentDateTime, setCurrentDateTime] = useState('');
   
   // Memoize the query to prevent re-renders
-  const studentsQuery = useMemo(() => {
+  const studentsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(collection(firestore, "students"));
   }, [firestore, user]);
@@ -99,7 +99,8 @@ export default function StudentManager() {
           batch.delete(doc.ref);
         });
         
-        await batch.commit()
+        // Use non-blocking commit with error handling
+        commitBatchNonBlocking(batch, studentsRef.path);
         
         toast({
           title: "Dados removidos",
@@ -151,10 +152,11 @@ export default function StudentManager() {
         const token = await requestPermissionAndGetToken();
         if (token) {
             const userDocRef = doc(firestore, 'users', user.uid);
-            updateDocumentNonBlocking(userDocRef, { fcmTokens: { [token]: true } }, { merge: true });
+            // Use non-blocking update
+            setDocumentNonBlocking(userDocRef, { fcmTokens: { [token]: true } }, { merge: true });
             toast({
-            title: 'Sucesso!',
-            description: 'As notificações foram ativadas para este dispositivo.'
+              title: 'Sucesso!',
+              description: 'As notificações foram ativadas para este dispositivo.'
             });
         }
     }
