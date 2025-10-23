@@ -28,14 +28,6 @@ const nextConfig = {
       },
     ],
   },
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      // Resolve 'async_hooks' to an empty module on the client side
-      config.resolve.alias.async_hooks = false;
-    }
-
-    return config;
-  },
 };
 
 module.exports = nextConfig;
