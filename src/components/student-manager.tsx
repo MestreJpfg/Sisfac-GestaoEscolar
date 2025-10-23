@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, BellRing, Trash2 } from "lucide-react";
+import { Loader2, BellRing, Trash2, Bot } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
 import { useFirestore, useUser, errorEmitter, setDocumentNonBlocking, useCollection, useMemoFirebase, commitBatchNonBlocking } from "@/firebase";
 import { collection, writeBatch, doc, getDocs, query } from "firebase/firestore";
@@ -26,6 +26,7 @@ import { useFcm } from "@/hooks/use-fcm";
 import { quotes } from "@/lib/quotes";
 import { useRouter } from "next/navigation";
 import { FirestorePermissionError } from "@/firebase/errors";
+import AiAssistant from "./ai-assistant";
 
 export default function StudentManager() {
   const firestore = useFirestore();
@@ -41,12 +42,13 @@ export default function StudentManager() {
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [currentDateTime, setCurrentDateTime] = useState('');
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   
   // Memoize the query to prevent re-renders
   const studentsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore) return null;
     return query(collection(firestore, "students"));
-  }, [firestore, user]);
+  }, [firestore]);
 
   // Fetch data directly on the client using useCollection
   const { data: studentData, isLoading: isDataLoading, error: dataError } = useCollection<DataItem>(studentsQuery);
@@ -204,10 +206,16 @@ export default function StudentManager() {
           ) : (
             <div className="space-y-4">
               <DataViewer data={data} onEditComplete={handleEditComplete} />
-               <Button onClick={() => setIsClearConfirmOpen(true)} className="w-full" variant="outline">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Limpar dados e carregar novo arquivo
-              </Button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Button onClick={() => setIsClearConfirmOpen(true)} variant="outline">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Limpar e Carregar Novo
+                </Button>
+                <Button onClick={() => setIsAssistantOpen(true)} variant="outline">
+                   <Bot className="mr-2 h-4 w-4" />
+                   Assistente Virtual
+                </Button>
+              </div>
               {notificationPermission !== 'denied' && user && (
                 <Button onClick={handleNotificationAction} className="w-full" variant="secondary">
                   <BellRing className="mr-2 h-4 w-4" />
@@ -257,6 +265,8 @@ export default function StudentManager() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {isAssistantOpen && <AiAssistant onClose={() => setIsAssistantOpen(false)} />}
     </main>
   );
 }
