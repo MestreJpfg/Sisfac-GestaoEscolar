@@ -65,16 +65,16 @@ export async function assistantFlow(input: AssistantInput): Promise<{ response: 
           ${studentSample}
         `;
 
-      // Add the system prompt and the latest user query to the history
-      const historyWithSystemPrompt: Message[] = [
-          { role: 'system', content: [{ text: systemPrompt }] },
-          ...history,
+      // Construct the full conversation history for the model
+      const fullHistory: Message[] = [
+        { role: 'system', content: [{ text: systemPrompt }] },
+        ...history,
+        { role: 'user', content: [{ text: query }] } // Add the current user query to the history
       ];
 
       const result = await ai.generate({
         model: 'googleai/gemini-pro',
-        prompt: query,
-        history: historyWithSystemPrompt,
+        history: fullHistory, // Pass the full history
         config: {
           temperature: 0.5,
         },
