@@ -24,7 +24,6 @@ import { collection, writeBatch, doc, getDocs, query } from "firebase/firestore"
 import { useToast } from "@/hooks/use-toast";
 import { useFcm } from "@/hooks/use-fcm";
 import { quotes } from "@/lib/quotes";
-import AiAssistant from "@/components/ai-assistant";
 import { useRouter } from "next/navigation";
 import { FirestorePermissionError } from "@/firebase/errors";
 
@@ -217,7 +216,6 @@ export default function StudentManager() {
           )}
         </div>
       </div>
-      <AiAssistant />
        <Dialog open={isClearConfirmOpen} onOpenChange={setIsClearConfirmOpen}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
