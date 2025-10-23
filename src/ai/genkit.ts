@@ -11,6 +11,8 @@ genkit({
   plugins: [
     googleAI(),
   ],
+  // Log level is configured via environment variables in Genkit v1.x
+  // enableTracingAndMetrics is now on by default in dev.
 });
 
 // Export the configured ai object for use in other modules.
