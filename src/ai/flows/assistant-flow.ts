@@ -8,7 +8,7 @@
 import { ai } from '@/ai/genkit';
 import { getFirestoreServer } from '@/firebase/server-init';
 import { collection, getDocs, limit, query } from 'firebase/firestore';
-import { Student } from '@/docs/backend-schema';
+import { type Student } from '@/docs/backend-schema';
 import { AssistantInputSchema, AssistantOutputSchema, type AssistantInput } from './assistant-schema';
 import { Message } from 'genkit';
 
