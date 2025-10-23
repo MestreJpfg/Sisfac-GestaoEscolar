@@ -4,11 +4,15 @@
  * including its core Genkit flow.
  */
 
-import { ai } from '@/ai/genkit';
+import { ai, configureGenkitOnce } from '@/ai/genkit';
 import { getFirestoreServer } from '@/firebase/server-init';
 import { collection, getDocs, limit, query } from 'firebase/firestore';
 import { Student } from '@/docs/backend-schema';
 import { AssistantInputSchema, AssistantOutputSchema, type AssistantInput } from './assistant-schema';
+import { Message } from 'genkit';
+
+// Ensure Genkit is configured once before defining flows.
+configureGenkitOnce();
 
 /**
  * Fetches a sample of student names from Firestore.
@@ -46,21 +50,26 @@ export const assistantFlow = ai.defineFlow(
     
     const studentSample = await getStudentSample();
 
-    const fullPrompt = `
+    const systemPrompt = `
         Você é um assistente virtual para uma aplicação de gestão de alunos.
         Sua tarefa é responder a perguntas e ajudar os utilizadores a gerir os dados dos alunos.
         Seja conciso, amigável e útil.
 
         Aqui está uma amostra de nomes de alunos na base de dados para seu contexto:
         ${studentSample}
-
-        Pergunta do utilizador: ${query}
       `;
+
+    // Add the system prompt to the beginning of the history
+    const historyWithSystemPrompt: Message[] = [
+        { role: 'system', content: [{ text: systemPrompt }] },
+        ...history,
+        { role: 'user', content: [{ text: query }] }
+    ];
 
     const result = await ai.generate({
       model: 'googleai/gemini-pro',
-      history: history,
-      prompt: query,
+      prompt: [], // prompt is now part of history
+      history: historyWithSystemPrompt,
       config: {
         temperature: 0.5, // Adjust for more creative or factual responses
       },
