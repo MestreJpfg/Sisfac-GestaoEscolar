@@ -5,8 +5,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit/zod';
-import { geminiPro } from '@genkit-ai/google-genai';
+import { z } from 'genkit';
 import { getFirestoreServer } from '@/firebase/server-init';
 import { collection, getDocs, limit, query } from 'firebase/firestore';
 import { Student } from '@/docs/backend-schema';
@@ -66,10 +65,7 @@ export const assistantFlow = ai.defineFlow(
     
     const studentSample = await getStudentSample();
 
-    const result = await ai.generate({
-      model: geminiPro,
-      history: history,
-      prompt: `
+    const fullPrompt = `
         Você é um assistente virtual para uma aplicação de gestão de alunos.
         Sua tarefa é responder a perguntas e ajudar os utilizadores a gerir os dados dos alunos.
         Seja conciso, amigável e útil.
@@ -78,13 +74,18 @@ export const assistantFlow = ai.defineFlow(
         ${studentSample}
 
         Pergunta do utilizador: ${query}
-      `,
+      `;
+
+    const result = await ai.generate({
+      model: 'googleai/gemini-pro',
+      history: history,
+      prompt: query,
       config: {
         temperature: 0.5, // Adjust for more creative or factual responses
       },
     });
 
-    const response = result.text();
+    const response = result.text;
 
     return { response };
   }
