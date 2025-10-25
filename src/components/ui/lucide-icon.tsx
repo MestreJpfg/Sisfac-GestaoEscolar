@@ -1,5 +1,5 @@
 "use client"
-import { icons, BellRing } from "lucide-react"
+import { icons, BellRing, List } from "lucide-react"
 
 export const LucideIcon = ({
   name,

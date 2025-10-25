@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, BellRing, Trash2, Bot } from "lucide-react";
+import { Loader2, BellRing, Trash2, Bot, List } from "lucide-react";
 import { type DataItem } from "@/components/data-viewer";
 import { useFirestore, useUser, errorEmitter, setDocumentNonBlocking, useCollection, useMemoFirebase, commitBatchNonBlocking } from "@/firebase";
 import { collection, writeBatch, doc, getDocs, query } from "firebase/firestore";
@@ -27,6 +27,7 @@ import { quotes } from "@/lib/quotes";
 import { useRouter } from "next/navigation";
 import { FirestorePermissionError } from "@/firebase/errors";
 import AiAssistant from "./ai-assistant";
+import ListGenerator from "./list-generator";
 
 export default function StudentManager() {
   const firestore = useFirestore();
@@ -43,6 +44,7 @@ export default function StudentManager() {
   const [passwordInput, setPasswordInput] = useState("");
   const [currentDateTime, setCurrentDateTime] = useState('');
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [isListGeneratorOpen, setIsListGeneratorOpen] = useState(false);
   
   // Memoize the query to prevent re-renders
   const studentsQuery = useMemoFirebase(() => {
@@ -267,6 +269,25 @@ export default function StudentManager() {
         </Dialog>
 
         {isAssistantOpen && <AiAssistant onClose={() => setIsAssistantOpen(false)} />}
+        
+        {hasData && (
+          <>
+            <Button 
+              className="fixed bottom-4 right-4 h-14 w-14 rounded-full shadow-2xl" 
+              size="icon"
+              onClick={() => setIsListGeneratorOpen(true)}
+            >
+              <List className="h-6 w-6" />
+              <span className="sr-only">Gerar Lista de Alunos</span>
+            </Button>
+            {isListGeneratorOpen && (
+              <ListGenerator
+                allStudents={data}
+                onClose={() => setIsListGeneratorOpen(false)}
+              />
+            )}
+          </>
+        )}
     </main>
   );
 }
