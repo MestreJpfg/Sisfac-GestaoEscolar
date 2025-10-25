@@ -57,6 +57,9 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
   const generatePdfInstance = (img: HTMLImageElement): jsPDF => {
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
+    const lineHeight = pdf.getLineHeight() / pdf.internal.scaleFactor;
+    const lineHeightFactor = 1.5;
+    
     pdf.addImage(img, 'JPEG', 0, 0, pdfWidth, pdf.internal.pageSize.getHeight(), undefined, 'FAST');
     
     pdf.setFont('helvetica', 'normal');
@@ -78,51 +81,52 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(12);
 
-    const addParagraph = (text: (string | { text: string; isBold: boolean })[]) => {
-        const splitText = pdf.splitTextToSize(text.map(t => typeof t === 'string' ? t : t.text).join(''), textWidth);
-        const boldParts = text.filter(t => typeof t !== 'string' && t.isBold) as { text: string; isBold: boolean }[];
-        
-        pdf.text(splitText, leftMargin, yPosition, { align: 'justify', lineHeightFactor: 1.5 });
-        
-        // Find and re-apply bolding
-        splitText.forEach((line: string, lineIndex: number) => {
-            boldParts.forEach(boldPart => {
-                let startIndex = 0;
-                let index = line.indexOf(boldPart.text, startIndex);
-                while(index !== -1) {
-                    const precedingText = line.substring(0, index);
-                    const precedingTextWidth = pdf.getStringUnitWidth(precedingText) * pdf.getFontSize() / pdf.internal.scaleFactor;
-                    pdf.setFont('helvetica', 'bold');
-                    pdf.text(boldPart.text, leftMargin + precedingTextWidth, yPosition + (lineIndex * (pdf.getLineHeight() * 1.5 / pdf.internal.scaleFactor)), { align: 'left' });
-                    pdf.setFont('helvetica', 'normal');
-                    startIndex = index + boldPart.text.length;
-                    index = line.indexOf(boldPart.text, startIndex);
-                }
-            });
-        });
-        
-        yPosition += (splitText.length * (pdf.getLineHeight() * 1.5 / pdf.internal.scaleFactor)) + 5;
+    const addParagraph = (parts: Array<{ text: string; isBold?: boolean }>) => {
+      let currentX = leftMargin;
+      
+      const words = parts.flatMap(part => {
+        const textParts = part.text.split(/(\s+)/); // Split by space but keep spaces
+        return textParts.map(word => ({ word, isBold: part.isBold }));
+      });
+    
+      words.forEach(({ word, isBold }) => {
+        if (!word) return;
+    
+        pdf.setFont('helvetica', isBold ? 'bold' : 'normal');
+        const wordWidth = pdf.getStringUnitWidth(word) * pdf.getFontSize() / pdf.internal.scaleFactor;
+    
+        if (currentX + wordWidth > pdfWidth - rightMargin) {
+          yPosition += lineHeight * lineHeightFactor;
+          currentX = leftMargin;
+        }
+    
+        pdf.text(word, currentX, yPosition);
+        currentX += wordWidth;
+      });
+    
+      yPosition += (lineHeight * lineHeightFactor) + 5; // Move to the next paragraph
     };
     
     const introText = [
-        "Declaramos, para os devidos fins, que o(a) estudante ",
+        { text: "Declaramos, para os devidos fins, que o(a) estudante " },
         { text: nomeCompleto, isBold: true },
-        `, nascido(a) em ${dataNascimento}, filho(a) de ${mae}`,
-        pai ? ` e de ${pai},` : ',',
-        ` encontra-se regularmente matriculado(a) nesta Unidade Escolar no ano letivo de ${currentYear}.`
+        { text: `, nascido(a) em ${dataNascimento}, filho(a) de ${mae}` },
+        { text: pai ? ` e de ${pai},` : ',' },
+        { text: ` encontra-se regularmente matriculado(a) nesta Unidade Escolar no ano letivo de ${currentYear}.` }
     ];
     addParagraph(introText);
     
     const classInfoText = [
-        "O(A) referido(a) aluno(a) está cursando o ",
+        { text: "O(A) referido(a) aluno(a) está cursando o " },
         { text: serie, isBold: true },
-        `, na turma `,
+        { text: ", na turma " },
         { text: turma, isBold: true },
-        `, no período da `,
+        { text: ", no período da " },
         { text: turno.toLowerCase(), isBold: true },
-        `.`
+        { text: "." }
     ];
     addParagraph(classInfoText);
+    
 
     // --- Observations Section ---
     if (rm || nis) {
