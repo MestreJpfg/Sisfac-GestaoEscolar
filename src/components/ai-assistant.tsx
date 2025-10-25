@@ -85,25 +85,22 @@ export default function AiAssistant({
     const userMessage: Message = { role: 'user', content: [{ text: query }] };
     let flowInput: AssistantInput;
 
+    // Add user message to visible history
+    setHistory(prev => [...prev, userMessage]);
+    
+    // Create a contextualized query for the AI.
+    let contextualizedQuery = query;
     if (currentAction && currentAction !== 'list') {
-      // Step 2: User provides a name. Create a contextualized query for the AI.
       const actionPrefix = currentAction === 'edit' 
           ? 'Encontrar aluno para editar: ' 
           : 'Encontrar aluno para gerar declaração: ';
-      
-      const contextualizedQuery = actionPrefix + query;
-      const contextualizedMessage: Message = { role: 'user', content: [{ text: contextualizedQuery }]};
-      
-      // Send the history UP TO the point before the user typed the name, plus the new contextualized query.
-      // This avoids sending the raw name, which could confuse the AI.
-      flowInput = { history: [...history.slice(0, -1), contextualizedMessage]};
-
-    } else {
-       // This handles cases where the user might continue a conversation after an initial response
-      flowInput = { history: [...history, userMessage] };
+      contextualizedQuery = actionPrefix + query;
     }
+    
+    // The history for the AI will include the new contextualized query.
+    const aiHistory: Message[] = [...history, { role: 'user', content: [{ text: contextualizedQuery }] }];
+    flowInput = { history: aiHistory };
 
-    setHistory(prev => [...prev, userMessage]);
     setQuery('');
     setIsLoading(true);
 
@@ -285,3 +282,5 @@ export default function AiAssistant({
     </AnimatePresence>
   );
 }
+
+    

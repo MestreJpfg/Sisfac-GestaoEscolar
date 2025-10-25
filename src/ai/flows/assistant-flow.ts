@@ -41,7 +41,7 @@ const findStudentTool = ai.defineTool(
       console.log(`[findStudentTool] Found ${searchResults.length} students for query "${name}"`);
       return searchResults;
     } catch (error) {
-      console.error("Error in findStudent tool:", error);
+      console.error("[findStudentTool] Error accessing Firestore:", error);
       // Return an empty array on error to prevent the flow from crashing
       return [];
     }
@@ -88,9 +88,9 @@ const assistantSystemPrompt = `
     Você receberá uma consulta do usuário que especifica uma ação (editar, gerar declaração, criar lista) e, às vezes, um nome de aluno.
     
     SIGA RIGOROSAMENTE ESTES PASSOS:
-    1.  Primeiro, use SEMPRE a ferramenta "findStudent" para procurar o aluno pelo nome fornecido na consulta do usuário. Se a consulta for apenas para 'criar lista', a ferramenta "findStudent" não é necessária.
+    1.  A consulta do usuário já virá com um contexto de ação (ex: "Encontrar aluno para editar: João"). Use a ferramenta "findStudent" para procurar o aluno pelo nome fornecido. Se a consulta for apenas para 'criar lista', a ferramenta "findStudent" não é necessária.
     2.  Analise o resultado da ferramenta "findStudent":
-        - Se encontrar UM aluno correspondente, você DEVE usar a ferramenta de AÇÃO apropriada ("requestEditStudent" ou "requestGenerateDeclaration") com o ID do aluno encontrado para solicitar a ação na interface. NÃO precisa confirmar com o usuário. Apenas execute a ação.
+        - Se encontrar UM aluno correspondente, você DEVE usar a ferramenta de AÇÃO apropriada ("requestEditStudent" ou "requestGenerateDeclaration") com o ID do aluno encontrado para solicitar a ação na interface. NÃO precisa confirmar com o usuário. Apenas execute a ação e diga "Ok, a abrir a janela de edição para [Nome do Aluno]".
         - Se encontrar VÁRIOS alunos, você DEVE listar os nomes encontrados e perguntar ao usuário para especificar qual deles é o correto. Ex: "Encontrei alguns alunos com esse nome: [Nome1], [Nome2]. Qual deles você gostaria de selecionar?"
         - Se NÃO encontrar nenhum aluno, você DEVE informar ao usuário que ninguém foi encontrado com aquele nome. Ex: "Não encontrei nenhum aluno com o nome [nome pesquisado]."
     3.  Se a consulta do usuário for para "criar lista", use a ferramenta "requestCreateList" imediatamente.
@@ -123,3 +123,5 @@ const internalAssistantFlow = ai.defineFlow(
 export async function assistantFlow(input: AssistantInput): Promise<any> {
     return internalAssistantFlow(input);
 }
+
+    
