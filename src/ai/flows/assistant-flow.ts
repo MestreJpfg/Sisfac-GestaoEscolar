@@ -8,7 +8,7 @@
 
 import { ai } from '@/ai/genkit';
 import { getFirestoreServer } from '@/firebase/server-init';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query } from 'firebase/firestore';
 import { type Student } from '@/docs/backend-schema';
 import { AssistantInputSchema, AssistantOutputSchema, type AssistantInput, ToolResponseSchema } from './assistant-schema';
 import { z } from 'genkit';
@@ -33,7 +33,7 @@ const findStudentTool = ai.defineTool(
       
       const students = querySnapshot.docs.map(doc => ({ id: doc.id, data: doc.data() as Student }));
       
-      // Filter in memory
+      // Filter in memory for robustness
       const searchResults = students
         .filter(student => student.data.mainItem && student.data.mainItem.toLowerCase().includes(name.toLowerCase()))
         .map(student => ({ id: student.id, name: student.data.mainItem }));
@@ -107,13 +107,12 @@ const internalAssistantFlow = ai.defineFlow(
       tools: [findStudentTool, requestEditStudentTool, requestGenerateDeclarationTool, requestCreateListTool]
     },
     async (input) => {
-        
-        const result = await ai.generate({
+        const llmResponse = await ai.generate({
             history: input.history,
             config: { temperature: 0.3 },
         });
         
-        return result.output();
+        return llmResponse.output();
     }
 );
 
