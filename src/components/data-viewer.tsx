@@ -9,8 +9,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, Pencil, FileText, Users } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import EditStudentForm from "./edit-student-form";
-import DeclarationGenerator from "./declaration-generator";
 import { cn } from "@/lib/utils";
 
 export interface SubItem {
@@ -27,6 +25,8 @@ export interface DataItem {
 interface DataViewerProps {
   data: DataItem[];
   onEditComplete: (updatedData: DataItem) => void;
+  onOpenEdit: (student: DataItem) => void;
+  onOpenDeclaration: (student: DataItem) => void;
 }
 
 const getSerieFromItem = (item: DataItem): string | undefined => {
@@ -41,11 +41,9 @@ const getStudentName = (item: DataItem): string => {
   return item.mainItem || 'Aluno sem nome';
 }
 
-export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
+export default function DataViewer({ data, onEditComplete, onOpenEdit, onOpenDeclaration }: DataViewerProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSerie, setSelectedSerie] = useState<string>("all");
-  const [editingStudent, setEditingStudent] = useState<DataItem | null>(null);
-  const [declarationStudent, setDeclarationStudent] = useState<DataItem | null>(null);
 
   const series = useMemo(() => {
     const allSeries = data.reduce((acc, item) => {
@@ -69,17 +67,6 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
     const serie = getSerieFromItem(item);
     return matchesSearchTerm && serie === selectedSerie;
   }), [data, searchTerm, selectedSerie]);
-
-  // When filters change, reset the editing/declaration modals
-  useEffect(() => {
-    setEditingStudent(null);
-    setDeclarationStudent(null);
-  }, [searchTerm, selectedSerie]);
-
-  const handleEditComplete = (updatedStudent: DataItem) => {
-    setEditingStudent(null);
-    onEditComplete(updatedStudent);
-  };
 
   return (
     <>
@@ -131,11 +118,11 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
                       <AccordionContent>
                         <div className="p-4 bg-muted/30 rounded-md border">
                             <div className="flex flex-col sm:flex-row justify-end mb-4 gap-2">
-                                <Button variant="secondary" size="sm" onClick={() => setDeclarationStudent(item)}>
+                                <Button variant="secondary" size="sm" onClick={() => onOpenDeclaration(item)}>
                                     <FileText className="mr-2 h-4 w-4" />
                                     Gerar Declaração
                                 </Button>
-                                <Button variant="secondary" size="sm" onClick={() => setEditingStudent(item)}>
+                                <Button variant="secondary" size="sm" onClick={() => onOpenEdit(item)}>
                                     <Pencil className="mr-2 h-4 w-4" />
                                     Editar Aluno
                                 </Button>
@@ -162,19 +149,6 @@ export default function DataViewer({ data, onEditComplete }: DataViewerProps) {
             </ScrollArea>
         </CardContent>
       </Card>
-      {editingStudent && (
-        <EditStudentForm
-          student={editingStudent}
-          onClose={() => setEditingStudent(null)}
-          onEditComplete={handleEditComplete}
-        />
-      )}
-      {declarationStudent && (
-        <DeclarationGenerator
-          student={declarationStudent}
-          onClose={() => setDeclarationStudent(null)}
-        />
-      )}
     </>
   );
 }

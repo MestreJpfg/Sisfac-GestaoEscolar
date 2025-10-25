@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -14,7 +15,7 @@ import { ScrollArea } from './ui/scroll-area';
 interface AiAssistantProps {
   onClose: () => void;
   onRequestEditStudent: (studentId: string) => void;
-  onRequestGenerateDeclaration: (studentId:string) => void;
+  onRequestGenerateDeclaration: (studentId: string) => void;
   onRequestCreateList: () => void;
 }
 
@@ -62,23 +63,28 @@ export default function AiAssistant({
   }, [onRequestEditStudent, onRequestGenerateDeclaration, onRequestCreateList, onClose]);
 
 
-  const processFlow = useCallback(async (currentHistory: Message[]) => {
-    setIsLoading(true);
-    try {
-        const input: AssistantInput = { history: currentHistory };
-        const response = await assistantFlow(input);
+  const handleSubmit = async () => {
+    if (!query.trim() || isLoading) return;
+    
+    const userMessage: Message = { role: 'user', content: [{ text: query }] };
+    const newHistory = [...history, userMessage];
 
-        // The response from the flow is the final output message from the model
-        const modelMessage: Message = response; 
+    setHistory(newHistory);
+    setQuery('');
+    setIsLoading(true);
+
+    try {
+        const input: AssistantInput = { history: newHistory };
+        const response: Message = await assistantFlow(input);
         
         // Add the model's message to history to be displayed
-        setHistory(prev => [...prev, modelMessage]);
+        setHistory(prev => [...prev, response]);
 
         // Check if the model's response contains a tool request to the UI
-        const toolRequests = modelMessage.content.filter(part => part.toolRequest);
+        const toolRequestPart = response.content.find(part => part.toolRequest);
 
-        if (toolRequests.length > 0) {
-            const toolRequest = toolRequests[0].toolRequest;
+        if (toolRequestPart && toolRequestPart.toolRequest) {
+            const toolRequest = toolRequestPart.toolRequest;
             const toolName = toolRequest.name;
             const toolInput = toolRequest.input;
 
@@ -87,7 +93,6 @@ export default function AiAssistant({
                 handleToolResponse(toolName, toolInput.studentId);
             }
         }
-
     } catch (error) {
       console.error('Error calling assistant flow:', error);
       const errorMessage: Message = {
@@ -98,21 +103,7 @@ export default function AiAssistant({
     } finally {
       setIsLoading(false);
     }
-  }, [handleToolResponse]);
-
-
-  const handleSubmit = useCallback(async () => {
-    if (!query.trim() || isLoading) return;
-    
-    const userMessage: Message = { role: 'user', content: [{ text: query }] };
-    const newHistory = [...history, userMessage];
-
-    setHistory(newHistory);
-    setQuery('');
-    
-    await processFlow(newHistory);
-
-  }, [query, history, isLoading, processFlow]);
+  };
 
   return (
     <AnimatePresence>

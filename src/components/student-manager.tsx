@@ -241,7 +241,12 @@ export default function StudentManager() {
             <XlsxUploader onUploadComplete={handleUploadComplete} setIsLoading={setIsUploading} />
           ) : (
             <div className="space-y-4">
-              <DataViewer data={data} onEditComplete={handleEditComplete} />
+              <DataViewer 
+                data={data} 
+                onEditComplete={handleEditComplete}
+                onOpenEdit={setEditingStudent}
+                onOpenDeclaration={setDeclarationStudent}
+              />
               <div className="space-y-2">
                 <Button onClick={() => setIsClearConfirmOpen(true)} variant="outline" className="w-full">
                   <Trash2 className="mr-2 h-4 w-4" />
