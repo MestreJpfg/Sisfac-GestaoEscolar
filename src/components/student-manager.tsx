@@ -28,6 +28,7 @@ import { useRouter } from "next/navigation";
 import { FirestorePermissionError } from "@/firebase/errors";
 import AiAssistant from "./ai-assistant";
 import ListGenerator from "./list-generator";
+import { AnimatePresence } from "framer-motion";
 
 export default function StudentManager() {
   const firestore = useFirestore();
@@ -280,12 +281,14 @@ export default function StudentManager() {
               <List className="h-6 w-6" />
               <span className="sr-only">Gerar Lista de Alunos</span>
             </Button>
+            <AnimatePresence>
             {isListGeneratorOpen && (
               <ListGenerator
                 allStudents={data}
                 onClose={() => setIsListGeneratorOpen(false)}
               />
             )}
+            </AnimatePresence>
           </>
         )}
     </main>

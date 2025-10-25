@@ -24,6 +24,8 @@ import { type DataItem } from './data-viewer';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Label } from './ui/label';
+import { motion } from 'framer-motion';
+
 
 interface ListGeneratorProps {
   allStudents: DataItem[];
@@ -150,6 +152,12 @@ const ListGenerator = ({ allStudents, onClose }: ListGeneratorProps) => {
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
+        <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            transition={{ duration: 0.3 }}
+        >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Gerar Lista de Alunos por Série</DialogTitle>
@@ -182,6 +190,7 @@ const ListGenerator = ({ allStudents, onClose }: ListGeneratorProps) => {
           </Button>
         </DialogFooter>
       </DialogContent>
+      </motion.div>
     </Dialog>
   );
 };
