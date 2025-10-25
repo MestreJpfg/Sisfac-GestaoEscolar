@@ -48,8 +48,8 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
   const serie = getStudentValue('serie');
   const turma = getStudentValue('classe');
   const turno = getStudentValue('turno');
-  const mae = getStudentValue('filiacao1');
-  const pai = getStudentValue('filiação 2'); // Note the different character in 'filiação'
+  const mae = getStudentValue('filiação 1'); // Corrected key from 'filiacao1'
+  const pai = getStudentValue('filiação 2');
   const rm = getStudentValue('rm');
   const nis = getStudentValue('nis');
   const fileName = `Declaracao_${nomeCompleto.replace(/ /g, '_')}.pdf`;
@@ -69,7 +69,7 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
     const leftMargin = 25;
     const rightMargin = 25;
     const textWidth = pdfWidth - leftMargin - rightMargin;
-    let yPosition = 100;
+    let yPosition = 85; // Adjusted yPosition to move text block higher
 
     // --- Title ---
     pdf.setFont('helvetica', 'bold');
