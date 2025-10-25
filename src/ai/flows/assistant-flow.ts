@@ -7,7 +7,7 @@
 
 import { ai } from '@/ai/genkit';
 import { getFirestoreServer } from '@/firebase/server-init';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { type Student } from '@/docs/backend-schema';
 import { AssistantInputSchema, AssistantOutputSchema, type AssistantInput, ToolResponseSchema } from './assistant-schema';
 import { z } from 'genkit';
@@ -24,21 +24,24 @@ const findStudentTool = ai.defineTool(
       const db = getFirestoreServer();
       const studentsRef = collection(db, 'students');
       
-      // Firestore does not support partial text search natively.
-      // This is a workaround for a small dataset. For larger datasets,
-      // a dedicated search service like Algolia or Elasticsearch would be better.
       const querySnapshot = await getDocs(studentsRef);
-      if (querySnapshot.empty) return [];
+      if (querySnapshot.empty) {
+          console.log("No students found in the database.");
+          return [];
+      }
       
       const students = querySnapshot.docs.map(doc => ({ id: doc.id, data: doc.data() as Student }));
       
+      // Filter in memory
       const searchResults = students
-        .filter(student => student.data.mainItem.toLowerCase().includes(name.toLowerCase()))
+        .filter(student => student.data.mainItem && student.data.mainItem.toLowerCase().includes(name.toLowerCase()))
         .map(student => ({ id: student.id, name: student.data.mainItem }));
         
+      console.log(`Found ${searchResults.length} students for query "${name}"`);
       return searchResults;
     } catch (error) {
       console.error("Error in findStudent tool:", error);
+      // Return an empty array on error to prevent the flow from crashing
       return [];
     }
   }
@@ -82,19 +85,14 @@ const assistantSystemPrompt = `
     Seja concisa, amigável e útil.
 
     Sempre se apresente como "FernandIA" na sua primeira mensagem.
-    Na sua primeira mensagem, liste as ações que você pode realizar:
-    - Editar dados de um aluno
-    - Gerar uma declaração de matrícula
-    - Criar uma lista de alunos por série
-
-    Para executar uma ação, você DEVE usar as ferramentas disponíveis.
     
-    COMO USAR AS FERRAMENTAS:
-    1.  Se o utilizador pedir para editar ou gerar uma declaração para um aluno, PRIMEIRO use a ferramenta "findStudent" para encontrar o aluno.
-    2.  Se encontrar UM aluno, confirme com o utilizador e, após a confirmação, use a ferramenta "requestEditStudent" ou "requestGenerateDeclaration" com o ID do aluno.
-    3.  Se encontrar VÁRIOS alunos, peça ao utilizador para especificar qual deles é o correto.
-    4.  Se NÃO encontrar nenhum aluno, informe o utilizador.
-    5.  Se o utilizador pedir para criar uma lista, use a ferramenta "requestCreateList" diretamente.
+    Para executar uma ação que requer encontrar um aluno (como editar ou gerar declaração), siga estes passos:
+    1.  Use a ferramenta "findStudent" para procurar o aluno pelo nome fornecido pelo utilizador.
+    2.  Analise o resultado da ferramenta:
+        - Se encontrar UM aluno, confirme com o utilizador ("Encontrei [nome do aluno]. Devo prosseguir com a ação?"). Se o utilizador confirmar, use a ferramenta apropriada ("requestEditStudent" or "requestGenerateDeclaration") com o ID do aluno.
+        - Se encontrar VÁRIOS alunos, liste os nomes encontrados e peça ao utilizador para especificar qual deles é o correto.
+        - Se NÃO encontrar nenhum aluno, informe ao utilizador que não encontrou ninguém com aquele nome.
+    3. Para criar uma lista de alunos, use a ferramenta "requestCreateList" diretamente se o utilizador pedir.
 
     NÃO invente informações. Baseie-se apenas nos resultados das ferramentas.
 `;
@@ -107,10 +105,10 @@ const internalAssistantFlow = ai.defineFlow(
       system: assistantSystemPrompt,
       tools: [findStudentTool, requestEditStudentTool, requestGenerateDeclarationTool, requestCreateListTool]
     },
-    async ({ history }) => {
+    async (input) => {
         
         const result = await ai.generate({
-            history,
+            history: input.history,
             config: { temperature: 0.3 },
         });
         

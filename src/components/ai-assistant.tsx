@@ -11,15 +11,6 @@ import type { Message } from 'genkit';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from './ui/scroll-area';
 
-type ToolCall = {
-    name: string;
-    input: any;
-};
-
-type ToolRequestPart = {
-    toolRequest: ToolCall;
-};
-
 interface AiAssistantProps {
   onClose: () => void;
   onRequestEditStudent: (studentId: string) => void;
@@ -52,7 +43,7 @@ export default function AiAssistant({
     }
   }, [history]);
 
-  const handleToolResponse = (toolName: string, studentId?: string) => {
+  const handleToolResponse = useCallback((toolName: string, studentId?: string) => {
     switch (toolName) {
         case 'requestEditStudent':
             if(studentId) onRequestEditStudent(studentId);
@@ -66,62 +57,35 @@ export default function AiAssistant({
         default:
             console.warn(`Unknown tool requested by AI: ${toolName}`);
     }
-    // Close the assistant after executing an action
+    // Close the assistant after executing a final UI action
     onClose();
-  };
+  }, [onRequestEditStudent, onRequestGenerateDeclaration, onRequestCreateList, onClose]);
+
 
   const processFlow = useCallback(async (currentHistory: Message[]) => {
     setIsLoading(true);
     try {
         const input: AssistantInput = { history: currentHistory };
         const response = await assistantFlow(input);
+
+        // The response from the flow is the final output message from the model
+        const modelMessage: Message = response; 
         
-        const modelResponseContent = response.content;
-        const modelMessage: Message = {
-            role: 'model',
-            content: modelResponseContent,
-        };
-        
-        const toolRequests = modelResponseContent.filter((part: any) => part.toolRequest);
+        // Add the model's message to history to be displayed
+        setHistory(prev => [...prev, modelMessage]);
+
+        // Check if the model's response contains a tool request to the UI
+        const toolRequests = modelMessage.content.filter(part => part.toolRequest);
 
         if (toolRequests.length > 0) {
-            // Add the model's request to the history
-            setHistory(prev => [...prev, modelMessage]);
-
             const toolRequest = toolRequests[0].toolRequest;
             const toolName = toolRequest.name;
             const toolInput = toolRequest.input;
-            
-            // This is a special case where the AI calls a "request" tool.
-            // These tools are instructions for the UI, not data-fetching tools.
+
+            // These tools are direct commands for the UI to execute an action
             if (toolName.startsWith('request')) {
                 handleToolResponse(toolName, toolInput.studentId);
-                // Stop loading as the UI action is the final step
-                setIsLoading(false);
-                return;
             }
-
-            // For data-fetching tools, we need another round trip
-            const toolResponseMessage: Message = {
-                role: 'tool',
-                content: [{
-                    toolResponse: {
-                        name: toolName,
-                        output: toolRequest.output // The flow now directly returns the tool output
-                    }
-                }]
-            };
-
-            // This recursive call is not ideal for React state updates.
-            // A better approach would be a state machine or effect-driven flow.
-            // For now, let's just re-run the process with the tool response.
-            // This will likely cause a flicker but is a simpler implementation.
-            processFlow([...currentHistory, modelMessage, toolResponseMessage]);
-
-        } else {
-            // It's a standard text response
-            setHistory(prev => [...prev, modelMessage]);
-            setIsLoading(false);
         }
 
     } catch (error) {
@@ -131,9 +95,10 @@ export default function AiAssistant({
         content: [{ text: 'Desculpe, ocorreu um erro. Por favor, tente novamente.' }],
       };
       setHistory((prev) => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
     }
-  }, [onRequestEditStudent, onRequestGenerateDeclaration, onRequestCreateList, onClose]);
+  }, [handleToolResponse]);
 
 
   const handleSubmit = useCallback(async () => {
@@ -145,7 +110,7 @@ export default function AiAssistant({
     setHistory(newHistory);
     setQuery('');
     
-    processFlow(newHistory);
+    await processFlow(newHistory);
 
   }, [query, history, isLoading, processFlow]);
 
@@ -172,13 +137,13 @@ export default function AiAssistant({
         <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
           <div className="space-y-4">
             {history.map((msg, index) => {
+              // Extract text content from the message parts
               const textContent = msg.content
-                .filter(c => c.text)
                 .map(c => c.text)
+                .filter(Boolean) // Filter out empty or undefined text
                 .join('\n');
                 
-              // Don't render tool requests/responses in the chat UI
-              if (!textContent && !isLoading && index === history.length -1) return null;
+              // Don't render messages that have no visible text content
               if (!textContent) return null;
 
               return (
