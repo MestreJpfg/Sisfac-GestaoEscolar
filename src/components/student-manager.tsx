@@ -111,18 +111,22 @@ export default function StudentManager() {
           batch.delete(doc.ref);
         });
         
-        // Use non-blocking commit with error handling
+        // Use non-blocking commit with proper error handling
         commitBatchNonBlocking(batch, studentsRef.path);
         
         toast({
-          title: "Dados removidos",
-          description: "A base de dados foi limpa. Pode carregar um novo ficheiro.",
+          title: "Limpeza Iniciada",
+          description: "A remoção dos dados antigos foi iniciada e acontecerá em segundo plano.",
         });
       }
     } catch(err: any) {
+        // This will now catch network errors or other unexpected issues,
+        // while permission errors are handled by the onSnapshot listener in useCollection
+        // and by the commitBatchNonBlocking function.
+        console.error("Error fetching documents to delete:", err);
         const permissionError = new FirestorePermissionError({
             path: studentsRef.path,
-            operation: 'list',
+            operation: 'list', // The failing operation is listing docs to delete
         });
         errorEmitter.emit('permission-error', permissionError);
     } finally {

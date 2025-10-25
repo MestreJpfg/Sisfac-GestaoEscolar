@@ -55,7 +55,7 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
     return doc(firestore, "students", student.id);
   }, [firestore, student.id]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentRef) {
       toast({ variant: "destructive", title: "Erro", description: "O serviço do banco de dados não está disponível." });
@@ -69,7 +69,7 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
       subItems,
     };
       
-    // Use non-blocking update
+    // Use non-blocking update. Error handling is done inside this function via the errorEmitter.
     setDocumentNonBlocking(studentRef, updatedData);
 
     toast({
@@ -77,9 +77,10 @@ export default function EditStudentForm({ student, onClose, onEditComplete }: Ed
       description: "Os dados do aluno foram atualizados.",
     });
 
-    // Pass the updated student data back to the parent
+    // Pass the updated student data back to the parent for optimistic UI update
     onEditComplete({ ...student, ...updatedData });
     setIsLoading(false);
+    onClose();
   };
 
   return (

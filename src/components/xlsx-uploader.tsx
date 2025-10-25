@@ -8,10 +8,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { UploadCloud, FileCheck2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';
-import { useFirestore } from "@/firebase";
+import { useFirestore, commitBatchNonBlocking } from "@/firebase";
 import { collection, writeBatch, doc, getDocs } from "firebase/firestore";
 import { type DataItem, type SubItem } from "./data-viewer";
 import { Button } from "./ui/button";
+import { FirestorePermissionError } from "@/firebase/errors";
+import { errorEmitter } from "@/firebase/error-emitter";
 
 interface XlsxUploaderProps {
   onUploadComplete: (data: DataItem[]) => void;
@@ -127,6 +129,7 @@ export default function XlsxUploader({ onUploadComplete, setIsLoading }: XlsxUpl
             const batch = writeBatch(firestore);
             
             const existingDocs = await getDocs(studentsCollection);
+            const oldDocsCount = existingDocs.size;
             existingDocs.forEach(doc => batch.delete(doc.ref));
 
             const dataToUpload = processedData.map(({id, ...rest}) => rest);
@@ -137,27 +140,40 @@ export default function XlsxUploader({ onUploadComplete, setIsLoading }: XlsxUpl
                 batch.set(docRef, student);
                 docRefs.push(docRef.id);
             });
-
-            await batch.commit();
+            
+            // Use the non-blocking commit which handles permission errors
+            commitBatchNonBlocking(batch, studentsCollection.path);
 
             toast({
-                title: "Sucesso!",
-                description: `${existingDocs.size} registros antigos removidos e ${processedData.length} novos registros foram salvos.`,
+                title: "Carregamento Iniciado!",
+                description: `${oldDocsCount} registos antigos serão removidos e ${processedData.length} novos registos serão guardados.`,
             });
             
-            const newData = processedData.map((item, index) => ({ ...item, id: docRefs[index] }));
-            onUploadComplete(newData);
+            // The UI will update automatically via the useCollection listener.
+            // We just need to signal the upload process is "complete" on the client.
+            onUploadComplete([]);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error processing file:", error);
-        toast({
-            variant: "destructive",
-            title: "Erro de Processamento",
-            description: "Ocorreu um erro ao processar seu arquivo. Verifique o formato do arquivo e as permissões do Firestore.",
-        });
+        
+        // This is a good place for a generic error, but if it's a permission error
+        // on getDocs, we should handle it specifically.
+        if (error.code === 'permission-denied') {
+             const permissionError = new FirestorePermissionError({
+                path: 'students',
+                operation: 'list', // getDocs is a 'list' operation
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Erro de Processamento",
+                description: "Ocorreu um erro ao processar seu arquivo. Verifique o formato e tente novamente.",
+            });
+        }
         resetState();
       } finally {
-        // isLoading is handled by onUploadComplete now.
+        // isLoading is handled by the parent component via onUploadComplete
       }
     };
     
