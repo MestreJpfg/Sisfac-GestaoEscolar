@@ -11,22 +11,38 @@ import type { Message } from 'genkit';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from './ui/scroll-area';
 
+type ToolCall = {
+    name: string;
+    input: any;
+};
+
+type ToolRequestPart = {
+    toolRequest: ToolCall;
+};
+
 interface AiAssistantProps {
   onClose: () => void;
+  onRequestEditStudent: (studentId: string) => void;
+  onRequestGenerateDeclaration: (studentId:string) => void;
+  onRequestCreateList: () => void;
 }
 
-/**
- * A client-side component that provides a chat interface for the AI assistant.
- * It manages conversation history, user input, and communication with the
- * Genkit assistant flow.
- */
-export default function AiAssistant({ onClose }: AiAssistantProps) {
-  const [history, setHistory] = useState<Message[]>([]);
+const initialMessage: Message = {
+    role: 'model',
+    content: [{ text: "Olá! Eu sou a FernandIA, a sua assistente virtual.\n\nComo posso ajudar hoje? Você pode me pedir para:\n- Editar os dados de um aluno\n- Gerar uma declaração de matrícula\n- Criar uma lista de alunos por série" }],
+};
+
+export default function AiAssistant({ 
+    onClose,
+    onRequestEditStudent,
+    onRequestGenerateDeclaration,
+    onRequestCreateList,
+ }: AiAssistantProps) {
+  const [history, setHistory] = useState<Message[]>([initialMessage]);
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  // Automatically scroll to the bottom of the message list when new messages are added
   useEffect(() => {
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTo({
@@ -36,34 +52,78 @@ export default function AiAssistant({ onClose }: AiAssistantProps) {
     }
   }, [history]);
 
-  // Handle the submission of a user's query
-  const handleSubmit = useCallback(async () => {
-    if (!query.trim() || isLoading) return;
+  const handleToolResponse = (toolName: string, studentId?: string) => {
+    switch (toolName) {
+        case 'requestEditStudent':
+            if(studentId) onRequestEditStudent(studentId);
+            break;
+        case 'requestGenerateDeclaration':
+            if(studentId) onRequestGenerateDeclaration(studentId);
+            break;
+        case 'requestCreateList':
+            onRequestCreateList();
+            break;
+        default:
+            console.warn(`Unknown tool requested by AI: ${toolName}`);
+    }
+    // Close the assistant after executing an action
+    onClose();
+  };
 
-    const userMessage: Message = {
-      role: 'user',
-      content: [{ text: query }],
-    };
-
-    // Add user message to history and clear input
-    setHistory((prev) => [...prev, userMessage]);
-    setQuery('');
+  const processFlow = useCallback(async (currentHistory: Message[]) => {
     setIsLoading(true);
-
     try {
-      const input: AssistantInput = {
-        history: [...history, userMessage],
-        query,
-      };
+        const input: AssistantInput = { history: currentHistory };
+        const response = await assistantFlow(input);
+        
+        const modelResponseContent = response.content;
+        const modelMessage: Message = {
+            role: 'model',
+            content: modelResponseContent,
+        };
+        
+        const toolRequests = modelResponseContent.filter((part: any) => part.toolRequest);
 
-      // Call the server-side Genkit flow
-      const { response } = await assistantFlow(input);
+        if (toolRequests.length > 0) {
+            // Add the model's request to the history
+            setHistory(prev => [...prev, modelMessage]);
 
-      const modelMessage: Message = {
-        role: 'model',
-        content: [{ text: response }],
-      };
-      setHistory((prev) => [...prev, modelMessage]);
+            const toolRequest = toolRequests[0].toolRequest;
+            const toolName = toolRequest.name;
+            const toolInput = toolRequest.input;
+            
+            // This is a special case where the AI calls a "request" tool.
+            // These tools are instructions for the UI, not data-fetching tools.
+            if (toolName.startsWith('request')) {
+                handleToolResponse(toolName, toolInput.studentId);
+                // Stop loading as the UI action is the final step
+                setIsLoading(false);
+                return;
+            }
+
+            // For data-fetching tools, we need another round trip
+            const toolResponseMessage: Message = {
+                role: 'tool',
+                content: [{
+                    toolResponse: {
+                        name: toolName,
+                        output: toolRequest.output // The flow now directly returns the tool output
+                    }
+                }]
+            };
+
+            // This recursive call is not ideal for React state updates.
+            // A better approach would be a state machine or effect-driven flow.
+            // For now, let's just re-run the process with the tool response.
+            // This will likely cause a flicker but is a simpler implementation.
+            processFlow([...currentHistory, modelMessage, toolResponseMessage]);
+
+        } else {
+            // It's a standard text response
+            setHistory(prev => [...prev, modelMessage]);
+            setIsLoading(false);
+        }
+
     } catch (error) {
       console.error('Error calling assistant flow:', error);
       const errorMessage: Message = {
@@ -71,10 +131,23 @@ export default function AiAssistant({ onClose }: AiAssistantProps) {
         content: [{ text: 'Desculpe, ocorreu um erro. Por favor, tente novamente.' }],
       };
       setHistory((prev) => [...prev, errorMessage]);
-    } finally {
       setIsLoading(false);
     }
-  }, [query, history, isLoading]);
+  }, [onRequestEditStudent, onRequestGenerateDeclaration, onRequestCreateList, onClose]);
+
+
+  const handleSubmit = useCallback(async () => {
+    if (!query.trim() || isLoading) return;
+    
+    const userMessage: Message = { role: 'user', content: [{ text: query }] };
+    const newHistory = [...history, userMessage];
+
+    setHistory(newHistory);
+    setQuery('');
+    
+    processFlow(newHistory);
+
+  }, [query, history, isLoading, processFlow]);
 
   return (
     <AnimatePresence>
@@ -88,7 +161,7 @@ export default function AiAssistant({ onClose }: AiAssistantProps) {
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-2">
             <Bot className="w-6 h-6 text-primary" />
-            <h3 className="text-lg font-semibold text-primary-foreground">Assistente Virtual</h3>
+            <h3 className="text-lg font-semibold text-primary-foreground">FernandIA</h3>
           </div>
           <Button variant="ghost" size="icon" onClick={onClose} className="text-muted-foreground">
             <X className="w-5 h-5" />
@@ -98,7 +171,17 @@ export default function AiAssistant({ onClose }: AiAssistantProps) {
         {/* Message Area */}
         <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
           <div className="space-y-4">
-            {history.map((msg, index) => (
+            {history.map((msg, index) => {
+              const textContent = msg.content
+                .filter(c => c.text)
+                .map(c => c.text)
+                .join('\n');
+                
+              // Don't render tool requests/responses in the chat UI
+              if (!textContent && !isLoading && index === history.length -1) return null;
+              if (!textContent) return null;
+
+              return (
               <div
                 key={index}
                 className={cn(
@@ -115,10 +198,11 @@ export default function AiAssistant({ onClose }: AiAssistantProps) {
                       : 'bg-muted/50'
                   )}
                 >
-                  {msg.content[0].text}
+                  {textContent}
                 </div>
               </div>
-            ))}
+              )
+            })}
             {isLoading && (
               <div className="flex justify-start items-center gap-3">
                  <Bot className="w-5 h-5 text-primary shrink-0 mt-1" />
@@ -136,7 +220,7 @@ export default function AiAssistant({ onClose }: AiAssistantProps) {
           <Textarea
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Pergunte-me qualquer coisa sobre os alunos..."
+            placeholder="Peça para editar, gerar ou listar..."
             className="w-full pr-12 resize-none bg-background/80"
             rows={2}
             onKeyDown={(e) => {

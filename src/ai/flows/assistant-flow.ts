@@ -7,85 +7,118 @@
 
 import { ai } from '@/ai/genkit';
 import { getFirestoreServer } from '@/firebase/server-init';
-import { collection, getDocs, limit, query } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { type Student } from '@/docs/backend-schema';
-import { AssistantInputSchema, AssistantOutputSchema, type AssistantInput } from './assistant-schema';
-import { Message } from 'genkit';
+import { AssistantInputSchema, AssistantOutputSchema, type AssistantInput, ToolResponseSchema } from './assistant-schema';
+import { z } from 'genkit';
 
-/**
- * Fetches a sample of student names from Firestore.
- * This data is used to provide context to the AI model.
- * @returns A string containing a comma-separated list of student names.
- */
-async function getStudentSample(): Promise<string> {
-  try {
-    const db = getFirestoreServer();
-    const studentsRef = collection(db, 'students');
-    const q = query(studentsRef, limit(10));
-    const querySnapshot = await getDocs(q);
-    
-    if (querySnapshot.empty) {
-      return 'Nenhum aluno encontrado.';
+const findStudentTool = ai.defineTool(
+  {
+    name: 'findStudent',
+    description: 'Encontra um aluno pelo nome na base de dados.',
+    inputSchema: z.object({ name: z.string().describe('O nome ou parte do nome do aluno a ser procurado.') }),
+    outputSchema: z.array(z.object({ id: z.string(), name: z.string() })),
+  },
+  async ({ name }) => {
+    try {
+      const db = getFirestoreServer();
+      const studentsRef = collection(db, 'students');
+      
+      // Firestore does not support partial text search natively.
+      // This is a workaround for a small dataset. For larger datasets,
+      // a dedicated search service like Algolia or Elasticsearch would be better.
+      const querySnapshot = await getDocs(studentsRef);
+      if (querySnapshot.empty) return [];
+      
+      const students = querySnapshot.docs.map(doc => ({ id: doc.id, data: doc.data() as Student }));
+      
+      const searchResults = students
+        .filter(student => student.data.mainItem.toLowerCase().includes(name.toLowerCase()))
+        .map(student => ({ id: student.id, name: student.data.mainItem }));
+        
+      return searchResults;
+    } catch (error) {
+      console.error("Error in findStudent tool:", error);
+      return [];
     }
-
-    const studentNames = querySnapshot.docs.map(doc => (doc.data() as Student).mainItem);
-    return studentNames.join(', ');
-
-  } catch (error) {
-    console.error("Error fetching student data for AI context:", error);
-    return "Não foi possível aceder aos dados dos alunos.";
   }
-}
+);
 
-/**
- * An async wrapper function that can be exported from a 'use server' file.
- * It defines and invokes the internal Genkit flow.
- * @param input The user query and conversation history.
- * @returns The AI model's response.
- */
-export async function assistantFlow(input: AssistantInput): Promise<{ response: string }> {
-  
-  // Define the flow inside the async function to ensure Genkit is initialized.
-  const internalAssistantFlow = ai.defineFlow(
+
+const requestEditStudentTool = ai.defineTool(
+    {
+        name: 'requestEditStudent',
+        description: 'Pede à interface para abrir o formulário de edição para um aluno específico.',
+        inputSchema: z.object({ studentId: z.string().describe('O ID do aluno a ser editado.') }),
+        outputSchema: ToolResponseSchema,
+    },
+    async ({ studentId }) => ({ studentId })
+);
+
+const requestGenerateDeclarationTool = ai.defineTool(
+    {
+        name: 'requestGenerateDeclaration',
+        description: 'Pede à interface para abrir o gerador de declaração para um aluno específico.',
+        inputSchema: z.object({ studentId: z.string().describe('O ID do aluno para o qual gerar a declaração.') }),
+        outputSchema: ToolResponseSchema,
+    },
+    async ({ studentId }) => ({ studentId })
+);
+
+const requestCreateListTool = ai.defineTool(
+    {
+        name: 'requestCreateList',
+        description: 'Pede à interface para abrir o gerador de listas de alunos.',
+        inputSchema: z.object({}),
+        outputSchema: ToolResponseSchema,
+    },
+    async () => ({})
+);
+
+
+const assistantSystemPrompt = `
+    Você é a FernandIA, uma assistente virtual para uma aplicação de gestão de alunos.
+    Sua tarefa é ajudar os utilizadores a interagir com a aplicação através de uma conversa.
+    Seja concisa, amigável e útil.
+
+    Sempre se apresente como "FernandIA" na sua primeira mensagem.
+    Na sua primeira mensagem, liste as ações que você pode realizar:
+    - Editar dados de um aluno
+    - Gerar uma declaração de matrícula
+    - Criar uma lista de alunos por série
+
+    Para executar uma ação, você DEVE usar as ferramentas disponíveis.
+    
+    COMO USAR AS FERRAMENTAS:
+    1.  Se o utilizador pedir para editar ou gerar uma declaração para um aluno, PRIMEIRO use a ferramenta "findStudent" para encontrar o aluno.
+    2.  Se encontrar UM aluno, confirme com o utilizador e, após a confirmação, use a ferramenta "requestEditStudent" ou "requestGenerateDeclaration" com o ID do aluno.
+    3.  Se encontrar VÁRIOS alunos, peça ao utilizador para especificar qual deles é o correto.
+    4.  Se NÃO encontrar nenhum aluno, informe o utilizador.
+    5.  Se o utilizador pedir para criar uma lista, use a ferramenta "requestCreateList" diretamente.
+
+    NÃO invente informações. Baseie-se apenas nos resultados das ferramentas.
+`;
+
+const internalAssistantFlow = ai.defineFlow(
     {
       name: 'assistantFlow',
       inputSchema: AssistantInputSchema,
       outputSchema: AssistantOutputSchema,
+      system: assistantSystemPrompt,
+      tools: [findStudentTool, requestEditStudentTool, requestGenerateDeclarationTool, requestCreateListTool]
     },
-    async ({ history, query }) => {
-      
-      const studentSample = await getStudentSample();
-
-      const systemPrompt = `
-          Você é um assistente virtual para uma aplicação de gestão de alunos.
-          Sua tarefa é responder a perguntas e ajudar os utilizadores a gerir os dados dos alunos.
-          Seja conciso, amigável e útil.
-
-          Aqui está uma amostra de nomes de alunos na base de dados para seu contexto:
-          ${studentSample}
-        `;
-
-      // Construct the full conversation history for the model
-      const fullHistory: Message[] = [
-        { role: 'system', content: [{ text: systemPrompt }] },
-        ...history,
-        { role: 'user', content: [{ text: query }] } // Add the current user query to the history
-      ];
-
-      const result = await ai.generate({
-        model: 'googleai/gemini-pro',
-        history: fullHistory, // Pass the full history
-        config: {
-          temperature: 0.5,
-        },
-      });
-
-      const response = result.text;
-      
-      return { response };
+    async ({ history }) => {
+        
+        const result = await ai.generate({
+            history,
+            config: { temperature: 0.3 },
+        });
+        
+        return result.output();
     }
-  );
+);
 
-  // Invoke the newly defined flow
-  return internalAssistantFlow(input);
+
+export async function assistantFlow(input: AssistantInput): Promise<any> {
+    return internalAssistantFlow(input);
 }

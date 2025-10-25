@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import XlsxUploader from "@/components/xlsx-uploader";
 import DataViewer from "@/components/data-viewer";
@@ -28,6 +28,8 @@ import { useRouter } from "next/navigation";
 import { FirestorePermissionError } from "@/firebase/errors";
 import AiAssistant from "./ai-assistant";
 import ListGenerator from "./list-generator";
+import EditStudentForm from "./edit-student-form";
+import DeclarationGenerator from "./declaration-generator";
 import { AnimatePresence } from "framer-motion";
 
 export default function StudentManager() {
@@ -44,8 +46,13 @@ export default function StudentManager() {
   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [currentDateTime, setCurrentDateTime] = useState('');
+  
+  // State for dialogs
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [isListGeneratorOpen, setIsListGeneratorOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<DataItem | null>(null);
+  const [declarationStudent, setDeclarationStudent] = useState<DataItem | null>(null);
+  
   
   // Memoize the query to prevent re-renders
   const studentsQuery = useMemoFirebase(() => {
@@ -130,6 +137,7 @@ export default function StudentManager() {
     );
      const sortedData = updatedData.sort((a, b) => (a.mainItem || "").localeCompare(b.mainItem || ""));
     setData(sortedData);
+    setEditingStudent(null);
   }
 
   const handleConfirmClear = () => {
@@ -167,6 +175,31 @@ export default function StudentManager() {
     }
   };
   
+  // --- AI Assistant action handlers ---
+  const handleRequestEditStudent = useCallback((studentId: string) => {
+    const studentToEdit = data.find(s => s.id === studentId);
+    if (studentToEdit) {
+        setEditingStudent(studentToEdit);
+    } else {
+        toast({ variant: 'destructive', title: 'Aluno não encontrado' });
+    }
+  }, [data, toast]);
+
+  const handleRequestGenerateDeclaration = useCallback((studentId: string) => {
+    const studentToDeclare = data.find(s => s.id === studentId);
+    if (studentToDeclare) {
+        setDeclarationStudent(studentToDeclare);
+    } else {
+        toast({ variant: 'destructive', title: 'Aluno não encontrado' });
+    }
+  }, [data, toast]);
+
+  const handleRequestCreateList = useCallback(() => {
+    setIsListGeneratorOpen(true);
+  }, []);
+  // --- End of AI handlers ---
+
+
   const isPageLoading = isDataLoading || isUserLoading || isClearing || isUploading;
   const hasData = !isPageLoading && data.length > 0;
 
@@ -269,12 +302,18 @@ export default function StudentManager() {
           </DialogContent>
         </Dialog>
 
-        {isAssistantOpen && <AiAssistant onClose={() => setIsAssistantOpen(false)} />}
+        {isAssistantOpen && 
+            <AiAssistant 
+                onClose={() => setIsAssistantOpen(false)}
+                onRequestEditStudent={handleRequestEditStudent}
+                onRequestGenerateDeclaration={handleRequestGenerateDeclaration}
+                onRequestCreateList={handleRequestCreateList} 
+            />}
         
         {hasData && (
           <>
             <Button 
-              className="fixed bottom-4 right-4 h-14 w-14 rounded-full shadow-2xl" 
+              className="fixed bottom-4 left-4 h-14 w-14 rounded-full shadow-2xl" 
               size="icon"
               onClick={() => setIsListGeneratorOpen(true)}
             >
@@ -290,6 +329,21 @@ export default function StudentManager() {
             )}
             </AnimatePresence>
           </>
+        )}
+        
+        {/* Render Dialogs triggered by AI or other components */}
+        {editingStudent && (
+          <EditStudentForm
+            student={editingStudent}
+            onClose={() => setEditingStudent(null)}
+            onEditComplete={handleEditComplete}
+          />
+        )}
+        {declarationStudent && (
+          <DeclarationGenerator
+            student={declarationStudent}
+            onClose={() => setDeclarationStudent(null)}
+          />
         )}
     </main>
   );
