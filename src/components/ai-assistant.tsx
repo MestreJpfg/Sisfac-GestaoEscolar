@@ -128,9 +128,7 @@ export default function AiAssistant({
     } finally {
       setIsLoading(false);
       // Se a IA não pediu uma ferramenta, resetar a ação para mostrar os botões de novo
-      const lastMessage = history[history.length-1];
-      const toolRequested = lastMessage?.content.some(c => c.toolRequest);
-      if(!toolRequested) {
+      if (!history[history.length - 1]?.content.some(c => c.toolRequest)) {
         setCurrentAction(null);
       }
     }

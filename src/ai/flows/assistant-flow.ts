@@ -10,7 +10,7 @@ import { ai } from '@/ai/genkit';
 import { getFirestoreServer } from '@/firebase/server-init';
 import { collection, getDocs, query } from 'firebase/firestore';
 import { type Student } from '@/docs/backend-schema';
-import { AssistantInputSchema, AssistantOutputSchema, type AssistantInput, ToolResponseSchema } from './assistant-schema';
+import { AssistantInputSchema, AssistantOutputSchema, ToolResponseSchema } from './assistant-schema';
 import { z } from 'genkit';
 
 const findStudentTool = ai.defineTool(
@@ -73,10 +73,10 @@ const requestCreateListTool = ai.defineTool(
     {
         name: 'requestCreateList',
         description: 'Pede à interface para abrir o gerador de listas de alunos.',
-        inputSchema: z.object({}),
+        inputSchema: z.object({}), // Não precisa de input
         outputSchema: ToolResponseSchema,
     },
-    async () => ({})
+    async () => ({}) // Retorna um objeto vazio, conforme o schema
 );
 
 
