@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CornerDownLeft, Loader, Bot, X } from 'lucide-react';
+import { CornerDownLeft, Loader, Bot, X, User, FileText, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { assistantFlow } from '@/ai/flows/assistant-flow';
@@ -19,9 +19,13 @@ interface AiAssistantProps {
   onRequestCreateList: () => void;
 }
 
+type AssistantState = 'idle' | 'awaiting_input' | 'loading' | 'tool_response';
+type ActionType = 'edit' | 'declaration' | 'list' | null;
+
+
 const initialMessage: Message = {
     role: 'model',
-    content: [{ text: "Olá! Eu sou a FernandIA, a sua assistente virtual.\n\nComo posso ajudar hoje? Você pode me pedir para:\n- Editar os dados de um aluno\n- Gerar uma declaração de matrícula\n- Criar uma lista de alunos por série" }],
+    content: [{ text: "Olá! Eu sou a FernandIA. 👋\n\nSelecione uma das opções abaixo para começar." }],
 };
 
 export default function AiAssistant({ 
@@ -33,7 +37,9 @@ export default function AiAssistant({
   const [history, setHistory] = useState<Message[]>([initialMessage]);
   const [query, setQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [currentAction, setCurrentAction] = useState<ActionType>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -43,29 +49,60 @@ export default function AiAssistant({
       });
     }
   }, [history]);
+  
+  useEffect(() => {
+    // Focus the input when the assistant is waiting for text input
+    if (currentAction && currentAction !== 'list' && inputRef.current) {
+        inputRef.current.focus();
+    }
+  }, [currentAction])
+
+
+  const handleActionSelect = (action: ActionType) => {
+    setCurrentAction(action);
+    let messageText = '';
+    if (action === 'edit') {
+        messageText = 'Ótimo! Qual o nome do aluno que deseja editar?';
+    } else if (action === 'declaration') {
+        messageText = 'Perfeito. Qual o nome do aluno para gerar a declaração?';
+    } else if (action === 'list') {
+        // This action is immediate and doesn't require more input.
+        setHistory(prev => [...prev, {role: 'user', content: [{text: "Criar uma lista de alunos"}]}]);
+        handleToolResponse('requestCreateList');
+        return;
+    }
+    setHistory(prev => [...prev, { role: 'model', content: [{ text: messageText }] }]);
+  };
+
 
   const handleToolResponse = useCallback((toolName: string, studentId?: string) => {
-    switch (toolName) {
-        case 'requestEditStudent':
-            if(studentId) onRequestEditStudent(studentId);
-            break;
-        case 'requestGenerateDeclaration':
-            if(studentId) onRequestGenerateDeclaration(studentId);
-            break;
-        case 'requestCreateList':
-            onRequestCreateList();
-            break;
-        default:
-            console.warn(`Unknown tool requested by AI: ${toolName}`);
-    }
-    // Close the assistant after executing a final UI action
-    onClose();
+    // Delay closing to let user see the final state
+    setTimeout(() => {
+        switch (toolName) {
+            case 'requestEditStudent':
+                if(studentId) onRequestEditStudent(studentId);
+                break;
+            case 'requestGenerateDeclaration':
+                if(studentId) onRequestGenerateDeclaration(studentId);
+                break;
+            case 'requestCreateList':
+                onRequestCreateList();
+                break;
+            default:
+                console.warn(`Unknown tool requested by AI: ${toolName}`);
+        }
+        onClose();
+    }, 1000);
   }, [onRequestEditStudent, onRequestGenerateDeclaration, onRequestCreateList, onClose]);
 
 
   const handleSubmit = async () => {
-    if (!query.trim() || isLoading) return;
+    if (!query.trim() || isLoading || !currentAction) return;
     
+    // Prefix the user query with the intent for the AI
+    const actionPrefix = currentAction === 'edit' ? 'Encontrar aluno para editar: ' : 'Encontrar aluno para gerar declaração: ';
+    const fullQuery = actionPrefix + query;
+
     const userMessage: Message = { role: 'user', content: [{ text: query }] };
     const newHistory = [...history, userMessage];
 
@@ -74,7 +111,9 @@ export default function AiAssistant({
     setIsLoading(true);
 
     try {
-        const input: AssistantInput = { history: newHistory };
+        // We send a modified history to the flow that includes the prefix
+        const flowHistory = [...history, { role: 'user', content: [{ text: fullQuery }] }];
+        const input: AssistantInput = { history: flowHistory };
         const response: Message = await assistantFlow(input);
         
         // Add the model's message to history to be displayed
@@ -85,13 +124,7 @@ export default function AiAssistant({
 
         if (toolRequestPart && toolRequestPart.toolRequest) {
             const toolRequest = toolRequestPart.toolRequest;
-            const toolName = toolRequest.name;
-            const toolInput = toolRequest.input;
-
-            // These tools are direct commands for the UI to execute an action
-            if (toolName.startsWith('request')) {
-                handleToolResponse(toolName, toolInput.studentId);
-            }
+            handleToolResponse(toolRequest.name, toolRequest.input.studentId);
         }
     } catch (error) {
       console.error('Error calling assistant flow:', error);
@@ -102,8 +135,66 @@ export default function AiAssistant({
       setHistory((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      // Reset action after flow completes
+      setCurrentAction(null);
     }
   };
+  
+  const renderInputArea = () => {
+    if (isLoading) {
+        return null; // Don't show any input while loading
+    }
+    
+    if (currentAction && currentAction !== 'list') {
+        // Show text input area
+        return (
+            <div className="p-4 border-t relative">
+              <Textarea
+                ref={inputRef}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Digite o nome do aluno..."
+                className="w-full pr-12 resize-none bg-background/80"
+                rows={2}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit();
+                  }
+                }}
+                disabled={isLoading}
+              />
+              <Button
+                size="icon"
+                className="absolute bottom-6 right-6"
+                onClick={handleSubmit}
+                disabled={isLoading || !query.trim()}
+              >
+                <CornerDownLeft className="w-5 h-5" />
+                <span className="sr-only">Enviar</span>
+              </Button>
+            </div>
+        )
+    }
+
+    // Show action buttons
+    return (
+        <div className="p-4 border-t grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <Button variant="outline" onClick={() => handleActionSelect('edit')}>
+                <User className="mr-2 h-4 w-4"/>
+                Editar Aluno
+            </Button>
+            <Button variant="outline" onClick={() => handleActionSelect('declaration')}>
+                <FileText className="mr-2 h-4 w-4"/>
+                Gerar Declaração
+            </Button>
+            <Button variant="outline" onClick={() => handleActionSelect('list')}>
+                <List className="mr-2 h-4 w-4"/>
+                Criar Lista
+            </Button>
+        </div>
+    )
+  }
 
   return (
     <AnimatePresence>
@@ -128,13 +219,11 @@ export default function AiAssistant({
         <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
           <div className="space-y-4">
             {history.map((msg, index) => {
-              // Extract text content from the message parts
               const textContent = msg.content
                 .map(c => c.text)
-                .filter(Boolean) // Filter out empty or undefined text
+                .filter(Boolean)
                 .join('\n');
                 
-              // Don't render messages that have no visible text content
               if (!textContent) return null;
 
               return (
@@ -172,31 +261,7 @@ export default function AiAssistant({
         </ScrollArea>
 
         {/* Input Area */}
-        <div className="p-4 border-t relative">
-          <Textarea
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Peça para editar, gerar ou listar..."
-            className="w-full pr-12 resize-none bg-background/80"
-            rows={2}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit();
-              }
-            }}
-            disabled={isLoading}
-          />
-          <Button
-            size="icon"
-            className="absolute bottom-6 right-6"
-            onClick={handleSubmit}
-            disabled={isLoading || !query.trim()}
-          >
-            <CornerDownLeft className="w-5 h-5" />
-            <span className="sr-only">Enviar</span>
-          </Button>
-        </div>
+        {renderInputArea()}
       </motion.div>
     </AnimatePresence>
   );
