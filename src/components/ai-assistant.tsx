@@ -19,7 +19,6 @@ interface AiAssistantProps {
   onRequestCreateList: () => void;
 }
 
-type AssistantState = 'idle' | 'awaiting_input' | 'loading' | 'tool_response';
 type ActionType = 'edit' | 'declaration' | 'list' | null;
 
 
@@ -98,22 +97,26 @@ export default function AiAssistant({
 
   const handleSubmit = async () => {
     if (!query.trim() || isLoading || !currentAction) return;
-    
-    // Prefix the user query with the intent for the AI
-    const actionPrefix = currentAction === 'edit' ? 'Encontrar aluno para editar: ' : 'Encontrar aluno para gerar declaração: ';
-    const fullQuery = actionPrefix + query;
 
+    // 1. Add the user's visible message to the history
     const userMessage: Message = { role: 'user', content: [{ text: query }] };
     const newHistory = [...history, userMessage];
-
     setHistory(newHistory);
     setQuery('');
     setIsLoading(true);
 
+    // 2. Create the contextualized query for the AI flow
+    const actionPrefix = currentAction === 'edit' 
+        ? 'Encontrar aluno para editar: ' 
+        : 'Encontrar aluno para gerar declaração: ';
+    const fullQuery = actionPrefix + query;
+    const aiMessage: Message = { role: 'user', content: [{ text: fullQuery }] };
+
+    // 3. Send the correct history to the flow (previous messages + the new contextualized one)
+    const flowHistory = [...history, aiMessage];
+    const input: AssistantInput = { history: flowHistory };
+
     try {
-        // We send a modified history to the flow that includes the prefix
-        const flowHistory = [...history, { role: 'user', content: [{ text: fullQuery }] }];
-        const input: AssistantInput = { history: flowHistory };
         const response: Message = await assistantFlow(input);
         
         // Add the model's message to history to be displayed
