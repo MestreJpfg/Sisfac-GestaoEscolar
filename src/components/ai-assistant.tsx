@@ -24,7 +24,7 @@ type ActionType = 'edit' | 'declaration' | 'list' | null;
 
 const initialMessage: Message = {
     role: 'model',
-    content: [{ text: "Olá! Eu sou a FernandIA. 👋\n\nSelecione uma das opções abaixo para começar." }],
+    content: [{ text: "Olá! Eu sou a FernandIA. 👋\n\nComo posso ajudar hoje?" }],
 };
 
 export default function AiAssistant({ 
@@ -50,16 +50,15 @@ export default function AiAssistant({
   }, [history]);
   
   useEffect(() => {
-    // Focus the input when the assistant is waiting for text input
+    // Focar no input quando uma ação que requer texto é selecionada
     if (currentAction && currentAction !== 'list' && !isLoading && inputRef.current) {
         inputRef.current.focus();
     }
-  }, [currentAction, isLoading])
+  }, [currentAction, isLoading]);
 
 
   const handleToolResponse = useCallback((toolName: string, studentId?: string) => {
-    // This function is now responsible for triggering actions in the main UI
-    // and closing the assistant.
+    // Atraso para o utilizador ler a mensagem final da IA
     setTimeout(() => {
         switch (toolName) {
             case 'requestEditStudent':
@@ -72,10 +71,10 @@ export default function AiAssistant({
                 onRequestCreateList();
                 break;
             default:
-                console.warn(`Unknown tool requested by AI: ${toolName}`);
+                console.warn(`Ferramenta desconhecida solicitada pela IA: ${toolName}`);
         }
-        onClose(); // Close the assistant after the action is requested
-    }, 1000); // A small delay to let the user read the final AI message
+        onClose(); // Fechar o assistente após a ação ser solicitada
+    }, 1000); 
   }, [onRequestEditStudent, onRequestGenerateDeclaration, onRequestCreateList, onClose]);
 
 
@@ -85,21 +84,21 @@ export default function AiAssistant({
     const userMessage: Message = { role: 'user', content: [{ text: query }] };
     let flowInput: AssistantInput;
 
-    // Add user message to visible history
+    // Adicionar mensagem do utilizador ao histórico visível
     setHistory(prev => [...prev, userMessage]);
     
-    // Create a contextualized query for the AI.
-    let contextualizedQuery = query;
+    // Criar uma consulta contextualizada para a IA
+    let contextualizedQueryText = query;
     if (currentAction && currentAction !== 'list') {
       const actionPrefix = currentAction === 'edit' 
           ? 'Encontrar aluno para editar: ' 
           : 'Encontrar aluno para gerar declaração: ';
-      contextualizedQuery = actionPrefix + query;
+      contextualizedQueryText = actionPrefix + query;
     }
+    const contextualizedUserMessage: Message = { role: 'user', content: [{ text: contextualizedQueryText }] };
     
-    // The history for the AI will include the new contextualized query.
-    const aiHistory: Message[] = [...history, { role: 'user', content: [{ text: contextualizedQuery }] }];
-    flowInput = { history: aiHistory };
+    // O histórico para a IA incluirá a consulta contextualizada
+    flowInput = { history: [...history, contextualizedUserMessage] };
 
     setQuery('');
     setIsLoading(true);
@@ -113,10 +112,14 @@ export default function AiAssistant({
         if (toolRequestPart && toolRequestPart.toolRequest) {
             const toolRequest = toolRequestPart.toolRequest;
             handleToolResponse(toolRequest.name, toolRequest.input.studentId);
+        } else {
+            // Se a IA responder sem uma ferramenta (ex: pedindo para especificar), resetar a ação
+            // para que o utilizador possa responder ou escolher outra ação.
+            setCurrentAction(null);
         }
 
     } catch (error) {
-      console.error('Error calling assistant flow:', error);
+      console.error('Erro ao chamar o fluxo do assistente:', error);
       const errorMessage: Message = {
         role: 'model',
         content: [{ text: 'Desculpe, ocorreu um erro. Por favor, tente novamente.' }],
@@ -124,8 +127,7 @@ export default function AiAssistant({
       setHistory((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
-      // If the flow didn't result in an action, reset the currentAction to show buttons again.
-      // We check if a tool was requested in the last message. If not, reset.
+      // Se a IA não pediu uma ferramenta, resetar a ação para mostrar os botões de novo
       const lastMessage = history[history.length-1];
       const toolRequested = lastMessage?.content.some(c => c.toolRequest);
       if(!toolRequested) {
@@ -158,10 +160,10 @@ export default function AiAssistant({
   
   const renderInputArea = () => {
     if (isLoading) {
-        return null; // Don't show any input while loading
+        return null; // Não mostrar nenhum input enquanto carrega
     }
     
-    // If an action has been selected that requires text input (edit/declaration)
+    // Se uma ação que requer input de texto (editar/declaração) foi selecionada
     if (currentAction && currentAction !== 'list') {
         return (
             <div className="p-4 border-t relative">
@@ -193,7 +195,7 @@ export default function AiAssistant({
         )
     }
 
-    // Initial state: show action buttons
+    // Estado inicial: mostrar botões de ação
     return (
         <div className="p-4 border-t grid grid-cols-1 sm:grid-cols-3 gap-2">
             <Button variant="outline" onClick={() => handleActionSelect('edit')}>
@@ -220,7 +222,7 @@ export default function AiAssistant({
         exit={{ opacity: 0, y: 50 }}
         className="fixed bottom-4 right-4 z-50 w-[90vw] max-w-lg h-[70vh] max-h-[600px] flex flex-col bg-card/80 backdrop-blur-lg rounded-2xl shadow-2xl border"
       >
-        {/* Header */}
+        {/* Cabeçalho */}
         <div className="flex items-center justify-between p-4 border-b">
           <div className="flex items-center gap-2">
             <Bot className="w-6 h-6 text-primary" />
@@ -231,7 +233,7 @@ export default function AiAssistant({
           </Button>
         </div>
 
-        {/* Message Area */}
+        {/* Área de Mensagens */}
         <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
           <div className="space-y-4">
             {history.map((msg, index) => {
@@ -276,11 +278,9 @@ export default function AiAssistant({
           </div>
         </ScrollArea>
 
-        {/* Input Area */}
+        {/* Área de Input */}
         {renderInputArea()}
       </motion.div>
     </AnimatePresence>
   );
 }
-
-    

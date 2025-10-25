@@ -27,22 +27,22 @@ const findStudentTool = ai.defineTool(
       
       const querySnapshot = await getDocs(studentsRef);
       if (querySnapshot.empty) {
-          console.log("No students found in the database.");
+          console.log("[findStudentTool] A coleção 'students' está vazia.");
           return [];
       }
       
-      const students = querySnapshot.docs.map(doc => ({ id: doc.id, data: doc.data() as Student }));
+      const students = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student & { id: string }));
       
-      // Filter in memory for robustness
       const searchResults = students
-        .filter(student => student.data.mainItem && student.data.mainItem.toLowerCase().includes(name.toLowerCase()))
-        .map(student => ({ id: student.id, name: student.data.mainItem }));
+        .filter(student => student.mainItem && student.mainItem.toLowerCase().includes(name.toLowerCase()))
+        .map(student => ({ id: student.id, name: student.mainItem }));
         
-      console.log(`[findStudentTool] Found ${searchResults.length} students for query "${name}"`);
+      console.log(`[findStudentTool] Encontrados ${searchResults.length} alunos para a consulta "${name}"`);
       return searchResults;
+
     } catch (error) {
-      console.error("[findStudentTool] Error accessing Firestore:", error);
-      // Return an empty array on error to prevent the flow from crashing
+      console.error("[findStudentTool] Erro ao aceder ao Firestore:", error);
+      // Retorna um array vazio em caso de erro para não quebrar o fluxo.
       return [];
     }
   }
@@ -85,16 +85,16 @@ const assistantSystemPrompt = `
     Sua tarefa é ajudar os utilizadores a interagir com a aplicação através de uma conversa.
     Seja concisa, amigável e útil.
 
-    Você receberá uma consulta do usuário que especifica uma ação (editar, gerar declaração, criar lista) e, às vezes, um nome de aluno.
-    
-    SIGA RIGOROSAMENTE ESTES PASSOS:
-    1.  A consulta do usuário já virá com um contexto de ação (ex: "Encontrar aluno para editar: João"). Use a ferramenta "findStudent" para procurar o aluno pelo nome fornecido. Se a consulta for apenas para 'criar lista', a ferramenta "findStudent" não é necessária.
-    2.  Analise o resultado da ferramenta "findStudent":
-        - Se encontrar UM aluno correspondente, você DEVE usar a ferramenta de AÇÃO apropriada ("requestEditStudent" ou "requestGenerateDeclaration") com o ID do aluno encontrado para solicitar a ação na interface. NÃO precisa confirmar com o usuário. Apenas execute a ação e diga "Ok, a abrir a janela de edição para [Nome do Aluno]".
-        - Se encontrar VÁRIOS alunos, você DEVE listar os nomes encontrados e perguntar ao usuário para especificar qual deles é o correto. Ex: "Encontrei alguns alunos com esse nome: [Nome1], [Nome2]. Qual deles você gostaria de selecionar?"
-        - Se NÃO encontrar nenhum aluno, você DEVE informar ao usuário que ninguém foi encontrado com aquele nome. Ex: "Não encontrei nenhum aluno com o nome [nome pesquisado]."
-    3.  Se a consulta do usuário for para "criar lista", use a ferramenta "requestCreateList" imediatamente.
-    4.  Nunca invente informações. Baseie-se apenas nos resultados das ferramentas.
+    Você receberá uma consulta do usuário que já especifica uma ação (ex: "Encontrar aluno para editar: João"). 
+    Siga estes passos rigorosamente:
+
+    1.  **Use a ferramenta 'findStudent'**: Sempre que a consulta do usuário incluir um nome, use a ferramenta 'findStudent' para procurar o aluno.
+    2.  **Analise o resultado da pesquisa**:
+        - Se encontrar **um** aluno, use a ferramenta de ação apropriada ('requestEditStudent' ou 'requestGenerateDeclaration') com o ID do aluno encontrado. Responda com uma confirmação simples como "Ok, a abrir a janela para [Nome do Aluno]".
+        - Se encontrar **vários** alunos, liste os nomes e pergunte ao usuário para especificar qual deles é o correto. Ex: "Encontrei alguns alunos com esse nome: [Nome1], [Nome2]. Qual deles você gostaria de selecionar?"
+        - Se **não encontrar** nenhum aluno, informe ao usuário. Ex: "Não encontrei nenhum aluno com o nome [nome pesquisado]."
+    3.  **Ação Direta**: Se a consulta for para uma ação que não requer um nome de aluno (como "criar lista"), use a ferramenta correspondente ('requestCreateList') imediatamente.
+    4.  **Baseie-se apenas nos resultados das ferramentas**. Nunca invente informações.
 `;
 
 const internalAssistantFlow = ai.defineFlow(
@@ -106,9 +106,10 @@ const internalAssistantFlow = ai.defineFlow(
       tools: [findStudentTool, requestEditStudentTool, requestGenerateDeclarationTool, requestCreateListTool]
     },
     async (input) => {
-        // The input now contains the full history, with the user's latest query at the end.
         const llmResponse = await ai.generate({
-            history: input.history,
+            // Passa a mensagem mais recente do usuário para o modelo.
+            prompt: input.history[input.history.length - 1].content,
+            history: input.history.slice(0, -1),
             config: { temperature: 0.1 },
         });
         
@@ -123,5 +124,3 @@ const internalAssistantFlow = ai.defineFlow(
 export async function assistantFlow(input: AssistantInput): Promise<any> {
     return internalAssistantFlow(input);
 }
-
-    
