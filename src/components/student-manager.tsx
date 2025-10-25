@@ -242,22 +242,18 @@ export default function StudentManager() {
           ) : (
             <div className="space-y-4">
               <DataViewer data={data} onEditComplete={handleEditComplete} />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <Button onClick={() => setIsClearConfirmOpen(true)} variant="outline">
+              <div className="space-y-2">
+                <Button onClick={() => setIsClearConfirmOpen(true)} variant="outline" className="w-full">
                   <Trash2 className="mr-2 h-4 w-4" />
                   Limpar e Carregar Novo
                 </Button>
-                <Button onClick={() => setIsAssistantOpen(true)} variant="outline">
-                   <Bot className="mr-2 h-4 w-4" />
-                   Assistente Virtual
-                </Button>
+                {notificationPermission !== 'denied' && user && (
+                  <Button onClick={handleNotificationAction} className="w-full" variant="secondary">
+                    <BellRing className="mr-2 h-4 w-4" />
+                    {notificationPermission === 'granted' ? 'Testar Notificação' : 'Ativar Notificações'}
+                  </Button>
+                )}
               </div>
-              {notificationPermission !== 'denied' && user && (
-                <Button onClick={handleNotificationAction} className="w-full" variant="secondary">
-                  <BellRing className="mr-2 h-4 w-4" />
-                  {notificationPermission === 'granted' ? 'Testar Notificação' : 'Ativar Notificações'}
-                </Button>
-              )}
             </div>
           )}
         </div>
@@ -319,6 +315,14 @@ export default function StudentManager() {
             >
               <List className="h-6 w-6" />
               <span className="sr-only">Gerar Lista de Alunos</span>
+            </Button>
+             <Button 
+              className="fixed bottom-4 right-4 h-14 w-14 rounded-full shadow-2xl" 
+              size="icon"
+              onClick={() => setIsAssistantOpen(true)}
+            >
+              <Bot className="h-6 w-6" />
+              <span className="sr-only">Assistente Virtual</span>
             </Button>
             <AnimatePresence>
             {isListGeneratorOpen && (
