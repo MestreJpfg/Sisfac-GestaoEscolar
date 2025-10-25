@@ -48,7 +48,7 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
   const serie = getStudentValue('serie');
   const turma = getStudentValue('classe');
   const turno = getStudentValue('turno');
-  const mae = getStudentValue('filiação 1'); // Corrected key from 'filiacao1'
+  const mae = getStudentValue('filiação 1');
   const pai = getStudentValue('filiação 2');
   const rm = getStudentValue('rm');
   const nis = getStudentValue('nis');
@@ -66,8 +66,8 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
     pdf.setTextColor(0, 0, 0);
     pdf.setFontSize(12);
 
-    const leftMargin = 25;
-    const rightMargin = 25;
+    const leftMargin = 10;
+    const rightMargin = 10;
     const textWidth = pdfWidth - leftMargin - rightMargin;
     let yPosition = 85; // Adjusted yPosition to move text block higher
 
@@ -129,22 +129,22 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
     
 
     // --- Observations Section ---
-    if (rm || nis) {
-        yPosition += 5;
-        pdf.setFont('helvetica', 'bold');
-        pdf.text("Observações:", leftMargin, yPosition);
-        yPosition += 7;
-        pdf.setFont('helvetica', 'normal');
-        
-        if (rm) {
-            pdf.text(`• Registro de Matrícula (RM): ${rm}`, leftMargin + 5, yPosition);
-            yPosition += 6;
-        }
-        if (nis) {
-            pdf.text(`• Número de Identificação Social (NIS): ${nis}`, leftMargin + 5, yPosition);
-            yPosition += 6;
-        }
+    yPosition += 5;
+    pdf.setFont('helvetica', 'bold');
+    pdf.text("Observações:", leftMargin, yPosition);
+    yPosition += 7;
+    pdf.setFont('helvetica', 'normal');
+    
+    if (rm) {
+        pdf.text(`• Registro de Matrícula (RM): ${rm}`, leftMargin + 5, yPosition);
+        yPosition += 6;
     }
+    if (nis) {
+        pdf.text(`• Número de Identificação Social (NIS): ${nis}`, leftMargin + 5, yPosition);
+        yPosition += 6;
+    }
+    pdf.text(`• Frequência Bimestral em 100%`, leftMargin + 5, yPosition);
+    yPosition += 6;
 
     // --- Date and Signature ---
     const dateYPosition = 230;
