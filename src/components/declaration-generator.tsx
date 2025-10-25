@@ -38,7 +38,8 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
 
   const getStudentValue = (label: string): string => {
     if (!student.subItems) return '';
-    const item = student.subItems.find(si => si.label.toLowerCase().includes(label.toLowerCase()));
+    // Case-insensitive and trim search for the label
+    const item = student.subItems.find(si => si.label.trim().toLowerCase() === label.trim().toLowerCase());
     return item ? item.value : '';
   };
   
@@ -47,34 +48,110 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
   const serie = getStudentValue('serie');
   const turma = getStudentValue('classe');
   const turno = getStudentValue('turno');
+  const mae = getStudentValue('filiacao1');
+  const pai = getStudentValue('filiação 2'); // Note the different character in 'filiação'
+  const rm = getStudentValue('rm');
+  const nis = getStudentValue('nis');
   const fileName = `Declaracao_${nomeCompleto.replace(/ /g, '_')}.pdf`;
 
   const generatePdfInstance = (img: HTMLImageElement): jsPDF => {
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
     pdf.addImage(img, 'JPEG', 0, 0, pdfWidth, pdf.internal.pageSize.getHeight(), undefined, 'FAST');
+    
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(0, 0, 0);
     pdf.setFontSize(12);
 
-    const leftMargin = 20;
-    const rightMargin = 20;
+    const leftMargin = 25;
+    const rightMargin = 25;
     const textWidth = pdfWidth - leftMargin - rightMargin;
-    let yPosition = 100; 
-    
-    const text1 = `Declaramos, para os devidos fins, que o(a) aluno(a) ${nomeCompleto}, nascido(a) em ${dataNascimento}, está regularmente matriculado(a) nesta Unidade Escolar no ano letivo de ${currentYear}, cursando o ${serie} - Turma ${turma}, no período da ${turno}.`;
-    
-    const textLines1 = pdf.splitTextToSize(text1, textWidth);
-    pdf.text(textLines1, leftMargin, yPosition, { align: 'left', lineHeightFactor: 1.5 });
-    
-    yPosition += pdf.getTextDimensions(textLines1, { lineHeightFactor: 1.5 }).h + (4 * 5);
+    let yPosition = 100;
 
-    const obsText = "Obs: Frequência Bimestral em 100%";
-    const obsLines = pdf.splitTextToSize(obsText, textWidth);
-    pdf.text(obsLines, leftMargin, yPosition, { align: 'left', lineHeightFactor: 1.5 });
+    // --- Title ---
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(16);
+    pdf.text("DECLARAÇÃO DE MATRÍCULA", pdfWidth / 2, yPosition, { align: 'center' });
+    yPosition += 20;
 
-    const dateYPosition = 210;
-    pdf.text(`Fortaleza, ${currentDate}`, pdf.internal.pageSize.getWidth() - rightMargin, dateYPosition, { align: 'right' });
+    // --- Body Text ---
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(12);
+
+    const addParagraph = (text: (string | { text: string; isBold: boolean })[]) => {
+        const splitText = pdf.splitTextToSize(text.map(t => typeof t === 'string' ? t : t.text).join(''), textWidth);
+        const boldParts = text.filter(t => typeof t !== 'string' && t.isBold) as { text: string; isBold: boolean }[];
+        
+        pdf.text(splitText, leftMargin, yPosition, { align: 'justify', lineHeightFactor: 1.5 });
+        
+        // Find and re-apply bolding
+        splitText.forEach((line: string, lineIndex: number) => {
+            boldParts.forEach(boldPart => {
+                let startIndex = 0;
+                let index = line.indexOf(boldPart.text, startIndex);
+                while(index !== -1) {
+                    const precedingText = line.substring(0, index);
+                    const precedingTextWidth = pdf.getStringUnitWidth(precedingText) * pdf.getFontSize() / pdf.internal.scaleFactor;
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text(boldPart.text, leftMargin + precedingTextWidth, yPosition + (lineIndex * (pdf.getLineHeight() * 1.5 / pdf.internal.scaleFactor)), { align: 'left' });
+                    pdf.setFont('helvetica', 'normal');
+                    startIndex = index + boldPart.text.length;
+                    index = line.indexOf(boldPart.text, startIndex);
+                }
+            });
+        });
+        
+        yPosition += (splitText.length * (pdf.getLineHeight() * 1.5 / pdf.internal.scaleFactor)) + 5;
+    };
+    
+    const introText = [
+        "Declaramos, para os devidos fins, que o(a) estudante ",
+        { text: nomeCompleto, isBold: true },
+        `, nascido(a) em ${dataNascimento}, filho(a) de ${mae}`,
+        pai ? ` e de ${pai},` : ',',
+        ` encontra-se regularmente matriculado(a) nesta Unidade Escolar no ano letivo de ${currentYear}.`
+    ];
+    addParagraph(introText);
+    
+    const classInfoText = [
+        "O(A) referido(a) aluno(a) está cursando o ",
+        { text: serie, isBold: true },
+        `, na turma `,
+        { text: turma, isBold: true },
+        `, no período da `,
+        { text: turno.toLowerCase(), isBold: true },
+        `.`
+    ];
+    addParagraph(classInfoText);
+
+    // --- Observations Section ---
+    if (rm || nis) {
+        yPosition += 5;
+        pdf.setFont('helvetica', 'bold');
+        pdf.text("Observações:", leftMargin, yPosition);
+        yPosition += 7;
+        pdf.setFont('helvetica', 'normal');
+        
+        if (rm) {
+            pdf.text(`• Registro de Matrícula (RM): ${rm}`, leftMargin + 5, yPosition);
+            yPosition += 6;
+        }
+        if (nis) {
+            pdf.text(`• Número de Identificação Social (NIS): ${nis}`, leftMargin + 5, yPosition);
+            yPosition += 6;
+        }
+    }
+
+    // --- Date and Signature ---
+    const dateYPosition = 230;
+    const signatureYPosition = 250;
+    
+    pdf.text(`Fortaleza, ${currentDate}.`, pdfWidth / 2, dateYPosition, { align: 'center' });
+
+    pdf.line(pdfWidth / 2 - 40, signatureYPosition, pdfWidth / 2 + 40, signatureYPosition);
+    pdf.setFontSize(10);
+    pdf.text("Assinatura da Secretaria", pdfWidth / 2, signatureYPosition + 5, { align: 'center' });
+
 
     return pdf;
   }
@@ -96,7 +173,6 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
               files: [pdfFile],
               title: `Declaração - ${nomeCompleto}`,
             }).catch((error) => {
-              // Ignore abort errors, which happen if the user cancels the share dialog
               if (error.name !== 'AbortError') {
                 throw error;
               }
@@ -129,13 +205,14 @@ const DeclarationGenerator = ({ student, onClose }: DeclarationGeneratorProps) =
     } else {
       img.onload = processPdf;
       img.onerror = () => {
-        console.error("Erro ao carregar a imagem do template. Gerando PDF sem imagem.");
+        console.error("Erro ao carregar a imagem do template. Gerando PDF sem imagem de fundo.");
         toast({
           variant: 'destructive',
           title: 'Erro de Imagem',
-          description: 'Não foi possível carregar a imagem de fundo do PDF.',
+          description: 'Não foi possível carregar a imagem de fundo do PDF. O documento será gerado sem ela.',
         });
-        setIsGenerating(false);
+        // Generate without the background image if it fails to load
+        processPdf();
       };
     }
   };
