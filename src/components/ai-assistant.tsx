@@ -51,31 +51,15 @@ export default function AiAssistant({
   
   useEffect(() => {
     // Focus the input when the assistant is waiting for text input
-    if (currentAction && currentAction !== 'list' && inputRef.current) {
+    if (currentAction && currentAction !== 'list' && !isLoading && inputRef.current) {
         inputRef.current.focus();
     }
-  }, [currentAction])
-
-
-  const handleActionSelect = (action: ActionType) => {
-    setCurrentAction(action);
-    let messageText = '';
-    if (action === 'edit') {
-        messageText = 'Ótimo! Qual o nome do aluno que deseja editar?';
-    } else if (action === 'declaration') {
-        messageText = 'Perfeito. Qual o nome do aluno para gerar a declaração?';
-    } else if (action === 'list') {
-        // This action is immediate and doesn't require more input.
-        setHistory(prev => [...prev, {role: 'user', content: [{text: "Criar uma lista de alunos"}]}]);
-        handleToolResponse('requestCreateList');
-        return;
-    }
-    setHistory(prev => [...prev, { role: 'model', content: [{ text: messageText }] }]);
-  };
+  }, [currentAction, isLoading])
 
 
   const handleToolResponse = useCallback((toolName: string, studentId?: string) => {
-    // Delay closing to let user see the final state
+    // This function is now responsible for triggering actions in the main UI
+    // and closing the assistant.
     setTimeout(() => {
         switch (toolName) {
             case 'requestEditStudent':
@@ -90,45 +74,50 @@ export default function AiAssistant({
             default:
                 console.warn(`Unknown tool requested by AI: ${toolName}`);
         }
-        onClose();
-    }, 1000);
+        onClose(); // Close the assistant after the action is requested
+    }, 1000); // A small delay to let the user read the final AI message
   }, [onRequestEditStudent, onRequestGenerateDeclaration, onRequestCreateList, onClose]);
 
 
   const handleSubmit = async () => {
-    if (!query.trim() || isLoading || !currentAction) return;
+    if (!query.trim() || isLoading) return;
 
-    // 1. Add the user's visible message to the history
     const userMessage: Message = { role: 'user', content: [{ text: query }] };
-    const newHistory = [...history, userMessage];
-    setHistory(newHistory);
+    let flowInput: AssistantInput;
+
+    if (currentAction && currentAction !== 'list') {
+      // Step 2: User provides a name. Create a contextualized query for the AI.
+      const actionPrefix = currentAction === 'edit' 
+          ? 'Encontrar aluno para editar: ' 
+          : 'Encontrar aluno para gerar declaração: ';
+      
+      const contextualizedQuery = actionPrefix + query;
+      const contextualizedMessage: Message = { role: 'user', content: [{ text: contextualizedQuery }]};
+      
+      // Send the history UP TO the point before the user typed the name, plus the new contextualized query.
+      // This avoids sending the raw name, which could confuse the AI.
+      flowInput = { history: [...history.slice(0, -1), contextualizedMessage]};
+
+    } else {
+       // This handles cases where the user might continue a conversation after an initial response
+      flowInput = { history: [...history, userMessage] };
+    }
+
+    setHistory(prev => [...prev, userMessage]);
     setQuery('');
     setIsLoading(true);
 
-    // 2. Create the contextualized query for the AI flow
-    const actionPrefix = currentAction === 'edit' 
-        ? 'Encontrar aluno para editar: ' 
-        : 'Encontrar aluno para gerar declaração: ';
-    const fullQuery = actionPrefix + query;
-    const aiMessage: Message = { role: 'user', content: [{ text: fullQuery }] };
-
-    // 3. Send the correct history to the flow (previous messages + the new contextualized one)
-    const flowHistory = [...history, aiMessage];
-    const input: AssistantInput = { history: flowHistory };
-
     try {
-        const response: Message = await assistantFlow(input);
+        const response: Message = await assistantFlow(flowInput);
         
-        // Add the model's message to history to be displayed
         setHistory(prev => [...prev, response]);
 
-        // Check if the model's response contains a tool request to the UI
         const toolRequestPart = response.content.find(part => part.toolRequest);
-
         if (toolRequestPart && toolRequestPart.toolRequest) {
             const toolRequest = toolRequestPart.toolRequest;
             handleToolResponse(toolRequest.name, toolRequest.input.studentId);
         }
+
     } catch (error) {
       console.error('Error calling assistant flow:', error);
       const errorMessage: Message = {
@@ -138,18 +127,45 @@ export default function AiAssistant({
       setHistory((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
-      // Reset action after flow completes
-      setCurrentAction(null);
+      // If the flow didn't result in an action, reset the currentAction to show buttons again.
+      // We check if a tool was requested in the last message. If not, reset.
+      const lastMessage = history[history.length-1];
+      const toolRequested = lastMessage?.content.some(c => c.toolRequest);
+      if(!toolRequested) {
+        setCurrentAction(null);
+      }
     }
   };
+
+  const handleActionSelect = (action: ActionType) => {
+    setCurrentAction(action);
+    let messageText = '';
+
+    if (action === 'list') {
+        const userMessage: Message = { role: 'user', content: [{text: "Criar uma lista de alunos"}] };
+        const modelResponse: Message = { role: 'model', content: [{text: "Ok, a abrir o gerador de listas..."}] };
+        setHistory(prev => [...prev, userMessage, modelResponse]);
+        handleToolResponse('requestCreateList');
+        return;
+    }
+    
+    if (action === 'edit') {
+        messageText = 'Ótimo! Qual o nome do aluno que deseja editar?';
+    } else if (action === 'declaration') {
+        messageText = 'Perfeito. Qual o nome do aluno para gerar a declaração?';
+    }
+    
+    setHistory(prev => [...prev, { role: 'model', content: [{ text: messageText }] }]);
+  };
+  
   
   const renderInputArea = () => {
     if (isLoading) {
         return null; // Don't show any input while loading
     }
     
+    // If an action has been selected that requires text input (edit/declaration)
     if (currentAction && currentAction !== 'list') {
-        // Show text input area
         return (
             <div className="p-4 border-t relative">
               <Textarea
@@ -180,7 +196,7 @@ export default function AiAssistant({
         )
     }
 
-    // Show action buttons
+    // Initial state: show action buttons
     return (
         <div className="p-4 border-t grid grid-cols-1 sm:grid-cols-3 gap-2">
             <Button variant="outline" onClick={() => handleActionSelect('edit')}>

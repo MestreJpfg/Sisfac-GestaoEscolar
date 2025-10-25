@@ -38,7 +38,7 @@ const findStudentTool = ai.defineTool(
         .filter(student => student.data.mainItem && student.data.mainItem.toLowerCase().includes(name.toLowerCase()))
         .map(student => ({ id: student.id, name: student.data.mainItem }));
         
-      console.log(`Found ${searchResults.length} students for query "${name}"`);
+      console.log(`[findStudentTool] Found ${searchResults.length} students for query "${name}"`);
       return searchResults;
     } catch (error) {
       console.error("Error in findStudent tool:", error);
@@ -81,21 +81,20 @@ const requestCreateListTool = ai.defineTool(
 
 
 const assistantSystemPrompt = `
-    Você é a FernandIA, uma assistente virtual para uma aplicação de gestão de alunos.
+    Você é a FernandIA, uma assistente de IA para uma aplicação de gestão de alunos.
     Sua tarefa é ajudar os utilizadores a interagir com a aplicação através de uma conversa.
     Seja concisa, amigável e útil.
 
-    Sempre se apresente como "FernandIA" na sua primeira mensagem.
+    Você receberá uma consulta do usuário que especifica uma ação (editar, gerar declaração, criar lista) e, às vezes, um nome de aluno.
     
-    Para executar uma ação que requer encontrar um aluno (como editar ou gerar declaração), siga estes passos:
-    1.  Use a ferramenta "findStudent" para procurar o aluno pelo nome fornecido pelo utilizador.
-    2.  Analise o resultado da ferramenta:
-        - Se encontrar UM aluno, confirme com o utilizador ("Encontrei [nome do aluno]. Devo prosseguir com a ação?"). Se o utilizador confirmar, use a ferramenta apropriada ("requestEditStudent" or "requestGenerateDeclaration") com o ID do aluno.
-        - Se encontrar VÁRIOS alunos, liste os nomes encontrados e peça ao utilizador para especificar qual deles é o correto.
-        - Se NÃO encontrar nenhum aluno, informe ao utilizador que não encontrou ninguém com aquele nome.
-    3. Para criar uma lista de alunos, use a ferramenta "requestCreateList" diretamente se o utilizador pedir.
-
-    NÃO invente informações. Baseie-se apenas nos resultados das ferramentas.
+    SIGA RIGOROSAMENTE ESTES PASSOS:
+    1.  Primeiro, use SEMPRE a ferramenta "findStudent" para procurar o aluno pelo nome fornecido na consulta do usuário. Se a consulta for apenas para 'criar lista', a ferramenta "findStudent" não é necessária.
+    2.  Analise o resultado da ferramenta "findStudent":
+        - Se encontrar UM aluno correspondente, você DEVE usar a ferramenta de AÇÃO apropriada ("requestEditStudent" ou "requestGenerateDeclaration") com o ID do aluno encontrado para solicitar a ação na interface. NÃO precisa confirmar com o usuário. Apenas execute a ação.
+        - Se encontrar VÁRIOS alunos, você DEVE listar os nomes encontrados e perguntar ao usuário para especificar qual deles é o correto. Ex: "Encontrei alguns alunos com esse nome: [Nome1], [Nome2]. Qual deles você gostaria de selecionar?"
+        - Se NÃO encontrar nenhum aluno, você DEVE informar ao usuário que ninguém foi encontrado com aquele nome. Ex: "Não encontrei nenhum aluno com o nome [nome pesquisado]."
+    3.  Se a consulta do usuário for para "criar lista", use a ferramenta "requestCreateList" imediatamente.
+    4.  Nunca invente informações. Baseie-se apenas nos resultados das ferramentas.
 `;
 
 const internalAssistantFlow = ai.defineFlow(
@@ -107,16 +106,20 @@ const internalAssistantFlow = ai.defineFlow(
       tools: [findStudentTool, requestEditStudentTool, requestGenerateDeclarationTool, requestCreateListTool]
     },
     async (input) => {
+        // The input now contains the full history, with the user's latest query at the end.
         const llmResponse = await ai.generate({
             history: input.history,
-            config: { temperature: 0.3 },
+            config: { temperature: 0.1 },
         });
         
         return llmResponse.output();
     }
 );
 
-
+/**
+ * Wrapper function for the Genkit flow.
+ * It takes the conversation history and passes it to the flow.
+ */
 export async function assistantFlow(input: AssistantInput): Promise<any> {
     return internalAssistantFlow(input);
 }
