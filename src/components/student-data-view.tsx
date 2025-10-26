@@ -91,6 +91,7 @@ export default function StudentDataView() {
       const totalDocs = allDocsSnapshot.size;
       if (totalDocs === 0) {
         toast({ title: "Base de dados já está vazia." });
+        setIsDeleting(false);
         return;
       }
       
@@ -109,6 +110,12 @@ export default function StudentDataView() {
       
       await Promise.all(batchPromises);
 
+      // Limpar o estado local (cache)
+      setStudents([]);
+      setTotalCount(0);
+      setLastVisible(null);
+      setCurrentPage(1);
+
       toast({
         title: "Sucesso!",
         description: `${deletedCount} registos de alunos foram apagados. A página será recarregada.`,
@@ -125,7 +132,13 @@ export default function StudentDataView() {
         description: `Ocorreu um erro: ${error.message}`
       });
     } finally {
-      setIsDeleting(false);
+      // O recarregamento da página irá redefinir o estado isDeleting
+      // mas podemos definir para false se o recarregamento falhar ou for cancelado
+       if (window.location) {
+         // Não muda o estado se a página está prestes a ser recarregada
+       } else {
+          setIsDeleting(false);
+       }
     }
   };
 
@@ -142,6 +155,8 @@ export default function StudentDataView() {
   };
   
   const handlePrevPage = () => {
+    // Para voltar à primeira página, limpamos o `lastVisible` e fazemos fetch
+    setLastVisible(null);
     fetchStudents('first');
   };
 
@@ -185,7 +200,7 @@ export default function StudentDataView() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteAll}>Sim, apagar tudo</AlertDialogAction>
+              <AlertDialogAction onClick={handleDeleteAll} className="bg-destructive hover:bg-destructive/90">Sim, apagar tudo</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
