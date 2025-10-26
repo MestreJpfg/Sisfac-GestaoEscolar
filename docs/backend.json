@@ -1,113 +1,98 @@
-
 {
   "entities": {
-    "UploadedFile": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "UploadedFile",
+    "Aluno": {
+      "title": "Aluno",
       "type": "object",
-      "description": "Represents an uploaded XLSX file and its associated data.",
+      "description": "Representa um único aluno na base de dados escolar.",
       "properties": {
-        "id": {
+        "rm": {
           "type": "string",
-          "description": "Unique identifier for the uploaded file."
+          "description": "Registro do Aluno, usado como identificador único."
         },
-        "fileName": {
+        "nome": {
+          "type": "string"
+        },
+        "ensino": {
+          "type": "string"
+        },
+        "serie": {
+          "type": "string"
+        },
+        "classe": {
+          "type": "string"
+        },
+        "turno": {
+          "type": "string"
+        },
+        "filiacao_1": {
+          "type": "string"
+        },
+        "filiacao_2": {
+          "type": "string"
+        },
+        "rg": {
+          "type": "string"
+        },
+        "nis": {
+          "type": "string"
+        },
+        "id_censo": {
+          "type": "string"
+        },
+        "cpf_aluno": {
+          "type": "string"
+        },
+        "cpffiliacao1": {
+          "type": "string"
+        },
+        "data_nascimento": {
           "type": "string",
-          "description": "The original name of the uploaded XLSX file."
+          "format": "date"
         },
-        "uploadDate": {
-          "type": "string",
-          "description": "The date and time when the file was uploaded.",
-          "format": "date-time"
+        "endereco": {
+          "type": "string"
         },
-        "fileSize": {
-          "type": "number",
-          "description": "The size of the uploaded file in bytes."
-        },
-        "extractedDataId": {
-          "type": "string",
-          "description": "Reference to ExtractedData. (Relationship: UploadedFile 1:1 ExtractedData)"
-        }
-      },
-      "required": [
-        "id",
-        "fileName",
-        "uploadDate",
-        "fileSize",
-        "extractedDataId"
-      ]
-    },
-    "ExtractedData": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ExtractedData",
-      "type": "object",
-      "description": "Represents the extracted data from the first column of an XLSX file.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the extracted data."
-        },
-        "data": {
+        "telefones": {
           "type": "array",
-          "description": "An array of strings, each representing a row from the first column of the XLSX file.",
           "items": {
             "type": "string"
           }
+        },
+        "transporte_escolar": {
+          "type": "boolean"
+        },
+        "carteira_estudante": {
+          "type": "boolean"
+        },
+        "nee": {
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "required": [
-        "id",
-        "data"
+        "rm",
+        "nome"
       ]
     }
   },
   "auth": {
     "providers": [
-      "password",
       "anonymous"
     ]
   },
   "firestore": {
     "structure": [
       {
-        "path": "/users/{userId}/uploadedFiles/{uploadedFileId}",
+        "path": "/alunos/{alunoId}",
         "definition": {
-          "entityName": "UploadedFile",
           "schema": {
-            "$ref": "#/backend/entities/UploadedFile"
+            "$ref": "#/entities/Aluno"
           },
-          "description": "Stores metadata about uploaded XLSX files. Uses path-based ownership for user-specific data. The `userId` parameter ensures only the owning user can access these documents.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The ID of the user who uploaded the file."
-            },
-            {
-              "name": "uploadedFileId",
-              "description": "The unique ID of the uploaded file."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/extractedData/{extractedDataId}",
-        "definition": {
-          "entityName": "ExtractedData",
-          "schema": {
-            "$ref": "#/backend/entities/ExtractedData"
-          },
-          "description": "Stores the extracted data from uploaded XLSX files. Uses path-based ownership for user-specific data. The `userId` parameter ensures only the owning user can access these documents.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The ID of the user who owns the extracted data."
-            },
-            {
-              "name": "extractedDataId",
-              "description": "The unique ID of the extracted data."
-            }
-          ]
+          "description": "Coleção principal que armazena os dados de todos os alunos. O ID do documento é o RM do aluno."
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to provide a secure and scalable solution for the XLSX Viewer application. Each user has a dedicated space for their uploaded files and extracted data, ensuring data isolation and simplifying security rules. The chosen structure prioritizes authorization independence by avoiding `get()` calls in security rules. This is achieved through path-based ownership, where each user has their own collection of files and extracted data. This makes it easier to debug and maintain, and also provides better guarantees about the security of the data. The structure allows for secure list operations because data with different security requirements are stored in separate collections. The data model uses explicit state modeling (through the `id
+    ]
+  }
+}
