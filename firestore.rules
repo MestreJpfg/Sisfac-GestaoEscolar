@@ -2,17 +2,55 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     /**
-     * @description This ruleset enforces a read-only policy on the 'alunos' collection,
-     * allowing any user to read the data but restricting all write operations. This is 
-     * suitable for public, read-only data where data modification is not permitted.
+     * @description This ruleset enforces a document ownership model for the `/alunos` collection.
+     *              Each aluno document is identified by their `rm` (Registro do Aluno) which serves as the document ID.
+     *              Only authenticated users can create, read, update, or delete aluno documents, and they can only
+     *              perform these operations on documents where the `rm` matches their `auth.uid`.  Since Anonymous auth is in use,
+     *              each user will have a unique UID, and therefore only be able to access the `aluno` record associated with that UID.
      * @path /alunos/{alunoId}
-     * @allow (get, list) Any user can read a aluno document.
-     * @deny (create, update, delete) No user can create, update, or delete a aluno document.
-     * @principle Read-only data access for all users; prevents unauthorized data modification.
+     * @allow (create) - User with UID 'user123' creates a new aluno document with ID 'user123'.
+     *                  request.auth.uid == 'user123', request.resource.data.rm == 'user123'
+     * @allow (get, list) - User with UID 'user456' reads the aluno document with ID 'user456'.
+     *                  request.auth.uid == 'user456', resource.data.rm == 'user456'
+     * @allow (update, delete) - User with UID 'user789' updates the aluno document with ID 'user789'.
+     *                  request.auth.uid == 'user789', resource.data.rm == 'user789'
+     * @deny  (create) - User with UID 'user123' attempts to create a new aluno document with ID 'user456'.
+     *                  request.auth.uid == 'user123', request.resource.data.rm == 'user456'
+     * @deny  (update) - User with UID 'user123' attempts to update the aluno document with ID 'user456'.
+     *                  request.auth.uid == 'user123', resource.data.rm == 'user456'
+     * @deny  (delete) - User with UID 'user123' attempts to delete the aluno document with ID 'user456'.
+     *                  request.auth.uid == 'user123', resource.data.rm == 'user456'
+     * @principle Enforces document ownership based on the `rm` field matching the authenticated user's UID.
      */
     match /alunos/{alunoId} {
-      allow get, list: if true;
-      allow create, update, delete: if false;
+      // Helper function to check if the user is signed in.
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      // Helper function to check if the user is the owner of the document.
+      function isOwner(alunoId) {
+        return isSignedIn() && request.auth.uid == alunoId;
+      }
+
+      // Helper function to check if the user is the existing owner of the document.
+      function isExistingOwner(alunoId) {
+        return isOwner(alunoId) && resource != null;
+      }
+
+      // Allow anyone to read the data
+      allow get: if true;
+      allow list: if false;
+
+      // Only allow the owner to create a document, and require that the 'rm' field matches the document ID.
+      allow create: if isSignedIn() && request.auth.uid == alunoId;
+
+      // Only allow the owner to update a document.
+      // Enforce that the 'rm' field (which represents ownership) cannot be changed.
+      allow update: if isExistingOwner(alunoId);
+
+      // Only allow the owner to delete the document.
+      allow delete: if isExistingOwner(alunoId);
     }
   }
 }
