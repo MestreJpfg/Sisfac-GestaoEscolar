@@ -44,11 +44,11 @@ export default function StudentTable({ students, currentPage, totalPages, onNext
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>RM</TableHead>
-                <TableHead>Data de Nasc.</TableHead>
                 <TableHead>Série</TableHead>
                 <TableHead>Classe</TableHead>
                 <TableHead>Turno</TableHead>
+                <TableHead>Data de Nasc.</TableHead>
+                <TableHead>RM</TableHead>
                 <TableHead>Filiação 1</TableHead>
                 <TableHead>NEE</TableHead>
               </TableRow>
@@ -57,11 +57,11 @@ export default function StudentTable({ students, currentPage, totalPages, onNext
               {students.map((student) => (
                 <TableRow key={student.id} onClick={() => onRowClick(student)} className="cursor-pointer">
                   <TableCell className="font-medium">{student.nome || <span className="text-muted-foreground italic">Sem nome</span>}</TableCell>
-                  <TableCell>{student.rm}</TableCell>
-                  <TableCell>{student.data_nascimento}</TableCell>
                   <TableCell>{student.serie}</TableCell>
                   <TableCell>{student.classe}</TableCell>
                   <TableCell>{student.turno}</TableCell>
+                  <TableCell>{student.data_nascimento}</TableCell>
+                  <TableCell>{student.rm}</TableCell>
                   <TableCell>{student.filiacao_1}</TableCell>
                   <TableCell>
                     {student.nee ? <Badge variant="destructive">SIM</Badge> : <Badge variant="secondary">NÃO</Badge>}
