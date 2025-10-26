@@ -2,7 +2,7 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "./ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { ChevronLeft, ChevronRight, BookUser, Loader2 } from "lucide-react";
 import { Badge } from "./ui/badge";
 
@@ -23,7 +23,7 @@ export default function StudentTable({ students, currentPage, totalPages, onNext
         <CardContent className="p-6 text-center">
             <BookUser className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum aluno encontrado</h3>
-            <p className="mt-1 text-sm text-muted-foreground">A base de dados parece estar vazia ou ocorreu um erro ao carregar os dados.</p>
+            <p className="mt-1 text-sm text-muted-foreground">A base de dados pode estar vazia. Tente carregar um ficheiro de alunos.</p>
         </CardContent>
       </Card>
     )
