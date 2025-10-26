@@ -56,11 +56,11 @@ export default function StudentManager() {
   const normalizeData = (data: any[]): any[] => {
     if (!data || data.length < 2) return [];
 
-    const headers: string[] = data[0].map((header: any) => 
-      String(header).trim().toLowerCase()
-        .replace(/\s+/g, '_')
-        .replace(/[^a-z0-9_]/g, '')
-    );
+    const headers: string[] = data[0].map((header: any) => {
+        let h = String(header).trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+        if (h === 'nome_registro_civil') return 'nome';
+        return h;
+    });
     
     const rmIndex = headers.indexOf('rm');
     if (rmIndex === -1) {

@@ -27,7 +27,7 @@ export default function StudentFilters({ onFilterChange }: StudentFiltersProps) 
   const [searchTerm, setSearchTerm] = useState('');
 
   const series = useMemo(() => ["INFANTIL II", "INFANTIL III", "INFANTIL IV", "INFANTIL V", "1º ANO", "2º ANO", "3º ANO", "4º ANO", "5º ANO", "6º ANO", "7º ANO", "8º ANO", "9º ANO", "1ª SÉRIE", "2ª SÉRIE", "3ª SÉRIE"], []);
-  const turnos = useMemo(() => ["MANHA", "TARDE", "NOITE"], []);
+  const turnos = useMemo(() => ["MANHÃ", "TARDE", "INTEGRAL"], []);
   const classes = useMemo(() => ["A", "B", "C", "D", "E", "F", "U"], []);
 
   const handleInputChange = (key: keyof StudentFiltersState, value: any) => {
