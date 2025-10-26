@@ -63,7 +63,7 @@ export default function StudentManager() {
           .replace(/é/g, 'e')
           .replace(/\s+/g, '_')
           .replace(/[^a-z0-9_]/g, '');
-        if (h === 'nome_do_registro_civil' || h === 'nome_registro_civil') {
+        if (h === 'nome_do_registro_civil' || h === 'nome_registro_civil' || h === 'nome_de_registro_civil') {
             return 'nome';
         }
         return h;
