@@ -3,9 +3,8 @@
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
-import { Auth, User, onAuthStateChanged } from 'firebase/auth';
+import { Auth, User, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
-import { initiateAnonymousSignIn } from './non-blocking-login';
 import { Loader2 } from 'lucide-react';
 
 interface FirebaseProviderProps {
@@ -71,29 +70,32 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
   // Effect to subscribe to Firebase auth state changes
   useEffect(() => {
-    if (!auth) { // If no Auth service instance, cannot determine user state
+    if (!auth) {
       setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
       return;
     }
-
-    setUserAuthState({ user: null, isUserLoading: true, userError: null }); // Reset on auth instance change
+  
+    // Immediately attempt anonymous sign-in if no user is present
+    if (!auth.currentUser) {
+      signInAnonymously(auth).catch(error => {
+         console.error("FirebaseProvider: Anonymous sign-in failed on init:", error);
+         setUserAuthState({ user: null, isUserLoading: false, userError: error });
+      });
+    }
 
     const unsubscribe = onAuthStateChanged(
       auth,
-      (firebaseUser) => { // Auth state determined
-        if (!firebaseUser) {
-          initiateAnonymousSignIn(auth);
-        } else {
-          setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
-        }
+      (firebaseUser) => {
+        setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
       },
-      (error) => { // Auth listener error
+      (error) => {
         console.error("FirebaseProvider: onAuthStateChanged error:", error);
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
       }
     );
-    return () => unsubscribe(); // Cleanup
-  }, [auth]); // Depends on the auth instance
+  
+    return () => unsubscribe();
+  }, [auth]);
 
   // Memoize the context value
   const contextValue = useMemo((): FirebaseContextState => {
@@ -110,7 +112,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   }, [firebaseApp, firestore, auth, userAuthState]);
 
   // Combined loading state: wait for services AND user authentication
-  const isLoading = !contextValue.areServicesAvailable || contextValue.isUserLoading || !contextValue.user;
+  const isLoading = !contextValue.areServicesAvailable || contextValue.isUserLoading;
 
   if (isLoading) {
     return (
@@ -130,6 +132,18 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       </div>
     );
   }
+  
+  // Final check to ensure we have a user before rendering the app
+  if (!contextValue.user) {
+    return (
+       <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-foreground">
+        <Loader2 className="mb-4 h-12 w-12 animate-spin text-primary" />
+        <h1 className="text-lg font-semibold">A aguardar autenticação...</h1>
+        <p className="text-sm text-muted-foreground">A finalizar a configuração de segurança.</p>
+      </div>
+    )
+  }
+
 
   return (
     <FirebaseContext.Provider value={contextValue}>

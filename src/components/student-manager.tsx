@@ -5,7 +5,7 @@ import Image from "next/image";
 import FileUploader from "@/components/file-uploader";
 import { Loader2 } from "lucide-react";
 import { quotes } from "@/lib/quotes";
-import { useFirestore, useAuth } from "@/firebase";
+import { useFirestore } from "@/firebase";
 import { writeBatch, doc, getCountFromServer, collection } from "firebase/firestore";
 import StudentDataView from "./student-data-view";
 import { useToast } from "@/hooks/use-toast";
@@ -17,7 +17,6 @@ export default function StudentManager() {
   const [currentDateTime, setCurrentDateTime] = useState('');
 
   const firestore = useFirestore();
-  const auth = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -143,7 +142,7 @@ export default function StudentManager() {
   };
 
   const handleUploadComplete = async (data: any[]) => {
-    // A verificação do auth e do firestore é garantida pelo FirebaseProvider
+    // O FirebaseProvider agora garante que `firestore` está disponível antes de renderizar este componente.
     setIsUploading(true);
   
     try {
@@ -155,8 +154,8 @@ export default function StudentManager() {
       }
   
       const batchPromises = [];
+      const batch = writeBatch(firestore);
       for (let i = 0; i < normalizedStudents.length; i += 500) {
-        const batch = writeBatch(firestore);
         const chunk = normalizedStudents.slice(i, i + 500);
         chunk.forEach(student => {
           if (student.rm) {
@@ -187,7 +186,7 @@ export default function StudentManager() {
     }
   };
   
-  const isPageLoading = dataExists === null || isUploading;
+  const isPageLoading = dataExists === null;
 
   return (
     <main className="flex min-h-screen flex-col items-center p-4 sm:p-6 md:p-8">
@@ -218,7 +217,7 @@ export default function StudentManager() {
         </header>
 
         <div className="w-full">
-          {isPageLoading ? (
+          {isPageLoading || isUploading ? (
             <div className="flex flex-col items-center justify-center h-80 rounded-lg border-2 border-dashed border-border bg-card/50">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
               <p className="mt-4 text-muted-foreground">{isUploading ? "Aguarde, a processar e carregar os dados..." : "A verificar a base de dados..."}</p>
