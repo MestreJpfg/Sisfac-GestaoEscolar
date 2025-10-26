@@ -146,14 +146,14 @@ export default function StudentManager() {
 
   const handleUploadComplete = async (data: any[]) => {
     if (!firestore) {
-        toast({
-            variant: "destructive",
-            title: "Erro de Conexão",
-            description: "A conexão com a base de dados ainda não foi estabelecida."
-        });
-        return;
+      toast({
+        variant: "destructive",
+        title: "Erro de Conexão",
+        description: "A conexão com a base de dados ainda não foi estabelecida."
+      });
+      return;
     }
-
+  
     setIsUploading(true);
   
     const normalizedStudents = normalizeData(data);
@@ -162,43 +162,35 @@ export default function StudentManager() {
       setIsUploading(false);
       return;
     }
-
+  
     const alunosCollectionPath = "alunos";
-
-    try {
-      const batchPromises = [];
-      // Firestore batch limit is 500 operations
-      for (let i = 0; i < normalizedStudents.length; i += 500) {
-        const batch = writeBatch(firestore!);
-        const chunk = normalizedStudents.slice(i, i + 500);
-        chunk.forEach(student => {
-          if (student.rm) {
-            const docRef = doc(firestore!, alunosCollectionPath, student.rm);
-            batch.set(docRef, student, { merge: true });
-          }
-        });
-        batchPromises.push(batch.commit());
+    const batch = writeBatch(firestore);
+    
+    normalizedStudents.forEach(student => {
+      if (student.rm) {
+        const docRef = doc(firestore, alunosCollectionPath, student.rm);
+        batch.set(docRef, student, { merge: true });
       }
-      
-      await Promise.all(batchPromises);
+    });
+  
+    try {
+      await batch.commit();
       
       toast({
         title: "Sucesso!",
         description: `${normalizedStudents.length} registros de alunos foram carregados na base de dados.`,
       });
       setDataExists(true);
-  
-    } catch (error: any) {
-        const permissionError = new FirestorePermissionError({
-          path: alunosCollectionPath,
-          operation: 'write',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        setIsUploading(false); // Make sure to stop uploading state on error
-        return; // Stop execution
-    } 
     
-    setIsUploading(false);
+    } catch (error: any) {
+      const permissionError = new FirestorePermissionError({
+        path: alunosCollectionPath,
+        operation: 'write',
+      });
+      errorEmitter.emit('permission-error', permissionError);
+    } finally {
+      setIsUploading(false);
+    }
   };
   
   const isPageLoading = dataExists === null;
