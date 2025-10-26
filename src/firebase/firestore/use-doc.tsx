@@ -91,4 +91,8 @@ export function useDoc<T = any>(
 
   // Developer-facing check to enforce memoization
   if (memoizedDocRef && !memoizedDocRef.__memo) {
-     console.warn('useDoc was called without a memoized document reference. This can lead to performance issues and infinite loops
+     console.warn('useDoc was called without a memoized document reference. This can lead to performance issues and infinite loops');
+  }
+  
+  return { data, isLoading, error };
+}
