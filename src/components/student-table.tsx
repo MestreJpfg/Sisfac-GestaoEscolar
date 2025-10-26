@@ -12,10 +12,11 @@ interface StudentTableProps {
   totalPages: number;
   onNextPage: () => void;
   onPrevPage: () => void;
+  onRowClick: (student: any) => void;
   isLoading: boolean;
 }
 
-export default function StudentTable({ students, currentPage, totalPages, onNextPage, onPrevPage, isLoading }: StudentTableProps) {
+export default function StudentTable({ students, currentPage, totalPages, onNextPage, onPrevPage, onRowClick, isLoading }: StudentTableProps) {
   
   if (students.length === 0 && !isLoading) {
     return (
@@ -53,7 +54,7 @@ export default function StudentTable({ students, currentPage, totalPages, onNext
             </TableHeader>
             <TableBody>
               {students.map((student) => (
-                <TableRow key={student.id}>
+                <TableRow key={student.id} onClick={() => onRowClick(student)} className="cursor-pointer">
                   <TableCell className="font-medium">{student.nome || <span className="text-muted-foreground italic">Sem nome</span>}</TableCell>
                   <TableCell>{student.rm}</TableCell>
                   <TableCell>{student.data_nascimento}</TableCell>

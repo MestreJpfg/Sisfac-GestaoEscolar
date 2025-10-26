@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import StudentDetailSheet from './student-detail-sheet';
 
 
 const PAGE_SIZE = 50;
@@ -33,6 +34,7 @@ export default function StudentDataView() {
   const [lastVisible, setLastVisible] = useState<DocumentData | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
   const studentsCollectionRef = useMemo(() => firestore ? collection(firestore, 'alunos') : null, [firestore]);
 
@@ -132,8 +134,6 @@ export default function StudentDataView() {
         description: `Ocorreu um erro: ${error.message}`
       });
     } finally {
-      // O recarregamento da página irá redefinir o estado isDeleting
-      // mas podemos definir para false se o recarregamento falhar ou for cancelado
        if (window.location) {
          // Não muda o estado se a página está prestes a ser recarregada
        } else {
@@ -155,9 +155,16 @@ export default function StudentDataView() {
   };
   
   const handlePrevPage = () => {
-    // Para voltar à primeira página, limpamos o `lastVisible` e fazemos fetch
     setLastVisible(null);
     fetchStudents('first');
+  };
+  
+  const handleStudentSelect = (student: any) => {
+    setSelectedStudent(student);
+  };
+
+  const handleCloseSheet = () => {
+    setSelectedStudent(null);
   };
 
   const totalPages = totalCount > 0 ? Math.ceil(totalCount / PAGE_SIZE) : 1;
@@ -211,7 +218,13 @@ export default function StudentDataView() {
         totalPages={totalPages}
         onNextPage={handleNextPage}
         onPrevPage={handlePrevPage}
+        onRowClick={handleStudentSelect}
         isLoading={isLoading}
+      />
+      <StudentDetailSheet 
+        student={selectedStudent}
+        isOpen={!!selectedStudent}
+        onClose={handleCloseSheet}
       />
     </div>
   );
