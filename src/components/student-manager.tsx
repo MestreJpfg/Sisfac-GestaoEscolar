@@ -61,10 +61,18 @@ export default function StudentManager() {
           .replace(/ç/g, 'c')
           .replace(/ã/g, 'a')
           .replace(/é/g, 'e')
-          .replace(/\s+/g, '_')
-          .replace(/[^a-z0-9_]/g, '');
+          .replace(/º/g, '')
+          .replace(/\./g, '')
+          .replace(/\s+/g, '_');
+          
         if (h === 'nome_do_registro_civil' || h === 'nome_registro_civil' || h === 'nome_de_registro_civil') {
             return 'nome';
+        }
+        if (h === 'filiacao_1' || h === 'filiação_1') {
+            return 'filiacao_1';
+        }
+         if (h === 'filiacao_2' || h === 'filiação_2') {
+            return 'filiacao_2';
         }
         return h;
     });
@@ -86,13 +94,18 @@ export default function StudentManager() {
         if (!header) return;
 
         let processedValue = value;
-        const stringValue = String(value).trim().toUpperCase();
-
-        if (stringValue === "SIM") {
-          processedValue = true;
-        } else if (stringValue === "NÃO" || stringValue === "NAO") {
-          processedValue = false;
-        } else if (value === null || String(value).trim() === '') {
+        if (typeof value === 'string') {
+           const stringValue = value.trim().toUpperCase();
+            if (stringValue === "SIM") {
+              processedValue = true;
+            } else if (stringValue === "NÃO" || stringValue === "NAO") {
+              processedValue = false;
+            } else {
+              processedValue = value;
+            }
+        }
+        
+        if (value === null || String(value).trim() === '') {
           processedValue = null;
         }
 
@@ -140,7 +153,7 @@ export default function StudentManager() {
     try {
       const normalizedStudents = normalizeData(data);
       
-      if (normalizedStudents.length === 0) {
+      if (normalizedStudents.length === 0 && !isUploading) {
         setIsUploading(false);
         return;
       }
@@ -155,7 +168,7 @@ export default function StudentManager() {
         chunk.forEach(student => {
           if (student.rm) {
             const docRef = doc(firestore, "alunos", student.rm);
-            batch.set(docRef, student);
+            batch.set(docRef, student, { merge: true });
           }
         });
         batchPromises.push(batch.commit());
