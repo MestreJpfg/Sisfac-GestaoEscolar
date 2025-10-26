@@ -23,7 +23,7 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
 
 
     return (
-        <div id={`declaration-${student.rm}`} className="bg-white text-black font-sans" style={{ width: '210mm', minHeight: '297mm', fontFamily: 'Arial, sans-serif' }}>
+        <div id={`declaration-${student.rm}`} className="bg-white text-black font-sans" style={{ width: '210mm', height: '297mm', fontFamily: 'Arial, sans-serif' }}>
             <div className="flex flex-col h-full p-12">
                 {/* Cabeçalho */}
                 <header className="flex flex-col items-center text-center text-[9px] font-bold">
@@ -49,13 +49,13 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
                     </div>
                     <p className="mb-6 indent-12">
                         Declaramos, para os devidos fins, que <strong className="font-bold">{student.nome || 'N/A'}</strong>, 
-                        nascido(a) em {student.data_nascimento || 'N/A'}, filho(a) de {student.filiacao_1 || 'N/A'} e {student.filiacao_2 || 'N/A'},
-                        está regularmente matriculado(a) nesta instituição de ensino no ano letivo de {today.getFullYear()}.
+                        filho(a) de {student.filiacao_1 || 'N/A'} e {student.filiacao_2 || 'N/A'},
+                        com data de nascimento em {student.data_nascimento || 'N/A'}, está regularmente matriculado(a) nesta instituição de ensino no ano letivo de {today.getFullYear()}.
                     </p>
                     <p className="mb-6 indent-12">
-                        O(A) referido(a) aluno(a) está cursando a <strong className="font-bold">{student.serie || 'N/A'}</strong> do 
+                        O(A) aluno(a) está cursando a <strong className="font-bold">{student.serie || 'N/A'}</strong> do 
                         <strong className="font-bold"> {student.ensino || 'N/A'}</strong>, na classe <strong className="font-bold">{student.classe || 'N/A'}</strong>, 
-                        no turno da <strong className="font-bold">{student.turno || 'N/A'}</strong>, sob o Registro do Aluno (RM) 
+                        no turno da <strong className="font-bold">{student.turno || 'N/A'}</strong>, e possui o Registro do Aluno (RM) 
                         nº <strong className="font-bold">{student.rm || 'N/A'}</strong>.
                     </p>
                     {student.nee && (
@@ -69,7 +69,6 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
                 </main>
 
                  {/* Assinatura */}
-                <div className="flex-grow"></div>
                 <div className="pt-16 flex justify-center items-end">
                     <div className="text-center">
                         <Image src={signatureUrl} alt="Assinatura Gestão Escolar" width={200} height={50}/>
