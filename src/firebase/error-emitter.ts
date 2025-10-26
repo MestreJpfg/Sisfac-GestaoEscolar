@@ -61,3 +61,4 @@ function createEventEmitter<T extends Record<string, any>>() {
 }
 
 // Create and export a singleton instance of the emitter
+export const errorEmitter = createEventEmitter<AppEvents>();
