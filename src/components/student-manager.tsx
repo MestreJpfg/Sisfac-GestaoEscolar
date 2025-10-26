@@ -5,10 +5,12 @@ import Image from "next/image";
 import FileUploader from "@/components/file-uploader";
 import { Loader2 } from "lucide-react";
 import { quotes } from "@/lib/quotes";
-import { useFirestore } from "@/firebase";
+import { useAuth, useFirestore } from "@/firebase";
 import { writeBatch, doc, getCountFromServer, collection } from "firebase/firestore";
 import StudentDataView from "./student-data-view";
 import { useToast } from "@/hooks/use-toast";
+import { FirestorePermissionError } from "@/firebase/errors";
+import { errorEmitter } from "@/firebase/error-emitter";
 
 export default function StudentManager() {
   const [dataExists, setDataExists] = useState<boolean | null>(null);
@@ -17,6 +19,7 @@ export default function StudentManager() {
   const [currentDateTime, setCurrentDateTime] = useState('');
 
   const firestore = useFirestore();
+  const auth = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -142,24 +145,26 @@ export default function StudentManager() {
   };
 
   const handleUploadComplete = async (data: any[]) => {
-    // O FirebaseProvider agora garante que `firestore` está disponível antes de renderizar este componente.
     setIsUploading(true);
   
+    const normalizedStudents = normalizeData(data);
+    
+    if (normalizedStudents.length === 0) {
+      setIsUploading(false);
+      return;
+    }
+
+    const alunosCollectionPath = "alunos";
+
     try {
-      const normalizedStudents = normalizeData(data);
-      
-      if (normalizedStudents.length === 0) {
-        setIsUploading(false);
-        return;
-      }
-  
       const batchPromises = [];
-      const batch = writeBatch(firestore);
+      // Firestore batch limit is 500 operations
       for (let i = 0; i < normalizedStudents.length; i += 500) {
+        const batch = writeBatch(firestore!);
         const chunk = normalizedStudents.slice(i, i + 500);
         chunk.forEach(student => {
           if (student.rm) {
-            const docRef = doc(firestore, "alunos", student.rm);
+            const docRef = doc(firestore!, alunosCollectionPath, student.rm);
             batch.set(docRef, student, { merge: true });
           }
         });
@@ -175,15 +180,16 @@ export default function StudentManager() {
       setDataExists(true);
   
     } catch (error: any) {
-      console.error("Erro ao enviar dados em lote:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro no Upload",
-        description: error.message || "Ocorreu um erro ao guardar os dados. Verifique a sua conexão e as permissões da base de dados.",
-      });
-    } finally {
-      setIsUploading(false);
-    }
+        const permissionError = new FirestorePermissionError({
+          path: alunosCollectionPath,
+          operation: 'write',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        setIsUploading(false); // Make sure to stop uploading state on error
+        return; // Stop execution
+    } 
+    
+    setIsUploading(false);
   };
   
   const isPageLoading = dataExists === null;
