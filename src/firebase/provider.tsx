@@ -109,7 +109,10 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     };
   }, [firebaseApp, firestore, auth, userAuthState]);
 
-  if (contextValue.isUserLoading || !contextValue.user) {
+  // Combined loading state: wait for services AND user authentication
+  const isLoading = !contextValue.areServicesAvailable || contextValue.isUserLoading || !contextValue.user;
+
+  if (isLoading) {
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-foreground">
         <Loader2 className="mb-4 h-12 w-12 animate-spin text-primary" />
