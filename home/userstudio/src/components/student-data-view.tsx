@@ -93,7 +93,7 @@ export default function StudentDataView() {
 
     // Apply NEE filter first
     if (filterNee) {
-      filteredStudents = filteredStudents.filter(student => student.nee === true);
+      filteredStudents = filteredStudents.filter(student => student.nee);
     }
     
     // Then apply search term filter
