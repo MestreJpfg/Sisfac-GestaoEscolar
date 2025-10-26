@@ -43,6 +43,8 @@ export default function StudentDataView() {
     classe: '',
     turno: '',
   });
+  
+  const [filteredStudents, setFilteredStudents] = useState<any[]>([]);
 
   const studentsCollectionRef = useMemo(() => firestore ? collection(firestore, 'alunos') : null, [firestore]);
 
@@ -61,6 +63,7 @@ export default function StudentDataView() {
       const allDocsSnapshot = await getDocs(allStudentsQuery);
       const allStudentData = allDocsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setAllStudents(allStudentData);
+      setFilteredStudents(allStudentData);
 
     } catch (error: any) {
       console.error("Erro detalhado ao buscar alunos:", error);
@@ -70,6 +73,7 @@ export default function StudentDataView() {
         description: `Ocorreu um erro ao comunicar com a base de dados. Detalhe: ${error.message}`,
       });
       setAllStudents([]);
+      setFilteredStudents([]);
     } finally {
       setIsLoading(false);
     }
@@ -84,7 +88,6 @@ export default function StudentDataView() {
   useEffect(() => {
     let filtered = [...allStudents];
     
-    // Apply filters
     (Object.keys(filters) as Array<keyof typeof filters>).forEach(key => {
         const filterValue = filters[key];
         if (filterValue) {
@@ -94,35 +97,18 @@ export default function StudentDataView() {
         }
     });
 
-    // Reset pagination to page 1 whenever filters change
-    setCurrentPage(1);
+    setFilteredStudents(filtered);
+    setCurrentPage(1); // Reset page to 1 on filter change
     
-    // Apply pagination to the filtered list
-    const startIndex = 0; // Start from the first page
-    const endIndex = startIndex + PAGE_SIZE;
-    setDisplayedStudents(filtered.slice(startIndex, endIndex));
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, allStudents]);
 
   useEffect(() => {
-    // This effect handles pagination changes on the already filtered data
-    let filtered = [...allStudents];
-     (Object.keys(filters) as Array<keyof typeof filters>).forEach(key => {
-        const filterValue = filters[key];
-        if (filterValue) {
-            filtered = filtered.filter(student =>
-                student[key]?.toString().toLowerCase().includes(filterValue.toLowerCase())
-            );
-        }
-    });
-
+    // This effect handles pagination for the filtered data
     const startIndex = (currentPage - 1) * PAGE_SIZE;
     const endIndex = startIndex + PAGE_SIZE;
-    setDisplayedStudents(filtered.slice(startIndex, endIndex));
+    setDisplayedStudents(filteredStudents.slice(startIndex, endIndex));
   
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, allStudents]);
+  }, [currentPage, filteredStudents]);
 
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -171,9 +157,9 @@ export default function StudentDataView() {
       
       await Promise.all(batchPromises);
 
-      // Limpar o estado local (cache)
-      setDisplayedStudents([]);
       setAllStudents([]);
+      setFilteredStudents([]);
+      setDisplayedStudents([]);
       setTotalCount(0);
       setCurrentPage(1);
       clearFilters();
@@ -186,7 +172,7 @@ export default function StudentDataView() {
       // Reload the page to go back to the uploader
       setTimeout(() => window.location.reload(), 2000);
 
-    } catch (error: any) => {
+    } catch (error: any) {
       console.error("Erro ao apagar todos os documentos:", error);
       toast({
         variant: "destructive",
@@ -218,11 +204,7 @@ export default function StudentDataView() {
     setSelectedStudent(null);
   };
 
-  const totalFilteredCount = Object.values(filters).some(v => v)
-    ? displayedStudents.length 
-    : allStudents.length;
-
-  const totalPages = Math.ceil(totalFilteredCount / PAGE_SIZE);
+  const totalPages = Math.ceil(filteredStudents.length / PAGE_SIZE);
   const hasActiveFilters = Object.values(filters).some(filter => filter !== '');
 
   if (isLoading && allStudents.length === 0) {
@@ -253,6 +235,13 @@ export default function StudentDataView() {
                         <span className="text-sm font-medium text-muted-foreground">Alunos</span>
                     </div>
                 </div>
+                 <div className="text-sm text-muted-foreground">
+                    {hasActiveFilters && (
+                       <span>
+                           A mostrar <span className="font-bold text-foreground">{filteredStudents.length}</span> de <span className="font-bold text-foreground">{allStudents.length}</span> resultados
+                       </span>
+                    )}
+                 </div>
             </div>
             <Card>
                 <CardContent className="p-4 space-y-4">
@@ -287,7 +276,7 @@ export default function StudentDataView() {
                         />
                     </div>
                     {hasActiveFilters && (
-                        <Button variant="ghost" size="sm" onClick={clearFilters} className="text-destructive hover:text-destructive">
+                        <Button variant="ghost" size="sm" onClick={clearFilters} className="text-destructive hover:text-destructive mt-2">
                             <X className="w-4 h-4 mr-2" />
                             Limpar Filtros
                         </Button>
