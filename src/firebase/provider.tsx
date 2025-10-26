@@ -6,6 +6,7 @@ import { Firestore } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 import { initiateAnonymousSignIn } from './non-blocking-login';
+import { Loader2 } from 'lucide-react';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -81,9 +82,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       auth,
       (firebaseUser) => { // Auth state determined
         if (!firebaseUser) {
-          // If no user is signed in, sign in anonymously.
-          // This is non-blocking. The onAuthStateChanged listener will be
-          // triggered again with the new user state.
           initiateAnonymousSignIn(auth);
         } else {
           setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
@@ -110,6 +108,25 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       userError: userAuthState.userError,
     };
   }, [firebaseApp, firestore, auth, userAuthState]);
+
+  if (contextValue.isUserLoading || !contextValue.user) {
+    return (
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-foreground">
+        <Loader2 className="mb-4 h-12 w-12 animate-spin text-primary" />
+        <h1 className="text-lg font-semibold">A estabelecer conexão segura...</h1>
+        <p className="text-sm text-muted-foreground">Aguarde um momento.</p>
+      </div>
+    );
+  }
+
+  if (contextValue.userError) {
+     return (
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-destructive-foreground">
+        <h1 className="text-lg font-semibold">Erro de Autenticação</h1>
+        <p className="text-sm">{contextValue.userError.message}</p>
+      </div>
+    );
+  }
 
   return (
     <FirebaseContext.Provider value={contextValue}>

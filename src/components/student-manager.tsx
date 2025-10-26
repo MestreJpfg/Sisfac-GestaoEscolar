@@ -5,7 +5,7 @@ import Image from "next/image";
 import FileUploader from "@/components/file-uploader";
 import { Loader2 } from "lucide-react";
 import { quotes } from "@/lib/quotes";
-import { useFirestore } from "@/firebase";
+import { useFirestore, useAuth } from "@/firebase";
 import { writeBatch, doc, getCountFromServer, collection } from "firebase/firestore";
 import StudentDataView from "./student-data-view";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +17,7 @@ export default function StudentManager() {
   const [currentDateTime, setCurrentDateTime] = useState('');
 
   const firestore = useFirestore();
+  const auth = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -41,9 +42,14 @@ export default function StudentManager() {
       setDataExists(exists);
     } catch (error) {
       console.error("Error checking for existing data:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao verificar dados",
+        description: "Não foi possível comunicar com a base de dados para verificar os dados existentes.",
+      });
       setDataExists(false); // Assume no data if check fails
     }
-  }, [firestore]);
+  }, [firestore, toast]);
 
   useEffect(() => {
     if (firestore) {
@@ -126,7 +132,6 @@ export default function StudentManager() {
           }
         }
 
-
         student[header] = processedValue;
       });
 
@@ -138,15 +143,7 @@ export default function StudentManager() {
   };
 
   const handleUploadComplete = async (data: any[]) => {
-    if (!firestore) {
-      toast({
-        variant: "destructive",
-        title: "Erro de Conexão",
-        description: "A conexão com a base de dados não foi estabelecida. Por favor, recarregue a página.",
-      });
-      return;
-    }
-  
+    // A verificação do auth e do firestore é garantida pelo FirebaseProvider
     setIsUploading(true);
   
     try {
@@ -154,14 +151,10 @@ export default function StudentManager() {
       
       if (normalizedStudents.length === 0) {
         setIsUploading(false);
-        // O toast de erro já é mostrado dentro do normalizeData se o RM não for encontrado
         return;
       }
   
-      console.log("Dados Normalizados Prontos para Envio:", normalizedStudents);
-  
       const batchPromises = [];
-      // Firestore batch limit is 500 operations
       for (let i = 0; i < normalizedStudents.length; i += 500) {
         const batch = writeBatch(firestore);
         const chunk = normalizedStudents.slice(i, i + 500);
@@ -240,5 +233,3 @@ export default function StudentManager() {
     </main>
   );
 }
-
-    
