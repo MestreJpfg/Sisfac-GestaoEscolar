@@ -14,9 +14,10 @@ interface StudentTableProps {
   onPrevPage: () => void;
   onRowClick: (student: any) => void;
   isLoading: boolean;
+  isSearching?: boolean;
 }
 
-export default function StudentTable({ students, currentPage, totalPages, onNextPage, onPrevPage, onRowClick, isLoading }: StudentTableProps) {
+export default function StudentTable({ students, currentPage, totalPages, onNextPage, onPrevPage, onRowClick, isLoading, isSearching = false }: StudentTableProps) {
   
   if (students.length === 0 && !isLoading) {
     return (
@@ -24,7 +25,7 @@ export default function StudentTable({ students, currentPage, totalPages, onNext
         <CardContent className="p-6 text-center">
             <BookUser className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum aluno encontrado</h3>
-            <p className="mt-1 text-sm text-muted-foreground">A base de dados pode estar vazia. Tente carregar um ficheiro de alunos.</p>
+            <p className="mt-1 text-sm text-muted-foreground">{isSearching ? "Tente um termo de busca diferente." : "A base de dados pode estar vazia. Tente carregar um ficheiro de alunos."}</p>
         </CardContent>
       </Card>
     )
@@ -71,32 +72,34 @@ export default function StudentTable({ students, currentPage, totalPages, onNext
           </Table>
         </div>
       </CardContent>
-
-      <div className="flex items-center justify-between p-4 border-t">
-        <p className="text-sm text-muted-foreground">
-          Página {currentPage} de {totalPages}
-        </p>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={onPrevPage} 
-            disabled={currentPage <= 1 || isLoading}
-          >
-            <ChevronLeft className="h-4 w-4 mr-1"/>
-            Anterior
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={onNextPage} 
-            disabled={currentPage >= totalPages || isLoading}
-          >
-            Próxima
-            <ChevronRight className="h-4 w-4 ml-1"/>
-          </Button>
+      
+      {!isSearching && (
+        <div className="flex items-center justify-between p-4 border-t">
+          <p className="text-sm text-muted-foreground">
+            Página {currentPage} de {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={onPrevPage} 
+              disabled={currentPage <= 1 || isLoading}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1"/>
+              Anterior
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={onNextPage} 
+              disabled={currentPage >= totalPages || isLoading}
+            >
+              Próxima
+              <ChevronRight className="h-4 w-4 ml-1"/>
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
     </Card>
   );
 }

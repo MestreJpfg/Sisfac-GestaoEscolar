@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query, getDocs, limit, startAfter, getCountFromServer, orderBy, DocumentData, Query as FirestoreQuery, writeBatch, doc } from 'firebase/firestore';
+import { collection, query, getDocs, limit, startAfter, getCountFromServer, orderBy, where, endAt, startAt, DocumentData, Query as FirestoreQuery, writeBatch, doc } from 'firebase/firestore';
 import StudentTable from './student-table';
-import { Loader2, Trash2 } from 'lucide-react';
+import { Loader2, Trash2, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from './ui/button';
 import {
@@ -19,6 +19,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import StudentDetailSheet from './student-detail-sheet';
+import { Input } from './ui/input';
+import { useDebounce } from '@/hooks/use-debounce';
 
 
 const PAGE_SIZE = 50;
@@ -36,31 +38,53 @@ export default function StudentDataView() {
   const [totalCount, setTotalCount] = useState(0);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
   const studentsCollectionRef = useMemo(() => firestore ? collection(firestore, 'alunos') : null, [firestore]);
 
-  const fetchStudents = useCallback(async (direction: 'next' | 'first' = 'first') => {
+  const fetchStudents = useCallback(async (direction: 'next' | 'first' = 'first', searchTerm: string = '') => {
     if (!studentsCollectionRef) return;
     setIsLoading(true);
 
     try {
-      if (totalCount === 0) {
-        const countSnapshot = await getCountFromServer(studentsCollectionRef);
+      const isSearch = searchTerm.length > 0;
+      let baseQuery: FirestoreQuery;
+
+      if (isSearch) {
+          const upperSearchTerm = searchTerm.toUpperCase();
+          baseQuery = query(studentsCollectionRef, 
+            orderBy("nome"), 
+            startAt(upperSearchTerm), 
+            endAt(upperSearchTerm + '\uf8ff')
+          );
+      } else {
+        baseQuery = query(studentsCollectionRef, orderBy("nome"));
+      }
+
+      if (!isSearch) {
+        const countQuery = query(studentsCollectionRef);
+        const countSnapshot = await getCountFromServer(countQuery);
         setTotalCount(countSnapshot.data().count);
       }
       
       let dataQuery: FirestoreQuery;
 
-      if (direction === 'next' && lastVisible) {
-        dataQuery = query(studentsCollectionRef, orderBy("nome"), startAfter(lastVisible), limit(PAGE_SIZE));
+      if (direction === 'next' && lastVisible && !isSearch) {
+        dataQuery = query(baseQuery, startAfter(lastVisible), limit(PAGE_SIZE));
         setCurrentPage(prev => prev + 1);
       } else {
-        dataQuery = query(studentsCollectionRef, orderBy("nome"), limit(PAGE_SIZE));
+        dataQuery = query(baseQuery, limit(PAGE_SIZE));
         setCurrentPage(1);
       }
       
       const snapshot = await getDocs(dataQuery);
       
       const studentData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      if (isSearch) {
+         setTotalCount(snapshot.size);
+      }
 
       setStudents(studentData);
       setLastVisible(snapshot.docs[snapshot.docs.length - 1] || null);
@@ -76,7 +100,7 @@ export default function StudentDataView() {
     } finally {
       setIsLoading(false);
     }
-  }, [studentsCollectionRef, lastVisible, totalCount, toast]);
+  }, [studentsCollectionRef, lastVisible, toast]);
 
   const handleDeleteAll = async () => {
     if (!firestore || !studentsCollectionRef) {
@@ -97,7 +121,6 @@ export default function StudentDataView() {
         return;
       }
       
-      let deletedCount = 0;
       const batchPromises = [];
       // Firestore batch limit is 500 operations
       for (let i = 0; i < allDocsSnapshot.docs.length; i += 500) {
@@ -107,7 +130,6 @@ export default function StudentDataView() {
           batch.delete(doc(firestore, "alunos", docSnapshot.id));
         });
         batchPromises.push(batch.commit());
-        deletedCount += chunk.length;
       }
       
       await Promise.all(batchPromises);
@@ -120,7 +142,7 @@ export default function StudentDataView() {
 
       toast({
         title: "Sucesso!",
-        description: `${deletedCount} registos de alunos foram apagados. A página será recarregada.`,
+        description: `${totalDocs} registos de alunos foram apagados. A página será recarregada.`,
       });
 
       // Reload the page to go back to the uploader
@@ -141,21 +163,19 @@ export default function StudentDataView() {
        }
     }
   };
-
-  // Initial load
+  
   useEffect(() => {
-    if (firestore) {
-      fetchStudents('first');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firestore]);
+    fetchStudents('first', debouncedSearchTerm);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearchTerm, firestore]);
+
 
   const handleNextPage = () => {
     fetchStudents('next');
   };
   
   const handlePrevPage = () => {
-    setLastVisible(null);
+    // This is tricky with orderBy and startAfter. For simplicity, we go back to the first page.
     fetchStudents('first');
   };
   
@@ -188,29 +208,41 @@ export default function StudentDataView() {
 
   return (
     <div className="space-y-6">
-       <div className="flex justify-between items-center">
+       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <h2 className="text-2xl font-bold text-primary">Painel de Alunos</h2>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm">
-              <Trash2 className="w-4 h-4 mr-2" />
-              Apagar Base de Dados
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta ação não pode ser desfeita. Isto irá apagar permanentemente todos os 
-                <span className="font-bold text-destructive-foreground"> {totalCount}</span> registos de alunos da base de dados.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteAll} className="bg-destructive hover:bg-destructive/90">Sim, apagar tudo</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <div className="flex items-center gap-2">
+            <div className="relative w-full max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                type="text"
+                placeholder="Filtrar por nome..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+                />
+            </div>
+            <AlertDialog>
+            <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" className="shrink-0">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Apagar
+                </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Esta ação não pode ser desfeita. Isto irá apagar permanentemente todos os 
+                    <span className="font-bold text-destructive-foreground"> {totalCount}</span> registos de alunos da base de dados.
+                </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteAll} className="bg-destructive hover:bg-destructive/90">Sim, apagar tudo</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+            </AlertDialog>
+        </div>
       </div>
       <StudentTable
         students={students}
@@ -220,6 +252,7 @@ export default function StudentDataView() {
         onPrevPage={handlePrevPage}
         onRowClick={handleStudentSelect}
         isLoading={isLoading}
+        isSearching={debouncedSearchTerm.length > 0}
       />
       <StudentDetailSheet 
         student={selectedStudent}
