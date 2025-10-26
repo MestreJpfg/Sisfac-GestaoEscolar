@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useFirestore } from '@/firebase';
 import { collection, query, getDocs, getCountFromServer, orderBy, writeBatch, doc } from 'firebase/firestore';
 import StudentTable from './student-table';
-import { Loader2, Trash2, Search, Users, X } from 'lucide-react';
+import { Loader2, Trash2, Search, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from './ui/button';
 import {
@@ -20,8 +20,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import StudentDetailSheet from './student-detail-sheet';
 import { Input } from './ui/input';
-import { Checkbox } from './ui/checkbox';
-import { Label } from './ui/label';
 
 const PAGE_SIZE = 20;
 
@@ -39,10 +37,6 @@ export default function StudentDataView() {
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterNee, setFilterNee] = useState(false);
-  const [isSearchVisible, setIsSearchVisible] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-
 
   const studentsCollectionRef = useMemo(() => firestore ? collection(firestore, 'alunos') : null, [firestore]);
 
@@ -88,44 +82,27 @@ export default function StudentDataView() {
 
 
   useEffect(() => {
-    // Start with all students
-    let filteredStudents = allStudents;
-
-    // Apply NEE filter first
-    if (filterNee) {
-      filteredStudents = filteredStudents.filter(student => student.nee);
-    }
-    
-    // Then apply search term filter
-    if (searchTerm !== '') {
-      const lowerCaseSearchTerm = searchTerm.toLowerCase();
-      filteredStudents = filteredStudents.filter(student => 
-        student.nome?.toLowerCase().includes(lowerCaseSearchTerm)
-      );
-    }
-    
-    // If no filters are active, apply pagination
-    if (searchTerm === '' && !filterNee) {
-      const totalPages = Math.ceil(filteredStudents.length / PAGE_SIZE);
+    if (searchTerm === '') {
+      // Reset to paginated view if search is cleared
+      const totalPages = Math.ceil(allStudents.length / PAGE_SIZE);
       const isCurrentPageInvalid = currentPage > totalPages && totalPages > 0;
       const pageToShow = isCurrentPageInvalid ? 1 : currentPage;
       
       const startIndex = (pageToShow - 1) * PAGE_SIZE;
       const endIndex = startIndex + PAGE_SIZE;
-      setDisplayedStudents(filteredStudents.slice(startIndex, endIndex));
+      setDisplayedStudents(allStudents.slice(startIndex, endIndex));
       if (isCurrentPageInvalid) setCurrentPage(1);
+
     } else {
-      // If any filter is active, show all results without pagination
-      setDisplayedStudents(filteredStudents);
+      // Filter locally
+      const lowerCaseSearchTerm = searchTerm.toLowerCase();
+      const filtered = allStudents.filter(student => 
+        student.nome?.toLowerCase().includes(lowerCaseSearchTerm)
+      );
+      setDisplayedStudents(filtered);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, allStudents, filterNee, currentPage]);
-
-   useEffect(() => {
-    if (isSearchVisible && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [isSearchVisible]);
+  }, [searchTerm, allStudents, currentPage]);
 
 
   const handleDeleteAll = async () => {
@@ -166,7 +143,6 @@ export default function StudentDataView() {
       setTotalCount(0);
       setCurrentPage(1);
       setSearchTerm('');
-      setFilterNee(false);
 
       toast({
         title: "Sucesso!",
@@ -215,15 +191,9 @@ export default function StudentDataView() {
   const handleCloseSheet = () => {
     setSelectedStudent(null);
   };
-  
-  const handleSearchBlur = () => {
-    if (searchTerm === '') {
-      setIsSearchVisible(false);
-    }
-  }
 
   const totalPages = Math.ceil(allStudents.length / PAGE_SIZE);
-  const isSearching = searchTerm.length > 0 || filterNee;
+  const isSearching = searchTerm.length > 0;
 
   if (isLoading && allStudents.length === 0) {
      return (
@@ -253,36 +223,18 @@ export default function StudentDataView() {
                 <span className="text-sm font-medium text-muted-foreground">Alunos</span>
             </div>
             </div>
-            <div className="relative w-full sm:w-auto flex justify-end">
-              {isSearchVisible ? (
+            <div className="relative w-full sm:w-auto">
                 <div className="relative w-full max-w-sm">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    ref={searchInputRef}
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
                     type="text"
                     placeholder="Filtrar por nome..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    onBlur={handleSearchBlur}
-                    className="pl-9 pr-9"
-                  />
-                  <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => { setSearchTerm(''); setIsSearchVisible(false); }}>
-                    <X className="h-4 w-4"/>
-                  </Button>
+                    className="pl-9"
+                    />
                 </div>
-              ) : (
-                <Button variant="outline" onClick={() => setIsSearchVisible(true)}>
-                  <Search className="h-4 w-4 mr-2" />
-                  Filtrar
-                </Button>
-              )}
             </div>
-        </div>
-        <div className="flex items-center justify-end space-x-2">
-            <Checkbox id="nee-filter" checked={filterNee} onCheckedChange={(checked) => setFilterNee(checked as boolean)} />
-            <Label htmlFor="nee-filter" className="text-sm font-normal text-muted-foreground">
-                Apenas alunos com NEE
-            </Label>
         </div>
       </div>
       <StudentTable
