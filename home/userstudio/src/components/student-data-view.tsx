@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useFirestore } from '@/firebase';
 import { collection, query, getDocs, getCountFromServer, orderBy, writeBatch, doc } from 'firebase/firestore';
 import StudentTable from './student-table';
-import { Loader2, Trash2, Search, Users } from 'lucide-react';
+import { Loader2, Trash2, Users, Filter, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from './ui/button';
 import {
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import StudentDetailSheet from './student-detail-sheet';
 import { Input } from './ui/input';
+import { Card, CardContent } from './ui/card';
 
 const PAGE_SIZE = 20;
 
@@ -36,7 +37,12 @@ export default function StudentDataView() {
   const [totalCount, setTotalCount] = useState(0);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
-  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({
+    nome: '',
+    serie: '',
+    classe: '',
+    turno: '',
+  });
 
   const studentsCollectionRef = useMemo(() => firestore ? collection(firestore, 'alunos') : null, [firestore]);
 
@@ -56,11 +62,6 @@ export default function StudentDataView() {
       const allStudentData = allDocsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setAllStudents(allStudentData);
 
-      // Set initial paginated view
-      const initialPageData = allStudentData.slice(0, PAGE_SIZE);
-      setDisplayedStudents(initialPageData);
-      setCurrentPage(1);
-
     } catch (error: any) {
       console.error("Erro detalhado ao buscar alunos:", error);
       toast({
@@ -68,7 +69,6 @@ export default function StudentDataView() {
         title: "Erro ao buscar alunos",
         description: `Ocorreu um erro ao comunicar com a base de dados. Detalhe: ${error.message}`,
       });
-      setDisplayedStudents([]);
       setAllStudents([]);
     } finally {
       setIsLoading(false);
@@ -82,28 +82,62 @@ export default function StudentDataView() {
 
 
   useEffect(() => {
-    if (searchTerm === '') {
-      // Reset to paginated view if search is cleared
-      const totalPages = Math.ceil(allStudents.length / PAGE_SIZE);
-      const isCurrentPageInvalid = currentPage > totalPages && totalPages > 0;
-      const pageToShow = isCurrentPageInvalid ? 1 : currentPage;
-      
-      const startIndex = (pageToShow - 1) * PAGE_SIZE;
-      const endIndex = startIndex + PAGE_SIZE;
-      setDisplayedStudents(allStudents.slice(startIndex, endIndex));
-      if (isCurrentPageInvalid) setCurrentPage(1);
+    let filtered = [...allStudents];
+    
+    // Apply filters
+    (Object.keys(filters) as Array<keyof typeof filters>).forEach(key => {
+        const filterValue = filters[key];
+        if (filterValue) {
+            filtered = filtered.filter(student =>
+                student[key]?.toString().toLowerCase().includes(filterValue.toLowerCase())
+            );
+        }
+    });
 
-    } else {
-      // Filter locally
-      const lowerCaseSearchTerm = searchTerm.toLowerCase();
-      const filtered = allStudents.filter(student => 
-        student.nome?.toLowerCase().includes(lowerCaseSearchTerm)
-      );
-      setDisplayedStudents(filtered);
-    }
+    // Reset pagination to page 1 whenever filters change
+    setCurrentPage(1);
+    
+    // Apply pagination to the filtered list
+    const startIndex = 0; // Start from the first page
+    const endIndex = startIndex + PAGE_SIZE;
+    setDisplayedStudents(filtered.slice(startIndex, endIndex));
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, allStudents, currentPage]);
+  }, [filters, allStudents]);
 
+  useEffect(() => {
+    // This effect handles pagination changes on the already filtered data
+    let filtered = [...allStudents];
+     (Object.keys(filters) as Array<keyof typeof filters>).forEach(key => {
+        const filterValue = filters[key];
+        if (filterValue) {
+            filtered = filtered.filter(student =>
+                student[key]?.toString().toLowerCase().includes(filterValue.toLowerCase())
+            );
+        }
+    });
+
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    const endIndex = startIndex + PAGE_SIZE;
+    setDisplayedStudents(filtered.slice(startIndex, endIndex));
+  
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, allStudents]);
+
+
+  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      nome: '',
+      serie: '',
+      classe: '',
+      turno: '',
+    });
+  }
 
   const handleDeleteAll = async () => {
     if (!firestore || !studentsCollectionRef) {
@@ -142,7 +176,7 @@ export default function StudentDataView() {
       setAllStudents([]);
       setTotalCount(0);
       setCurrentPage(1);
-      setSearchTerm('');
+      clearFilters();
 
       toast({
         title: "Sucesso!",
@@ -152,7 +186,7 @@ export default function StudentDataView() {
       // Reload the page to go back to the uploader
       setTimeout(() => window.location.reload(), 2000);
 
-    } catch (error: any) {
+    } catch (error: any) => {
       console.error("Erro ao apagar todos os documentos:", error);
       toast({
         variant: "destructive",
@@ -169,19 +203,11 @@ export default function StudentDataView() {
   };
   
   const handleNextPage = () => {
-    const newPage = currentPage + 1;
-    const startIndex = (newPage - 1) * PAGE_SIZE;
-    const endIndex = startIndex + PAGE_SIZE;
-    setDisplayedStudents(allStudents.slice(startIndex, endIndex));
-    setCurrentPage(newPage);
+    setCurrentPage(prev => prev + 1);
   };
   
   const handlePrevPage = () => {
-    const newPage = currentPage - 1;
-    const startIndex = (newPage - 1) * PAGE_SIZE;
-    const endIndex = startIndex + PAGE_SIZE;
-    setDisplayedStudents(allStudents.slice(startIndex, endIndex));
-    setCurrentPage(newPage);
+    setCurrentPage(prev => prev - 1);
   };
   
   const handleStudentSelect = (student: any) => {
@@ -192,8 +218,12 @@ export default function StudentDataView() {
     setSelectedStudent(null);
   };
 
-  const totalPages = Math.ceil(allStudents.length / PAGE_SIZE);
-  const isSearching = searchTerm.length > 0;
+  const totalFilteredCount = Object.values(filters).some(v => v)
+    ? displayedStudents.length 
+    : allStudents.length;
+
+  const totalPages = Math.ceil(totalFilteredCount / PAGE_SIZE);
+  const hasActiveFilters = Object.values(filters).some(filter => filter !== '');
 
   if (isLoading && allStudents.length === 0) {
      return (
@@ -215,27 +245,55 @@ export default function StudentDataView() {
   return (
     <div className="space-y-6">
        <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-            <div className="flex items-center gap-3 text-foreground">
-            <Users className="w-5 h-5 text-primary"/>
-            <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold tracking-tight">{totalCount}</span>
-                <span className="text-sm font-medium text-muted-foreground">Alunos</span>
-            </div>
-            </div>
-            <div className="relative w-full sm:w-auto">
-                <div className="relative w-full max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                    type="text"
-                    placeholder="Filtrar por nome..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                    />
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <div className="flex items-center gap-3 text-foreground">
+                    <Users className="w-5 h-5 text-primary"/>
+                    <div className="flex items-baseline gap-1.5">
+                        <span className="text-2xl font-bold tracking-tight">{totalCount}</span>
+                        <span className="text-sm font-medium text-muted-foreground">Alunos</span>
+                    </div>
                 </div>
             </div>
-        </div>
+            <Card>
+                <CardContent className="p-4 space-y-4">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <Filter className="w-4 h-4" />
+                        <h3 className="text-sm font-semibold">Filtros da Tabela</h3>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <Input
+                            name="nome"
+                            placeholder="Filtrar por nome..."
+                            value={filters.nome}
+                            onChange={handleFilterChange}
+                        />
+                        <Input
+                            name="serie"
+                            placeholder="Filtrar por série..."
+                            value={filters.serie}
+                            onChange={handleFilterChange}
+                        />
+                        <Input
+                            name="classe"
+                            placeholder="Filtrar por classe..."
+                            value={filters.classe}
+                            onChange={handleFilterChange}
+                        />
+                        <Input
+                            name="turno"
+                            placeholder="Filtrar por turno..."
+                            value={filters.turno}
+                            onChange={handleFilterChange}
+                        />
+                    </div>
+                    {hasActiveFilters && (
+                        <Button variant="ghost" size="sm" onClick={clearFilters} className="text-destructive hover:text-destructive">
+                            <X className="w-4 h-4 mr-2" />
+                            Limpar Filtros
+                        </Button>
+                    )}
+                </CardContent>
+            </Card>
       </div>
       <StudentTable
         students={displayedStudents}
@@ -245,7 +303,7 @@ export default function StudentDataView() {
         onPrevPage={handlePrevPage}
         onRowClick={handleStudentSelect}
         isLoading={isLoading}
-        isSearching={isSearching}
+        isSearching={hasActiveFilters}
       />
       <StudentDetailSheet 
         student={selectedStudent}
@@ -278,4 +336,3 @@ export default function StudentDataView() {
     </div>
   );
 }
-    
