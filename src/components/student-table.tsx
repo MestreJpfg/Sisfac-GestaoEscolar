@@ -3,19 +3,21 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "./ui/card";
-import { ChevronLeft, ChevronRight, BookUser } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookUser, Loader2 } from "lucide-react";
 import { Badge } from "./ui/badge";
 
 interface StudentTableProps {
   students: any[];
   currentPage: number;
   totalPages: number;
-  onPageChange: (page: number) => void;
+  onNextPage: () => void;
+  onPrevPage: () => void;
+  isLoading: boolean;
 }
 
-export default function StudentTable({ students, currentPage, totalPages, onPageChange }: StudentTableProps) {
+export default function StudentTable({ students, currentPage, totalPages, onNextPage, onPrevPage, isLoading }: StudentTableProps) {
   
-  if (students.length === 0) {
+  if (students.length === 0 && !isLoading) {
     return (
       <Card>
         <CardContent className="p-6 text-center">
@@ -30,7 +32,12 @@ export default function StudentTable({ students, currentPage, totalPages, onPage
   return (
     <Card>
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto relative">
+           {isLoading && (
+            <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10">
+              <Loader2 className="w-8 h-8 text-primary animate-spin" />
+            </div>
+          )}
           <Table>
             <TableHeader>
               <TableRow>
@@ -47,7 +54,7 @@ export default function StudentTable({ students, currentPage, totalPages, onPage
             <TableBody>
               {students.map((student) => (
                 <TableRow key={student.id}>
-                  <TableCell className="font-medium">{student.nome}</TableCell>
+                  <TableCell className="font-medium">{student.nome || <span className="text-muted-foreground italic">Sem nome</span>}</TableCell>
                   <TableCell>{student.rm}</TableCell>
                   <TableCell>{student.data_nascimento}</TableCell>
                   <TableCell>{student.serie}</TableCell>
@@ -72,8 +79,8 @@ export default function StudentTable({ students, currentPage, totalPages, onPage
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => onPageChange(currentPage - 1)} 
-            disabled={currentPage <= 1}
+            onClick={onPrevPage} 
+            disabled={currentPage <= 1 || isLoading}
           >
             <ChevronLeft className="h-4 w-4 mr-1"/>
             Anterior
@@ -81,8 +88,8 @@ export default function StudentTable({ students, currentPage, totalPages, onPage
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => onPageChange(currentPage + 1)} 
-            disabled={currentPage >= totalPages}
+            onClick={onNextPage} 
+            disabled={currentPage >= totalPages || isLoading}
           >
             Próxima
             <ChevronRight className="h-4 w-4 ml-1"/>
