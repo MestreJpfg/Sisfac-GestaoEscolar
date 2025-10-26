@@ -1,16 +1,22 @@
 "use client";
 
+import { useState } from "react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetDescription,
+  SheetFooter,
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
-import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash } from "lucide-react";
+import StudentDeclaration from "./student-declaration";
+import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Download, Loader2 } from "lucide-react";
 
 interface StudentDetailSheetProps {
   student: any | null;
@@ -43,7 +49,56 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, lab
 
 
 export default function StudentDetailSheet({ student, isOpen, onClose }: StudentDetailSheetProps) {
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
   if (!student) return null;
+
+  const handleGeneratePdf = async () => {
+    setIsGeneratingPdf(true);
+    const declarationElement = document.getElementById(`declaration-${student.rm}`);
+    
+    if (!declarationElement) {
+        console.error("Elemento da declaração não encontrado.");
+        setIsGeneratingPdf(false);
+        return;
+    }
+
+    try {
+        const canvas = await html2canvas(declarationElement, {
+            scale: 2, // Aumenta a resolução para melhor qualidade
+            useCORS: true,
+            backgroundColor: null, 
+        });
+        
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF({
+            orientation: 'p',
+            unit: 'mm',
+            format: 'a4'
+        });
+
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const ratio = canvasWidth / canvasHeight;
+        
+        const imgWidth = pdfWidth - 20; // margem de 10mm de cada lado
+        const imgHeight = imgWidth / ratio;
+        
+        const x = 10;
+        const y = (pdfHeight - imgHeight) / 2; // Centraliza verticalmente
+
+        pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+        pdf.save(`Declaracao_${student.nome.replace(/\s+/g, '_')}.pdf`);
+
+    } catch (error) {
+        console.error("Erro ao gerar o PDF:", error);
+    } finally {
+        setIsGeneratingPdf(false);
+    }
+  };
+
 
   const studentDetails = [
     { label: "RM", value: student.rm, icon: Hash },
@@ -77,19 +132,19 @@ export default function StudentDetailSheet({ student, isOpen, onClose }: Student
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-md">
-        <ScrollArea className="h-full pr-6">
-          <SheetHeader className="text-left mb-6">
-            <SheetTitle className="text-2xl font-bold text-primary flex items-center gap-3">
-              <User size={28}/>
-              {student.nome || "Detalhes do Aluno"}
-            </SheetTitle>
-            <SheetDescription>
-              Informações completas do aluno.
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="space-y-8">
+      <SheetContent className="w-full sm:max-w-md flex flex-col">
+        <SheetHeader className="text-left">
+          <SheetTitle className="text-2xl font-bold text-primary flex items-center gap-3">
+            <User size={28}/>
+            {student.nome || "Detalhes do Aluno"}
+          </SheetTitle>
+          <SheetDescription>
+            Informações completas do aluno.
+          </SheetDescription>
+        </SheetHeader>
+        
+        <ScrollArea className="h-full pr-6 flex-1">
+          <div className="space-y-8 mt-6">
             <div>
               <h3 className="text-lg font-semibold text-foreground mb-4">Dados Pessoais</h3>
               <div className="space-y-4">
@@ -125,6 +180,22 @@ export default function StudentDetailSheet({ student, isOpen, onClose }: Student
             </div>
           </div>
         </ScrollArea>
+        
+        <SheetFooter className="mt-auto pt-4 border-t border-border/20">
+            <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf} className="w-full">
+                {isGeneratingPdf ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                )}
+                {isGeneratingPdf ? "A Gerar PDF..." : "Gerar Declaração em PDF"}
+            </Button>
+        </SheetFooter>
+
+        {/* Elemento oculto para gerar o PDF */}
+        <div className="absolute -left-[9999px] top-0 opacity-0" aria-hidden="true">
+            <StudentDeclaration student={student} />
+        </div>
       </SheetContent>
     </Sheet>
   );
