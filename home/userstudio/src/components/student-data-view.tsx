@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useFirestore } from '@/firebase';
 import { collection, query, getDocs, getCountFromServer, orderBy, writeBatch, doc } from 'firebase/firestore';
 import StudentTable from './student-table';
-import { Loader2, Trash2, Search, Users } from 'lucide-react';
+import { Loader2, Trash2, Search, Users, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from './ui/button';
 import {
@@ -40,6 +40,9 @@ export default function StudentDataView() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterNee, setFilterNee] = useState(false);
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
 
   const studentsCollectionRef = useMemo(() => firestore ? collection(firestore, 'alunos') : null, [firestore]);
 
@@ -117,6 +120,12 @@ export default function StudentDataView() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, allStudents, filterNee]);
+
+   useEffect(() => {
+    if (isSearchVisible && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isSearchVisible]);
 
 
   const handleDeleteAll = async () => {
@@ -206,6 +215,12 @@ export default function StudentDataView() {
   const handleCloseSheet = () => {
     setSelectedStudent(null);
   };
+  
+  const handleSearchBlur = () => {
+    if (searchTerm === '') {
+      setIsSearchVisible(false);
+    }
+  }
 
   const totalPages = Math.ceil(allStudents.length / PAGE_SIZE);
   const isSearching = searchTerm.length > 0 || filterNee;
@@ -238,15 +253,29 @@ export default function StudentDataView() {
                 <span className="text-sm font-medium text-muted-foreground">Alunos</span>
             </div>
             </div>
-            <div className="relative w-full max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                type="text"
-                placeholder="Filtrar por nome..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-                />
+            <div className="relative w-full sm:w-auto flex justify-end">
+              {isSearchVisible ? (
+                <div className="relative w-full max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder="Filtrar por nome..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onBlur={handleSearchBlur}
+                    className="pl-9 pr-9"
+                  />
+                  <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => { setSearchTerm(''); setIsSearchVisible(false); }}>
+                    <X className="h-4 w-4"/>
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="outline" onClick={() => setIsSearchVisible(true)}>
+                  <Search className="h-4 w-4 mr-2" />
+                  Filtrar
+                </Button>
+              )}
             </div>
         </div>
         <div className="flex items-center justify-end space-x-2">
