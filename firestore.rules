@@ -1,87 +1,18 @@
-/**
- * @fileoverview Firestore Security Rules for the escolar database.
- *
- * Core Philosophy:
- * This ruleset enforces a strict owner-only access model for the `/alunos` collection,
- * where the `alunoId` in the path must match the `rm` (Registro do Aluno)
- * property within the document. This ensures that only an aluno (if authenticated)
- * can create, read, update, or delete their own data. Since anonymous auth is used,
- * it is assumed there is a trusted backend process to manage the creation and management
- * of accounts or the rules will need to be updated to allow for self-creation with
- * validation.
- *
- * Data Structure:
- * All aluno data is stored in the `/alunos/{alunoId}` collection.  The document ID
- * (`alunoId`) corresponds to the aluno's `rm` field.
- *
- * Key Security Decisions:
- * - Aluno listing is denied to prevent unauthorized data access.
- * - Data validation is relaxed to allow rapid prototyping but critical authorization
- *   fields like `rm` are strictly validated.
- * - Write operations on `/alunos/{alunoId}` require the user to be the owner (i.e.,
- *   `request.auth.uid == alunoId`).
- *
- * Denormalization for Authorization:
- *  The rules rely on the `rm` field within the Aluno document matching the `alunoId`
- *  in the path. This avoids the need for additional `get()` calls to determine
- *  ownership.
- *
- *  Structural Segregation:
- *  Not applicable in this data model. All data is considered private and stored
- *  under the `/alunos/{alunoId}` path.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
     /**
-     * @description Defines if the user is signed in
-     * @return {boolean}
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /**
-     * @description Checks if the authenticated user is the owner of the resource.
-     * @param {string} userId - The user ID to compare against.
-     * @return {boolean} - True if the user is the owner, false otherwise.
-     */
-    function isOwner(alunoId) {
-        return request.auth.uid == alunoId;
-    }
-
-    /**
-     * @description Checks if the authenticated user is the owner of an existing resource.
-     * @param {string} userId - The user ID to compare against.
-     * @return {boolean} - True if the user is the owner and the resource exists, false otherwise.
-     */
-    function isExistingOwner(alunoId) {
-      return isOwner(alunoId) && resource != null;
-    }
-
-    /**
-     * @description Security rules for the /alunos/{alunoId} collection.
+     * @description This ruleset enforces a read-only policy on the 'alunos' collection,
+     * allowing any user to read the data but restricting all write operations. This is 
+     * suitable for public, read-only data where data modification is not permitted.
      * @path /alunos/{alunoId}
-     * @allow (create) - Allow aluno with UID 'aluno123' to create a document with rm='aluno123'.
-     * @allow (get) - Allow aluno with UID 'aluno123' to read a document with ID 'aluno123'.
-     * @allow (update) - Allow aluno with UID 'aluno123' to update a document with ID 'aluno123'.
-     * @allow (delete) - Allow aluno with UID 'aluno123' to delete a document with ID 'aluno123'.
-     * @deny (create) - Deny aluno with UID 'aluno456' to create a document with rm='aluno123'.
-     * @deny (get) - Deny unauthenticated user to read.
-     * @deny (update) - Deny aluno with UID 'aluno456' to update a document with ID 'aluno123'.
-     * @deny (delete) - Deny aluno with UID 'aluno456' to delete a document with ID 'aluno123'.
-     * @principle Enforces document ownership for all write operations and read operations.
+     * @allow (get, list) Any user can read a aluno document.
+     * @deny (create, update, delete) No user can create, update, or delete a aluno document.
+     * @principle Read-only data access for all users; prevents unauthorized data modification.
      */
     match /alunos/{alunoId} {
-      // Read rules
-      allow get: if isSignedIn() && isOwner(alunoId);
-      allow list: if false;
-
-      // Write rules
-      allow create: if isSignedIn() && request.resource.data.rm == alunoId;
-      allow update: if isExistingOwner(alunoId) && request.resource.data.rm == resource.data.rm;
-      allow delete: if isExistingOwner(alunoId);
+      allow get, list: if true;
+      allow create, update, delete: if false;
     }
   }
 }
