@@ -16,58 +16,86 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
         year: 'numeric'
     }).format(today);
 
+    // Use a public placeholder for logos and images
+    const fortalezaLogoUrl = "https://placehold.co/100x100?text=Bras%C3%A3o+Fortaleza";
+    const schoolSealUrl = "https://placehold.co/500x500/000000/ffffff.png?text=SELO+DA+ESCOLA&font=roboto";
+    const signatureUrl = "https://placehold.co/200x50?text=Assinatura&font=script";
+
+
     return (
-        <div id={`declaration-${student.rm}`} className="bg-white text-black p-10 font-serif" style={{ width: '210mm', height: '297mm' }}>
-            <div className="flex flex-col h-full">
+        <div id={`declaration-${student.rm}`} className="bg-white text-black font-sans" style={{ width: '210mm', minHeight: '297mm', fontFamily: 'Arial, sans-serif' }}>
+            <div className="flex flex-col h-full p-12">
                 {/* Cabeçalho */}
-                <header className="flex items-center justify-between pb-8 border-b-2 border-gray-200">
-                    <div className="flex items-center gap-4">
-                        <Image src="/logoyuri.png" alt="Logo da Escola" width={100} height={33} />
+                <header className="flex flex-col items-center text-center text-[9px] font-bold">
+                    <div className="flex items-center gap-4 mb-4">
+                       <Image src="/logoyuri.png" alt="Logo da Prefeitura de Fortaleza" width={80} height={80} />
+                       <div className="h-10 border-l border-gray-400"></div>
+                       <span className="text-xl font-semibold">EDUCAÇÃO</span>
                     </div>
-                    <div className="text-right text-sm">
-                        <p className="font-bold">ESCOLA ESTADUAL YURI GAGARIN</p>
-                        <p>Endereço da Escola, Nº, Bairro</p>
-                        <p>Cidade, Estado - CEP</p>
-                        <p>Telefone: (XX) XXXX-XXXX</p>
-                    </div>
+                    <p className="text-xs font-bold">ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES - EI / EF</p>
+                    <p className="text-[8px] font-bold">COORDENADORIA DO DISTRITO DE EDUCACAO 6</p>
+                    <p className="text-[8px] font-normal">AVENIDA PROFESSOR JOSE ARTHUR DE CARVALHO, Nº 1540, LAGOA REDONDA (85) 34883209 CODEDU: 7183 | MEC-INEP: 23070188</p>
                 </header>
                 
                 {/* Título da Declaração */}
-                <div className="text-center my-16">
-                    <h1 className="text-3xl font-bold tracking-wider uppercase">DECLARAÇÃO</h1>
+                <div className="text-center my-8">
+                    <h1 className="text-2xl font-bold tracking-wider uppercase">DECLARAÇÃO</h1>
                 </div>
 
-                {/* Corpo da Declaração */}
-                <main className="text-lg leading-relaxed text-justify flex-grow">
-                    <p className="mb-6 indent-8">
+                {/* Corpo da Declaração com Marca d'Água */}
+                <main className="relative text-base leading-relaxed text-justify flex-grow">
+                    <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-15">
+                        <Image src={schoolSealUrl} alt="Selo da Escola" width={400} height={400} />
+                    </div>
+                    <p className="mb-6 indent-12">
                         Declaramos, para os devidos fins, que <strong className="font-bold">{student.nome || 'N/A'}</strong>, 
-                        nascido(a) em {student.data_nascimento || 'N/A'}, filho(a) de {student.filiacao_1 || 'N/A'}, 
-                        portador(a) do RG nº {student.rg || 'N/A'}, inscrito(a) no CPF sob o nº {student.cpf_aluno || 'N/A'}, 
-                        está regularmente matriculado(a) nesta instituição de ensino no ano letivo de {today.getFullYear()}.
+                        filho(a) de {student.filiacao_1 || 'N/A'} e {student.filiacao_2 || 'N/A'},
+                        com data de nascimento em {student.data_nascimento || 'N/A'}, está regularmente matriculado(a) nesta instituição de ensino no ano letivo de {today.getFullYear()}.
                     </p>
-                    <p className="mb-6 indent-8">
-                        O(A) referido(a) aluno(a) está cursando a <strong className="font-bold">{student.serie || 'N/A'}</strong> do 
+                    <p className="mb-6 indent-12">
+                        O(A) aluno(a) está cursando a <strong className="font-bold">{student.serie || 'N/A'}</strong> do 
                         <strong className="font-bold"> {student.ensino || 'N/A'}</strong>, na classe <strong className="font-bold">{student.classe || 'N/A'}</strong>, 
-                        no turno da <strong className="font-bold">{student.turno || 'N/A'}</strong>, sob o Registro do Aluno (RM) 
+                        no turno da <strong className="font-bold">{student.turno || 'N/A'}</strong>, e possui o Registro do Aluno (RM) 
                         nº <strong className="font-bold">{student.rm || 'N/A'}</strong>.
                     </p>
                     {student.nee && (
-                         <p className="mb-6 indent-8">
+                         <p className="mb-6 indent-12">
                             Consta em nossos registros que o(a) aluno(a) possui a seguinte necessidade educacional especial: <strong className="font-bold">{student.nee}</strong>.
                         </p>
                     )}
-                     <p className="mt-12">
+                     <p className="mt-12 indent-12">
                         Por ser expressão da verdade, firmamos a presente declaração.
                     </p>
                 </main>
 
-                {/* Data e Assinatura */}
-                <footer className="pt-16 text-center">
-                    <p className="mb-16">{`Cidade, ${formattedDate}.`}</p>
-                    <div className="w-64 mx-auto">
-                        <div className="border-t border-gray-400 pt-2">
-                            <p className="font-bold">Direção da Escola</p>
-                            <p className="text-sm">Assinatura Autorizada</p>
+                 {/* Assinatura */}
+                <div className="flex-grow"></div>
+                <div className="pt-16 flex justify-center items-end">
+                    <div className="text-center">
+                        <Image src={signatureUrl} alt="Assinatura Gestão Escolar" width={200} height={50}/>
+                        <p className="text-xs font-semibold">GESTÃO ESCOLAR</p>
+                    </div>
+                    <div className="text-center text-[8px] leading-tight ml-4">
+                        <p>Maria Aparecida da S. Numes</p>
+                        <p className="font-bold">Secretária Escolar</p>
+                        <p>Registro Nº 37899/65128092 CM</p>
+                    </div>
+                </div>
+
+                {/* Rodapé */}
+                <footer className="mt-auto pt-8">
+                     <div className="flex w-full">
+                        <div className="h-2 w-full" style={{backgroundColor: '#00857F'}}></div>
+                        <div className="h-2 w-1/4" style={{backgroundColor: '#F38A00'}}></div>
+                    </div>
+                    <div className="flex items-start pt-2 text-[8px] font-bold">
+                        <div className="pr-4 border-r border-gray-400">
+                             <p>EDUCAÇÃO</p>
+                        </div>
+                        <div className="pl-4">
+                             <p>ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES</p>
+                             <p className="font-normal">AV. RECREIO, 1540 - CEP 60831-600 - LAGOA REDONDA</p>
+                             <p className="font-normal">INEP 23070188</p>
                         </div>
                     </div>
                 </footer>
