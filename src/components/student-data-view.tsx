@@ -21,7 +21,7 @@ import {
 import StudentDetailSheet from './student-detail-sheet';
 import { Input } from './ui/input';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 20;
 
 export default function StudentDataView() {
   const firestore = useFirestore();
