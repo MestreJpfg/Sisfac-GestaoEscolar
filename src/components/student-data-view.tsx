@@ -209,38 +209,15 @@ export default function StudentDataView() {
   return (
     <div className="space-y-6">
        <div className="flex flex-col sm:flex-row justify-end sm:items-center gap-4">
-        <div className="flex items-center gap-2">
-            <div className="relative w-full max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                type="text"
-                placeholder="Filtrar por nome..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-                />
-            </div>
-            <AlertDialog>
-            <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm" className="shrink-0">
-                <Trash2 className="w-4 h-4 mr-2" />
-                Apagar
-                </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    Esta ação não pode ser desfeita. Isto irá apagar permanentemente todos os 
-                    <span className="font-bold text-destructive-foreground"> {totalCount}</span> registos de alunos da base de dados.
-                </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteAll} className="bg-destructive hover:bg-destructive/90">Sim, apagar tudo</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-            </AlertDialog>
+        <div className="relative w-full max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+            type="text"
+            placeholder="Filtrar por nome..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+            />
         </div>
       </div>
       <StudentTable
@@ -258,6 +235,29 @@ export default function StudentDataView() {
         isOpen={!!selectedStudent}
         onClose={handleCloseSheet}
       />
+       <div className="flex justify-end pt-6 border-t border-border/10">
+            <AlertDialog>
+            <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" className="shrink-0">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Apagar Base de Dados
+                </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Esta ação não pode ser desfeita. Isto irá apagar permanentemente todos os 
+                    <span className="font-bold text-destructive-foreground"> {totalCount}</span> registos de alunos da base de dados.
+                </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteAll} className="bg-destructive hover:bg-destructive/90">Sim, apagar tudo</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+            </AlertDialog>
+        </div>
     </div>
   );
 }
