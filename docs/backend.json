@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UploadedFile": {
@@ -109,6 +110,4 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to provide a secure and scalable solution for the XLSX Viewer application. Each user has a dedicated space for their uploaded files and extracted data, ensuring data isolation and simplifying security rules. The chosen structure prioritizes authorization independence by avoiding `get()` calls in security rules. This is achieved through path-based ownership, where each user has their own collection of files and extracted data. This makes it easier to debug and maintain, and also provides better guarantees about the security of the data. The structure allows for secure list operations because data with different security requirements are stored in separate collections. The data model uses explicit state modeling (through the `id` fields acting as implicit state) and radical consistency in naming conventions."
-  }
-}
+    "reasoning": "The Firestore structure is designed to provide a secure and scalable solution for the XLSX Viewer application. Each user has a dedicated space for their uploaded files and extracted data, ensuring data isolation and simplifying security rules. The chosen structure prioritizes authorization independence by avoiding `get()` calls in security rules. This is achieved through path-based ownership, where each user has their own collection of files and extracted data. This makes it easier to debug and maintain, and also provides better guarantees about the security of the data. The structure allows for secure list operations because data with different security requirements are stored in separate collections. The data model uses explicit state modeling (through the `id

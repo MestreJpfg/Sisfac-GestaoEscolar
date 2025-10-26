@@ -99,7 +99,7 @@ export function useCollection<T = any>(
 
         // Set local error state for the component using the hook
         setError(contextualError);
-        setData(null);
+setData(null);
         setIsLoading(false);
 
         // Emit the global error event for central handling (e.g., dev overlay)
