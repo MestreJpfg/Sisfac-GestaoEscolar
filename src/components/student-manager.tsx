@@ -101,12 +101,17 @@ export default function StudentManager() {
         }
         
         if (header === 'data_nascimento' && value) {
-          // Assuming the date is in a format Excel can parse, then it becomes a number
           if (typeof value === 'number') {
+            // Excel date to JS date
             const date = new Date(Math.round((value - 25569) * 86400 * 1000));
-            processedValue = ('0' + date.getDate()).slice(-2) + '-' + ('0' + (date.getMonth() + 1)).slice(-2) + '-' + date.getFullYear();
+            if (!isNaN(date.getTime())) {
+              processedValue = ('0' + date.getDate()).slice(-2) + '/' + ('0' + (date.getMonth() + 1)).slice(-2) + '/' + date.getFullYear();
+            } else {
+              processedValue = String(value); // Keep original if parse fails
+            }
+          } else {
+             processedValue = String(value);
           }
-          // Can add more parsing for string dates if needed
         }
 
 
@@ -202,7 +207,7 @@ export default function StudentManager() {
             Gestão de Alunos 2025
           </h1>
           <p className="text-muted-foreground mt-2 text-sm sm:text-base max-w-lg mx-auto">
-            {dataExists ? "Visualize e filtre os dados dos alunos." : "Carregue o ficheiro de alunos para iniciar a gestão."}
+            {dataExists ? "Visualize os dados dos alunos." : "Carregue o ficheiro de alunos para iniciar a gestão."}
           </p>
         </header>
 
