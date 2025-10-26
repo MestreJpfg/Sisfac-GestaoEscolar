@@ -24,64 +24,66 @@ export default function StudentDataView() {
 
   const studentsCollectionRef = useMemo(() => collection(firestore, 'alunos'), [firestore]);
 
-  const buildQuery = useCallback((forCount: boolean = false): Query<DocumentData> => {
-      let constraints: QueryConstraint[] = [];
-      
-      if (filters.serie) constraints.push(where("serie", "==", filters.serie));
-      if (filters.turno) constraints.push(where("turno", "==", filters.turno));
-      if (filters.classe) constraints.push(where("classe", "==", filters.classe));
-      if (filters.transporte_escolar) constraints.push(where("transporte_escolar", "==", true));
-      if (filters.nee) constraints.push(where("nee", "!=", null));
+  const buildQuery = useCallback((currentFilters: StudentFiltersState, forCount: boolean = false): Query<DocumentData> => {
+    let constraints: QueryConstraint[] = [];
+    const isFiltered = Object.values(currentFilters).some(v => v !== undefined && v !== '');
 
-      // Simple text search logic (can be improved with more advanced backend)
-      if (filters.search) {
-        // Firestore doesn't support partial string search natively on multiple fields
-        // This is a simplified approach. For better search, use a dedicated search service like Algolia.
-        // This query will look for an exact match on 'nome' or 'rm'.
-        // To handle partial search, you'd typically fetch more data and filter client-side, or use >= and < range queries.
-        // constraints.push(where("nome", ">=", filters.search));
-        // constraints.push(where("nome", "<=", filters.search + '\uf8ff'));
-      }
-      
-      if (!forCount) {
-        constraints.push(orderBy("nome"));
-      }
+    if (currentFilters.serie) constraints.push(where("serie", "==", currentFilters.serie));
+    if (currentFilters.turno) constraints.push(where("turno", "==", currentFilters.turno));
+    if (currentFilters.classe) constraints.push(where("classe", "==", currentFilters.classe));
+    if (currentFilters.transporte_escolar) constraints.push(where("transporte_escolar", "==", true));
+    if (currentFilters.nee) constraints.push(where("nee", "!=", null));
+    
+    // Only order by name if there are no filters applied.
+    // This simplifies index requirements. Complex filtering + ordering needs specific composite indexes.
+    if (!forCount && !isFiltered) {
+      constraints.push(orderBy("nome"));
+    }
 
-      return query(studentsCollectionRef, ...constraints);
-  }, [filters, studentsCollectionRef]);
+    return query(studentsCollectionRef, ...constraints);
+  }, [studentsCollectionRef]);
 
 
-  const fetchStudents = useCallback(async (page: number, newFilters?: StudentFiltersState) => {
+  const fetchStudents = useCallback(async (page: number, newFilters: StudentFiltersState) => {
     setIsLoading(true);
-    const currentFilters = newFilters || filters;
     try {
+      // Use the new filters immediately for the query build
+      const finalFilters = newFilters;
+
       // Fetch total count based on filters
-      const countQuery = buildQuery(true);
+      const countQuery = buildQuery(finalFilters, true);
       const countSnapshot = await getCountFromServer(countQuery);
       setTotalCount(countSnapshot.data().count);
       
       // Fetch paginated data
-      const dataQuery = buildQuery();
+      const dataQuery = buildQuery(finalFilters, false);
       let paginatedQuery = query(dataQuery, limit(PAGE_SIZE));
-
+      
+      // Only use pagination cursor if we are on a subsequent page *with the same filters*
       if (page > 1 && lastVisible) {
         paginatedQuery = query(dataQuery, startAfter(lastVisible), limit(PAGE_SIZE));
       }
       
       const snapshot = await getDocs(paginatedQuery);
-      const studentData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      let studentData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-      if (currentFilters.search) {
-        const searchTerm = currentFilters.search.toLowerCase();
-        const filteredData = studentData.filter(s => 
+      // Client-side search and sorting if filters are active
+      const isFiltered = Object.values(finalFilters).some(v => v !== undefined && v !== '');
+      
+      if (finalFilters.search) {
+        const searchTerm = finalFilters.search.toLowerCase();
+        studentData = studentData.filter(s => 
             s.nome.toLowerCase().includes(searchTerm) || 
             (s.rm && s.rm.toString().toLowerCase().includes(searchTerm))
         );
-        setStudents(filteredData);
-      } else {
-        setStudents(studentData);
       }
 
+      // If filters are applied, sort client-side as we removed server-side orderBy
+      if (isFiltered) {
+        studentData.sort((a, b) => a.nome.localeCompare(b.nome));
+      }
+
+      setStudents(studentData);
       setLastVisible(snapshot.docs[snapshot.docs.length - 1] || null);
     } catch (error: any) {
       console.error("Error fetching students: ", error);
@@ -95,35 +97,34 @@ export default function StudentDataView() {
     } finally {
       setIsLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buildQuery, lastVisible, toast]);
 
   useEffect(() => {
-    fetchStudents(1);
+    // Initial load with no filters
+    fetchStudents(1, {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // Run only once on mount
 
   const handleFilterChange = (newFilters: StudentFiltersState) => {
     setFilters(newFilters);
     setCurrentPage(1);
-    setLastVisible(null);
+    setLastVisible(null); // Reset pagination on new filter
     fetchStudents(1, newFilters);
   };
 
   const handlePageChange = (newPage: number) => {
     if (newPage > currentPage) {
-      // Moving to the next page
-      fetchStudents(newPage);
+        fetchStudents(newPage, filters);
     } else {
-      // Moving to a previous page requires re-fetching from the beginning
-      // Firestore's cursor-based pagination makes it hard to go "back" without re-querying
-      setLastVisible(null);
-      fetchStudents(1); 
+        // Firestore cursor pagination doesn't easily support "previous".
+        // Re-fetching from the start is the simplest way.
+        setLastVisible(null);
+        fetchStudents(1, filters);
     }
     setCurrentPage(newPage);
   };
 
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  const totalPages = totalCount > 0 ? Math.ceil(totalCount / PAGE_SIZE) : 1;
 
   return (
     <div className="space-y-6">
