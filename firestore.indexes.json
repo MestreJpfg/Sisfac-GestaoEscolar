@@ -30,7 +30,7 @@
     },
     {
       "collectionGroup": "alunos",
-      "queryScope": "COLLECTION",
+      "queryScope": "COLlection",
       "fields": [
         {
           "fieldPath": "classe",
