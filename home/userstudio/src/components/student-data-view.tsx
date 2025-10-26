@@ -119,7 +119,7 @@ export default function StudentDataView() {
       setDisplayedStudents(filteredStudents);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, allStudents, filterNee]);
+  }, [searchTerm, allStudents, filterNee, currentPage]);
 
    useEffect(() => {
     if (isSearchVisible && searchInputRef.current) {
