@@ -73,20 +73,27 @@ export default function StudentDataView() {
       if (finalFilters.search) {
         const searchTerm = finalFilters.search.toLowerCase();
         studentData = studentData.filter(s => 
-            s.nome.toLowerCase().includes(searchTerm) || 
+            s.nome?.toLowerCase().includes(searchTerm) || 
             (s.rm && s.rm.toString().toLowerCase().includes(searchTerm))
         );
       }
 
       // If filters are applied, sort client-side as we removed server-side orderBy
       if (isFiltered) {
-        studentData.sort((a, b) => a.nome.localeCompare(b.nome));
+        studentData.sort((a, b) => {
+          if (a.nome && b.nome) {
+            return a.nome.localeCompare(b.nome);
+          }
+          if (a.nome) return -1; // a comes first
+          if (b.nome) return 1;  // b comes first
+          return 0; // both are missing name
+        });
       }
 
       setStudents(studentData);
       setLastVisible(snapshot.docs[snapshot.docs.length - 1] || null);
     } catch (error: any) {
-      console.error("Error fetching students: ", error);
+      console.error("Erro detalhado ao buscar alunos:", error.stack || error);
       toast({
         variant: "destructive",
         title: "Erro ao buscar alunos",
