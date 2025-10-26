@@ -142,9 +142,10 @@ export default function StudentManager() {
     if (!firestore || !user) {
       toast({
         variant: "destructive",
-        title: "Erro de Conexão",
-        description: "A conexão com a base de dados não está disponível.",
+        title: "Erro de Autenticação",
+        description: "A sua sessão não está ativa. Por favor, recarregue a página e tente novamente.",
       });
+      setIsUploading(false);
       return;
     }
 
