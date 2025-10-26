@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query, getDocs, limit, startAfter, getCountFromServer, orderBy, where, endAt, startAt, DocumentData, Query as FirestoreQuery, writeBatch, doc } from 'firebase/firestore';
+import { collection, query, getDocs, limit, startAfter, getCountFromServer, orderBy, DocumentData, Query as FirestoreQuery, writeBatch, doc } from 'firebase/firestore';
 import StudentTable from './student-table';
 import { Loader2, Trash2, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -20,8 +20,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import StudentDetailSheet from './student-detail-sheet';
 import { Input } from './ui/input';
-import { useDebounce } from '@/hooks/use-debounce';
-
 
 const PAGE_SIZE = 50;
 
@@ -29,7 +27,8 @@ export default function StudentDataView() {
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  const [students, setStudents] = useState<any[]>([]);
+  const [allStudents, setAllStudents] = useState<any[]>([]);
+  const [displayedStudents, setDisplayedStudents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   
@@ -39,55 +38,30 @@ export default function StudentDataView() {
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   const studentsCollectionRef = useMemo(() => firestore ? collection(firestore, 'alunos') : null, [firestore]);
 
-  const fetchStudents = useCallback(async (direction: 'next' | 'first' = 'first', searchTerm: string = '') => {
+  const fetchInitialStudents = useCallback(async () => {
     if (!studentsCollectionRef) return;
     setIsLoading(true);
 
     try {
-      const isSearch = searchTerm.length > 0;
-      let baseQuery: FirestoreQuery;
-
-      if (isSearch) {
-          const upperSearchTerm = searchTerm.toUpperCase();
-          baseQuery = query(studentsCollectionRef, 
-            orderBy("nome"), 
-            startAt(upperSearchTerm), 
-            endAt(upperSearchTerm + '\uf8ff')
-          );
-      } else {
-        baseQuery = query(studentsCollectionRef, orderBy("nome"));
-      }
-
-      if (!isSearch) {
-        const countQuery = query(studentsCollectionRef);
-        const countSnapshot = await getCountFromServer(countQuery);
-        setTotalCount(countSnapshot.data().count);
-      }
+      // Get total count
+      const countQuery = query(studentsCollectionRef);
+      const countSnapshot = await getCountFromServer(countQuery);
+      setTotalCount(countSnapshot.data().count);
       
-      let dataQuery: FirestoreQuery;
+      // Get all students for local filtering
+      const allStudentsQuery = query(studentsCollectionRef, orderBy("nome"));
+      const allDocsSnapshot = await getDocs(allStudentsQuery);
+      const allStudentData = allDocsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setAllStudents(allStudentData);
 
-      if (direction === 'next' && lastVisible && !isSearch) {
-        dataQuery = query(baseQuery, startAfter(lastVisible), limit(PAGE_SIZE));
-        setCurrentPage(prev => prev + 1);
-      } else {
-        dataQuery = query(baseQuery, limit(PAGE_SIZE));
-        setCurrentPage(1);
-      }
-      
-      const snapshot = await getDocs(dataQuery);
-      
-      const studentData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-      if (isSearch) {
-         setTotalCount(snapshot.size);
-      }
-
-      setStudents(studentData);
-      setLastVisible(snapshot.docs[snapshot.docs.length - 1] || null);
+      // Set initial paginated view
+      const initialPageData = allStudentData.slice(0, PAGE_SIZE);
+      setDisplayedStudents(initialPageData);
+      setLastVisible(allDocsSnapshot.docs[PAGE_SIZE -1] || null); // This is not really used anymore but kept for structure
+      setCurrentPage(1);
 
     } catch (error: any) {
       console.error("Erro detalhado ao buscar alunos:", error);
@@ -96,11 +70,42 @@ export default function StudentDataView() {
         title: "Erro ao buscar alunos",
         description: `Ocorreu um erro ao comunicar com a base de dados. Detalhe: ${error.message}`,
       });
-      setStudents([]);
+      setDisplayedStudents([]);
+      setAllStudents([]);
     } finally {
       setIsLoading(false);
     }
-  }, [studentsCollectionRef, lastVisible, toast]);
+  }, [studentsCollectionRef, toast]);
+  
+  useEffect(() => {
+    fetchInitialStudents();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firestore]);
+
+
+  useEffect(() => {
+    if (searchTerm === '') {
+      // Reset to paginated view if search is cleared
+      const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+      const isCurrentPageInvalid = currentPage > totalPages && totalPages > 0;
+      const pageToShow = isCurrentPageInvalid ? 1 : currentPage;
+      
+      const startIndex = (pageToShow - 1) * PAGE_SIZE;
+      const endIndex = startIndex + PAGE_SIZE;
+      setDisplayedStudents(allStudents.slice(startIndex, endIndex));
+      if (isCurrentPageInvalid) setCurrentPage(1);
+
+    } else {
+      // Filter locally
+      const lowerCaseSearchTerm = searchTerm.toLowerCase();
+      const filtered = allStudents.filter(student => 
+        student.nome?.toLowerCase().includes(lowerCaseSearchTerm)
+      );
+      setDisplayedStudents(filtered);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm, allStudents]);
+
 
   const handleDeleteAll = async () => {
     if (!firestore || !studentsCollectionRef) {
@@ -135,10 +140,12 @@ export default function StudentDataView() {
       await Promise.all(batchPromises);
 
       // Limpar o estado local (cache)
-      setStudents([]);
+      setDisplayedStudents([]);
+      setAllStudents([]);
       setTotalCount(0);
       setLastVisible(null);
       setCurrentPage(1);
+      setSearchTerm('');
 
       toast({
         title: "Sucesso!",
@@ -164,19 +171,20 @@ export default function StudentDataView() {
     }
   };
   
-  useEffect(() => {
-    fetchStudents('first', debouncedSearchTerm);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearchTerm, firestore]);
-
-
   const handleNextPage = () => {
-    fetchStudents('next');
+    const newPage = currentPage + 1;
+    const startIndex = (newPage - 1) * PAGE_SIZE;
+    const endIndex = startIndex + PAGE_SIZE;
+    setDisplayedStudents(allStudents.slice(startIndex, endIndex));
+    setCurrentPage(newPage);
   };
   
   const handlePrevPage = () => {
-    // This is tricky with orderBy and startAfter. For simplicity, we go back to the first page.
-    fetchStudents('first');
+    const newPage = currentPage - 1;
+    const startIndex = (newPage - 1) * PAGE_SIZE;
+    const endIndex = startIndex + PAGE_SIZE;
+    setDisplayedStudents(allStudents.slice(startIndex, endIndex));
+    setCurrentPage(newPage);
   };
   
   const handleStudentSelect = (student: any) => {
@@ -188,8 +196,9 @@ export default function StudentDataView() {
   };
 
   const totalPages = totalCount > 0 ? Math.ceil(totalCount / PAGE_SIZE) : 1;
+  const isSearching = searchTerm.length > 0;
 
-  if (isLoading && students.length === 0) {
+  if (isLoading && allStudents.length === 0) {
      return (
         <div className="flex items-center justify-center h-96">
           <Loader2 className="w-12 h-12 text-primary animate-spin" />
@@ -221,14 +230,14 @@ export default function StudentDataView() {
         </div>
       </div>
       <StudentTable
-        students={students}
+        students={displayedStudents}
         currentPage={currentPage}
         totalPages={totalPages}
         onNextPage={handleNextPage}
         onPrevPage={handlePrevPage}
         onRowClick={handleStudentSelect}
         isLoading={isLoading}
-        isSearching={debouncedSearchTerm.length > 0}
+        isSearching={isSearching}
       />
       <StudentDetailSheet 
         student={selectedStudent}
@@ -261,3 +270,4 @@ export default function StudentDataView() {
     </div>
   );
 }
+    
