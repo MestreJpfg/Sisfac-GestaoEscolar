@@ -162,26 +162,6 @@ export const useFirebaseApp = (): FirebaseApp => {
   return firebaseApp;
 };
 
-/** Hook to access the Firebase Messaging instance. */
-export const useMessaging = () => {
-    const { auth } = useFirebase(); // Or however you get the messaging instance
-    // This is a placeholder. You'd actually get this from your init logic.
-    // For now, let's assume it's part of what useFirebase provides or can be derived.
-    const [messaging, setMessaging] = useState<any>(null);
-
-    useEffect(() => {
-        if (auth) {
-            // Dynamically import messaging to avoid server-side issues
-            import('firebase/messaging').then(({ getMessaging }) => {
-                setMessaging(getMessaging());
-            });
-        }
-    }, [auth]);
-
-    return messaging;
-};
-
-
 type MemoFirebase <T> = T & {__memo?: boolean};
 
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | (MemoFirebase<T>) {
