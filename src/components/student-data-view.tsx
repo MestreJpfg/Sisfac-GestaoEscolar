@@ -51,8 +51,9 @@ export default function StudentDataView() {
   }, [filters, studentsCollectionRef]);
 
 
-  const fetchStudents = useCallback(async (page: number) => {
+  const fetchStudents = useCallback(async (page: number, newFilters?: StudentFiltersState) => {
     setIsLoading(true);
+    const currentFilters = newFilters || filters;
     try {
       // Fetch total count based on filters
       const countQuery = buildQuery(true);
@@ -70,8 +71,8 @@ export default function StudentDataView() {
       const snapshot = await getDocs(paginatedQuery);
       const studentData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-      if (filters.search) {
-        const searchTerm = filters.search.toLowerCase();
+      if (currentFilters.search) {
+        const searchTerm = currentFilters.search.toLowerCase();
         const filteredData = studentData.filter(s => 
             s.nome.toLowerCase().includes(searchTerm) || 
             (s.rm && s.rm.toString().toLowerCase().includes(searchTerm))
@@ -94,15 +95,20 @@ export default function StudentDataView() {
     } finally {
       setIsLoading(false);
     }
-  }, [buildQuery, lastVisible, toast, filters.search]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buildQuery, lastVisible, toast]);
 
   useEffect(() => {
     fetchStudents(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleFilterChange = (newFilters: StudentFiltersState) => {
+    setFilters(newFilters);
     setCurrentPage(1);
     setLastVisible(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters]); // Re-fetch when filters change
-
+    fetchStudents(1, newFilters);
+  };
 
   const handlePageChange = (newPage: number) => {
     if (newPage > currentPage) {
@@ -121,7 +127,7 @@ export default function StudentDataView() {
 
   return (
     <div className="space-y-6">
-      <StudentFilters onFilterChange={setFilters} />
+      <StudentFilters onFilterChange={handleFilterChange} />
 
       {isLoading ? (
         <div className="flex items-center justify-center h-96">

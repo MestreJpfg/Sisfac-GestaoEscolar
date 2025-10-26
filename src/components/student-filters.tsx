@@ -30,26 +30,19 @@ export default function StudentFilters({ onFilterChange }: StudentFiltersProps) 
   const turnos = useMemo(() => ["MANHA", "TARDE", "NOITE"], []);
   const classes = useMemo(() => ["A", "B", "C", "D", "E", "F", "U"], []);
 
-  const handleFilter = () => {
-    onFilterChange({ ...filters, search: searchTerm });
-  };
-  
   const handleInputChange = (key: keyof StudentFiltersState, value: any) => {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
-    onFilterChange(newFilters);
   };
   
   const handleSelectChange = (key: keyof StudentFiltersState) => (value: string) => {
     const newFilters = { ...filters, [key]: value === 'all' ? undefined : value };
     setFilters(newFilters);
-    onFilterChange(newFilters);
   };
 
   const handleCheckboxChange = (key: keyof StudentFiltersState) => (checked: boolean) => {
     const newFilters = { ...filters, [key]: checked || undefined };
     setFilters(newFilters);
-    onFilterChange(newFilters);
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,7 +138,7 @@ export default function StudentFilters({ onFilterChange }: StudentFiltersProps) 
             </Button>
             <Button type="submit">
               <Search className="mr-2 h-4 w-4" />
-              Aplicar Pesquisa
+              Aplicar Filtros
             </Button>
           </div>
         </form>
