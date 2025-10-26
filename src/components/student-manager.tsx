@@ -6,27 +6,27 @@ import Image from "next/image";
 import FileUploader from "@/components/file-uploader";
 import { Loader2 } from "lucide-react";
 import { quotes } from "@/lib/quotes";
+import { useEffect } from "react";
 
 export default function StudentManager() {
-  const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [randomQuote, setRandomQuote] = useState<{ quote: string; author: string } | null>(null);
   const [currentDateTime, setCurrentDateTime] = useState('');
 
-  useState(() => {
+  useEffect(() => {
     setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
     const now = new Date();
     const datePart = now.toLocaleDateString('pt-BR', { dateStyle: 'full' });
     const timePart = now.toLocaleTimeString('pt-BR', { timeStyle: 'short' });
     setCurrentDateTime(`${datePart} - ${timePart}`);
-  });
+  }, []);
 
   const handleUploadComplete = (data: any[]) => {
-    // Handle the new data structure here in the future
     console.log("Upload complete:", data);
-    setIsUploading(false);
+    setIsLoading(false);
   };
   
-  const isPageLoading = isUploading;
+  const isPageLoading = isLoading;
 
   return (
     <main className="flex min-h-screen flex-col items-center p-4 sm:p-6 md:p-8">
@@ -63,7 +63,7 @@ export default function StudentManager() {
               <p className="mt-4 text-muted-foreground">Aguarde, a processar o ficheiro...</p>
             </div>
           ) : (
-             <FileUploader onUploadComplete={handleUploadComplete} setIsLoading={setIsUploading} />
+             <FileUploader onUploadComplete={handleUploadComplete} setIsLoading={setIsLoading} />
           )}
         </div>
       </div>

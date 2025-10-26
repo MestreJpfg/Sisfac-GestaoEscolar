@@ -113,7 +113,7 @@ export default function FileUploader({ onUploadComplete, setIsLoading }: FileUpl
     if (!selectedFile) return;
 
     const allowedExtensions = ['.xlsx', '.csv', '.json'];
-    const fileExtension = '.' + selectedFile.name.split('.').pop();
+    const fileExtension = '.' + selectedFile.name.split('.').pop()?.toLowerCase();
 
     if (!allowedExtensions.includes(fileExtension)) {
       toast({
@@ -200,7 +200,7 @@ export default function FileUploader({ onUploadComplete, setIsLoading }: FileUpl
           <input
             ref={inputRef}
             type="file"
-            accept=".xlsx, .csv, .json, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, text/csv, application/json"
+            accept=".xlsx,.csv,.json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,application/json"
             className="hidden"
             onChange={(e) => handleFileSelect(e.target.files ? e.target.files[0] : null)}
             disabled={isProcessing || !!fileName}
