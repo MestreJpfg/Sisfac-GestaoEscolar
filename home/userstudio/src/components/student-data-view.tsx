@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query, getDocs, limit, startAfter, getCountFromServer, orderBy, DocumentData, Query as FirestoreQuery, writeBatch, doc } from 'firebase/firestore';
+import { collection, query, getDocs, getCountFromServer, orderBy, writeBatch, doc } from 'firebase/firestore';
 import StudentTable from './student-table';
 import { Loader2, Trash2, Search, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import StudentDetailSheet from './student-detail-sheet';
 import { Input } from './ui/input';
+import { Checkbox } from './ui/checkbox';
+import { Label } from './ui/label';
 
 const PAGE_SIZE = 20;
 
@@ -32,12 +34,12 @@ export default function StudentDataView() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  const [lastVisible, setLastVisible] = useState<DocumentData | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterNee, setFilterNee] = useState(false);
 
   const studentsCollectionRef = useMemo(() => firestore ? collection(firestore, 'alunos') : null, [firestore]);
 
@@ -60,7 +62,6 @@ export default function StudentDataView() {
       // Set initial paginated view
       const initialPageData = allStudentData.slice(0, PAGE_SIZE);
       setDisplayedStudents(initialPageData);
-      setLastVisible(allDocsSnapshot.docs[PAGE_SIZE -1] || null); // This is not really used anymore but kept for structure
       setCurrentPage(1);
 
     } catch (error: any) {
@@ -84,27 +85,38 @@ export default function StudentDataView() {
 
 
   useEffect(() => {
-    if (searchTerm === '') {
-      // Reset to paginated view if search is cleared
-      const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+    // Start with all students
+    let filteredStudents = allStudents;
+
+    // Apply NEE filter first
+    if (filterNee) {
+      filteredStudents = filteredStudents.filter(student => student.nee === true);
+    }
+    
+    // Then apply search term filter
+    if (searchTerm !== '') {
+      const lowerCaseSearchTerm = searchTerm.toLowerCase();
+      filteredStudents = filteredStudents.filter(student => 
+        student.nome?.toLowerCase().includes(lowerCaseSearchTerm)
+      );
+    }
+    
+    // If no filters are active, apply pagination
+    if (searchTerm === '' && !filterNee) {
+      const totalPages = Math.ceil(filteredStudents.length / PAGE_SIZE);
       const isCurrentPageInvalid = currentPage > totalPages && totalPages > 0;
       const pageToShow = isCurrentPageInvalid ? 1 : currentPage;
       
       const startIndex = (pageToShow - 1) * PAGE_SIZE;
       const endIndex = startIndex + PAGE_SIZE;
-      setDisplayedStudents(allStudents.slice(startIndex, endIndex));
+      setDisplayedStudents(filteredStudents.slice(startIndex, endIndex));
       if (isCurrentPageInvalid) setCurrentPage(1);
-
     } else {
-      // Filter locally
-      const lowerCaseSearchTerm = searchTerm.toLowerCase();
-      const filtered = allStudents.filter(student => 
-        student.nome?.toLowerCase().includes(lowerCaseSearchTerm)
-      );
-      setDisplayedStudents(filtered);
+      // If any filter is active, show all results without pagination
+      setDisplayedStudents(filteredStudents);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, allStudents]);
+  }, [searchTerm, allStudents, filterNee]);
 
 
   const handleDeleteAll = async () => {
@@ -143,9 +155,9 @@ export default function StudentDataView() {
       setDisplayedStudents([]);
       setAllStudents([]);
       setTotalCount(0);
-      setLastVisible(null);
       setCurrentPage(1);
       setSearchTerm('');
+      setFilterNee(false);
 
       toast({
         title: "Sucesso!",
@@ -195,8 +207,8 @@ export default function StudentDataView() {
     setSelectedStudent(null);
   };
 
-  const totalPages = totalCount > 0 ? Math.ceil(totalCount / PAGE_SIZE) : 1;
-  const isSearching = searchTerm.length > 0;
+  const totalPages = Math.ceil(allStudents.length / PAGE_SIZE);
+  const isSearching = searchTerm.length > 0 || filterNee;
 
   if (isLoading && allStudents.length === 0) {
      return (
@@ -217,23 +229,31 @@ export default function StudentDataView() {
 
   return (
     <div className="space-y-6">
-       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-        <div className="flex items-center gap-3 text-foreground">
-          <Users className="w-5 h-5 text-primary"/>
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-2xl font-bold tracking-tight">{totalCount}</span>
-            <span className="text-sm font-medium text-muted-foreground">Alunos</span>
-          </div>
+       <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+            <div className="flex items-center gap-3 text-foreground">
+            <Users className="w-5 h-5 text-primary"/>
+            <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl font-bold tracking-tight">{totalCount}</span>
+                <span className="text-sm font-medium text-muted-foreground">Alunos</span>
+            </div>
+            </div>
+            <div className="relative w-full max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                type="text"
+                placeholder="Filtrar por nome..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+                />
+            </div>
         </div>
-        <div className="relative w-full max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-            type="text"
-            placeholder="Filtrar por nome..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-            />
+        <div className="flex items-center justify-end space-x-2">
+            <Checkbox id="nee-filter" checked={filterNee} onCheckedChange={(checked) => setFilterNee(checked as boolean)} />
+            <Label htmlFor="nee-filter" className="text-sm font-normal text-muted-foreground">
+                Apenas alunos com NEE
+            </Label>
         </div>
       </div>
       <StudentTable
