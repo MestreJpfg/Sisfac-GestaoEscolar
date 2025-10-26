@@ -57,8 +57,15 @@ export default function StudentManager() {
     if (!data || data.length < 2) return [];
 
     const headers: string[] = data[0].map((header: any) => {
-        let h = String(header).trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-        if (h === 'nome_registro_civil') return 'nome';
+        let h = String(header).trim().toLowerCase()
+          .replace(/ç/g, 'c')
+          .replace(/ã/g, 'a')
+          .replace(/é/g, 'e')
+          .replace(/\s+/g, '_')
+          .replace(/[^a-z0-9_]/g, '');
+        if (h === 'nome_do_registro_civil' || h === 'nome_registro_civil') {
+            return 'nome';
+        }
         return h;
     });
     
