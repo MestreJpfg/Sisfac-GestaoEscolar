@@ -1,94 +1,12 @@
 
 {
-  "entities": {
-    "Student": {
-      "title": "Student",
-      "type": "object",
-      "description": "Represents a student's data imported from an XLSX file.",
-      "properties": {
-        "mainItem": {
-          "type": "string",
-          "description": "The main identifying information for the student, typically their full name."
-        },
-        "subItems": {
-          "type": "array",
-          "description": "An array of key-value pairs representing other information from the spreadsheet.",
-          "items": {
-            "type": "object",
-            "properties": {
-              "label": {
-                "type": "string"
-              },
-              "value": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "label",
-              "value"
-            ]
-          }
-        }
-      },
-      "required": [
-        "mainItem",
-        "subItems"
-      ]
-    },
-    "User": {
-      "title": "User",
-      "type": "object",
-      "description": "Represents a user of the application, for FCM token storage.",
-      "properties": {
-        "fcmTokens": {
-          "type": "object",
-          "description": "A map of FCM registration tokens for the user's devices. The keys are the tokens.",
-          "additionalProperties": {
-            "type": "boolean"
-          }
-        }
-      }
-    }
-  },
+  "entities": {},
   "auth": {
     "providers": [
       "anonymous"
     ]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/students/{studentId}",
-        "definition": {
-          "entityName": "Student",
-          "schema": {
-            "$ref": "#/backend/entities/Student"
-          },
-          "description": "Stores student data in a global, shared collection.",
-          "params": [
-            {
-              "name": "studentId",
-              "description": "The unique identifier of the student."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores user-specific data, such as FCM tokens.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            }
-          ]
-        }
-      }
-    ]
+    "structure": []
   }
 }
