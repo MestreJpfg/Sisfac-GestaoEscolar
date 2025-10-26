@@ -145,6 +145,15 @@ export default function StudentManager() {
   };
 
   const handleUploadComplete = async (data: any[]) => {
+    if (!firestore) {
+        toast({
+            variant: "destructive",
+            title: "Erro de Conexão",
+            description: "A conexão com a base de dados ainda não foi estabelecida."
+        });
+        return;
+    }
+
     setIsUploading(true);
   
     const normalizedStudents = normalizeData(data);
@@ -196,7 +205,7 @@ export default function StudentManager() {
 
   return (
     <main className="flex min-h-screen flex-col items-center p-4 sm:p-6 md:p-8">
-      <div className="w-full max-w-7xl mx-auto">
+      <div className="w-full max-w-7xl mx-auto flex-1">
         <header className="text-center mb-8 flex flex-col items-center">
           <div className="mb-4 flex flex-col items-center">
             <Image
@@ -235,6 +244,9 @@ export default function StudentManager() {
           )}
         </div>
       </div>
+      <footer className="w-full max-w-7xl mx-auto mt-12 py-4 text-center text-xs text-muted-foreground">
+        <p>&copy; {new Date().getFullYear()} MestreJp. Todos os direitos reservados.</p>
+      </footer>
     </main>
   );
 }
