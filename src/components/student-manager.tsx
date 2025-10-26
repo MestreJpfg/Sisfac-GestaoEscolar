@@ -5,7 +5,7 @@ import Image from "next/image";
 import FileUploader from "@/components/file-uploader";
 import { Loader2 } from "lucide-react";
 import { quotes } from "@/lib/quotes";
-import { useFirestore, useUser } from "@/firebase";
+import { useFirestore } from "@/firebase";
 import { writeBatch, doc, getCountFromServer, collection } from "firebase/firestore";
 import StudentDataView from "./student-data-view";
 import { useToast } from "@/hooks/use-toast";
@@ -17,7 +17,6 @@ export default function StudentManager() {
   const [currentDateTime, setCurrentDateTime] = useState('');
 
   const firestore = useFirestore();
-  const { user } = useUser();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -47,10 +46,10 @@ export default function StudentManager() {
   }, [firestore]);
 
   useEffect(() => {
-    if (firestore && user) {
+    if (firestore) {
       checkDataExists();
     }
-  }, [firestore, user, checkDataExists]);
+  }, [firestore, checkDataExists]);
 
 
   const normalizeData = (data: any[]): any[] => {
@@ -139,28 +138,28 @@ export default function StudentManager() {
   };
 
   const handleUploadComplete = async (data: any[]) => {
-    if (!firestore || !user) {
+    if (!firestore) {
       toast({
         variant: "destructive",
-        title: "Erro de Autenticação",
-        description: "A sua sessão não está ativa. Por favor, recarregue a página e tente novamente.",
+        title: "Erro de Conexão",
+        description: "A conexão com a base de dados não foi estabelecida. Por favor, recarregue a página.",
       });
-      setIsUploading(false);
       return;
     }
-
+  
     setIsUploading(true);
-
+  
     try {
       const normalizedStudents = normalizeData(data);
       
-      if (normalizedStudents.length === 0 && !isUploading) {
+      if (normalizedStudents.length === 0) {
         setIsUploading(false);
+        // O toast de erro já é mostrado dentro do normalizeData se o RM não for encontrado
         return;
       }
-
+  
       console.log("Dados Normalizados Prontos para Envio:", normalizedStudents);
-
+  
       const batchPromises = [];
       // Firestore batch limit is 500 operations
       for (let i = 0; i < normalizedStudents.length; i += 500) {
@@ -182,13 +181,13 @@ export default function StudentManager() {
         description: `${normalizedStudents.length} registros de alunos foram carregados na base de dados.`,
       });
       setDataExists(true);
-
+  
     } catch (error: any) {
       console.error("Erro ao enviar dados em lote:", error);
       toast({
         variant: "destructive",
         title: "Erro no Upload",
-        description: error.message || "Ocorreu um erro ao guardar os dados. Tente novamente.",
+        description: error.message || "Ocorreu um erro ao guardar os dados. Verifique a sua conexão e as permissões da base de dados.",
       });
     } finally {
       setIsUploading(false);
@@ -241,3 +240,5 @@ export default function StudentManager() {
     </main>
   );
 }
+
+    
