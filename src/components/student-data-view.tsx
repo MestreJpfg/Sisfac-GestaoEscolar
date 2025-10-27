@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query, getDocs, where, orderBy, limit } from 'firebase/firestore';
+import { collection, query, getDocs, where } from 'firebase/firestore';
 import StudentTable from './student-table';
-import { Loader2, Filter, X } from 'lucide-react';
+import { Loader2, Filter, X, ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import StudentDetailSheet from './student-detail-sheet';
 import { Input } from './ui/input';
@@ -12,6 +12,8 @@ import { Card, CardContent } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Button } from './ui/button';
 import { useDebounce } from '@/hooks/use-debounce';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
 
 export default function StudentDataView() {
   const firestore = useFirestore();
@@ -21,6 +23,7 @@ export default function StudentDataView() {
   const [isLoading, setIsLoading] = useState(false);
   
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
+  const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
 
   const [filters, setFilters] = useState({
     nome: '',
@@ -39,13 +42,12 @@ export default function StudentDataView() {
 
   const [hasSearched, setHasSearched] = useState(false);
 
-  // This effect will fetch unique options for the dropdowns ONCE on component mount
   useEffect(() => {
     const fetchUniqueOptions = async () => {
       if (!firestore) return;
       try {
         const studentsCollectionRef = collection(firestore, 'alunos');
-        const querySnapshot = await getDocs(query(studentsCollectionRef, limit(1000))); // Sample for performance
+        const querySnapshot = await getDocs(query(studentsCollectionRef)); 
         
         const series = new Set<string>();
         const classes = new Set<string>();
@@ -88,9 +90,7 @@ export default function StudentDataView() {
     try {
       const baseQuery = collection(firestore, 'alunos');
       let conditions = [];
-
-      // A busca por nome agora é sempre feita no cliente.
-      // Construímos a consulta ao Firestore apenas com os filtros de seleção.
+      
       if (filters.serie) {
         conditions.push(where('serie', '==', filters.serie));
       }
@@ -101,36 +101,23 @@ export default function StudentDataView() {
         conditions.push(where('turno', '==', filters.turno));
       }
       
-      const finalQuery = query(
-        baseQuery,
-        ...conditions
-      );
+      const finalQuery = conditions.length > 0 ? query(baseQuery, ...conditions) : query(baseQuery);
 
       const querySnapshot = await getDocs(finalQuery);
       
       let studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-      // Aplicar filtro de nome (substring) no lado do cliente
       if (hasNameSearch) {
         studentsData = studentsData.filter(student => 
             student.nome && student.nome.toUpperCase().includes(nameSearch)
         );
       }
       
-      // Ordenação no lado do cliente
       studentsData.sort((a, b) => {
-        // Ordenação principal por 'serie'
-        const serieA = String(a.serie || '');
-        const serieB = String(b.serie || '');
-        if (serieA < serieB) return -1;
-        if (serieA > serieB) return 1;
-
-        // Ordenação secundária por 'nome'
-        const nomeA = String(a.nome || '');
-        const nomeB = String(b.nome || '');
+        const nomeA = String(a.nome || '').toUpperCase();
+        const nomeB = String(b.nome || '').toUpperCase();
         if (nomeA < nomeB) return -1;
         if (nomeA > nomeB) return 1;
-
         return 0;
       });
 
@@ -180,12 +167,11 @@ export default function StudentDataView() {
   };
 
   const handleStudentUpdate = () => {
-    // Re-fetch data to ensure table is up-to-date after an edit
     searchStudents();
     handleCloseSheet();
   };
 
-  const hasActiveFilters = Object.values(filters).some(filter => filter !== '');
+  const hasActiveFilters = Object.values(filters).some(filter => filter !== '' && filter !== filters.nome);
   
   return (
     <div className="space-y-6">
@@ -195,49 +181,63 @@ export default function StudentDataView() {
             <Filter className="w-4 h-4" />
             <h3 className="text-sm font-semibold">Filtrar Base de Dados</h3>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Input
-              name="nome"
-              placeholder="Digite 3+ letras do nome..."
-              value={filters.nome}
-              onChange={(e) => handleFilterChange('nome', e.target.value)}
-            />
-            <Select value={filters.serie || ''} onValueChange={(value) => handleFilterChange('serie', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filtrar por série..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as séries</SelectItem>
-                {uniqueFilterOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={filters.classe || ''} onValueChange={(value) => handleFilterChange('classe', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filtrar por classe..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as classes</SelectItem>
-                {uniqueFilterOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={filters.turno || ''} onValueChange={(value) => handleFilterChange('turno', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filtrar por turno..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os turnos</SelectItem>
-                {uniqueFilterOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          {hasActiveFilters && (
-            <div className="flex items-center justify-end mt-4">
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="text-destructive hover:text-destructive">
-                <X className="w-4 h-4 mr-2" />
-                Limpar Filtros
+          
+          <Input
+            name="nome"
+            placeholder="Digite 3+ letras do nome para buscar..."
+            value={filters.nome}
+            onChange={(e) => handleFilterChange('nome', e.target.value)}
+          />
+
+          <Collapsible open={isAdvancedSearchOpen} onOpenChange={setIsAdvancedSearchOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" className="w-full justify-start px-0 text-sm font-semibold text-primary">
+                 Filtros Avançados
+                <ChevronDown className={cn("ml-2 h-4 w-4 transition-transform", isAdvancedSearchOpen && "rotate-180")} />
               </Button>
-            </div>
-          )}
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 pt-4 data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <Select value={filters.serie || ''} onValueChange={(value) => handleFilterChange('serie', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filtrar por série..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas as séries</SelectItem>
+                      {uniqueFilterOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Select value={filters.classe || ''} onValueChange={(value) => handleFilterChange('classe', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filtrar por classe..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas as classes</SelectItem>
+                      {uniqueFilterOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Select value={filters.turno || ''} onValueChange={(value) => handleFilterChange('turno', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filtrar por turno..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os turnos</SelectItem>
+                      {uniqueFilterOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+              </div>
+              
+              {(hasActiveFilters || (filters.nome.length > 0 && !hasSearched)) && (
+                <div className="flex items-center justify-end mt-4">
+                  <Button variant="ghost" size="sm" onClick={clearFilters} className="text-destructive hover:text-destructive">
+                    <X className="w-4 h-4 mr-2" />
+                    Limpar Todos os Filtros
+                  </Button>
+                </div>
+              )}
+
+            </CollapsibleContent>
+          </Collapsible>
         </CardContent>
       </Card>
       
