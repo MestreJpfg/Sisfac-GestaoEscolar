@@ -89,6 +89,8 @@ export default function StudentDataView() {
       const baseQuery = collection(firestore, 'alunos');
       let conditions = [];
 
+      // A busca por nome agora é sempre feita no cliente.
+      // Construímos a consulta ao Firestore apenas com os filtros de seleção.
       if (filters.serie) {
         conditions.push(where('serie', '==', filters.serie));
       }
@@ -97,12 +99,6 @@ export default function StudentDataView() {
       }
       if (filters.turno) {
         conditions.push(where('turno', '==', filters.turno));
-      }
-      
-      // If there are no other filters, we can use the efficient prefix search on 'nome'
-      if (hasNameSearch && !hasOtherFilters) {
-        conditions.push(where('nome', '>=', nameSearch));
-        conditions.push(where('nome', '<=', nameSearch + '\uf8ff'));
       }
       
       const finalQuery = query(
@@ -114,22 +110,22 @@ export default function StudentDataView() {
       
       let studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-      // If a name search is active along with other filters, perform client-side filtering for substring matches
-      if (hasNameSearch && hasOtherFilters) {
+      // Aplicar filtro de nome (substring) no lado do cliente
+      if (hasNameSearch) {
         studentsData = studentsData.filter(student => 
             student.nome && student.nome.toUpperCase().includes(nameSearch)
         );
       }
       
-      // Client-side sorting
+      // Ordenação no lado do cliente
       studentsData.sort((a, b) => {
-        // Primary sort: by 'serie'
+        // Ordenação principal por 'serie'
         const serieA = String(a.serie || '');
         const serieB = String(b.serie || '');
         if (serieA < serieB) return -1;
         if (serieA > serieB) return 1;
 
-        // Secondary sort: by 'nome'
+        // Ordenação secundária por 'nome'
         const nomeA = String(a.nome || '');
         const nomeB = String(b.nome || '');
         if (nomeA < nomeB) return -1;
