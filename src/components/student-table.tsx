@@ -1,9 +1,8 @@
 "use client";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "./ui/card";
-import { ChevronLeft, ChevronRight, BookUser, Loader2, Search } from "lucide-react";
+import { BookUser, Loader2, Search } from "lucide-react";
 import { Badge } from "./ui/badge";
 
 interface StudentTableProps {
@@ -38,7 +37,7 @@ export default function StudentTable({ students, isLoading, onRowClick, hasSearc
                  <>
                     <Search className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum aluno exibido</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">Use os filtros acima e digite um nome para começar a pesquisar.</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Use os filtros acima para começar a pesquisar.</p>
                 </>
             )}
         </CardContent>

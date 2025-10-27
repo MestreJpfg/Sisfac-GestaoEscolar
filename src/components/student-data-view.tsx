@@ -13,8 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Button } from './ui/button';
 import { useDebounce } from '@/hooks/use-debounce';
 
-const PAGE_SIZE = 20;
-
 export default function StudentDataView() {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -91,12 +89,7 @@ export default function StudentDataView() {
     try {
       const baseQuery = collection(firestore, 'alunos');
       let conditions = [];
-
-      // Condição de busca por nome (com 3+ caracteres)
-      if (hasNameSearch) {
-        conditions.push(where('nome', '>=', nameSearch.toUpperCase()));
-        conditions.push(where('nome', '<=', nameSearch.toUpperCase() + '\uf8ff'));
-      }
+      let orderByClauses = [];
 
       // Condições para os outros filtros
       if (filters.serie) {
@@ -109,12 +102,26 @@ export default function StudentDataView() {
         conditions.push(where('turno', '==', filters.turno));
       }
 
-      // Monta a query final. A ordenação deve ser consistente com o primeiro filtro de desigualdade.
+      // Condição de busca por nome (com 3+ caracteres)
+      if (hasNameSearch) {
+        conditions.push(where('nome', '>=', nameSearch.toUpperCase()));
+        conditions.push(where('nome', '<=', nameSearch.toUpperCase() + '\uf8ff'));
+        // A ordenação DEVE começar pelo campo do filtro de desigualdade
+        orderByClauses.push(orderBy('nome')); 
+      }
+      
+      // Adiciona a ordenação principal por série e secundária por nome
+      orderByClauses.push(orderBy('serie'));
+      orderByClauses.push(orderBy('nome'));
+      
+      // Remove duplicatas de orderBy (caso 'nome' já tenha sido adicionado)
+      const uniqueOrderBy = Array.from(new Map(orderByClauses.map(item => [item._field.toString(), item])).values());
+
+
       const finalQuery = query(
         baseQuery,
         ...conditions,
-        orderBy('serie'), // Ordena sempre por serie primeiro
-        orderBy('nome') // Depois por nome
+        ...uniqueOrderBy,
       );
 
       const querySnapshot = await getDocs(finalQuery);
@@ -126,7 +133,7 @@ export default function StudentDataView() {
       toast({
         variant: "destructive",
         title: "Erro ao buscar dados",
-        description: error.message.includes("indexes") 
+        description: error.message.includes("index") 
           ? "A base de dados precisa de um índice para esta consulta. Verifique a consola do Firebase."
           : "Não foi possível realizar a busca na base de dados.",
       });
