@@ -41,8 +41,8 @@ export default function StudentTable({ students, isLoading, onRowClick, currentP
             ) : (
                  <>
                     <Search className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-medium text-foreground">Base de dados carregada</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">Use os filtros acima para pesquisar nos registos. Nenhum aluno na base de dados.</p>
+                    <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum aluno na base de dados</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">Use os filtros acima para pesquisar nos registos.</p>
                 </>
             )}
         </CardContent>
