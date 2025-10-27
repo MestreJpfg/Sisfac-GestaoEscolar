@@ -1,8 +1,9 @@
 "use client";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "./ui/card";
-import { BookUser, Loader2, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookUser, Loader2, Search } from "lucide-react";
 import { Badge } from "./ui/badge";
 
 interface StudentTableProps {
@@ -10,15 +11,19 @@ interface StudentTableProps {
   isLoading: boolean;
   hasSearched: boolean;
   onRowClick: (student: any) => void;
+  currentPage: number;
+  totalPages: number;
+  onNextPage: () => void;
+  onPrevPage: () => void;
 }
 
-export default function StudentTable({ students, isLoading, hasSearched, onRowClick }: StudentTableProps) {
+export default function StudentTable({ students, isLoading, hasSearched, onRowClick, currentPage, totalPages, onNextPage, onPrevPage }: StudentTableProps) {
   
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">A buscar na base de dados...</p>
+        <p className="mt-4 text-muted-foreground">A carregar dados...</p>
       </div>
     )
   }
@@ -34,10 +39,10 @@ export default function StudentTable({ students, isLoading, hasSearched, onRowCl
                     <p className="mt-1 text-sm text-muted-foreground">Tente um termo de busca diferente ou refine os seus filtros.</p>
                 </>
             ) : (
-                <>
+                 <>
                     <Search className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-medium text-foreground">Pronto para a busca</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">Use os filtros acima para pesquisar na base de dados.</p>
+                    <h3 className="mt-4 text-lg font-medium text-foreground">Base de dados carregada</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">Use os filtros acima para pesquisar nos registos.</p>
                 </>
             )}
         </CardContent>
@@ -81,6 +86,31 @@ export default function StudentTable({ students, isLoading, hasSearched, onRowCl
           </Table>
         </div>
       </CardContent>
+       <div className="flex items-center justify-between p-4 border-t">
+          <p className="text-sm text-muted-foreground">
+            Página {currentPage} de {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={onPrevPage} 
+              disabled={currentPage <= 1}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1"/>
+              Anterior
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={onNextPage} 
+              disabled={currentPage >= totalPages}
+            >
+              Próxima
+              <ChevronRight className="h-4 w-4 ml-1"/>
+            </Button>
+          </div>
+        </div>
     </Card>
   );
 }
