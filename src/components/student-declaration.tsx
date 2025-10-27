@@ -15,7 +15,6 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
     }).format(today);
 
     // Use a public placeholder for logos and images
-    const fortalezaLogoUrl = "https://placehold.co/100x100?text=Bras%C3%A3o+Fortaleza";
     const schoolSealUrl = "https://placehold.co/500x500/000000/ffffff.png?text=SELO+DA+ESCOLA&font=roboto";
     const signatureUrl = "https://placehold.co/200x50?text=Assinatura&font=script";
 
