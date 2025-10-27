@@ -3,29 +3,48 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "./ui/card";
-import { ChevronLeft, ChevronRight, BookUser, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, BookUser, Loader2, Search } from "lucide-react";
 import { Badge } from "./ui/badge";
 
 interface StudentTableProps {
   students: any[];
+  isLoading: boolean;
+  onRowClick: (student: any) => void;
   currentPage: number;
   totalPages: number;
   onNextPage: () => void;
   onPrevPage: () => void;
-  onRowClick: (student: any) => void;
-  isLoading: boolean;
-  isSearching?: boolean;
+  hasFilters: boolean;
 }
 
-export default function StudentTable({ students, currentPage, totalPages, onNextPage, onPrevPage, onRowClick, isLoading, isSearching = false }: StudentTableProps) {
+export default function StudentTable({ students, isLoading, onRowClick, currentPage, totalPages, onNextPage, onPrevPage, hasFilters }: StudentTableProps) {
   
-  if (students.length === 0 && !isLoading) {
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">A carregar dados...</p>
+      </div>
+    )
+  }
+
+  if (students.length === 0) {
     return (
       <Card>
-        <CardContent className="p-6 text-center">
-            <BookUser className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum aluno encontrado</h3>
-            <p className="mt-1 text-sm text-muted-foreground">{isSearching ? "Tente um termo de busca diferente." : "A base de dados pode estar vazia. Tente carregar um ficheiro de alunos."}</p>
+        <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
+            {hasFilters ? (
+                <>
+                    <BookUser className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum aluno encontrado</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">Tente um termo de busca diferente ou refine os seus filtros.</p>
+                </>
+            ) : (
+                 <>
+                    <Search className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <h3 className="mt-4 text-lg font-medium text-foreground">Base de dados carregada</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">Use os filtros acima para pesquisar nos registos. Nenhum aluno na base de dados.</p>
+                </>
+            )}
         </CardContent>
       </Card>
     )
@@ -35,11 +54,6 @@ export default function StudentTable({ students, currentPage, totalPages, onNext
     <Card>
       <CardContent className="p-0">
         <div className="overflow-x-auto relative">
-           {isLoading && (
-            <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-10">
-              <Loader2 className="w-8 h-8 text-primary animate-spin" />
-            </div>
-          )}
           <Table>
             <TableHeader>
               <TableRow>
@@ -55,7 +69,7 @@ export default function StudentTable({ students, currentPage, totalPages, onNext
             </TableHeader>
             <TableBody>
               {students.map((student) => (
-                <TableRow key={student.id} onClick={() => onRowClick(student)} className="cursor-pointer">
+                <TableRow key={student.id} onClick={() => onRowClick(student)} className="cursor-pointer hover:bg-muted/50">
                   <TableCell className="font-medium">{student.nome || <span className="text-muted-foreground italic">Sem nome</span>}</TableCell>
                   <TableCell>{student.serie}</TableCell>
                   <TableCell>{student.classe}</TableCell>
@@ -72,34 +86,33 @@ export default function StudentTable({ students, currentPage, totalPages, onNext
           </Table>
         </div>
       </CardContent>
-      
-      {!isSearching && (
-        <div className="flex items-center justify-between p-4 border-t">
-          <p className="text-sm text-muted-foreground">
-            Página {currentPage} de {totalPages}
-          </p>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={onPrevPage} 
-              disabled={currentPage <= 1 || isLoading}
-            >
-              <ChevronLeft className="h-4 w-4 mr-1"/>
-              Anterior
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={onNextPage} 
-              disabled={currentPage >= totalPages || isLoading}
-            >
-              Próxima
-              <ChevronRight className="h-4 w-4 ml-1"/>
-            </Button>
+       {totalPages > 1 && (
+         <div className="flex items-center justify-between p-4 border-t">
+            <p className="text-sm text-muted-foreground">
+              Página {currentPage} de {totalPages}
+            </p>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={onPrevPage} 
+                disabled={currentPage <= 1}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1"/>
+                Anterior
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={onNextPage} 
+                disabled={currentPage >= totalPages}
+              >
+                Próxima
+                <ChevronRight className="h-4 w-4 ml-1"/>
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+       )}
     </Card>
   );
 }
