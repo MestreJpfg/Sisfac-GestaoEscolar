@@ -9,15 +9,15 @@ import { Badge } from "./ui/badge";
 interface StudentTableProps {
   students: any[];
   isLoading: boolean;
-  hasSearched: boolean;
   onRowClick: (student: any) => void;
   currentPage: number;
   totalPages: number;
   onNextPage: () => void;
   onPrevPage: () => void;
+  hasFilters: boolean;
 }
 
-export default function StudentTable({ students, isLoading, hasSearched, onRowClick, currentPage, totalPages, onNextPage, onPrevPage }: StudentTableProps) {
+export default function StudentTable({ students, isLoading, onRowClick, currentPage, totalPages, onNextPage, onPrevPage, hasFilters }: StudentTableProps) {
   
   if (isLoading) {
     return (
@@ -32,7 +32,7 @@ export default function StudentTable({ students, isLoading, hasSearched, onRowCl
     return (
       <Card>
         <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
-            {hasSearched ? (
+            {hasFilters ? (
                 <>
                     <BookUser className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum aluno encontrado</h3>
@@ -42,7 +42,7 @@ export default function StudentTable({ students, isLoading, hasSearched, onRowCl
                  <>
                     <Search className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-medium text-foreground">Base de dados carregada</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">Use os filtros acima para pesquisar nos registos.</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Use os filtros acima para pesquisar nos registos. Nenhum aluno na base de dados.</p>
                 </>
             )}
         </CardContent>
@@ -57,27 +57,25 @@ export default function StudentTable({ students, isLoading, hasSearched, onRowCl
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Série</TableHead>
-                <TableHead>Classe</TableHead>
-                <TableHead>Turno</TableHead>
-                <TableHead>Data de Nasc.</TableHead>
-                <TableHead>RM</TableHead>
-                <TableHead>Filiação 1</TableHead>
-                <TableHead>NEE</TableHead>
+                <TableHead className="text-left">Nome</TableHead>
+                <TableHead className="text-center">Série</TableHead>
+                <TableHead className="text-center">Classe</TableHead>
+                <TableHead className="text-center">Turno</TableHead>
+                <TableHead className="text-center">Data de Nasc.</TableHead>
+                <TableHead className="text-center">RM</TableHead>
+                <TableHead className="text-center">NEE</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {students.map((student) => (
-                <TableRow key={student.id} onClick={() => onRowClick(student)} className="cursor-pointer">
-                  <TableCell className="font-medium">{student.nome || <span className="text-muted-foreground italic">Sem nome</span>}</TableCell>
-                  <TableCell>{student.serie}</TableCell>
-                  <TableCell>{student.classe}</TableCell>
-                  <TableCell>{student.turno}</TableCell>
-                  <TableCell>{student.data_nascimento}</TableCell>
-                  <TableCell>{student.rm}</TableCell>
-                  <TableCell>{student.filiacao_1}</TableCell>
-                  <TableCell>
+                <TableRow key={student.id} onClick={() => onRowClick(student)} className="cursor-pointer hover:bg-muted/50">
+                  <TableCell className="font-medium text-left whitespace-nowrap">{student.nome || <span className="text-muted-foreground italic">Sem nome</span>}</TableCell>
+                  <TableCell className="text-center whitespace-nowrap">{student.serie}</TableCell>
+                  <TableCell className="text-center whitespace-nowrap">{student.classe}</TableCell>
+                  <TableCell className="text-center whitespace-nowrap">{student.turno}</TableCell>
+                  <TableCell className="text-center whitespace-nowrap">{student.data_nascimento}</TableCell>
+                  <TableCell className="text-center whitespace-nowrap">{student.rm}</TableCell>
+                  <TableCell className="text-center whitespace-nowrap">
                     {student.nee ? <Badge variant="destructive">SIM</Badge> : <Badge variant="secondary">NÃO</Badge>}
                   </TableCell>
                 </TableRow>
@@ -86,31 +84,33 @@ export default function StudentTable({ students, isLoading, hasSearched, onRowCl
           </Table>
         </div>
       </CardContent>
-       <div className="flex items-center justify-between p-4 border-t">
-          <p className="text-sm text-muted-foreground">
-            Página {currentPage} de {totalPages}
-          </p>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={onPrevPage} 
-              disabled={currentPage <= 1}
-            >
-              <ChevronLeft className="h-4 w-4 mr-1"/>
-              Anterior
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={onNextPage} 
-              disabled={currentPage >= totalPages}
-            >
-              Próxima
-              <ChevronRight className="h-4 w-4 ml-1"/>
-            </Button>
+       {totalPages > 1 && (
+         <div className="flex items-center justify-between p-4 border-t">
+            <p className="text-sm text-muted-foreground">
+              Página {currentPage} de {totalPages}
+            </p>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={onPrevPage} 
+                disabled={currentPage <= 1}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1"/>
+                Anterior
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={onNextPage} 
+                disabled={currentPage >= totalPages}
+              >
+                Próxima
+                <ChevronRight className="h-4 w-4 ml-1"/>
+              </Button>
+            </div>
           </div>
-        </div>
+       )}
     </Card>
   );
 }
