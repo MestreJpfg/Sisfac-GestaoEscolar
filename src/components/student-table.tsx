@@ -6,6 +6,12 @@ import { Card, CardContent } from "./ui/card";
 import { ChevronLeft, ChevronRight, BookUser, Loader2, Search } from "lucide-react";
 import { Badge } from "./ui/badge";
 
+interface PaginationInfo {
+  totalResults: number;
+  startResult: number;
+  endResult: number;
+}
+
 interface StudentTableProps {
   students: any[];
   isLoading: boolean;
@@ -15,9 +21,10 @@ interface StudentTableProps {
   onNextPage: () => void;
   onPrevPage: () => void;
   hasFilters: boolean;
+  paginationInfo: PaginationInfo;
 }
 
-export default function StudentTable({ students, isLoading, onRowClick, currentPage, totalPages, onNextPage, onPrevPage, hasFilters }: StudentTableProps) {
+export default function StudentTable({ students, isLoading, onRowClick, currentPage, totalPages, onNextPage, onPrevPage, hasFilters, paginationInfo }: StudentTableProps) {
   
   if (isLoading) {
     return (
@@ -42,7 +49,7 @@ export default function StudentTable({ students, isLoading, onRowClick, currentP
                  <>
                     <Search className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum aluno na base de dados</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">Use os filtros acima para pesquisar nos registos.</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Carregue um ficheiro para começar ou use os filtros acima para pesquisar.</p>
                 </>
             )}
         </CardContent>
@@ -87,7 +94,11 @@ export default function StudentTable({ students, isLoading, onRowClick, currentP
        {totalPages > 1 && (
          <div className="flex items-center justify-between p-4 border-t">
             <p className="text-sm text-muted-foreground">
-              Página {currentPage} de {totalPages}
+              A mostrar{' '}
+              <strong>
+                {paginationInfo.startResult}–{paginationInfo.endResult}
+              </strong>{' '}
+              de <strong>{paginationInfo.totalResults}</strong> alunos
             </p>
             <div className="flex gap-2">
               <Button 

@@ -12,7 +12,7 @@ import { Card, CardContent } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Button } from './ui/button';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 20;
 
 export default function StudentDataView() {
   const firestore = useFirestore();
@@ -159,6 +159,13 @@ export default function StudentDataView() {
     )
   }
 
+  const paginationInfo = {
+    totalResults: filteredStudents.length,
+    startResult: Math.min((currentPage - 1) * PAGE_SIZE + 1, filteredStudents.length),
+    endResult: Math.min(currentPage * PAGE_SIZE, filteredStudents.length)
+  };
+
+
   return (
     <div className="space-y-6">
       <Card>
@@ -213,6 +220,15 @@ export default function StudentDataView() {
         </CardContent>
       </Card>
       
+      <div className="text-sm text-muted-foreground">
+        {filteredStudents.length > 0 && (
+          <p>
+            A mostrar {paginationInfo.startResult}–{paginationInfo.endResult} de {paginationInfo.totalResults} alunos encontrados.
+            {hasActiveFilters && ` (${allStudents.length} no total)`}
+          </p>
+        )}
+      </div>
+
       <StudentTable
         students={paginatedStudents}
         isLoading={isLoading}
@@ -222,6 +238,7 @@ export default function StudentDataView() {
         onNextPage={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
         onPrevPage={() => setCurrentPage(p => Math.max(p - 1, 1))}
         hasFilters={hasActiveFilters}
+        paginationInfo={paginationInfo}
       />
       
       <StudentDetailSheet
