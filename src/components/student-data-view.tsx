@@ -74,9 +74,8 @@ export default function StudentDataView() {
 
     const nameSearch = debouncedNome.trim();
     const hasNameSearch = nameSearch.length >= 3;
-    const hasOtherFilters = filters.serie || filters.classe || filters.turno;
+    const hasOtherFilters = !!(filters.serie || filters.classe || filters.turno);
 
-    // Condição para não pesquisar: Nenhum filtro ativo, ou busca por nome com menos de 3 caracteres e sem outros filtros
     if (!hasNameSearch && !hasOtherFilters) {
       setStudents([]);
       setHasSearched(false);
@@ -91,7 +90,6 @@ export default function StudentDataView() {
       let conditions = [];
       let orderByClauses = [];
 
-      // Condições para os outros filtros
       if (filters.serie) {
         conditions.push(where('serie', '==', filters.serie));
       }
@@ -101,27 +99,25 @@ export default function StudentDataView() {
       if (filters.turno) {
         conditions.push(where('turno', '==', filters.turno));
       }
-
-      // Condição de busca por nome (com 3+ caracteres)
+      
       if (hasNameSearch) {
         conditions.push(where('nome', '>=', nameSearch.toUpperCase()));
         conditions.push(where('nome', '<=', nameSearch.toUpperCase() + '\uf8ff'));
-        // A ordenação DEVE começar pelo campo do filtro de desigualdade
-        orderByClauses.push(orderBy('nome')); 
       }
       
-      // Adiciona a ordenação principal por série e secundária por nome
-      orderByClauses.push(orderBy('serie'));
-      orderByClauses.push(orderBy('nome'));
-      
-      // Remove duplicatas de orderBy (caso 'nome' já tenha sido adicionado)
-      const uniqueOrderBy = Array.from(new Map(orderByClauses.map(item => [item._field.toString(), item])).values());
-
+      // Define order based on search type
+      if(hasNameSearch) {
+        orderByClauses.push(orderBy('nome'));
+        orderByClauses.push(orderBy('serie')); // Secondary sort
+      } else {
+        orderByClauses.push(orderBy('serie'));
+        orderByClauses.push(orderBy('nome')); // Secondary sort
+      }
 
       const finalQuery = query(
         baseQuery,
         ...conditions,
-        ...uniqueOrderBy,
+        ...orderByClauses,
       );
 
       const querySnapshot = await getDocs(finalQuery);
