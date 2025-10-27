@@ -114,8 +114,13 @@ export default function StudentDataView() {
       }
       
       studentsData.sort((a, b) => {
+        const serieA = String(a.serie || '').toUpperCase();
+        const serieB = String(b.serie || '').toUpperCase();
         const nomeA = String(a.nome || '').toUpperCase();
         const nomeB = String(b.nome || '').toUpperCase();
+
+        if (serieA < serieB) return -1;
+        if (serieA > serieB) return 1;
         if (nomeA < nomeB) return -1;
         if (nomeA > nomeB) return 1;
         return 0;
@@ -177,11 +182,6 @@ export default function StudentDataView() {
     <div className="space-y-6">
       <Card>
         <CardContent className="p-4 space-y-4">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Filter className="w-4 h-4" />
-            <h3 className="text-sm font-semibold">Filtrar Base de Dados</h3>
-          </div>
-          
           <Input
             name="nome"
             placeholder="Digite 3+ letras do nome para buscar..."
@@ -192,8 +192,9 @@ export default function StudentDataView() {
           <Collapsible open={isAdvancedSearchOpen} onOpenChange={setIsAdvancedSearchOpen}>
             <CollapsibleTrigger asChild>
               <Button variant="ghost" className="w-full justify-start px-0 text-sm font-semibold text-primary">
+                 <Filter className="w-4 h-4 mr-2" />
                  Filtros Avançados
-                <ChevronDown className={cn("ml-2 h-4 w-4 transition-transform", isAdvancedSearchOpen && "rotate-180")} />
+                <ChevronDown className={cn("ml-auto h-4 w-4 transition-transform", isAdvancedSearchOpen && "rotate-180")} />
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-4 pt-4 data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
