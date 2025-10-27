@@ -219,7 +219,7 @@ export default function StudentManager() {
             Gestão de Alunos 2025
           </h1>
           <p className="text-muted-foreground mt-2 text-sm sm:text-base max-w-lg mx-auto">
-            {dataExists ? "Visualize os dados dos alunos." : "Carregue o ficheiro de alunos para iniciar a gestão."}
+            {dataExists ? "Filtre e visualize os dados dos alunos." : "Carregue o ficheiro de alunos para iniciar a gestão."}
           </p>
         </header>
 

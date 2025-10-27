@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, getDocs, where, orderBy, limit } from 'firebase/firestore';
 import StudentTable from './student-table';
 import { Loader2, Filter, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -11,6 +11,7 @@ import { Input } from './ui/input';
 import { Card, CardContent } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Button } from './ui/button';
+import { useDebounce } from '@/hooks/use-debounce';
 
 const PAGE_SIZE = 20;
 
@@ -18,9 +19,8 @@ export default function StudentDataView() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const [allStudents, setAllStudents] = useState<any[]>([]);
-  const [filteredStudents, setFilteredStudents] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [students, setStudents] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
@@ -31,97 +31,107 @@ export default function StudentDataView() {
     turno: '',
   });
 
-  const [filterOptions, setFilterOptions] = useState<{ series: string[], classes: string[], turnos: string[] }>({
+  const debouncedNome = useDebounce(filters.nome, 500);
+
+  const [uniqueFilterOptions, setUniqueFilterOptions] = useState<{ series: string[], classes: string[], turnos: string[] }>({
     series: [],
     classes: [],
     turnos: [],
   });
 
-  const [currentPage, setCurrentPage] = useState(1);
-  
-  const totalPages = Math.ceil(filteredStudents.length / PAGE_SIZE);
-  
-  const paginatedStudents = useMemo(() => {
-    const startIndex = (currentPage - 1) * PAGE_SIZE;
-    return filteredStudents.slice(startIndex, startIndex + PAGE_SIZE);
-  }, [filteredStudents, currentPage]);
+  const [hasSearched, setHasSearched] = useState(false);
+
+  // This effect will fetch unique options for the dropdowns ONCE on component mount
+  useEffect(() => {
+    const fetchUniqueOptions = async () => {
+      if (!firestore) return;
+      try {
+        const studentsCollectionRef = collection(firestore, 'alunos');
+        const querySnapshot = await getDocs(query(studentsCollectionRef, limit(1000))); // Sample for performance
+        
+        const series = new Set<string>();
+        const classes = new Set<string>();
+        const turnos = new Set<string>();
+        querySnapshot.docs.forEach(doc => {
+          const student = doc.data();
+          if (student.serie && String(student.serie).trim() !== '') series.add(String(student.serie));
+          if (student.classe && String(student.classe).trim() !== '') classes.add(String(student.classe));
+          if (student.turno && String(student.turno).trim() !== '') turnos.add(String(student.turno));
+        });
+        setUniqueFilterOptions({
+          series: Array.from(series).sort(),
+          classes: Array.from(classes).sort(),
+          turnos: Array.from(turnos).sort(),
+        });
+      } catch (error) {
+        console.error("Erro ao buscar opções de filtro:", error);
+      }
+    };
+    fetchUniqueOptions();
+  }, [firestore]);
 
 
-  const fetchAllStudents = useCallback(async () => {
-    if (!firestore) return;
+  const searchStudents = useCallback(async () => {
+    // Only search if the name filter is not empty
+    if (!firestore || !debouncedNome.trim()) {
+      setStudents([]);
+      if(debouncedNome.trim() === '' && (filters.serie || filters.classe || filters.turno)) {
+        // do nothing, user has not typed a name
+      } else {
+         setHasSearched(false);
+      }
+      return;
+    }
+    
     setIsLoading(true);
-
+    setHasSearched(true);
+    
     try {
-      const studentsCollectionRef = collection(firestore, 'alunos');
-      const q = query(studentsCollectionRef, orderBy('nome'));
+      let q = query(
+        collection(firestore, 'alunos'),
+        // Firestore requires the first orderBy to match the inequality filter
+        orderBy('nome'), 
+        where('nome', '>=', debouncedNome.toUpperCase()),
+        where('nome', '<=', debouncedNome.toUpperCase() + '\uf8ff')
+      );
+
+      if (filters.serie) {
+        q = query(q, where('serie', '==', filters.serie));
+      }
+      if (filters.classe) {
+        q = query(q, where('classe', '==', filters.classe));
+      }
+      if (filters.turno) {
+        q = query(q, where('turno', '==', filters.turno));
+      }
+
       const querySnapshot = await getDocs(q);
       const studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-      setAllStudents(studentsData);
-      setFilteredStudents(studentsData);
-
-      // Extract unique values for filters, ensuring no empty strings
-      const series = new Set<string>();
-      const classes = new Set<string>();
-      const turnos = new Set<string>();
-      studentsData.forEach(student => {
-        if (student.serie && String(student.serie).trim() !== '') series.add(String(student.serie));
-        if (student.classe && String(student.classe).trim() !== '') classes.add(String(student.classe));
-        if (student.turno && String(student.turno).trim() !== '') turnos.add(String(student.turno));
-      });
-      setFilterOptions({
-        series: Array.from(series).sort(),
-        classes: Array.from(classes).sort(),
-        turnos: Array.from(turnos).sort(),
-      });
+      setStudents(studentsData);
 
     } catch (error: any) {
       console.error("Erro ao buscar alunos:", error);
       toast({
         variant: "destructive",
-        title: "Erro ao carregar dados",
-        description: "Não foi possível carregar a lista de alunos da base de dados.",
+        title: "Erro ao buscar dados",
+        description: "Não foi possível realizar a busca na base de dados.",
       });
+      setStudents([]);
     } finally {
       setIsLoading(false);
     }
-  }, [firestore, toast]);
+  }, [firestore, toast, debouncedNome, filters.serie, filters.classe, filters.turno]);
 
   useEffect(() => {
-    fetchAllStudents();
-  }, [fetchAllStudents]);
-
-  const applyFilters = useCallback(() => {
-    let students = [...allStudents];
-    
-    const { nome, serie, classe, turno } = filters;
-
-    if (nome) {
-      students = students.filter(s => s.nome && s.nome.toLowerCase().includes(nome.toLowerCase()));
-    }
-    if (serie) {
-      students = students.filter(s => s.serie === serie);
-    }
-    if (classe) {
-      students = students.filter(s => s.classe === classe);
-    }
-    if (turno) {
-      students = students.filter(s => s.turno === turno);
-    }
-    
-    setFilteredStudents(students);
-    setCurrentPage(1); // Reset to first page after filtering
-    
-  }, [allStudents, filters]);
-  
-  useEffect(() => {
-    // Apply filters automatically when they change
-    applyFilters();
-  }, [filters, allStudents, applyFilters]);
+    searchStudents();
+  }, [searchStudents]);
 
 
   const handleFilterChange = (name: string, value: string) => {
     setFilters(prev => ({ ...prev, [name]: value }));
+    if(name === 'nome' && value.trim() === ''){
+      setHasSearched(false);
+    }
   };
 
   const clearFilters = () => {
@@ -131,7 +141,8 @@ export default function StudentDataView() {
       classe: '',
       turno: '',
     });
-    setCurrentPage(1);
+    setStudents([]);
+    setHasSearched(false);
   }
 
   const handleStudentSelect = (student: any) => {
@@ -143,29 +154,13 @@ export default function StudentDataView() {
   };
 
   const handleStudentUpdate = () => {
-    // Re-fetch all data to ensure table and filters are up-to-date
-    fetchAllStudents();
+    // Re-fetch data to ensure table is up-to-date after an edit
+    searchStudents();
     handleCloseSheet();
   };
 
   const hasActiveFilters = Object.values(filters).some(filter => filter !== '');
   
-  if (isLoading && allStudents.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-80 rounded-lg border-2 border-dashed border-border bg-card/50">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">A carregar dados da base de dados...</p>
-      </div>
-    )
-  }
-
-  const paginationInfo = {
-    totalResults: filteredStudents.length,
-    startResult: Math.min((currentPage - 1) * PAGE_SIZE + 1, filteredStudents.length),
-    endResult: Math.min(currentPage * PAGE_SIZE, filteredStudents.length)
-  };
-
-
   return (
     <div className="space-y-6">
       <Card>
@@ -177,7 +172,7 @@ export default function StudentDataView() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Input
               name="nome"
-              placeholder="Filtrar por nome..."
+              placeholder="Digite um nome para buscar..."
               value={filters.nome}
               onChange={(e) => handleFilterChange('nome', e.target.value)}
             />
@@ -187,7 +182,7 @@ export default function StudentDataView() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as séries</SelectItem>
-                {filterOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                {uniqueFilterOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={filters.classe || 'all'} onValueChange={(value) => handleFilterChange('classe', value === 'all' ? '' : value)}>
@@ -196,7 +191,7 @@ export default function StudentDataView() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as classes</SelectItem>
-                {filterOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                {uniqueFilterOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={filters.turno || 'all'} onValueChange={(value) => handleFilterChange('turno', value === 'all' ? '' : value)}>
@@ -205,7 +200,7 @@ export default function StudentDataView() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os turnos</SelectItem>
-                {filterOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                {uniqueFilterOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -221,24 +216,20 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground">
-        {filteredStudents.length > 0 && (
+        {hasSearched && !isLoading && (
           <p>
-            A mostrar {paginationInfo.startResult}–{paginationInfo.endResult} de {paginationInfo.totalResults} alunos encontrados.
-            {hasActiveFilters && ` (${allStudents.length} no total)`}
+            {students.length > 0 
+              ? `Encontrados ${students.length} alunos.`
+              : `Nenhum aluno encontrado com os critérios fornecidos.`}
           </p>
         )}
       </div>
 
       <StudentTable
-        students={paginatedStudents}
+        students={students}
         isLoading={isLoading}
         onRowClick={handleStudentSelect}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onNextPage={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-        onPrevPage={() => setCurrentPage(p => Math.max(p - 1, 1))}
-        hasFilters={hasActiveFilters}
-        paginationInfo={paginationInfo}
+        hasSearched={hasSearched}
       />
       
       <StudentDetailSheet

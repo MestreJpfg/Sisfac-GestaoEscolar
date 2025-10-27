@@ -6,31 +6,20 @@ import { Card, CardContent } from "./ui/card";
 import { ChevronLeft, ChevronRight, BookUser, Loader2, Search } from "lucide-react";
 import { Badge } from "./ui/badge";
 
-interface PaginationInfo {
-  totalResults: number;
-  startResult: number;
-  endResult: number;
-}
-
 interface StudentTableProps {
   students: any[];
   isLoading: boolean;
   onRowClick: (student: any) => void;
-  currentPage: number;
-  totalPages: number;
-  onNextPage: () => void;
-  onPrevPage: () => void;
-  hasFilters: boolean;
-  paginationInfo: PaginationInfo;
+  hasSearched: boolean;
 }
 
-export default function StudentTable({ students, isLoading, onRowClick, currentPage, totalPages, onNextPage, onPrevPage, hasFilters, paginationInfo }: StudentTableProps) {
+export default function StudentTable({ students, isLoading, onRowClick, hasSearched }: StudentTableProps) {
   
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">A carregar dados...</p>
+        <p className="mt-4 text-muted-foreground">A buscar dados...</p>
       </div>
     )
   }
@@ -39,7 +28,7 @@ export default function StudentTable({ students, isLoading, onRowClick, currentP
     return (
       <Card>
         <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
-            {hasFilters ? (
+            {hasSearched ? (
                 <>
                     <BookUser className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum aluno encontrado</h3>
@@ -48,8 +37,8 @@ export default function StudentTable({ students, isLoading, onRowClick, currentP
             ) : (
                  <>
                     <Search className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum aluno na base de dados</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">Carregue um ficheiro para começar ou use os filtros acima para pesquisar.</p>
+                    <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum aluno exibido</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">Use os filtros acima e digite um nome para começar a pesquisar.</p>
                 </>
             )}
         </CardContent>
@@ -91,37 +80,6 @@ export default function StudentTable({ students, isLoading, onRowClick, currentP
           </Table>
         </div>
       </CardContent>
-       {totalPages > 1 && (
-         <div className="flex items-center justify-between p-4 border-t">
-            <p className="text-sm text-muted-foreground">
-              A mostrar{' '}
-              <strong>
-                {paginationInfo.startResult}–{paginationInfo.endResult}
-              </strong>{' '}
-              de <strong>{paginationInfo.totalResults}</strong> alunos
-            </p>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={onPrevPage} 
-                disabled={currentPage <= 1}
-              >
-                <ChevronLeft className="h-4 w-4 mr-1"/>
-                Anterior
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={onNextPage} 
-                disabled={currentPage >= totalPages}
-              >
-                Próxima
-                <ChevronRight className="h-4 w-4 ml-1"/>
-              </Button>
-            </div>
-          </div>
-       )}
     </Card>
   );
 }
