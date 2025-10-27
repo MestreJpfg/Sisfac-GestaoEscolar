@@ -104,15 +104,28 @@ export default function StudentDataView() {
         conditions.push(where('nome', '<=', nameSearch.toUpperCase() + '\uf8ff'));
       }
       
-      // Simplified ordering: always by name
       const finalQuery = query(
         baseQuery,
-        ...conditions,
-        orderBy('nome'),
+        ...conditions
       );
 
       const querySnapshot = await getDocs(finalQuery);
+      
       const studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Client-side sorting
+      studentsData.sort((a, b) => {
+        // Primary sort: by 'serie'
+        if (a.serie < b.serie) return -1;
+        if (a.serie > b.serie) return 1;
+
+        // Secondary sort: by 'nome'
+        if (a.nome < b.nome) return -1;
+        if (a.nome > b.nome) return 1;
+
+        return 0;
+      });
+
       setStudents(studentsData);
 
     } catch (error: any) {
@@ -121,7 +134,7 @@ export default function StudentDataView() {
         variant: "destructive",
         title: "Erro ao buscar dados",
         description: error.message.includes("index") 
-          ? "A base de dados precisa de um índice para esta consulta. Verifique a consola do Firebase."
+          ? "A base de dados precisa de um índice para esta consulta. Por favor, verifique a consola do Firebase."
           : "Não foi possível realizar a busca na base de dados.",
       });
       setStudents([]);
