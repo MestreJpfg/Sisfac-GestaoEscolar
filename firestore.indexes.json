@@ -5,16 +5,6 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "nome",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "alunos",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
           "fieldPath": "serie",
           "order": "ASCENDING"
         },
@@ -33,6 +23,10 @@
           "order": "ASCENDING"
         },
         {
+          "fieldPath": "serie",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "nome",
           "order": "ASCENDING"
         }
@@ -44,6 +38,10 @@
       "fields": [
         {
           "fieldPath": "turno",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "serie",
           "order": "ASCENDING"
         },
         {

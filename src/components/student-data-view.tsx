@@ -113,7 +113,8 @@ export default function StudentDataView() {
       const finalQuery = query(
         baseQuery,
         ...conditions,
-        orderBy('nome') // Ordena sempre por nome
+        orderBy('serie'), // Ordena sempre por serie primeiro
+        orderBy('nome') // Depois por nome
       );
 
       const querySnapshot = await getDocs(finalQuery);
