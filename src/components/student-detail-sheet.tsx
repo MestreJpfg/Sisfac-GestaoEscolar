@@ -17,6 +17,8 @@ import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import StudentDeclaration from "./student-declaration";
 import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Download, Loader2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+
 
 interface StudentDetailSheetProps {
   student: any | null;
@@ -65,12 +67,11 @@ export default function StudentDetailSheet({ student, isOpen, onClose }: Student
 
     try {
         const canvas = await html2canvas(declarationElement, {
-            scale: 1.5, // Reduz a escala para um ficheiro mais leve
+            scale: 1.5,
             useCORS: true,
             backgroundColor: null, 
         });
         
-        // Usa JPEG com qualidade controlada para compressão
         const imgData = canvas.toDataURL('image/jpeg', 0.7); 
         const pdf = new jsPDF({
             orientation: 'p',
@@ -84,10 +85,9 @@ export default function StudentDetailSheet({ student, isOpen, onClose }: Student
         const canvasHeight = canvas.height;
         const ratio = canvasWidth / canvasHeight;
         
-        let imgWidth = pdfWidth - 20; // margem de 10mm de cada lado
+        let imgWidth = pdfWidth - 20; 
         let imgHeight = imgWidth / ratio;
 
-        // Se a altura da imagem for maior que a altura do PDF, ajusta pela altura
         if (imgHeight > pdfHeight - 20) {
             imgHeight = pdfHeight - 20;
             imgWidth = imgHeight * ratio;
@@ -96,7 +96,6 @@ export default function StudentDetailSheet({ student, isOpen, onClose }: Student
         const x = (pdfWidth - imgWidth) / 2;
         const y = (pdfHeight - imgHeight) / 2;
 
-        // Adiciona a imagem especificando o formato e a compressão
         pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight, undefined, 'MEDIUM');
         pdf.save(`Declaracao_${student.nome.replace(/\s+/g, '_')}.pdf`);
 
@@ -190,14 +189,25 @@ export default function StudentDetailSheet({ student, isOpen, onClose }: Student
         </ScrollArea>
         
         <SheetFooter className="mt-auto pt-4 border-t border-border/20">
-            <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf} className="w-full">
-                {isGeneratingPdf ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                    <Download className="w-4 h-4 mr-2" />
-                )}
-                {isGeneratingPdf ? "A Gerar PDF..." : "Gerar Declaração em PDF"}
-            </Button>
+          <div className="flex items-center justify-end gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" onClick={handleGeneratePdf} disabled={isGeneratingPdf}>
+                    {isGeneratingPdf ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4" />
+                    )}
+                    <span className="sr-only">Gerar Declaração em PDF</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Gerar Declaração em PDF</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </SheetFooter>
 
         {/* Elemento oculto para gerar o PDF */}
