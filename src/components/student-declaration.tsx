@@ -66,7 +66,6 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
                 </main>
 
                  {/* Assinatura */}
-                <div className="flex-grow"></div>
                 <div className="pt-16 flex justify-center items-end">
                     <div className="text-center">
                         <img src={signatureUrl} alt="Assinatura Gestão Escolar" width={200} height={50} crossOrigin="anonymous" />
