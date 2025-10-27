@@ -27,7 +27,14 @@ const studentSchema = z.object({
   cpf_aluno: z.string().nullable().optional(),
   cpffiliacao1: z.string().nullable().optional(),
   data_nascimento: z.string().nullable().optional(),
-  endereco: z.string().nullable().optional(),
+  
+  // Endereço dividido
+  endereco_cep: z.string().nullable().optional(),
+  endereco_rua: z.string().nullable().optional(),
+  endereco_numero: z.string().nullable().optional(),
+  endereco_bairro: z.string().nullable().optional(),
+  endereco: z.string().nullable().optional(), // Mantém o campo original
+
   telefones: z.array(z.string()).nullable().optional(),
   transporte_escolar: z.boolean().nullable().optional(),
   carteira_estudante: z.boolean().nullable().optional(),
@@ -40,7 +47,7 @@ interface StudentEditDialogProps {
   isOpen: boolean;
   onClose: () => void;
   student: any;
-  onSave: (data: StudentFormValues) => void;
+  onSave: (data: Partial<StudentFormValues>) => void;
 }
 
 const cleanData = (data: any) => {
@@ -55,6 +62,19 @@ const cleanData = (data: any) => {
     return cleaned;
 };
 
+const parseAddress = (addressString: string) => {
+    if (!addressString || typeof addressString !== 'string') {
+      return { cep: '', rua: '', numero: '', bairro: '' };
+    }
+    const cleanedString = addressString.replace(/[()]/g, '');
+    const parts = cleanedString.split(' - ').map(part => part.trim());
+
+    if (parts.length === 4) {
+      const [cep, rua, numero, bairro] = parts;
+      return { cep, rua, numero, bairro };
+    }
+    return { cep: '', rua: addressString, numero: '', bairro: '' };
+};
 
 export default function StudentEditDialog({ isOpen, onClose, student, onSave }: StudentEditDialogProps) {
   const form = useForm<StudentFormValues>({
@@ -64,8 +84,13 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
 
   useEffect(() => {
     if (student) {
+        const address = parseAddress(student.endereco);
         const defaultVals = {
             ...student,
+            endereco_cep: address.cep,
+            endereco_rua: address.rua,
+            endereco_numero: address.numero,
+            endereco_bairro: address.bairro,
             telefones: student.telefones || [],
             transporte_escolar: !!student.transporte_escolar,
             carteira_estudante: !!student.carteira_estudante
@@ -75,8 +100,14 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
   }, [student, form]);
 
   const onSubmit = (data: StudentFormValues) => {
-    const cleaned = cleanData(data);
-    onSave(cleaned);
+    const { endereco_cep, endereco_rua, endereco_numero, endereco_bairro, ...restOfData } = data;
+    const enderecoCompleto = `(${endereco_cep || ''} - ${endereco_rua || ''} - ${endereco_numero || ''} - ${endereco_bairro || ''})`;
+
+    const finalData = {
+        ...restOfData,
+        endereco: enderecoCompleto,
+    };
+    onSave(cleanData(finalData));
   };
   
   return (
@@ -91,7 +122,7 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
              <ScrollArea className="flex-1 pr-6 -mr-6">
-                <Accordion type="multiple" defaultValue={["personal", "academic"]} className="w-full">
+                <Accordion type="multiple" defaultValue={["personal", "address", "academic"]} className="w-full">
 
                   {/* Dados Pessoais */}
                   <AccordionItem value="personal">
@@ -118,13 +149,6 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
                           <FormMessage />
                         </FormItem>
                       )} />
-                      <FormField name="endereco" control={form.control} render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Endereço</FormLabel>
-                          <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
                        <FormField name="telefones" control={form.control} render={({ field }) => (
                         <FormItem>
                           <FormLabel>Telefones (separados por vírgula)</FormLabel>
@@ -132,6 +156,41 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
                           <FormMessage />
                         </FormItem>
                        )} />
+                    </AccordionContent>
+                  </AccordionItem>
+                  
+                   {/* Endereço */}
+                  <AccordionItem value="address">
+                    <AccordionTrigger>Endereço</AccordionTrigger>
+                    <AccordionContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField name="endereco_cep" control={form.control} render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>CEP</FormLabel>
+                            <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField name="endereco_bairro" control={form.control} render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Bairro</FormLabel>
+                            <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField name="endereco_rua" control={form.control} render={({ field }) => (
+                            <FormItem className="md:col-span-2">
+                            <FormLabel>Rua / Logradouro</FormLabel>
+                            <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )} />
+                         <FormField name="endereco_numero" control={form.control} render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Número</FormLabel>
+                            <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )} />
                     </AccordionContent>
                   </AccordionItem>
 

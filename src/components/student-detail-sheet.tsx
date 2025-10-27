@@ -17,7 +17,7 @@ import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import StudentDeclaration from "./student-declaration";
 import StudentEditDialog from "./student-edit-dialog";
-import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Download, Loader2, Share2, Pencil, Printer } from "lucide-react";
+import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Download, Loader2, Share2, Pencil, Printer, MapPin } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
@@ -156,7 +156,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
       a.href = url;
       a.download = `Declaracao_${student.nome.replace(/\s+/g, '_')}.pdf`;
       document.body.appendChild(a);
-      a.click();
+a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
@@ -207,7 +207,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
       a.href = url;
       a.download = fileName;
       document.body.appendChild(a);
-      a.click();
+a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
@@ -215,6 +215,23 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     setIsProcessing(false);
   };
 
+  const parseAddress = (addressString: string) => {
+    if (!addressString || typeof addressString !== 'string') {
+      return { cep: null, rua: null, bairro: null, enderecoCompleto: addressString };
+    }
+    const cleanedString = addressString.replace(/[()]/g, '');
+    const parts = cleanedString.split(' - ').map(part => part.trim());
+
+    if (parts.length === 4) {
+      const [cep, rua, numero, bairro] = parts;
+      return { cep, rua: `${rua}, ${numero}`, bairro, enderecoCompleto: null };
+    }
+    
+    // Fallback for unexpected formats
+    return { cep: null, rua: null, bairro: null, enderecoCompleto: addressString };
+  };
+
+  const address = parseAddress(student.endereco);
 
   const studentDetails = [
     { label: "RM", value: student.rm, icon: Hash },
@@ -223,9 +240,17 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     { label: "CPF Aluno", value: student.cpf_aluno, icon: FileText },
     { label: "NIS", value: student.nis, icon: Hash },
     { label: "ID Censo", value: student.id_censo, icon: Hash },
-    { label: "Endereço", value: student.endereco, icon: User },
     { label: "Telefones", value: student.telefones, icon: Phone },
   ];
+
+  const addressDetails = address.enderecoCompleto ? 
+    [{ label: "Endereço", value: address.enderecoCompleto, icon: MapPin }] :
+    [
+      { label: "CEP", value: address.cep, icon: MapPin },
+      { label: "Endereço", value: address.rua, icon: MapPin },
+      { label: "Bairro", value: address.bairro, icon: MapPin },
+    ];
+
 
   const academicDetails = [
     { label: "Ensino", value: student.ensino, icon: Book },
@@ -269,6 +294,15 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
                 </div>
               </div>
               
+              <Separator />
+
+              <div>
+                <h3 className="text-lg font-semibold text-foreground mb-4">Endereço</h3>
+                <div className="space-y-4">
+                  {addressDetails.map(item => <DetailItem key={item.label} {...item} />)}
+                </div>
+              </div>
+
               <Separator />
               
               <div>
@@ -373,5 +407,3 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     </>
   );
 }
-
-    
