@@ -60,14 +60,14 @@ export default function StudentDataView() {
       setAllStudents(studentsData);
       setFilteredStudents(studentsData);
 
-      // Extract unique values for filters
+      // Extract unique values for filters, ensuring no empty strings
       const series = new Set<string>();
       const classes = new Set<string>();
       const turnos = new Set<string>();
       studentsData.forEach(student => {
-        if (student.serie) series.add(student.serie);
-        if (student.classe) classes.add(student.classe);
-        if (student.turno) turnos.add(student.turno);
+        if (student.serie && String(student.serie).trim() !== '') series.add(String(student.serie));
+        if (student.classe && String(student.classe).trim() !== '') classes.add(String(student.classe));
+        if (student.turno && String(student.turno).trim() !== '') turnos.add(String(student.turno));
       });
       setFilterOptions({
         series: Array.from(series).sort(),
@@ -91,7 +91,7 @@ export default function StudentDataView() {
     fetchAllStudents();
   }, [fetchAllStudents]);
 
-  const handleFilter = useCallback(() => {
+  const applyFilters = useCallback(() => {
     let students = [...allStudents];
     
     const { nome, serie, classe, turno } = filters;
@@ -116,8 +116,8 @@ export default function StudentDataView() {
   
   useEffect(() => {
     // Apply filters automatically when they change
-    handleFilter();
-  }, [filters, allStudents, handleFilter]);
+    applyFilters();
+  }, [filters, allStudents, applyFilters]);
 
 
   const handleFilterChange = (name: string, value: string) => {
@@ -168,30 +168,30 @@ export default function StudentDataView() {
               value={filters.nome}
               onChange={(e) => handleFilterChange('nome', e.target.value)}
             />
-            <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)}>
+            <Select value={filters.serie || 'all'} onValueChange={(value) => handleFilterChange('serie', value === 'all' ? '' : value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Filtrar por série..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas as séries</SelectItem>
+                <SelectItem value="all">Todas as séries</SelectItem>
                 {filterOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)}>
+            <Select value={filters.classe || 'all'} onValueChange={(value) => handleFilterChange('classe', value === 'all' ? '' : value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Filtrar por classe..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas as classes</SelectItem>
+                <SelectItem value="all">Todas as classes</SelectItem>
                 {filterOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)}>
+            <Select value={filters.turno || 'all'} onValueChange={(value) => handleFilterChange('turno', value === 'all' ? '' : value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Filtrar por turno..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os turnos</SelectItem>
+                <SelectItem value="all">Todos os turnos</SelectItem>
                 {filterOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
               </SelectContent>
             </Select>
