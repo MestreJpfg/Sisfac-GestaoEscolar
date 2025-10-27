@@ -88,7 +88,6 @@ export default function StudentDataView() {
     try {
       const baseQuery = collection(firestore, 'alunos');
       let conditions = [];
-      let orderByClauses = [];
 
       if (filters.serie) {
         conditions.push(where('serie', '==', filters.serie));
@@ -105,19 +104,11 @@ export default function StudentDataView() {
         conditions.push(where('nome', '<=', nameSearch.toUpperCase() + '\uf8ff'));
       }
       
-      // Define order based on search type
-      if(hasNameSearch) {
-        orderByClauses.push(orderBy('nome'));
-        orderByClauses.push(orderBy('serie')); // Secondary sort
-      } else {
-        orderByClauses.push(orderBy('serie'));
-        orderByClauses.push(orderBy('nome')); // Secondary sort
-      }
-
+      // Simplified ordering: always by name
       const finalQuery = query(
         baseQuery,
         ...conditions,
-        ...orderByClauses,
+        orderBy('nome'),
       );
 
       const querySnapshot = await getDocs(finalQuery);
