@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useFirestore } from '@/firebase';
 import { collection, query, getDocs, where, orderBy, limit } from 'firebase/firestore';
 import StudentTable from './student-table';
@@ -72,14 +72,16 @@ export default function StudentDataView() {
 
 
   const searchStudents = useCallback(async () => {
-    // Only search if the name filter is not empty
-    if (!firestore || !debouncedNome.trim()) {
+    if (!firestore) return;
+
+    const nameSearch = debouncedNome.trim();
+    const hasNameSearch = nameSearch.length >= 3;
+    const hasOtherFilters = filters.serie || filters.classe || filters.turno;
+
+    // Condição para não pesquisar: Nenhum filtro ativo, ou busca por nome com menos de 3 caracteres e sem outros filtros
+    if (!hasNameSearch && !hasOtherFilters) {
       setStudents([]);
-      if(debouncedNome.trim() === '' && (filters.serie || filters.classe || filters.turno)) {
-        // do nothing, user has not typed a name
-      } else {
-         setHasSearched(false);
-      }
+      setHasSearched(false);
       return;
     }
     
@@ -87,25 +89,34 @@ export default function StudentDataView() {
     setHasSearched(true);
     
     try {
-      let q = query(
-        collection(firestore, 'alunos'),
-        // Firestore requires the first orderBy to match the inequality filter
-        orderBy('nome'), 
-        where('nome', '>=', debouncedNome.toUpperCase()),
-        where('nome', '<=', debouncedNome.toUpperCase() + '\uf8ff')
-      );
+      const baseQuery = collection(firestore, 'alunos');
+      let conditions = [];
 
+      // Condição de busca por nome (com 3+ caracteres)
+      if (hasNameSearch) {
+        conditions.push(where('nome', '>=', nameSearch.toUpperCase()));
+        conditions.push(where('nome', '<=', nameSearch.toUpperCase() + '\uf8ff'));
+      }
+
+      // Condições para os outros filtros
       if (filters.serie) {
-        q = query(q, where('serie', '==', filters.serie));
+        conditions.push(where('serie', '==', filters.serie));
       }
       if (filters.classe) {
-        q = query(q, where('classe', '==', filters.classe));
+        conditions.push(where('classe', '==', filters.classe));
       }
       if (filters.turno) {
-        q = query(q, where('turno', '==', filters.turno));
+        conditions.push(where('turno', '==', filters.turno));
       }
 
-      const querySnapshot = await getDocs(q);
+      // Monta a query final. A ordenação deve ser consistente com o primeiro filtro de desigualdade.
+      const finalQuery = query(
+        baseQuery,
+        ...conditions,
+        orderBy('nome') // Ordena sempre por nome
+      );
+
+      const querySnapshot = await getDocs(finalQuery);
       const studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setStudents(studentsData);
 
@@ -114,7 +125,9 @@ export default function StudentDataView() {
       toast({
         variant: "destructive",
         title: "Erro ao buscar dados",
-        description: "Não foi possível realizar a busca na base de dados.",
+        description: error.message.includes("indexes") 
+          ? "A base de dados precisa de um índice para esta consulta. Verifique a consola do Firebase."
+          : "Não foi possível realizar a busca na base de dados.",
       });
       setStudents([]);
     } finally {
@@ -129,9 +142,6 @@ export default function StudentDataView() {
 
   const handleFilterChange = (name: string, value: string) => {
     setFilters(prev => ({ ...prev, [name]: value }));
-    if(name === 'nome' && value.trim() === ''){
-      setHasSearched(false);
-    }
   };
 
   const clearFilters = () => {
@@ -172,34 +182,34 @@ export default function StudentDataView() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Input
               name="nome"
-              placeholder="Digite um nome para buscar..."
+              placeholder="Digite 3+ letras do nome..."
               value={filters.nome}
               onChange={(e) => handleFilterChange('nome', e.target.value)}
             />
-            <Select value={filters.serie || 'all'} onValueChange={(value) => handleFilterChange('serie', value === 'all' ? '' : value)}>
+            <Select value={filters.serie || ''} onValueChange={(value) => handleFilterChange('serie', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Filtrar por série..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas as séries</SelectItem>
+                <SelectItem value="">Todas as séries</SelectItem>
                 {uniqueFilterOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Select value={filters.classe || 'all'} onValueChange={(value) => handleFilterChange('classe', value === 'all' ? '' : value)}>
+            <Select value={filters.classe || ''} onValueChange={(value) => handleFilterChange('classe', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Filtrar por classe..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas as classes</SelectItem>
+                <SelectItem value="">Todas as classes</SelectItem>
                 {uniqueFilterOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Select value={filters.turno || 'all'} onValueChange={(value) => handleFilterChange('turno', value === 'all' ? '' : value)}>
+            <Select value={filters.turno || ''} onValueChange={(value) => handleFilterChange('turno', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Filtrar por turno..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos os turnos</SelectItem>
+                <SelectItem value="">Todos os turnos</SelectItem>
                 {uniqueFilterOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
               </SelectContent>
             </Select>

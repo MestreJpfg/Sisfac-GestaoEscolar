@@ -9,6 +9,48 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "alunos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "serie",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "nome",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "alunos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "classe",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "nome",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "alunos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "turno",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "nome",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
