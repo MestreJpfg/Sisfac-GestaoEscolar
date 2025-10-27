@@ -11,6 +11,7 @@ import StudentDataView from "./student-data-view";
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
+import { ThemeToggle } from "./theme-toggle";
 
 export default function StudentManager() {
   const [dataExists, setDataExists] = useState<boolean | null>(null);
@@ -198,7 +199,10 @@ export default function StudentManager() {
   return (
     <main className="flex min-h-screen flex-col items-center p-4 sm:p-6 md:p-8">
       <div className="w-full max-w-7xl mx-auto flex-1">
-        <header className="text-center mb-8 flex flex-col items-center">
+        <header className="text-center mb-8 flex flex-col items-center relative">
+          <div className="absolute top-0 right-0">
+            <ThemeToggle />
+          </div>
           <div className="mb-4 flex flex-col items-center">
             <Image
               src="/logoyuri.png"

@@ -4,26 +4,36 @@
 
 @layer base {
   :root {
-    --background: 222 83% 4%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
-    --popover: 224 71% 4%;
-    --popover-foreground: 215 28% 93%;
-    --primary: 39 100% 50%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 28% 63%;
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+ 
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+ 
+    --primary: 170 100% 30%;
+    --primary-foreground: 210 40% 98%;
+ 
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+ 
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+ 
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+ 
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 217 91% 60%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+ 
     --radius: 0.5rem;
+
     --chart-1: 221 83% 53%;
     --chart-2: 161 77% 45%;
     --chart-3: 39 92% 55%;
@@ -38,7 +48,7 @@
     --sidebar-border: 222 47% 11%;
     --sidebar-ring: 217 91% 60%;
   }
-
+ 
   .dark {
     --background: 222 83% 4%;
     --foreground: 210 40% 98%;
@@ -68,6 +78,9 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  .dark body {
     background-color: hsl(var(--background));
     background-image: radial-gradient(
       ellipse 80% 80% at 50% -20%,
