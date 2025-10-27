@@ -60,14 +60,14 @@ export default function StudentDataView() {
       setAllStudents(studentsData);
       setFilteredStudents(studentsData);
 
-      // Extract unique values for filters
+      // Extract unique values for filters, ensuring no empty strings
       const series = new Set<string>();
       const classes = new Set<string>();
       const turnos = new Set<string>();
       studentsData.forEach(student => {
-        if (student.serie) series.add(student.serie);
-        if (student.classe) classes.add(student.classe);
-        if (student.turno) turnos.add(student.turno);
+        if (student.serie && String(student.serie).trim() !== '') series.add(String(student.serie));
+        if (student.classe && String(student.classe).trim() !== '') classes.add(String(student.classe));
+        if (student.turno && String(student.turno).trim() !== '') turnos.add(String(student.turno));
       });
       setFilterOptions({
         series: Array.from(series).sort(),
