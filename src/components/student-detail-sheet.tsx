@@ -17,7 +17,7 @@ import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import StudentDeclaration from "./student-declaration";
 import StudentEditDialog from "./student-edit-dialog";
-import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Download, Loader2, Share2, Pencil } from "lucide-react";
+import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Download, Loader2, Share2, Pencil, Printer } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
@@ -162,6 +162,10 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     }
     setIsProcessing(false);
   };
+  
+  const handlePrint = () => {
+    window.print();
+  };
 
   const handleShare = async () => {
     setIsProcessing(true);
@@ -245,7 +249,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
   return (
     <>
       <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent className="w-full sm:max-w-md flex flex-col">
+        <SheetContent className="w-full sm:max-w-md flex flex-col non-printable">
           <SheetHeader className="text-left">
             <SheetTitle className="text-2xl font-bold text-primary flex items-center gap-3">
               <User size={28}/>
@@ -338,16 +342,27 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
                     <p>Partilhar Declaração</p>
                   </TooltipContent>
                 </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" onClick={handlePrint} disabled={isProcessing}>
+                       <Printer className="w-4 h-4" />
+                       <span className="sr-only">Imprimir Declaração</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Imprimir Declaração</p>
+                  </TooltipContent>
+                </Tooltip>
               </TooltipProvider>
             </div>
           </SheetFooter>
-
-          {/* Elemento oculto para gerar o PDF */}
-          <div className="absolute -left-[9999px] top-0 opacity-0" aria-hidden="true">
-              <StudentDeclaration student={student} />
-          </div>
         </SheetContent>
       </Sheet>
+      
+      {/* Elemento para gerar o PDF e para Impressão */}
+      <div className="absolute -left-[9999px] top-0 opacity-0 printable-content" aria-hidden="true">
+          <StudentDeclaration student={student} />
+      </div>
       
       <StudentEditDialog
         isOpen={isEditDialogOpen}
@@ -358,3 +373,5 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     </>
   );
 }
+
+    
