@@ -2,18 +2,46 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent } from "./ui/card";
-import { BookUser, Loader2, Search } from "lucide-react";
+import { BookUser, Loader2, Search, ArrowUpDown } from "lucide-react";
 import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { cn } from "@/lib/utils";
+
+export interface SortConfig {
+  key: string;
+  direction: 'ascending' | 'descending';
+}
 
 interface StudentTableProps {
   students: any[];
   isLoading: boolean;
   onRowClick: (student: any) => void;
   hasSearched: boolean;
+  onSort: (key: string) => void;
+  sortConfig: SortConfig;
 }
 
-export default function StudentTable({ students, isLoading, onRowClick, hasSearched }: StudentTableProps) {
+export default function StudentTable({ students, isLoading, onRowClick, hasSearched, onSort, sortConfig }: StudentTableProps) {
   
+  const SortableHeader = ({ sortKey, children, className }: { sortKey: string, children: React.ReactNode, className?: string }) => {
+    const isSorted = sortConfig.key === sortKey;
+    const direction = sortConfig.direction === 'ascending' ? 'asc' : 'desc';
+
+    return (
+        <TableHead className={cn("text-left", className)}>
+            <Button variant="ghost" onClick={() => onSort(sortKey)} className="px-2 py-1 h-auto -ml-2">
+                {children}
+                <ArrowUpDown 
+                    className={cn(
+                        "ml-2 h-4 w-4 text-muted-foreground/50",
+                        isSorted && "text-foreground"
+                    )} 
+                />
+            </Button>
+        </TableHead>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
@@ -52,13 +80,13 @@ export default function StudentTable({ students, isLoading, onRowClick, hasSearc
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-left">Nome</TableHead>
-                <TableHead className="text-center">Série</TableHead>
-                <TableHead className="text-center">Classe</TableHead>
-                <TableHead className="text-center">Turno</TableHead>
-                <TableHead className="text-center">Data de Nasc.</TableHead>
-                <TableHead className="text-center">RM</TableHead>
-                <TableHead className="text-center">NEE</TableHead>
+                <SortableHeader sortKey="nome">Nome</SortableHeader>
+                <SortableHeader sortKey="serie" className="text-center">Série</SortableHeader>
+                <SortableHeader sortKey="classe" className="text-center">Classe</SortableHeader>
+                <SortableHeader sortKey="turno" className="text-center">Turno</SortableHeader>
+                <SortableHeader sortKey="data_nascimento" className="text-center">Data de Nasc.</SortableHeader>
+                <SortableHeader sortKey="rm" className="text-center">RM</SortableHeader>
+                <SortableHeader sortKey="nee" className="text-center">NEE</SortableHeader>
               </TableRow>
             </TableHeader>
             <TableBody>

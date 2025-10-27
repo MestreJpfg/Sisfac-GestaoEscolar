@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useFirestore } from '@/firebase';
 import { collection, query, getDocs, where } from 'firebase/firestore';
 import StudentTable from './student-table';
@@ -14,12 +14,13 @@ import { Button } from './ui/button';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
+import type { SortConfig } from './student-table';
 
 export default function StudentDataView() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const [students, setStudents] = useState<any[]>([]);
+  const [allFetchedStudents, setAllFetchedStudents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
@@ -41,6 +42,9 @@ export default function StudentDataView() {
   });
 
   const [hasSearched, setHasSearched] = useState(false);
+
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'serie', direction: 'ascending' });
+
 
   useEffect(() => {
     const fetchUniqueOptions = async () => {
@@ -79,7 +83,7 @@ export default function StudentDataView() {
     const hasOtherFilters = !!(filters.serie || filters.classe || filters.turno);
 
     if (!hasNameSearch && !hasOtherFilters) {
-      setStudents([]);
+      setAllFetchedStudents([]);
       setHasSearched(false);
       return;
     }
@@ -112,21 +116,8 @@ export default function StudentDataView() {
             student.nome && student.nome.toUpperCase().includes(nameSearch)
         );
       }
-      
-      studentsData.sort((a, b) => {
-        const serieA = String(a.serie || '').toUpperCase();
-        const serieB = String(b.serie || '').toUpperCase();
-        const nomeA = String(a.nome || '').toUpperCase();
-        const nomeB = String(b.nome || '').toUpperCase();
 
-        if (serieA < serieB) return -1;
-        if (serieA > serieB) return 1;
-        if (nomeA < nomeB) return -1;
-        if (nomeA > nomeB) return 1;
-        return 0;
-      });
-
-      setStudents(studentsData);
+      setAllFetchedStudents(studentsData);
 
     } catch (error: any) {
       console.error("Erro ao buscar alunos:", error);
@@ -137,7 +128,7 @@ export default function StudentDataView() {
           ? "A base de dados precisa de um índice para esta consulta. Por favor, verifique a consola do Firebase."
           : "Não foi possível realizar a busca na base de dados.",
       });
-      setStudents([]);
+      setAllFetchedStudents([]);
     } finally {
       setIsLoading(false);
     }
@@ -147,6 +138,56 @@ export default function StudentDataView() {
     searchStudents();
   }, [searchStudents]);
 
+  const sortedStudents = useMemo(() => {
+    let sortableItems = [...allFetchedStudents];
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        const aValue = a[sortConfig.key] || '';
+        const bValue = b[sortConfig.key] || '';
+
+        // Tratar "SIM" / "NÃO" para nee
+        if (sortConfig.key === 'nee') {
+            const valA = a.nee ? 1 : 0;
+            const valB = b.nee ? 1 : 0;
+            if (valA < valB) return sortConfig.direction === 'ascending' ? -1 : 1;
+            if (valA > valB) return sortConfig.direction === 'ascending' ? 1 : -1;
+            return 0;
+        }
+
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          const comparison = aValue.localeCompare(bValue, 'pt-BR', { numeric: true });
+          return sortConfig.direction === 'ascending' ? comparison : -comparison;
+        }
+        
+        if (aValue < bValue) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+
+     // Adiciona um segundo critério de ordenação por nome
+    if (sortConfig.key !== 'nome') {
+        sortableItems.sort((a, b) => {
+             if (a[sortConfig.key] === b[sortConfig.key]) {
+                return a.nome.localeCompare(b.nome, 'pt-BR');
+            }
+            return 0;
+        });
+    }
+
+    return sortableItems;
+  }, [allFetchedStudents, sortConfig]);
+
+  const handleSort = (key: string) => {
+    setSortConfig(prevConfig => ({
+        key,
+        direction: prevConfig.key === key && prevConfig.direction === 'ascending' ? 'descending' : 'ascending'
+    }));
+  };
 
   const handleFilterChange = (name: string, value: string) => {
     setFilters(prev => ({ ...prev, [name]: value === 'all' ? '' : value }));
@@ -159,7 +200,7 @@ export default function StudentDataView() {
       classe: '',
       turno: '',
     });
-    setStudents([]);
+    setAllFetchedStudents([]);
     setHasSearched(false);
   }
 
@@ -245,18 +286,20 @@ export default function StudentDataView() {
       <div className="text-sm text-muted-foreground">
         {hasSearched && !isLoading && (
           <p>
-            {students.length > 0 
-              ? `Encontrados ${students.length} alunos.`
+            {sortedStudents.length > 0 
+              ? `Encontrados ${sortedStudents.length} alunos.`
               : `Nenhum aluno encontrado com os critérios fornecidos.`}
           </p>
         )}
       </div>
 
       <StudentTable
-        students={students}
+        students={sortedStudents}
         isLoading={isLoading}
         onRowClick={handleStudentSelect}
         hasSearched={hasSearched}
+        onSort={handleSort}
+        sortConfig={sortConfig}
       />
       
       <StudentDetailSheet
