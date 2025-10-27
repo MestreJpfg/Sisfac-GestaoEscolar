@@ -16,8 +16,9 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import StudentDeclaration from "./student-declaration";
-import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Download, Loader2 } from "lucide-react";
+import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Download, Loader2, Share2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 
 
 interface StudentDetailSheetProps {
@@ -51,18 +52,22 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, lab
 
 
 export default function StudentDetailSheet({ student, isOpen, onClose }: StudentDetailSheetProps) {
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { toast } = useToast();
 
   if (!student) return null;
 
-  const handleGeneratePdf = async () => {
-    setIsGeneratingPdf(true);
+  const generatePdfBlob = async (): Promise<Blob | null> => {
     const declarationElement = document.getElementById(`declaration-${student.rm}`);
     
     if (!declarationElement) {
         console.error("Elemento da declaração não encontrado.");
-        setIsGeneratingPdf(false);
-        return;
+        toast({
+          variant: "destructive",
+          title: "Erro ao Gerar PDF",
+          description: "O elemento da declaração não foi encontrado.",
+        });
+        return null;
     }
 
     try {
@@ -97,13 +102,81 @@ export default function StudentDetailSheet({ student, isOpen, onClose }: Student
         const y = (pdfHeight - imgHeight) / 2;
 
         pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight, undefined, 'MEDIUM');
-        pdf.save(`Declaracao_${student.nome.replace(/\s+/g, '_')}.pdf`);
+        return pdf.output('blob');
 
     } catch (error) {
-        console.error("Erro ao gerar o PDF:", error);
-    } finally {
-        setIsGeneratingPdf(false);
+        console.error("Erro ao gerar o Blob do PDF:", error);
+        toast({
+          variant: "destructive",
+          title: "Erro ao Gerar PDF",
+          description: "Ocorreu um erro ao criar o ficheiro PDF.",
+        });
+        return null;
     }
+  };
+
+  const handleGeneratePdf = async () => {
+    setIsProcessing(true);
+    const blob = await generatePdfBlob();
+    if (blob) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Declaracao_${student.nome.replace(/\s+/g, '_')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+    setIsProcessing(false);
+  };
+
+  const handleShare = async () => {
+    setIsProcessing(true);
+    const blob = await generatePdfBlob();
+    
+    if (!blob) {
+      setIsProcessing(false);
+      return;
+    }
+
+    const fileName = `Declaracao_${student.nome.replace(/\s+/g, '_')}.pdf`;
+    const file = new File([blob], fileName, { type: 'application/pdf' });
+
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: `Declaração de Matrícula - ${student.nome}`,
+          text: `Segue em anexo a declaração de matrícula para ${student.nome}.`,
+        });
+      } catch (error) {
+         if ((error as DOMException).name !== 'AbortError') {
+            console.error('Erro ao partilhar:', error);
+            toast({
+              variant: "destructive",
+              title: "Erro de Partilha",
+              description: "Não foi possível partilhar o ficheiro.",
+            });
+         }
+      }
+    } else {
+      // Fallback to download if share API is not supported
+      toast({
+        title: "Partilha não suportada",
+        description: "A iniciar o download do ficheiro.",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+    
+    setIsProcessing(false);
   };
 
 
@@ -193,8 +266,8 @@ export default function StudentDetailSheet({ student, isOpen, onClose }: Student
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="icon" onClick={handleGeneratePdf} disabled={isGeneratingPdf}>
-                    {isGeneratingPdf ? (
+                  <Button variant="outline" size="icon" onClick={handleGeneratePdf} disabled={isProcessing}>
+                    {isProcessing ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <Download className="w-4 h-4" />
@@ -204,6 +277,21 @@ export default function StudentDetailSheet({ student, isOpen, onClose }: Student
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Gerar Declaração em PDF</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" onClick={handleShare} disabled={isProcessing}>
+                    {isProcessing ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Share2 className="w-4 h-4" />
+                    )}
+                    <span className="sr-only">Partilhar Declaração</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Partilhar Declaração</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -218,3 +306,5 @@ export default function StudentDetailSheet({ student, isOpen, onClose }: Student
     </Sheet>
   );
 }
+
+    
