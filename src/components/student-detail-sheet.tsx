@@ -339,8 +339,8 @@ a.click();
               <TooltipProvider>
                  <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" onClick={() => setIsEditDialogOpen(true)} disabled={isProcessing}>
-                          <Pencil className="w-4 h-4" />
+                      <Button variant="ghost" size="icon" onClick={() => setIsEditDialogOpen(true)} disabled={isProcessing}>
+                          <Pencil className="w-4 h-4 text-primary" />
                           <span className="sr-only">Editar Aluno</span>
                       </Button>
                     </TooltipTrigger>
@@ -350,11 +350,11 @@ a.click();
                   </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" onClick={handleGeneratePdf} disabled={isProcessing}>
+                    <Button variant="ghost" size="icon" onClick={handleGeneratePdf} disabled={isProcessing}>
                       {isProcessing ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
                       ) : (
-                        <Download className="w-4 h-4" />
+                        <Download className="w-4 h-4 text-primary" />
                       )}
                       <span className="sr-only">Gerar Declaração em PDF</span>
                     </Button>
@@ -365,11 +365,11 @@ a.click();
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" onClick={handleShare} disabled={isProcessing}>
+                    <Button variant="ghost" size="icon" onClick={handleShare} disabled={isProcessing}>
                       {isProcessing ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
                       ) : (
-                        <Share2 className="w-4 h-4" />
+                        <Share2 className="w-4 h-4 text-primary" />
                       )}
                       <span className="sr-only">Partilhar Declaração</span>
                     </Button>
@@ -380,8 +380,8 @@ a.click();
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" onClick={handlePrint} disabled={isProcessing}>
-                       <Printer className="w-4 h-4" />
+                    <Button variant="ghost" size="icon" onClick={handlePrint} disabled={isProcessing}>
+                       <Printer className="w-4 h-4 text-primary" />
                        <span className="sr-only">Imprimir Declaração</span>
                     </Button>
                   </TooltipTrigger>
