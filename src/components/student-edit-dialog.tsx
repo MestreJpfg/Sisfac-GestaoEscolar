@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useForm } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -11,6 +11,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ScrollArea } from "./ui/scroll-area";
 import { Switch } from "./ui/switch";
+import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
 
 const studentSchema = z.object({
   rm: z.string().min(1, "RM é obrigatório."),
@@ -77,6 +80,8 @@ const parseAddress = (addressString: string) => {
 };
 
 export default function StudentEditDialog({ isOpen, onClose, student, onSave }: StudentEditDialogProps) {
+  const { toast } = useToast();
+  const [isCepLoading, setIsCepLoading] = useState(false);
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentSchema),
     defaultValues: {},
@@ -99,13 +104,53 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
     }
   }, [student, form]);
 
+  const handleCepChange = async (cep: string) => {
+    const cleanedCep = cep?.replace(/\D/g, '') || '';
+    if (cleanedCep.length !== 8) {
+      return;
+    }
+
+    setIsCepLoading(true);
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanedCep}/json/`);
+      const data = await response.json();
+      if (data.erro) {
+        toast({
+            variant: "destructive",
+            title: "CEP não encontrado",
+            description: "O CEP digitado não foi encontrado.",
+        });
+        return;
+      }
+      form.setValue('endereco_rua', data.logradouro, { shouldValidate: true });
+      form.setValue('endereco_bairro', data.bairro, { shouldValidate: true });
+      toast({
+        title: "Endereço encontrado!",
+        description: `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`,
+      });
+    } catch (error) {
+      toast({
+            variant: "destructive",
+            title: "Erro ao buscar CEP",
+            description: "Não foi possível buscar o endereço. Verifique sua conexão.",
+        });
+    } finally {
+      setIsCepLoading(false);
+    }
+  };
+
+
   const onSubmit = (data: StudentFormValues) => {
     const { endereco_cep, endereco_rua, endereco_numero, endereco_bairro, ...restOfData } = data;
-    const enderecoCompleto = `(${endereco_cep || ''} - ${endereco_rua || ''} - ${endereco_numero || ''} - ${endereco_bairro || ''})`;
+    
+    let enderecoCompleto = '';
+    if (endereco_cep || endereco_rua || endereco_numero || endereco_bairro) {
+      enderecoCompleto = `(${endereco_cep || ''} - ${endereco_rua || ''} - ${endereco_numero || ''} - ${endereco_bairro || ''})`;
+    }
 
     const finalData = {
         ...restOfData,
-        endereco: enderecoCompleto,
+        endereco: enderecoCompleto || null,
     };
     onSave(cleanData(finalData));
   };
@@ -165,9 +210,24 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
                     <AccordionContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField name="endereco_cep" control={form.control} render={({ field }) => (
                             <FormItem>
-                            <FormLabel>CEP</FormLabel>
-                            <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
-                            <FormMessage />
+                              <FormLabel>CEP</FormLabel>
+                              <div className="relative">
+                                <FormControl>
+                                  <Input 
+                                    {...field} 
+                                    value={field.value ?? ''} 
+                                    onChange={(e) => {
+                                      field.onChange(e.target.value);
+                                      handleCepChange(e.target.value);
+                                    }}
+                                    maxLength={9}
+                                  />
+                                </FormControl>
+                                {isCepLoading && (
+                                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />
+                                )}
+                              </div>
+                              <FormMessage />
                             </FormItem>
                         )} />
                         <FormField name="endereco_bairro" control={form.control} render={({ field }) => (
