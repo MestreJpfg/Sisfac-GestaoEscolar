@@ -148,9 +148,19 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
       enderecoCompleto = `(${endereco_cep || ''} - ${endereco_rua || ''} - ${endereco_numero || ''} - ${endereco_bairro || ''})`;
     }
 
+    const uppercasedData: any = {};
+    for (const key in restOfData) {
+        const value = (restOfData as any)[key];
+        if (typeof value === 'string') {
+            uppercasedData[key] = value.toUpperCase();
+        } else {
+            uppercasedData[key] = value;
+        }
+    }
+
     const finalData = {
-        ...restOfData,
-        endereco: enderecoCompleto || null,
+        ...uppercasedData,
+        endereco: enderecoCompleto.toUpperCase() || null,
     };
     onSave(cleanData(finalData));
   };
