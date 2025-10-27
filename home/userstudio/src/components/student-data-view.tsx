@@ -4,25 +4,14 @@ import { useState, useCallback, useMemo } from 'react';
 import { useFirestore } from '@/firebase';
 import { collection, query, getDocs, where, orderBy, limit, WhereFilterOp } from 'firebase/firestore';
 import StudentTable from './student-table';
-import { Loader2, Trash2, Users, Filter, X, Search } from 'lucide-react';
+import { Loader2, Users, Filter, X, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from './ui/button';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import StudentDetailSheet from './student-detail-sheet';
 import { Input } from './ui/input';
 import { Card, CardContent } from './ui/card';
 
-const PAGE_SIZE = 50; // Aumentar o limite para buscas mais abrangentes
+const PAGE_SIZE = 50; 
 
 export default function StudentDataView() {
   const firestore = useFirestore();
@@ -30,7 +19,6 @@ export default function StudentDataView() {
   
   const [displayedStudents, setDisplayedStudents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
@@ -133,12 +121,6 @@ export default function StudentDataView() {
     setDisplayedStudents([]);
     setHasSearched(false);
   }
-
-  const handleDeleteAll = async () => {
-      // Esta funcionalidade apaga toda a base de dados e recarrega a página,
-      // portanto, não precisa de ser alterada no contexto da busca sob demanda.
-      // O código original pode ser mantido aqui.
-  };
   
   const handleStudentSelect = (student: any) => {
     setSelectedStudent(student);

@@ -31,7 +31,7 @@ export default function StudentTable({ students, isLoading, hasSearched, onRowCl
                 <>
                     <BookUser className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum aluno encontrado</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">Tente um termo de busca diferente.</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Tente um termo de busca diferente ou refine os seus filtros.</p>
                 </>
             ) : (
                 <>
