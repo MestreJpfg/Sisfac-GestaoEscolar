@@ -57,27 +57,25 @@ export default function StudentTable({ students, isLoading, onRowClick, currentP
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Série</TableHead>
-                <TableHead>Classe</TableHead>
-                <TableHead>Turno</TableHead>
-                <TableHead>Data de Nasc.</TableHead>
-                <TableHead>RM</TableHead>
-                <TableHead>Filiação 1</TableHead>
-                <TableHead>NEE</TableHead>
+                <TableHead className="text-left">Nome</TableHead>
+                <TableHead className="text-center">Série</TableHead>
+                <TableHead className="text-center">Classe</TableHead>
+                <TableHead className="text-center">Turno</TableHead>
+                <TableHead className="text-center">Data de Nasc.</TableHead>
+                <TableHead className="text-center">RM</TableHead>
+                <TableHead className="text-center">NEE</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {students.map((student) => (
                 <TableRow key={student.id} onClick={() => onRowClick(student)} className="cursor-pointer hover:bg-muted/50">
-                  <TableCell className="font-medium">{student.nome || <span className="text-muted-foreground italic">Sem nome</span>}</TableCell>
-                  <TableCell>{student.serie}</TableCell>
-                  <TableCell>{student.classe}</TableCell>
-                  <TableCell>{student.turno}</TableCell>
-                  <TableCell>{student.data_nascimento}</TableCell>
-                  <TableCell>{student.rm}</TableCell>
-                  <TableCell>{student.filiacao_1}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-medium text-left whitespace-nowrap">{student.nome || <span className="text-muted-foreground italic">Sem nome</span>}</TableCell>
+                  <TableCell className="text-center whitespace-nowrap">{student.serie}</TableCell>
+                  <TableCell className="text-center whitespace-nowrap">{student.classe}</TableCell>
+                  <TableCell className="text-center whitespace-nowrap">{student.turno}</TableCell>
+                  <TableCell className="text-center whitespace-nowrap">{student.data_nascimento}</TableCell>
+                  <TableCell className="text-center whitespace-nowrap">{student.rm}</TableCell>
+                  <TableCell className="text-center whitespace-nowrap">
                     {student.nee ? <Badge variant="destructive">SIM</Badge> : <Badge variant="secondary">NÃO</Badge>}
                   </TableCell>
                 </TableRow>
