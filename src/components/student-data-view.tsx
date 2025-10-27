@@ -142,6 +142,12 @@ export default function StudentDataView() {
     setSelectedStudent(null);
   };
 
+  const handleStudentUpdate = () => {
+    // Re-fetch all data to ensure table and filters are up-to-date
+    fetchAllStudents();
+    handleCloseSheet();
+  };
+
   const hasActiveFilters = Object.values(filters).some(filter => filter !== '');
   
   if (isLoading && allStudents.length === 0) {
@@ -222,6 +228,7 @@ export default function StudentDataView() {
         student={selectedStudent}
         isOpen={!!selectedStudent}
         onClose={handleCloseSheet}
+        onUpdate={handleStudentUpdate}
       />
     </div>
   );
