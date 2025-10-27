@@ -141,7 +141,7 @@ export default function StudentDataView() {
 
 
   const handleFilterChange = (name: string, value: string) => {
-    setFilters(prev => ({ ...prev, [name]: value }));
+    setFilters(prev => ({ ...prev, [name]: value === 'all' ? '' : value }));
   };
 
   const clearFilters = () => {
@@ -191,7 +191,7 @@ export default function StudentDataView() {
                 <SelectValue placeholder="Filtrar por série..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas as séries</SelectItem>
+                <SelectItem value="all">Todas as séries</SelectItem>
                 {uniqueFilterOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -200,7 +200,7 @@ export default function StudentDataView() {
                 <SelectValue placeholder="Filtrar por classe..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas as classes</SelectItem>
+                <SelectItem value="all">Todas as classes</SelectItem>
                 {uniqueFilterOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -209,7 +209,7 @@ export default function StudentDataView() {
                 <SelectValue placeholder="Filtrar por turno..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os turnos</SelectItem>
+                <SelectItem value="all">Todos os turnos</SelectItem>
                 {uniqueFilterOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
               </SelectContent>
             </Select>
