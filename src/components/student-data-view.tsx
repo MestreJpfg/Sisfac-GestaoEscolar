@@ -72,7 +72,7 @@ export default function StudentDataView() {
   const searchStudents = useCallback(async () => {
     if (!firestore) return;
 
-    const nameSearch = debouncedNome.trim();
+    const nameSearch = debouncedNome.trim().toUpperCase();
     const hasNameSearch = nameSearch.length >= 3;
     const hasOtherFilters = !!(filters.serie || filters.classe || filters.turno);
 
@@ -99,9 +99,10 @@ export default function StudentDataView() {
         conditions.push(where('turno', '==', filters.turno));
       }
       
-      if (hasNameSearch) {
-        conditions.push(where('nome', '>=', nameSearch.toUpperCase()));
-        conditions.push(where('nome', '<=', nameSearch.toUpperCase() + '\uf8ff'));
+      // If there are no other filters, we can use the efficient prefix search on 'nome'
+      if (hasNameSearch && !hasOtherFilters) {
+        conditions.push(where('nome', '>=', nameSearch));
+        conditions.push(where('nome', '<=', nameSearch + '\uf8ff'));
       }
       
       const finalQuery = query(
@@ -111,17 +112,28 @@ export default function StudentDataView() {
 
       const querySnapshot = await getDocs(finalQuery);
       
-      const studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      let studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+      // If a name search is active along with other filters, perform client-side filtering for substring matches
+      if (hasNameSearch && hasOtherFilters) {
+        studentsData = studentsData.filter(student => 
+            student.nome && student.nome.toUpperCase().includes(nameSearch)
+        );
+      }
+      
       // Client-side sorting
       studentsData.sort((a, b) => {
         // Primary sort: by 'serie'
-        if (a.serie < b.serie) return -1;
-        if (a.serie > b.serie) return 1;
+        const serieA = String(a.serie || '');
+        const serieB = String(b.serie || '');
+        if (serieA < serieB) return -1;
+        if (serieA > serieB) return 1;
 
         // Secondary sort: by 'nome'
-        if (a.nome < b.nome) return -1;
-        if (a.nome > b.nome) return 1;
+        const nomeA = String(a.nome || '');
+        const nomeB = String(b.nome || '');
+        if (nomeA < nomeB) return -1;
+        if (nomeA > nomeB) return 1;
 
         return 0;
       });
