@@ -350,7 +350,7 @@ a.click();
                   </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="default" size="icon" onClick={handleGeneratePdf} disabled={isProcessing}>
+                    <Button variant="outline" size="icon" onClick={handleGeneratePdf} disabled={isProcessing}>
                       {isProcessing ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
@@ -365,7 +365,7 @@ a.click();
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="default" size="icon" onClick={handleShare} disabled={isProcessing}>
+                    <Button variant="outline" size="icon" onClick={handleShare} disabled={isProcessing}>
                       {isProcessing ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
@@ -380,7 +380,7 @@ a.click();
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="default" size="icon" onClick={handlePrint} disabled={isProcessing}>
+                    <Button variant="outline" size="icon" onClick={handlePrint} disabled={isProcessing}>
                        <Printer className="w-4 h-4" />
                        <span className="sr-only">Imprimir Declaração</span>
                     </Button>
