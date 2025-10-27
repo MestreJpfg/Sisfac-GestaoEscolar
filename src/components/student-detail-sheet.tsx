@@ -65,12 +65,13 @@ export default function StudentDetailSheet({ student, isOpen, onClose }: Student
 
     try {
         const canvas = await html2canvas(declarationElement, {
-            scale: 2, // Aumenta a resolução para melhor qualidade
+            scale: 1.5, // Reduz a escala para um ficheiro mais leve
             useCORS: true,
             backgroundColor: null, 
         });
         
-        const imgData = canvas.toDataURL('image/png');
+        // Usa JPEG com qualidade controlada para compressão
+        const imgData = canvas.toDataURL('image/jpeg', 0.7); 
         const pdf = new jsPDF({
             orientation: 'p',
             unit: 'mm',
@@ -83,13 +84,20 @@ export default function StudentDetailSheet({ student, isOpen, onClose }: Student
         const canvasHeight = canvas.height;
         const ratio = canvasWidth / canvasHeight;
         
-        const imgWidth = pdfWidth - 20; // margem de 10mm de cada lado
-        const imgHeight = imgWidth / ratio;
-        
-        const x = 10;
-        const y = (pdfHeight - imgHeight) / 2; // Centraliza verticalmente
+        let imgWidth = pdfWidth - 20; // margem de 10mm de cada lado
+        let imgHeight = imgWidth / ratio;
 
-        pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+        // Se a altura da imagem for maior que a altura do PDF, ajusta pela altura
+        if (imgHeight > pdfHeight - 20) {
+            imgHeight = pdfHeight - 20;
+            imgWidth = imgHeight * ratio;
+        }
+
+        const x = (pdfWidth - imgWidth) / 2;
+        const y = (pdfHeight - imgHeight) / 2;
+
+        // Adiciona a imagem especificando o formato e a compressão
+        pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight, undefined, 'MEDIUM');
         pdf.save(`Declaracao_${student.nome.replace(/\s+/g, '_')}.pdf`);
 
     } catch (error) {
