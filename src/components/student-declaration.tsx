@@ -63,9 +63,12 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
                 </main>
 
                  {/* Assinatura */}
-                <div className="pt-16 flex justify-center items-end">
-                    <div className="text-center">
-                        <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" width={200} height={50} unoptimized />
+                 <div className="pt-16 flex justify-center items-end">
+                    <div className="relative text-center w-[250px]">
+                        <div className="absolute inset-x-0 -top-8 flex justify-center items-center">
+                            <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" width={200} height={100} unoptimized className="opacity-80" />
+                        </div>
+                        <div className="h-12"></div>
                         <p className="text-xs font-semibold">GESTÃO ESCOLAR</p>
                     </div>
                     <div className="text-center text-[8px] leading-tight ml-4">
@@ -74,6 +77,7 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
                         <p>Registro Nº 37899/65128092 CM</p>
                     </div>
                 </div>
+
 
                 {/* Rodapé */}
                 <footer className="mt-auto pt-8">
