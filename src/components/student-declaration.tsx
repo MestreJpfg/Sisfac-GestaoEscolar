@@ -68,7 +68,7 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
                  {/* Assinatura */}
                  <div className="pt-16 flex justify-center items-end">
                     <div className="relative text-center w-[250px]">
-                        <div className="absolute inset-x-0 -top-2 flex justify-center items-center">
+                        <div className="absolute inset-x-0 top-10 flex justify-center items-center">
                             <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" width={200} height={100} unoptimized className="opacity-80" />
                         </div>
                         <div className="h-12"></div>
