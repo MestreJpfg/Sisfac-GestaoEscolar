@@ -70,8 +70,7 @@ export default function StudentDataView() {
           turnos: Array.from(turnos).sort(),
         });
       } catch (error) {
-        console.error("Erro ao buscar opções de filtro:", error);
-         if (error instanceof Error && error.message.includes('permission-denied')) {
+        if (error instanceof Error && (error.message.includes('permission-denied') || error.message.includes('insufficient permissions'))) {
           const permissionError = new FirestorePermissionError({
             path: 'alunos',
             operation: 'list'
@@ -129,16 +128,18 @@ export default function StudentDataView() {
       setAllFetchedStudents(studentsData);
 
     } catch (error: any) {
-      const permissionError = new FirestorePermissionError({
-          path: 'alunos', // Path is simplified for query errors
-          operation: 'list',
-      });
-      errorEmitter.emit('permission-error', permissionError);
+      if (error instanceof Error && (error.message.includes('permission-denied') || error.message.includes('insufficient permissions'))) {
+        const permissionError = new FirestorePermissionError({
+            path: 'alunos', // Path is simplified for query errors
+            operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      }
       setAllFetchedStudents([]);
     } finally {
       setIsLoading(false);
     }
-  }, [firestore, toast, debouncedNome, filters.serie, filters.classe, filters.turno]);
+  }, [firestore, debouncedNome, filters.serie, filters.classe, filters.turno]);
 
   useEffect(() => {
     searchStudents();

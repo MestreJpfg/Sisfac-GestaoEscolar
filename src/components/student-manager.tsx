@@ -45,9 +45,7 @@ export default function StudentManager() {
       const exists = snapshot.data().count > 0;
       setDataExists(exists);
     } catch (error) {
-      console.error("Error checking for existing data:", error);
-      // Don't toast here, but emit a contextual error if it's a permission issue
-      if (error instanceof Error && error.message.includes('permission-denied')) {
+      if (error instanceof Error && (error.message.includes('permission-denied') || error.message.includes('insufficient permissions'))) {
         const permissionError = new FirestorePermissionError({
           path: 'alunos',
           operation: 'list',
@@ -56,7 +54,7 @@ export default function StudentManager() {
       }
       setDataExists(false); // Assume no data if check fails
     }
-  }, [firestore, toast]);
+  }, [firestore]);
 
   useEffect(() => {
     if (firestore) {
