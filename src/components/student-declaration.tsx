@@ -18,7 +18,7 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
 
     return (
         <div id={`declaration-${student.rm}`} className="bg-white text-black font-sans" style={{ width: '210mm', minHeight: '297mm', fontFamily: 'Arial, sans-serif' }}>
-            <div className="flex flex-col h-full p-12">
+            <div className="flex flex-col h-full p-8">
                 {/* Cabeçalho */}
                 <header className="flex flex-col items-center text-center text-[9px] font-bold">
                     <div className="flex items-center gap-4 mb-4">
@@ -68,7 +68,7 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
                  {/* Assinatura */}
                  <div className="pt-16 flex justify-center items-end">
                     <div className="relative text-center w-[250px]">
-                        <div className="absolute inset-x-0 -top-8 flex justify-center items-center">
+                        <div className="absolute inset-x-0 -top-2 flex justify-center items-center">
                             <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" width={200} height={100} unoptimized className="opacity-80" />
                         </div>
                         <div className="h-12"></div>
