@@ -15,6 +15,8 @@ import { useDebounce } from '@/hooks/use-debounce';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import type { SortConfig } from './student-table';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { errorEmitter } from '@/firebase/error-emitter';
 
 export default function StudentDataView() {
   const firestore = useFirestore();
@@ -69,6 +71,13 @@ export default function StudentDataView() {
         });
       } catch (error) {
         console.error("Erro ao buscar opções de filtro:", error);
+         if (error instanceof Error && error.message.includes('permission-denied')) {
+          const permissionError = new FirestorePermissionError({
+            path: 'alunos',
+            operation: 'list'
+          });
+          errorEmitter.emit('permission-error', permissionError);
+        }
       }
     };
     fetchUniqueOptions();
@@ -120,14 +129,11 @@ export default function StudentDataView() {
       setAllFetchedStudents(studentsData);
 
     } catch (error: any) {
-      console.error("Erro ao buscar alunos:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao buscar dados",
-        description: error.message.includes("index") 
-          ? "A base de dados precisa de um índice para esta consulta. Por favor, verifique a consola do Firebase."
-          : "Não foi possível realizar a busca na base de dados.",
+      const permissionError = new FirestorePermissionError({
+          path: 'alunos', // Path is simplified for query errors
+          operation: 'list',
       });
+      errorEmitter.emit('permission-error', permissionError);
       setAllFetchedStudents([]);
     } finally {
       setIsLoading(false);

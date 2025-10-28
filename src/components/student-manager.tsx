@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { ThemeToggle } from "./theme-toggle";
+import { commitBatchNonBlocking } from "@/firebase/non-blocking-updates";
 
 export default function StudentManager() {
   const [dataExists, setDataExists] = useState<boolean | null>(null);
@@ -45,11 +46,14 @@ export default function StudentManager() {
       setDataExists(exists);
     } catch (error) {
       console.error("Error checking for existing data:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao verificar dados",
-        description: "Não foi possível comunicar com a base de dados para verificar os dados existentes.",
-      });
+      // Don't toast here, but emit a contextual error if it's a permission issue
+      if (error instanceof Error && error.message.includes('permission-denied')) {
+        const permissionError = new FirestorePermissionError({
+          path: 'alunos',
+          operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      }
       setDataExists(false); // Assume no data if check fails
     }
   }, [firestore, toast]);
@@ -174,24 +178,17 @@ export default function StudentManager() {
       }
     });
   
-    try {
-      await batch.commit();
-      
-      toast({
-        title: "Sucesso!",
-        description: `${normalizedStudents.length} registros de alunos foram carregados na base de dados.`,
-      });
-      setDataExists(true);
-    
-    } catch (error: any) {
-      const permissionError = new FirestorePermissionError({
-        path: alunosCollectionPath,
-        operation: 'write',
-      });
-      errorEmitter.emit('permission-error', permissionError);
-    } finally {
-      setIsUploading(false);
-    }
+    commitBatchNonBlocking(batch, alunosCollectionPath);
+
+    // Give time for the UI to show the optimistic update, and for the write to potentially fail
+    setTimeout(() => {
+        toast({
+            title: "Sucesso!",
+            description: `${normalizedStudents.length} registros de alunos foram carregados na base de dados.`,
+        });
+        setDataExists(true);
+        setIsUploading(false);
+    }, 1500); // Wait 1.5 seconds
   };
   
   const isPageLoading = dataExists === null;

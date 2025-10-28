@@ -21,9 +21,8 @@ import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriang
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
-import { doc, setDoc } from "firebase/firestore";
-import { FirestorePermissionError } from "@/firebase/errors";
-import { errorEmitter } from "@/firebase/error-emitter";
+import { doc } from "firebase/firestore";
+import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 
 interface StudentDetailSheetProps {
@@ -70,23 +69,16 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     
     const docRef = doc(firestore, 'alunos', student.rm);
     
-    try {
-      await setDoc(docRef, updatedData, { merge: true });
-      toast({
-        title: "Sucesso!",
-        description: "Os dados do aluno foram atualizados.",
-      });
-      onUpdate(); // Trigger data refresh
-      setIsEditDialogOpen(false); // Close edit dialog
-    } catch (error) {
-      console.error("Erro ao atualizar aluno:", error);
-      const permissionError = new FirestorePermissionError({
-        path: docRef.path,
-        operation: 'update',
-        requestResourceData: updatedData
-      });
-      errorEmitter.emit('permission-error', permissionError);
-    }
+    setDocumentNonBlocking(docRef, updatedData, { merge: true });
+
+    toast({
+        title: "Atualização em andamento...",
+        description: "Os dados do aluno estão a ser salvos.",
+    });
+
+    // Optimistically update UI
+    onUpdate();
+    setIsEditDialogOpen(false);
   };
 
   const generatePdfBlob = async (): Promise<Blob | null> => {
