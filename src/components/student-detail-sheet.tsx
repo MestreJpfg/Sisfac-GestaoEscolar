@@ -297,15 +297,6 @@ a.click();
               </div>
               
               <Separator />
-
-              <div>
-                <h3 className="text-lg font-semibold text-foreground mb-4">Endereço</h3>
-                <div className="space-y-4">
-                  {addressDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                </div>
-              </div>
-
-              <Separator />
               
               <div>
                 <h3 className="text-lg font-semibold text-foreground mb-4">Dados Académicos</h3>
@@ -320,6 +311,15 @@ a.click();
                 <h3 className="text-lg font-semibold text-foreground mb-4">Filiação</h3>
                 <div className="space-y-4">
                   {familyDetails.map(item => <DetailItem key={item.label} {...item} />)}
+                </div>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h3 className="text-lg font-semibold text-foreground mb-4">Endereço</h3>
+                <div className="space-y-4">
+                  {addressDetails.map(item => <DetailItem key={item.label} {...item} />)}
                 </div>
               </div>
 
