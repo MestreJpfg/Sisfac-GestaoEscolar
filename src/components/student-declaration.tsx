@@ -14,18 +14,13 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
         year: 'numeric'
     }).format(today);
 
-    // Use a public placeholder for logos and images
-    const schoolSealUrl = "https://placehold.co/500x500/000000/ffffff.png?text=SELO+DA+ESCOLA&font=roboto";
-    const signatureUrl = "https://placehold.co/200x50?text=Assinatura&font=script";
-
-
     return (
         <div id={`declaration-${student.rm}`} className="bg-white text-black font-sans" style={{ width: '210mm', minHeight: '297mm', fontFamily: 'Arial, sans-serif' }}>
             <div className="flex flex-col h-full p-12">
                 {/* Cabeçalho */}
                 <header className="flex flex-col items-center text-center text-[9px] font-bold">
                     <div className="flex items-center gap-4 mb-4">
-                       <img src="/logoyuri.png" alt="Logo da Prefeitura de Fortaleza" width={80} height={80} />
+                       <img src="/logo.png" alt="Logo da Prefeitura de Fortaleza" width={80} height={80} />
                        <div className="h-10 border-l border-gray-400"></div>
                        <span className="text-xl font-semibold">EDUCAÇÃO</span>
                     </div>
@@ -42,7 +37,7 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
                 {/* Corpo da Declaração com Marca d'Água */}
                 <main className="relative text-base leading-relaxed text-justify flex-grow">
                     <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-15">
-                        <img src={schoolSealUrl} alt="Selo da Escola" width={400} height={400} crossOrigin="anonymous" />
+                        <img src="/selo.png" alt="Selo da Escola" width={400} height={400} crossOrigin="anonymous" />
                     </div>
                     <p className="mb-6 indent-12">
                         Declaramos, para os devidos fins, que <strong className="font-bold">{student.nome || 'N/A'}</strong>, 
@@ -68,7 +63,7 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
                  {/* Assinatura */}
                 <div className="pt-16 flex justify-center items-end">
                     <div className="text-center">
-                        <img src={signatureUrl} alt="Assinatura Gestão Escolar" width={200} height={50} crossOrigin="anonymous" />
+                        <img src="/assinatura.png" alt="Assinatura Gestão Escolar" width={200} height={50} crossOrigin="anonymous" />
                         <p className="text-xs font-semibold">GESTÃO ESCOLAR</p>
                     </div>
                     <div className="text-center text-[8px] leading-tight ml-4">
