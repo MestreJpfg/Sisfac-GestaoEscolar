@@ -58,7 +58,7 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
                         </p>
                     )}
                      <p className="mt-12 indent-12">
-                        Por ser expressão da verdade, firmamos a presente declaração.
+                        Observações: Frequência Bimestral em 100%
                     </p>
                 </main>
 
