@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -50,7 +51,7 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
                         O(A) aluno(a) está cursando a <strong className="font-bold">{student.serie || 'N/A'}</strong> do 
                         <strong className="font-bold"> {student.ensino || 'N/A'}</strong>, na classe <strong className="font-bold">{student.classe || 'N/A'}</strong>, 
                         no turno da <strong className="font-bold">{student.turno || 'N/A'}</strong>, e possui o Registro do Aluno (RM) 
-                        nº <strong className="font-bold">{student.rm || 'N/A'}</strong>.
+                        nº <strong className="font-bold">{student.rm || 'N/A'}</strong> e ID Censo nº <strong className="font-bold">{student.id_censo || 'N/A'}</strong>.
                     </p>
                     {student.nee && (
                          <p className="mb-6 indent-12">
