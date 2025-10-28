@@ -60,6 +60,9 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
                      <p className="mt-12 indent-12">
                         Observações: Frequência Bimestral em 100%
                     </p>
+                    <p className="mt-12 text-right">
+                        Fortaleza, {formattedDate}.
+                    </p>
                 </main>
 
                  {/* Assinatura */}
