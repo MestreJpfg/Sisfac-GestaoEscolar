@@ -1,69 +1,32 @@
 /**
- * @file Firestore Security Rules
- * @description This ruleset enforces a strict user-ownership model for the 'alunos' collection.
+ * @fileoverview Firestore Security Rules for the escolar database.
+ *
+ * Core Philosophy:
+ * This ruleset provides public read access to the 'alunos' collection. Write access is prohibited to prevent unauthorized data modification.
  *
  * Data Structure:
- * All aluno data is stored in the `/alunos/{alunoId}` collection. Each document represents a single aluno.
+ * The database consists of a single top-level collection: '/alunos/{alunoId}'.
  *
  * Key Security Decisions:
- * - Only authenticated users can access aluno data.
- * - An aluno can only read, update, or delete their own record, identified by `alunoId`.
- * - Data consistency between the path and the document's internal 'rm' field is enforced.
- *
- * Denormalization for Authorization:
- * The 'rm' field within each `/alunos/{alunoId}` document is used for authorization.
+ * - Public Read: The 'alunos' collection is readable by all users, including unauthenticated ones.
+ * - No Writes: Creation, updating, and deletion of 'alunos' documents are explicitly denied.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls access to the 'alunos' collection. Only the aluno themselves can read, update, or delete their own record.
+     * @description Allows anyone to read the 'alunos' collection but prohibits any writes.
      * @path /alunos/{alunoId}
-     * @allow (get, list) User with UID 'aluno123' can read their own record: request.auth.uid == 'aluno123' where /alunos/aluno123 exists.
-     * @allow (create) User with UID 'aluno123' can create a new record with rm = 'aluno123'.
-     * @allow (update) User with UID 'aluno123' can update their own record where /alunos/aluno123 exists.
-     * @allow (delete) User with UID 'aluno123' can delete their own record where /alunos/aluno123 exists.
-     * @deny (get, list) User with UID 'otherUser' cannot read aluno 'aluno123' data: request.auth.uid != 'aluno123'.
-     * @deny (create) User with UID 'aluno123' cannot create a new record with rm != 'aluno123'.
-     * @deny (update) User with UID 'otherUser' cannot update aluno 'aluno123' data: request.auth.uid != 'aluno123'.
-     * @deny (delete) User with UID 'otherUser' cannot delete aluno 'aluno123' data: request.auth.uid != 'aluno123'.
-     * @principle Enforces document ownership for all operations on the 'alunos' collection.
+     * @allow (get, list) Anyone can read aluno data.
+     * @deny (create, update, delete) No one can create, update, or delete aluno data.
+     * @principle Allows public reads and disallows writes.
      */
     match /alunos/{alunoId} {
-      allow get: if isSignedIn() && isOwner(alunoId);
-      allow list: if isSignedIn() && isOwner(alunoId);
-      allow create: if isSignedIn() && request.resource.data.rm == alunoId;
-      allow update: if isSignedIn() && isExistingOwner(alunoId) && request.resource.data.rm == resource.data.rm;
-      allow delete: if isSignedIn() && isExistingOwner(alunoId);
-    }
-
-    // ---- Helper functions ----
-
-    /**
-     * @description Checks if the user is signed in.
-     * @return {boolean} True if the user is signed in, false otherwise.
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /**
-     * @description Checks if the authenticated user is the owner of the document.
-     * @param {string} userId The ID of the user to check against.
-     * @return {boolean} True if the user is the owner, false otherwise.
-     */
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    /**
-     * @description Checks if the authenticated user is the owner of the existing document.
-     * @param {string} userId The ID of the user to check against.
-     * @return {boolean} True if the user is the owner and the document exists, false otherwise.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
+      allow get, list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
   }
 }
