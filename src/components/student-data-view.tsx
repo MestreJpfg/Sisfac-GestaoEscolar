@@ -4,8 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useFirestore } from '@/firebase';
 import { collection, query, getDocs, where } from 'firebase/firestore';
 import StudentTable from './student-table';
-import { Loader2, Filter, X, ChevronDown } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Filter, X, ChevronDown } from 'lucide-react';
 import StudentDetailSheet from './student-detail-sheet';
 import { Input } from './ui/input';
 import { Card, CardContent } from './ui/card';
@@ -20,7 +19,6 @@ import { errorEmitter } from '@/firebase/error-emitter';
 
 export default function StudentDataView() {
   const firestore = useFirestore();
-  const { toast } = useToast();
 
   const [allFetchedStudents, setAllFetchedStudents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -49,8 +47,9 @@ export default function StudentDataView() {
 
 
   useEffect(() => {
+    if (!firestore) return;
+
     const fetchUniqueOptions = async () => {
-      if (!firestore) return;
       try {
         const studentsCollectionRef = collection(firestore, 'alunos');
         const querySnapshot = await getDocs(query(studentsCollectionRef)); 
@@ -79,7 +78,9 @@ export default function StudentDataView() {
         }
       }
     };
+
     fetchUniqueOptions();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [firestore]);
 
 
@@ -224,7 +225,7 @@ export default function StudentDataView() {
     handleCloseSheet();
   };
 
-  const hasActiveFilters = Object.values(filters).some(filter => filter !== '' && filter !== filters.nome);
+  const hasActiveFilters = Object.values(filters).some(val => val !== '');
   
   return (
     <div className="space-y-6">
@@ -268,7 +269,7 @@ export default function StudentDataView() {
                   <Select value={filters.turno || ''} onValueChange={(value) => handleFilterChange('turno', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filtrar por turno..." />
-                    </SelectTrigger>
+                    </Trigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os turnos</SelectItem>
                       {uniqueFilterOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
@@ -276,7 +277,7 @@ export default function StudentDataView() {
                   </Select>
               </div>
               
-              {(hasActiveFilters || (filters.nome.length > 0 && !hasSearched)) && (
+              {hasActiveFilters && (
                 <div className="flex items-center justify-end mt-4">
                   <Button variant="ghost" size="sm" onClick={clearFilters} className="text-destructive hover:text-destructive">
                     <X className="w-4 h-4 mr-2" />
@@ -290,7 +291,7 @@ export default function StudentDataView() {
         </CardContent>
       </Card>
       
-      <div className="text-sm text-muted-foreground">
+      <div className="text-sm text-muted-foreground h-5">
         {hasSearched && !isLoading && (
           <p>
             {sortedStudents.length > 0 

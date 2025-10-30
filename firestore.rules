@@ -1,36 +1,41 @@
 /**
- * @fileOverview Firestore Security Rules for the escolar database.
+ * @fileoverview Firestore Security Rules for the escolar database.
  *
  * Core Philosophy:
- * This ruleset allows public read access to the 'alunos' collection while restricting write access.
- * Write access is denied in the current configuration, as the intended authorization mechanism is unclear.
+ * This ruleset prioritizes ease of access for prototyping, while enforcing fundamental security principles.
+ * All data is stored in the `/alunos/{alunoId}` collection. Access is granted to all users for reading.
+ * Writes are disallowed to prevent unauthorized data modification since anonymous auth is being used.
  *
  * Data Structure:
- * The database consists of a single top-level collection, 'alunos', where each document represents a student.
- * Document IDs are the student's RM (Registro do Aluno).
+ * All data is stored under the `/alunos/{alunoId}` collection, where `{alunoId}` corresponds to the Aluno's RM.
  *
  * Key Security Decisions:
- * - 'alunos' collection: Public read access is enabled to allow open access to student data.
- * - Write access to the 'alunos' collection is explicitly denied, indicating either a need for a different
- *   authentication mechanism, or a desire to prevent modification.
+ * - Read-only access is enabled for all authenticated users to allow free data exploration during development.
+ * - Write access is completely disabled to ensure data integrity in the prototyping phase.
+ * - No user listing is allowed (as there are no user documents).
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows public read access to the 'alunos' collection, but denies all write operations.
+     * @description Defines rules for the /alunos/{alunoId} collection.
      * @path /alunos/{alunoId}
-     * @allow (get, list) User can read any document in the 'alunos' collection.
-     * @deny (create, update, delete) No user can create, update, or delete documents in the 'alunos' collection.
-     * @principle Allows public read access.
+     * @allow (get, list) Any signed-in user can read any Aluno document.
+     * @deny (create, update, delete) No user can create, update, or delete Aluno documents.
+     * @principle Allows public read access for prototyping. Disables write access for security.
      */
     match /alunos/{alunoId} {
-      allow get: if true;
-      allow list: if true;
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
       allow create: if false;
       allow update: if false;
       allow delete: if false;
+    }
+
+    // Helper function to determine if a user is signed in.
+    function isSignedIn() {
+      return request.auth != null;
     }
   }
 }

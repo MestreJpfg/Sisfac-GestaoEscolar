@@ -209,19 +209,22 @@ a.click();
 
   const parseAddress = (addressString: string) => {
     if (!addressString || typeof addressString !== 'string') {
-      return { cep: null, rua: null, bairro: null, enderecoCompleto: addressString };
-    }
-    const cleanedString = addressString.replace(/[()]/g, '');
-    const parts = cleanedString.split(' - ').map(part => part.trim());
-  
-    // Expects (cep - rua - numero - bairro)
-    if (parts.length === 4) {
-      const [cep, rua, numero, bairro] = parts;
-      const fullStreet = numero ? `${rua}, ${numero}` : rua;
-      return { cep, rua: fullStreet, bairro, enderecoCompleto: null };
+        return { cep: null, rua: null, bairro: null, enderecoCompleto: addressString };
     }
     
-    // Fallback for unexpected formats
+    // Remove parentheses and split by hyphen
+    const cleanedString = addressString.replace(/[()]/g, '');
+    const parts = cleanedString.split('-').map(part => part.trim());
+
+    // Expects: (CEP - RUA - NUMERO - BAIRRO)
+    if (parts.length === 4) {
+        const [cep, rua, numero, bairro] = parts;
+        // Only combine rua and numero if numero exists
+        const fullStreet = numero ? `${rua}, ${numero}` : rua;
+        return { cep, rua: fullStreet, bairro, enderecoCompleto: null };
+    }
+    
+    // Fallback: If the format is not as expected, return the original string
     return { cep: null, rua: null, bairro: null, enderecoCompleto: addressString };
   };
 

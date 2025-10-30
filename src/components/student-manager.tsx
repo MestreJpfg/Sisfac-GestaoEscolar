@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import FileUploader from "@/components/file-uploader";
 import { Loader2 } from "lucide-react";
 import { quotes } from "@/lib/quotes";
-import { useAuth, useFirestore } from "@/firebase";
+import { useFirestore } from "@/firebase";
 import { writeBatch, doc, getCountFromServer, collection } from "firebase/firestore";
 import StudentDataView from "./student-data-view";
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +21,6 @@ export default function StudentManager() {
   const [currentDateTime, setCurrentDateTime] = useState('');
 
   const firestore = useFirestore();
-  const auth = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -37,30 +36,30 @@ export default function StudentManager() {
     return () => clearInterval(timer);
   }, []);
 
-  const checkDataExists = useCallback(async () => {
-    if (!firestore) return;
-    try {
-      const collectionRef = collection(firestore, 'alunos');
-      const snapshot = await getCountFromServer(collectionRef);
-      const exists = snapshot.data().count > 0;
-      setDataExists(exists);
-    } catch (error) {
-      if (error instanceof Error && (error.message.includes('permission-denied') || error.message.includes('insufficient permissions'))) {
-        const permissionError = new FirestorePermissionError({
-          path: 'alunos',
-          operation: 'list',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      }
-      setDataExists(false); // Assume no data if check fails
-    }
-  }, [firestore]);
-
   useEffect(() => {
-    if (firestore) {
-      checkDataExists();
-    }
-  }, [firestore, checkDataExists]);
+    if (!firestore) return;
+
+    const checkDataExists = async () => {
+      try {
+        const collectionRef = collection(firestore, 'alunos');
+        const snapshot = await getCountFromServer(collectionRef);
+        setDataExists(snapshot.data().count > 0);
+      } catch (error) {
+        if (error instanceof Error && (error.message.includes('permission-denied') || error.message.includes('insufficient permissions'))) {
+          const permissionError = new FirestorePermissionError({
+            path: 'alunos',
+            operation: 'list',
+          });
+          errorEmitter.emit('permission-error', permissionError);
+        } else {
+            console.error("Failed to check if data exists:", error);
+        }
+        setDataExists(false); // Assume no data if check fails
+      }
+    };
+    
+    checkDataExists();
+  }, [firestore]);
 
 
   const normalizeData = (data: any[]): any[] => {

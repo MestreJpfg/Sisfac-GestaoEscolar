@@ -90,7 +90,7 @@
           "schema": {
             "$ref": "#/entities/Aluno"
           },
-          "description": "Coleção principal que armazena os dados de todos os alunos. O ID do documento é o RM do aluno."
+          "description": "Coleção que armazena os dados de todos os alunos."
         }
       }
     ]
