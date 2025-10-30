@@ -1,44 +1,36 @@
 /**
- * @file Firestore Security Rules
- * @description This ruleset implements a public-read, owner-write model for the `alunos` collection,
- * allowing any user to read student data but restricting write access to authenticated users.
+ * @fileOverview Firestore Security Rules for the escolar database.
+ *
+ * Core Philosophy:
+ * This ruleset allows public read access to the 'alunos' collection while restricting write access.
+ * Write access is denied in the current configuration, as the intended authorization mechanism is unclear.
  *
  * Data Structure:
- * - /alunos/{alunoId}: Stores student data, where {alunoId} is the student's RM.
+ * The database consists of a single top-level collection, 'alunos', where each document represents a student.
+ * Document IDs are the student's RM (Registro do Aluno).
  *
  * Key Security Decisions:
- * - Public Read Access: Any user, authenticated or not, can read student data.
- * - Authenticated Write Access: Only authenticated users can create, update, or delete student data.
- * - Owner-Only Writes: An authenticated user can only modify a student record if they are the "owner,"
- *   as determined by matching the authenticated user's UID to an `ownerId` field on the document.
- *   The `ownerId` must match `request.auth.uid` on `create`.
+ * - 'alunos' collection: Public read access is enabled to allow open access to student data.
+ * - Write access to the 'alunos' collection is explicitly denied, indicating either a need for a different
+ *   authentication mechanism, or a desire to prevent modification.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows anyone to read student data, but only authenticated users can create, update, or delete.
+     * @description Allows public read access to the 'alunos' collection, but denies all write operations.
      * @path /alunos/{alunoId}
-     * @allow (get, list): Any user can read.
-     * @allow (create): Authenticated user can create a new student record if they are the owner.
-     * @allow (update, delete): Authenticated user can update or delete a student record if they are the owner and the record exists.
-     * @deny (create): Unauthenticated user attempts to create a student record.
-     * @deny (update, delete): Unauthenticated user attempts to update or delete a student record.
-     * @deny (update, delete): Authenticated user attempts to update or delete a non-existent student record.
-     * @principle Allows public read access to student data, while restricting write access to authenticated users.
+     * @allow (get, list) User can read any document in the 'alunos' collection.
+     * @deny (create, update, delete) No user can create, update, or delete documents in the 'alunos' collection.
+     * @principle Allows public read access.
      */
     match /alunos/{alunoId} {
       allow get: if true;
       allow list: if true;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
   }
-
-  function isSignedIn() {
-    return request.auth != null;
-  }
-
 }
