@@ -34,7 +34,7 @@ interface StudentDetailSheetProps {
 }
 
 const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) => {
-  if (value === null || value === undefined || value === '') return null;
+  if (value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) return null;
   return (
     <div className="flex items-start space-x-4">
       <Icon className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
@@ -234,11 +234,11 @@ a.click();
   const studentDetails = [
     { label: "RM", value: student.rm, icon: Hash },
     { label: "Data de Nascimento", value: student.data_nascimento, icon: Calendar },
+    { label: "Telefones", value: student.telefones, icon: Phone },
     { label: "RG", value: student.rg, icon: FileText },
     { label: "CPF Aluno", value: student.cpf_aluno, icon: FileText },
     { label: "NIS", value: student.nis, icon: Hash },
     { label: "ID Censo", value: student.id_censo, icon: Hash },
-    { label: "Telefones", value: student.telefones, icon: Phone },
   ];
 
   const addressDetails = address.enderecoCompleto ? 
@@ -405,3 +405,5 @@ a.click();
     </>
   );
 }
+
+    
