@@ -28,10 +28,10 @@ import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 const formatPhoneNumber = (phone: string): string => {
   const cleaned = ('' + phone).replace(/\D/g, '');
   if (cleaned.length === 11) {
-    return `(${cleaned.substring(0, 2)}) ${cleaned.substring(2, 7)}${cleaned.substring(7)}`;
+    return `(${cleaned.substring(0, 2)}) ${cleaned.substring(2, 7)}-${cleaned.substring(7)}`;
   }
   if (cleaned.length === 10) {
-    return `(${cleaned.substring(0, 2)}) ${cleaned.substring(2, 6)}${cleaned.substring(6)}`;
+    return `(${cleaned.substring(0, 2)}) ${cleaned.substring(2, 6)}-${cleaned.substring(6)}`;
   }
   return phone; // Return original if not a valid length
 };
@@ -40,7 +40,7 @@ interface StudentDetailSheetProps {
   student: any | null;
   isOpen: boolean;
   onClose: () => void;
-  onUpdate: () => void; // Callback to refresh data
+  onUpdate: () => void;
 }
 
 const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) => {
@@ -48,7 +48,7 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, lab
   
   let displayValue = value;
 
-  if (label === "Telefone" && Array.isArray(value)) {
+  if (label === "Telefones" && Array.isArray(value)) {
     displayValue = (
       <div className="flex flex-col space-y-1">
         {value.map((item, index) => <span key={index}>{formatPhoneNumber(item)}</span>)}
@@ -92,7 +92,6 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
         description: "Os dados do aluno estão a ser salvos.",
     });
 
-    // Optimistically update UI
     onUpdate();
     setIsEditDialogOpen(false);
   };
@@ -164,7 +163,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
       a.href = url;
       a.download = `Declaracao_${student.nome.replace(/\s+/g, '_')}.pdf`;
       document.body.appendChild(a);
-a.click();
+      a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
@@ -205,7 +204,6 @@ a.click();
          }
       }
     } else {
-      // Fallback to download if share API is not supported
       toast({
         title: "Partilha não suportada",
         description: "A iniciar o download do ficheiro.",
@@ -215,7 +213,7 @@ a.click();
       a.href = url;
       a.download = fileName;
       document.body.appendChild(a);
-a.click();
+      a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
@@ -228,28 +226,27 @@ a.click();
         return { cep: null, rua: null, bairro: null, enderecoCompleto: addressString };
     }
     
-    // Remove parentheses and split by hyphen
     const cleanedString = addressString.replace(/[()]/g, '');
     const parts = cleanedString.split('-').map(part => part.trim());
 
-    // Expects: (CEP - RUA - NUMERO - BAIRRO)
     if (parts.length === 4) {
         const [cep, rua, numero, bairro] = parts;
-        // Only combine rua and numero if numero exists
         const fullStreet = numero ? `${rua}, ${numero}` : rua;
         return { cep, rua: fullStreet, bairro, enderecoCompleto: null };
     }
     
-    // Fallback: If the format is not as expected, return the original string
     return { cep: null, rua: null, bairro: null, enderecoCompleto: addressString };
   };
 
   const address = parseAddress(student.endereco);
+  
+  // Use `telefones` (plural) from student data
+  const studentPhones = student.telefones || (student.telefone ? [student.telefone] : []);
 
   const studentDetails = [
     { label: "RM", value: student.rm, icon: Hash },
     { label: "Data de Nascimento", value: student.data_nascimento, icon: Calendar },
-    { label: "Telefone", value: student.telefones, icon: Phone },
+    { label: "Telefones", value: studentPhones, icon: Phone },
     { label: "RG", value: student.rg, icon: FileText },
     { label: "CPF Aluno", value: student.cpf_aluno, icon: FileText },
     { label: "NIS", value: student.nis, icon: Hash },
@@ -406,7 +403,6 @@ a.click();
         </SheetContent>
       </Sheet>
       
-      {/* Elemento para gerar o PDF e para Impressão */}
       <div className="absolute -left-[9999px] top-0 opacity-0 printable-content" aria-hidden="true">
           <StudentDeclaration student={student} />
       </div>

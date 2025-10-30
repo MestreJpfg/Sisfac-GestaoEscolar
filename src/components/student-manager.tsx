@@ -84,6 +84,9 @@ export default function StudentManager() {
          if (h === 'filiacao_2' || h === 'filiação_2') {
             return 'filiacao_2';
         }
+        if (h === 'telefone') {
+            return 'telefones';
+        }
         return h;
     });
     
@@ -120,21 +123,19 @@ export default function StudentManager() {
         }
 
         if (header === 'telefones' && value) {
-            // Splits by comma or semicolon, then cleans each number by removing non-digits
             processedValue = String(value)
                 .split(/[,;/]/)
-                .map(phone => phone.replace(/\D/g, '')) // Remove non-numeric characters
-                .filter(p => p && p.length >= 10); // Filter out empty or invalid strings
+                .map(phone => phone.replace(/\D/g, ''))
+                .filter(p => p && p.length >= 10);
         }
         
         if (header === 'data_nascimento' && value) {
           if (typeof value === 'number') {
-            // Excel date to JS date
             const date = new Date(Math.round((value - 25569) * 86400 * 1000));
             if (!isNaN(date.getTime())) {
               processedValue = ('0' + date.getDate()).slice(-2) + '/' + ('0' + (date.getMonth() + 1)).slice(-2) + '/' + date.getFullYear();
             } else {
-              processedValue = String(value); // Keep original if parse fails
+              processedValue = String(value);
             }
           } else {
              processedValue = String(value);
@@ -182,7 +183,6 @@ export default function StudentManager() {
   
     commitBatchNonBlocking(batch, alunosCollectionPath);
 
-    // Give time for the UI to show the optimistic update, and for the write to potentially fail
     setTimeout(() => {
         toast({
             title: "Sucesso!",
@@ -190,7 +190,7 @@ export default function StudentManager() {
         });
         setDataExists(true);
         setIsUploading(false);
-    }, 1500); // Wait 1.5 seconds
+    }, 1500);
   };
   
   const isPageLoading = dataExists === null;
