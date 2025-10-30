@@ -268,7 +268,7 @@ export default function StudentDataView() {
                   <Select value={filters.turno || ''} onValueChange={(value) => handleFilterChange('turno', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filtrar por turno..." />
-                    </Trigger>
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os turnos</SelectItem>
                       {uniqueFilterOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
