@@ -234,7 +234,7 @@ a.click();
   const studentDetails = [
     { label: "RM", value: student.rm, icon: Hash },
     { label: "Data de Nascimento", value: student.data_nascimento, icon: Calendar },
-    { label: "Telefones", value: student.telefones, icon: Phone },
+    { label: "Telefone", value: student.telefones, icon: Phone },
     { label: "RG", value: student.rg, icon: FileText },
     { label: "CPF Aluno", value: student.cpf_aluno, icon: FileText },
     { label: "NIS", value: student.nis, icon: Hash },
