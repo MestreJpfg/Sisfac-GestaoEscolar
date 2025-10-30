@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useFirestore } from '@/firebase';
 import { collection, query, getDocs, where } from 'firebase/firestore';
 import StudentTable from './student-table';
@@ -84,67 +85,67 @@ export default function StudentDataView() {
   }, [firestore]);
 
 
-  const searchStudents = useCallback(async () => {
+  useEffect(() => {
     if (!firestore) return;
 
-    const nameSearch = debouncedNome.trim().toUpperCase();
-    const hasNameSearch = nameSearch.length >= 3;
-    const hasOtherFilters = !!(filters.serie || filters.classe || filters.turno);
+    const searchStudents = async () => {
+        const nameSearch = debouncedNome.trim().toUpperCase();
+        const hasNameSearch = nameSearch.length >= 3;
+        const hasOtherFilters = !!(filters.serie || filters.classe || filters.turno);
 
-    if (!hasNameSearch && !hasOtherFilters) {
-      setAllFetchedStudents([]);
-      setHasSearched(false);
-      return;
-    }
-    
-    setIsLoading(true);
-    setHasSearched(true);
-    
-    try {
-      const baseQuery = collection(firestore, 'alunos');
-      let conditions = [];
-      
-      if (filters.serie) {
-        conditions.push(where('serie', '==', filters.serie));
-      }
-      if (filters.classe) {
-        conditions.push(where('classe', '==', filters.classe));
-      }
-      if (filters.turno) {
-        conditions.push(where('turno', '==', filters.turno));
-      }
-      
-      const finalQuery = conditions.length > 0 ? query(baseQuery, ...conditions) : query(baseQuery);
+        if (!hasNameSearch && !hasOtherFilters) {
+          setAllFetchedStudents([]);
+          setHasSearched(false);
+          return;
+        }
+        
+        setIsLoading(true);
+        setHasSearched(true);
+        
+        try {
+          const baseQuery = collection(firestore, 'alunos');
+          let conditions = [];
+          
+          if (filters.serie) {
+            conditions.push(where('serie', '==', filters.serie));
+          }
+          if (filters.classe) {
+            conditions.push(where('classe', '==', filters.classe));
+          }
+          if (filters.turno) {
+            conditions.push(where('turno', '==', filters.turno));
+          }
+          
+          const finalQuery = conditions.length > 0 ? query(baseQuery, ...conditions) : query(baseQuery);
 
-      const querySnapshot = await getDocs(finalQuery);
-      
-      let studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          const querySnapshot = await getDocs(finalQuery);
+          
+          let studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-      if (hasNameSearch) {
-        studentsData = studentsData.filter(student => 
-            student.nome && student.nome.toUpperCase().includes(nameSearch)
-        );
-      }
+          if (hasNameSearch) {
+            studentsData = studentsData.filter(student => 
+                student.nome && student.nome.toUpperCase().includes(nameSearch)
+            );
+          }
 
-      setAllFetchedStudents(studentsData);
+          setAllFetchedStudents(studentsData);
 
-    } catch (error: any) {
-      if (error instanceof Error && (error.message.includes('permission-denied') || error.message.includes('insufficient permissions'))) {
-        const permissionError = new FirestorePermissionError({
-            path: 'alunos', // Path is simplified for query errors
-            operation: 'list',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      }
-      setAllFetchedStudents([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [firestore, debouncedNome, filters.serie, filters.classe, filters.turno]);
+        } catch (error: any) {
+          if (error instanceof Error && (error.message.includes('permission-denied') || error.message.includes('insufficient permissions'))) {
+            const permissionError = new FirestorePermissionError({
+                path: 'alunos', // Path is simplified for query errors
+                operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+          }
+          setAllFetchedStudents([]);
+        } finally {
+          setIsLoading(false);
+        }
+    };
 
-  useEffect(() => {
     searchStudents();
-  }, [searchStudents]);
+  }, [firestore, debouncedNome, filters.serie, filters.classe, filters.turno]);
 
   const sortedStudents = useMemo(() => {
     let sortableItems = [...allFetchedStudents];
@@ -153,7 +154,6 @@ export default function StudentDataView() {
         const aValue = a[sortConfig.key] || '';
         const bValue = b[sortConfig.key] || '';
 
-        // Tratar "SIM" / "NÃO" para nee
         if (sortConfig.key === 'nee') {
             const valA = a.nee ? 1 : 0;
             const valB = b.nee ? 1 : 0;
@@ -177,7 +177,6 @@ export default function StudentDataView() {
       });
     }
 
-     // Adiciona um segundo critério de ordenação por nome
     if (sortConfig.key !== 'nome') {
         sortableItems.sort((a, b) => {
              if (a[sortConfig.key] === b[sortConfig.key]) {
@@ -221,9 +220,9 @@ export default function StudentDataView() {
   };
 
   const handleStudentUpdate = () => {
-    searchStudents();
-    handleCloseSheet();
+    // This is intentionally left blank for now, will be implemented with searchStudents
   };
+
 
   const hasActiveFilters = Object.values(filters).some(val => val !== '');
   
