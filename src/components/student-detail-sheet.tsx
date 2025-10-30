@@ -25,6 +25,16 @@ import { useFirestore } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
+const formatPhoneNumber = (phone: string): string => {
+  const cleaned = ('' + phone).replace(/\D/g, '');
+  if (cleaned.length === 11) {
+    return `(${cleaned.substring(0, 2)}) ${cleaned.substring(2, 7)}-${cleaned.substring(7)}`;
+  }
+  if (cleaned.length === 10) {
+    return `(${cleaned.substring(0, 2)}) ${cleaned.substring(2, 6)}-${cleaned.substring(6)}`;
+  }
+  return phone; // Return original if not a valid length
+};
 
 interface StudentDetailSheetProps {
   student: any | null;
@@ -45,10 +55,10 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, lab
             (value ? <Badge variant="destructive">SIM</Badge> : <Badge variant="secondary">NÃO</Badge>) :
             Array.isArray(value) ? (
               <div className="flex flex-col space-y-1">
-                {value.map((item, index) => <span key={index}>{item}</span>)}
+                {value.map((item, index) => <span key={index}>{label === "Telefone" ? formatPhoneNumber(item) : item}</span>)}
               </div>
             ) :
-            (value)
+            (label === "Telefone" ? formatPhoneNumber(String(value)) : value)
           }
         </div>
       </div>
@@ -405,7 +415,3 @@ a.click();
     </>
   );
 }
-
-    
-
-    

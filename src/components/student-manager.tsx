@@ -120,7 +120,11 @@ export default function StudentManager() {
         }
 
         if (header === 'telefones' && value) {
-          processedValue = String(value).split(/[,;/]/).map(phone => phone.trim()).filter(p => p);
+            // Splits by comma or semicolon, then cleans each number by removing non-digits
+            processedValue = String(value)
+                .split(/[,;/]/)
+                .map(phone => phone.replace(/\D/g, '')) // Remove non-numeric characters
+                .filter(p => p && p.length >= 10); // Filter out empty or invalid strings
         }
         
         if (header === 'data_nascimento' && value) {
@@ -241,5 +245,3 @@ export default function StudentManager() {
     </main>
   );
 }
-
-    
