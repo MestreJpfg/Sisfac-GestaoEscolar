@@ -45,21 +45,26 @@ interface StudentDetailSheetProps {
 
 const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) => {
   if (value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) return null;
+  
+  let displayValue = value;
+
+  if (label === "Telefone" && Array.isArray(value)) {
+    displayValue = (
+      <div className="flex flex-col space-y-1">
+        {value.map((item, index) => <span key={index}>{formatPhoneNumber(item)}</span>)}
+      </div>
+    );
+  } else if (typeof value === 'boolean') {
+    displayValue = value ? <Badge variant="destructive">SIM</Badge> : <Badge variant="secondary">NÃO</Badge>;
+  }
+
   return (
     <div className="flex items-start space-x-4">
       <Icon className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
       <div>
         <p className="text-sm font-semibold text-muted-foreground">{label}</p>
         <div className="text-base text-foreground font-medium">
-          {typeof value === 'boolean' ? 
-            (value ? <Badge variant="destructive">SIM</Badge> : <Badge variant="secondary">NÃO</Badge>) :
-            Array.isArray(value) ? (
-              <div className="flex flex-col space-y-1">
-                {value.map((item, index) => <span key={index}>{label === "Telefone" ? formatPhoneNumber(item) : item}</span>)}
-              </div>
-            ) :
-            (label === "Telefone" ? formatPhoneNumber(String(value)) : value)
-          }
+          {displayValue}
         </div>
       </div>
     </div>
@@ -415,3 +420,5 @@ a.click();
     </>
   );
 }
+
+    
