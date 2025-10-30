@@ -1,41 +1,69 @@
 /**
- * @fileoverview Firestore Security Rules for the escolar database.
- *
- * Core Philosophy:
- * This ruleset prioritizes ease of access for prototyping, while enforcing fundamental security principles.
- * All data is stored in the `/alunos/{alunoId}` collection. Access is granted to all users for reading.
- * Writes are disallowed to prevent unauthorized data modification since anonymous auth is being used.
+ * @file Firestore Security Rules
+ * @description This ruleset enforces a strict user-ownership model for the 'alunos' collection.
  *
  * Data Structure:
- * All data is stored under the `/alunos/{alunoId}` collection, where `{alunoId}` corresponds to the Aluno's RM.
+ * All aluno data is stored in the `/alunos/{alunoId}` collection. Each document represents a single aluno.
  *
  * Key Security Decisions:
- * - Read-only access is enabled for all authenticated users to allow free data exploration during development.
- * - Write access is completely disabled to ensure data integrity in the prototyping phase.
- * - No user listing is allowed (as there are no user documents).
+ * - Only authenticated users can access aluno data.
+ * - An aluno can only read, update, or delete their own record, identified by `alunoId`.
+ * - Data consistency between the path and the document's internal 'rm' field is enforced.
+ *
+ * Denormalization for Authorization:
+ * The 'rm' field within each `/alunos/{alunoId}` document is used for authorization.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Defines rules for the /alunos/{alunoId} collection.
+     * @description Controls access to the 'alunos' collection. Only the aluno themselves can read, update, or delete their own record.
      * @path /alunos/{alunoId}
-     * @allow (get, list) Any signed-in user can read any Aluno document.
-     * @deny (create, update, delete) No user can create, update, or delete Aluno documents.
-     * @principle Allows public read access for prototyping. Disables write access for security.
+     * @allow (get, list) User with UID 'aluno123' can read their own record: request.auth.uid == 'aluno123' where /alunos/aluno123 exists.
+     * @allow (create) User with UID 'aluno123' can create a new record with rm = 'aluno123'.
+     * @allow (update) User with UID 'aluno123' can update their own record where /alunos/aluno123 exists.
+     * @allow (delete) User with UID 'aluno123' can delete their own record where /alunos/aluno123 exists.
+     * @deny (get, list) User with UID 'otherUser' cannot read aluno 'aluno123' data: request.auth.uid != 'aluno123'.
+     * @deny (create) User with UID 'aluno123' cannot create a new record with rm != 'aluno123'.
+     * @deny (update) User with UID 'otherUser' cannot update aluno 'aluno123' data: request.auth.uid != 'aluno123'.
+     * @deny (delete) User with UID 'otherUser' cannot delete aluno 'aluno123' data: request.auth.uid != 'aluno123'.
+     * @principle Enforces document ownership for all operations on the 'alunos' collection.
      */
     match /alunos/{alunoId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow get: if isSignedIn() && isOwner(alunoId);
+      allow list: if isSignedIn() && isOwner(alunoId);
+      allow create: if isSignedIn() && request.resource.data.rm == alunoId;
+      allow update: if isSignedIn() && isExistingOwner(alunoId) && request.resource.data.rm == resource.data.rm;
+      allow delete: if isSignedIn() && isExistingOwner(alunoId);
     }
 
-    // Helper function to determine if a user is signed in.
+    // ---- Helper functions ----
+
+    /**
+     * @description Checks if the user is signed in.
+     * @return {boolean} True if the user is signed in, false otherwise.
+     */
     function isSignedIn() {
       return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the authenticated user is the owner of the document.
+     * @param {string} userId The ID of the user to check against.
+     * @return {boolean} True if the user is the owner, false otherwise.
+     */
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    /**
+     * @description Checks if the authenticated user is the owner of the existing document.
+     * @param {string} userId The ID of the user to check against.
+     * @return {boolean} True if the user is the owner and the document exists, false otherwise.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
     }
   }
 }
