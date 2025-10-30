@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useFirestore } from '@/firebase';
 import { collection, query, getDocs, where } from 'firebase/firestore';
 import StudentTable from './student-table';
-import { Filter, X, ChevronDown } from 'lucide-react';
+import { Filter, X, ChevronDown, AlertTriangle } from 'lucide-react';
 import StudentDetailSheet from './student-detail-sheet';
 import { Input } from './ui/input';
 import { Card, CardContent } from './ui/card';
@@ -17,6 +17,8 @@ import { cn } from '@/lib/utils';
 import type { SortConfig } from './student-table';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
+import { Switch } from './ui/switch';
+import { Label } from './ui/label';
 
 export default function StudentDataView() {
   const firestore = useFirestore();
@@ -32,6 +34,7 @@ export default function StudentDataView() {
     serie: '',
     classe: '',
     turno: '',
+    nee: false,
   });
 
   const debouncedNome = useDebounce(filters.nome, 500);
@@ -91,7 +94,7 @@ export default function StudentDataView() {
 
         const nameSearch = debouncedNome.trim().toUpperCase();
         const hasNameSearch = nameSearch.length >= 3;
-        const hasOtherFilters = !!(filters.serie || filters.classe || filters.turno);
+        const hasOtherFilters = !!(filters.serie || filters.classe || filters.turno || filters.nee);
 
         if (!hasNameSearch && !hasOtherFilters) {
           setAllFetchedStudents([]);
@@ -114,6 +117,9 @@ export default function StudentDataView() {
           }
           if (filters.turno) {
             conditions.push(where('turno', '==', filters.turno));
+          }
+           if (filters.nee) {
+            conditions.push(where('nee', '!=', null));
           }
           
           const finalQuery = conditions.length > 0 ? query(baseQuery, ...conditions) : query(baseQuery);
@@ -145,7 +151,7 @@ export default function StudentDataView() {
     };
 
     searchStudents();
-  }, [firestore, debouncedNome, filters.serie, filters.classe, filters.turno]);
+  }, [firestore, debouncedNome, filters.serie, filters.classe, filters.turno, filters.nee]);
 
   const sortedStudents = useMemo(() => {
     let sortableItems = [...allFetchedStudents];
@@ -196,9 +202,10 @@ export default function StudentDataView() {
     }));
   };
 
-  const handleFilterChange = (name: string, value: string) => {
-    setFilters(prev => ({ ...prev, [name]: value === 'all' ? '' : value }));
+  const handleFilterChange = (name: string, value: string | boolean) => {
+    setFilters(prev => ({ ...prev, [name]: typeof value === 'string' && value === 'all' ? '' : value }));
   };
+
 
   const clearFilters = () => {
     setFilters({
@@ -206,6 +213,7 @@ export default function StudentDataView() {
       serie: '',
       classe: '',
       turno: '',
+      nee: false,
     });
     setAllFetchedStudents([]);
     setHasSearched(false);
@@ -224,7 +232,7 @@ export default function StudentDataView() {
   };
 
 
-  const hasActiveFilters = Object.values(filters).some(val => val !== '');
+  const hasActiveFilters = Object.values(filters).some(val => val);
   
   return (
     <div className="space-y-6">
@@ -275,6 +283,18 @@ export default function StudentDataView() {
                     </SelectContent>
                   </Select>
               </div>
+
+               <div className="flex items-center space-x-2 rounded-md border p-3 mt-4">
+                <Switch 
+                  id="nee-filter" 
+                  checked={filters.nee}
+                  onCheckedChange={(checked) => handleFilterChange('nee', checked)}
+                />
+                <Label htmlFor="nee-filter" className="flex items-center cursor-pointer">
+                  <AlertTriangle className="w-4 h-4 mr-2 text-destructive" />
+                  Mostrar apenas alunos com NEE
+                </Label>
+              </div>
               
               {hasActiveFilters && (
                 <div className="flex items-center justify-end mt-4">
@@ -318,3 +338,5 @@ export default function StudentDataView() {
     </div>
   );
 }
+
+    
