@@ -12,6 +12,8 @@ interface ClassListPrintViewProps {
   };
 }
 
+// Este componente agora serve principalmente como uma pré-visualização no painel lateral
+// A geração de PDF foi movida para o class-list-generator para maior controle e otimização.
 export default function ClassListPrintView({ students, filters }: ClassListPrintViewProps) {
     const today = new Date();
     const formattedDate = new Intl.DateTimeFormat('pt-BR', {

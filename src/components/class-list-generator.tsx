@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import jsPDF from "jspdf";
-import html2canvas from 'html2canvas';
+import 'jspdf-autotable';
 import { useFirestore } from '@/firebase';
 import { collection, query, getDocs } from 'firebase/firestore';
 import { ClipboardList, X, Loader2, Download } from 'lucide-react';
@@ -12,6 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import ClassListPrintView from './class-list-print-view';
 import { useToast } from '@/hooks/use-toast';
+
+// Extend jsPDF with autoTable method
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => jsPDF;
+  }
+}
 
 export default function ClassListGenerator() {
   const firestore = useFirestore();
@@ -115,65 +122,82 @@ export default function ClassListGenerator() {
   
   const handleDownload = async () => {
     if (students.length === 0) return;
-
     setIsProcessing(true);
-    const printElement = document.getElementById('class-list-print-view');
-
-    if (!printElement) {
-        toast({
-            variant: "destructive",
-            title: "Erro de Impressão",
-            description: "Não foi possível encontrar o conteúdo para impressão.",
-        });
-        setIsProcessing(false);
-        return;
-    }
-    
-    printElement.style.display = 'block';
-    printElement.style.position = 'absolute';
-    printElement.style.left = '-9999px';
 
     try {
-        const canvas = await html2canvas(printElement, {
-            scale: 2,
-            useCORS: true,
-        });
+      const doc = new jsPDF();
+      const tableData = students.map((student, index) => [
+        index + 1,
+        student.nome,
+        student.data_nascimento || '',
+        student.rm || ''
+      ]);
 
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const imgWidth = canvas.width;
-        const imgHeight = canvas.height;
-        const ratio = imgWidth / imgHeight;
-        let newImgWidth = pdfWidth;
-        let newImgHeight = newImgWidth / ratio;
+      const title = `Lista de Alunos - ${filters.ensino || ''} ${filters.serie || ''} ${filters.classe || ''} - Turno: ${filters.turno || ''}`.trim();
+      const today = new Date();
+      const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(today);
 
-        if (newImgHeight > pdfHeight) {
-            newImgHeight = pdfHeight;
-            newImgWidth = newImgHeight * ratio;
+      const addHeaderAndFooter = (doc: jsPDF) => {
+        const pageCount = doc.internal.pages.length - 1;
+        for (let i = 1; i <= pageCount; i++) {
+          doc.setPage(i);
+          
+          // Header
+          // Simulating the logo and school info - for a real logo, you'd need it as a base64 string
+          doc.setFontSize(14).setFont('helvetica', 'bold');
+          doc.text('ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+          doc.setFontSize(10).setFont('helvetica', 'normal');
+          doc.text('AVENIDA PROFESSOR JOSE ARTHUR DE CARVALHO, Nº 1540, LAGOA REDONDA | INEP: 23070188', doc.internal.pageSize.getWidth() / 2, 21, { align: 'center' });
+          
+          // Footer
+          const footerText = `Gerado em: ${formattedDate} - Página ${i} de ${pageCount}`;
+          doc.setFontSize(8);
+          doc.text(footerText, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
         }
+      };
+      
+      doc.autoTable({
+        head: [['Nº', 'Nome do Aluno', 'Data de Nascimento', 'RM']],
+        body: tableData,
+        startY: 40,
+        didDrawPage: (data) => {
+          // Title for the first page
+          if (data.pageNumber === 1) {
+            doc.setFontSize(18).setFont('helvetica', 'bold');
+            doc.text("Lista de Alunos", doc.internal.pageSize.getWidth() / 2, 30, { align: 'center' });
+            doc.setFontSize(12).setFont('helvetica', 'normal');
+            doc.text(title, doc.internal.pageSize.getWidth() / 2, 36, { align: 'center' });
+          }
+        },
+        styles: {
+          font: 'helvetica',
+          fontSize: 10,
+        },
+        headStyles: {
+          fillColor: [230, 230, 230],
+          textColor: [40, 40, 40],
+          fontStyle: 'bold'
+        },
+        margin: { top: 30 }
+      });
+      
+      addHeaderAndFooter(doc);
 
-        const x = (pdfWidth - newImgWidth) / 2;
-        const y = (pdfHeight - newImgHeight) / 2;
-
-        pdf.addImage(imgData, 'PNG', x, y, newImgWidth, newImgHeight);
-        
-        const fileName = `Lista_Turma_${filters.ensino || ''}_${filters.serie || ''}_${filters.classe || ''}.pdf`.replace(/ /g, '_');
-        pdf.save(fileName);
+      const fileName = `Lista_Turma_${filters.ensino || ''}_${filters.serie || ''}_${filters.classe || ''}.pdf`.replace(/ /g, '_');
+      doc.save(fileName);
 
     } catch (error) {
-        console.error("Error generating PDF:", error);
-        toast({
-            variant: "destructive",
-            title: "Erro ao Gerar PDF",
-            description: "Ocorreu um erro ao criar o ficheiro PDF.",
-        });
+      console.error("Error generating PDF:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao Gerar PDF",
+        description: "Ocorreu um erro ao criar o ficheiro PDF.",
+      });
     } finally {
-        printElement.style.display = 'none';
-        setIsProcessing(false);
+      setIsProcessing(false);
     }
   };
+
 
   const clearFiltersAndResults = () => {
     setFilters({ ensino: '', serie: '', turno: '', classe: '' });
@@ -296,10 +320,6 @@ export default function ClassListGenerator() {
                 </TooltipContent>
             </Tooltip>
         </TooltipProvider>
-
-        <div id="class-list-print-view" className="printable-content" style={{ display: 'none' }}>
-            <ClassListPrintView students={students} filters={filters} />
-        </div>
     </>
   );
 }
