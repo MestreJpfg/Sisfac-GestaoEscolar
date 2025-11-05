@@ -125,32 +125,41 @@ export default function ClassListGenerator() {
       const today = new Date();
       const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(today);
 
-      const addHeaderAndFooterAndWatermark = (doc: jsPDF, pageNumber: number, pageCount: number, watermarkImg: HTMLImageElement) => {
+      const addHeaderAndFooterAndWatermark = (doc: jsPDF, watermarkImg: HTMLImageElement, title?: string) => {
           doc.setFontSize(10).setFont('helvetica', 'bold');
           doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 12, { align: 'center' });
           doc.setFontSize(8).setFont('helvetica', 'normal');
           doc.text(`INEP: 23070188`, doc.internal.pageSize.getWidth() / 2, 16, { align: 'center' });
           
+          if (title) {
+            doc.setFontSize(11).setFont('helvetica', 'normal');
+            doc.text(title, doc.internal.pageSize.getWidth() / 2, 23, { align: 'center' });
+          }
+
           const pageWidth = doc.internal.pageSize.getWidth();
           const pageHeight = doc.internal.pageSize.getHeight();
           const imgWidth = 100;
           const imgHeight = 100;
           const x = (pageWidth - imgWidth) / 2;
           const y = (pageHeight - imgHeight) / 2;
-          doc.setGState(new doc.GState({opacity: 0.15}));
+          doc.setGState(new (doc as any).GState({opacity: 0.15}));
           doc.addImage(watermarkImg, 'PNG', x, y, imgWidth, imgHeight);
-          doc.setGState(new doc.GState({opacity: 1}));
+          doc.setGState(new (doc as any).GState({opacity: 1}));
 
-          const footerText = `Gerado em: ${formattedDate} - Página ${pageNumber} de ${pageCount}`;
+          const footerText = `Gerado em: ${formattedDate}`;
           doc.setFontSize(8);
-          doc.text(footerText, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' });
+          const pageCount = (doc.internal as any).getNumberOfPages();
+          for(let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            const footerY = doc.internal.pageSize.getHeight() - 8;
+            doc.text(footerText, doc.internal.pageSize.getWidth() / 2, footerY, { align: 'center' });
+          }
       };
       
       const watermarkImg = new Image();
       watermarkImg.src = '/selo.png';
       
       watermarkImg.onload = () => {
-          // Group students by serie, classe, and turno
           const groupedStudents = students.reduce((acc, student) => {
             const key = `${student.serie || 'N/A'}|${student.classe || 'N/A'}|${student.turno || 'N/A'}`;
             if (!acc[key]) {
@@ -160,12 +169,9 @@ export default function ClassListGenerator() {
             return acc;
           }, {} as Record<string, any[]>);
 
-          const groupKeys = Object.keys(groupedStudents);
-          
-          // Remove the initial blank page
-          doc.deletePage(1);
+          let isFirstPage = true;
 
-          groupKeys.forEach((key) => {
+          for (const key in groupedStudents) {
               const group = groupedStudents[key];
               const [serie, classe, turno] = key.split('|');
               const tableData = group.map((student, index) => [
@@ -174,10 +180,11 @@ export default function ClassListGenerator() {
                   student.data_nascimento || '',
                   student.rm || ''
               ]);
-
-              doc.addPage();
-              const pageNumber = doc.internal.pages.length -1;
-              doc.setPage(pageNumber);
+              
+              if (!isFirstPage) {
+                doc.addPage();
+              }
+              isFirstPage = false;
 
               const title = `Lista de Alunos - ${filters.ensino || ''} ${serie} ${classe} - Turno: ${turno}`.trim();
               
@@ -186,11 +193,7 @@ export default function ClassListGenerator() {
                   body: tableData,
                   startY: 28,
                   didDrawPage: (data) => {
-                      addHeaderAndFooterAndWatermark(doc, pageNumber, groupKeys.length, watermarkImg);
-                       if (data.pageNumber === doc.internal.pages.length -1) {
-                         doc.setFontSize(11).setFont('helvetica', 'normal');
-                         doc.text(title, doc.internal.pageSize.getWidth() / 2, 23, { align: 'center' });
-                       }
+                      addHeaderAndFooterAndWatermark(doc, watermarkImg, title);
                   },
                   styles: {
                     font: 'helvetica',
@@ -206,14 +209,6 @@ export default function ClassListGenerator() {
                   },
                   margin: { top: 28, bottom: 15 }
               });
-          });
-
-          // Update page footers after all pages are added
-          const finalPageCount = doc.internal.pages.length - 1;
-          for (let i = 1; i <= finalPageCount; i++) {
-              doc.setPage(i);
-              const currentPageFooter = doc.internal.pageSize.getHeight() - 8;
-              doc.text(`Página ${i} de ${finalPageCount}`, doc.internal.pageSize.getWidth() / 2, currentPageFooter, { align: 'center' });
           }
 
           const fileName = `Listas_de_Turmas_${filters.ensino || 'Geral'}.pdf`.replace(/ /g, '_');
@@ -344,9 +339,9 @@ export default function ClassListGenerator() {
                                         <p className="text-sm text-muted-foreground text-center mb-4">{`${students.length} alunos encontrados`}</p>
                                         <div className="flex-1 overflow-y-auto">
                                             <ul className="divide-y">
-                                                {students.map((student, index) => (
-                                                <li key={student.id || student.rm} className="py-2 text-sm flex items-center">
-                                                    <span className="w-6 text-right mr-2 text-muted-foreground">{index + 1}.</span>
+                                                {students.map((student) => (
+                                                <li key={student.rm} className="py-2 text-sm flex items-center">
+                                                    <span className="w-6 text-right mr-2 text-muted-foreground">{students.indexOf(student) + 1}.</span>
                                                     <span>{student.nome}</span>
                                                 </li>
                                                 ))}
