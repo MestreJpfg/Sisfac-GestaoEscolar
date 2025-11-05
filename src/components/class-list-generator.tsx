@@ -68,20 +68,16 @@ export default function ClassListGenerator() {
     const getUniqueValues = (key: string, data: any[]) => 
         Array.from(new Set(data.map(s => s[key]).filter(Boolean))).sort((a,b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
 
-    const getDynamicOptions = (key: string) => {
-        let tempFilteredData = allStudentsData;
-        if (filters.ensino) tempFilteredData = tempFilteredData.filter(s => s.ensino === filters.ensino);
-        if (filters.serie && key !== 'serie') tempFilteredData = tempFilteredData.filter(s => s.serie === filters.serie);
-        if (filters.turno && key !== 'turno') tempFilteredData = tempFilteredData.filter(s => s.turno === filters.turno);
-        if (filters.classe && key !== 'classe') tempFilteredData = tempFilteredData.filter(s => s.classe === filters.classe);
-        return getUniqueValues(key, tempFilteredData);
-    };
+    let tempFilteredData = allStudentsData;
+    if (filters.ensino) tempFilteredData = tempFilteredData.filter(s => s.ensino === filters.ensino);
+    if (filters.serie) tempFilteredData = tempFilteredData.filter(s => s.serie === filters.serie);
+    if (filters.turno) tempFilteredData = tempFilteredData.filter(s => s.turno === filters.turno);
 
     return {
       ensinos: getUniqueValues('ensino', allStudentsData),
-      series: getDynamicOptions('serie'),
-      turnos: getDynamicOptions('turno'),
-      classes: getDynamicOptions('classe'),
+      series: filters.ensino ? getUniqueValues('serie', allStudentsData.filter(s => s.ensino === filters.ensino)) : [],
+      turnos: filters.serie ? getUniqueValues('turno', allStudentsData.filter(s => s.ensino === filters.ensino && s.serie === filters.serie)) : [],
+      classes: filters.turno ? getUniqueValues('classe', allStudentsData.filter(s => s.ensino === filters.ensino && s.serie === filters.serie && s.turno === filters.turno)) : [],
     };
   }, [allStudentsData, filters]);
 
@@ -126,24 +122,15 @@ export default function ClassListGenerator() {
 
     try {
       const doc = new jsPDF();
-      const tableData = students.map((student, index) => [
-        index + 1,
-        student.nome,
-        student.data_nascimento || '',
-        student.rm || ''
-      ]);
-
-      const title = `Lista de Alunos - ${filters.ensino || ''} ${filters.serie || ''} ${filters.classe || ''} - Turno: ${filters.turno || ''}`.trim();
       const today = new Date();
       const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(today);
 
       const addHeaderAndFooterAndWatermark = (doc: jsPDF, pageNumber: number, pageCount: number, watermarkImg: HTMLImageElement) => {
-          doc.setFontSize(12).setFont('helvetica', 'bold');
+          doc.setFontSize(10).setFont('helvetica', 'bold');
           doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 12, { align: 'center' });
-          doc.setFontSize(9).setFont('helvetica', 'normal');
-          doc.text(`INEP: 23070188`, doc.internal.pageSize.getWidth() / 2, 17, { align: 'center' });
+          doc.setFontSize(8).setFont('helvetica', 'normal');
+          doc.text(`INEP: 23070188`, doc.internal.pageSize.getWidth() / 2, 16, { align: 'center' });
           
-          // Watermark
           const pageWidth = doc.internal.pageSize.getWidth();
           const pageHeight = doc.internal.pageSize.getHeight();
           const imgWidth = 100;
@@ -163,39 +150,73 @@ export default function ClassListGenerator() {
       watermarkImg.src = '/selo.png';
       
       watermarkImg.onload = () => {
-          doc.autoTable({
-            head: [['Nº', 'Nome do Aluno', 'Data de Nascimento', 'RM']],
-            body: tableData,
-            startY: 28,
-            didDrawPage: (data) => {
-              addHeaderAndFooterAndWatermark(doc, data.pageNumber, doc.internal.pages.length - 1, watermarkImg);
-              if (data.pageNumber === 1) {
-                doc.setFontSize(11).setFont('helvetica', 'normal');
-                doc.text(title, doc.internal.pageSize.getWidth() / 2, 23, { align: 'center' });
-              }
-            },
-            styles: {
-              font: 'helvetica',
-              fontSize: 8,
-              cellPadding: 1.5,
-              valign: 'middle',
-            },
-            headStyles: {
-              fillColor: [230, 230, 230],
-              textColor: [40, 40, 40],
-              fontStyle: 'bold',
-              fontSize: 9,
-            },
-            margin: { top: 28, bottom: 15 }
-          });
+          // Group students by serie, classe, and turno
+          const groupedStudents = students.reduce((acc, student) => {
+            const key = `${student.serie || 'N/A'}|${student.classe || 'N/A'}|${student.turno || 'N/A'}`;
+            if (!acc[key]) {
+              acc[key] = [];
+            }
+            acc[key].push(student);
+            return acc;
+          }, {} as Record<string, any[]>);
+
+          const groupKeys = Object.keys(groupedStudents);
           
-          const finalPageCount = doc.internal.pages.length -1;
+          // Remove the initial blank page
+          doc.deletePage(1);
+
+          groupKeys.forEach((key) => {
+              const group = groupedStudents[key];
+              const [serie, classe, turno] = key.split('|');
+              const tableData = group.map((student, index) => [
+                  index + 1,
+                  student.nome,
+                  student.data_nascimento || '',
+                  student.rm || ''
+              ]);
+
+              doc.addPage();
+              const pageNumber = doc.internal.pages.length -1;
+              doc.setPage(pageNumber);
+
+              const title = `Lista de Alunos - ${filters.ensino || ''} ${serie} ${classe} - Turno: ${turno}`.trim();
+              
+              doc.autoTable({
+                  head: [['Nº', 'Nome do Aluno', 'Data de Nascimento', 'RM']],
+                  body: tableData,
+                  startY: 28,
+                  didDrawPage: (data) => {
+                      addHeaderAndFooterAndWatermark(doc, pageNumber, groupKeys.length, watermarkImg);
+                       if (data.pageNumber === doc.internal.pages.length -1) {
+                         doc.setFontSize(11).setFont('helvetica', 'normal');
+                         doc.text(title, doc.internal.pageSize.getWidth() / 2, 23, { align: 'center' });
+                       }
+                  },
+                  styles: {
+                    font: 'helvetica',
+                    fontSize: 8,
+                    cellPadding: 1.5,
+                    valign: 'middle',
+                  },
+                  headStyles: {
+                    fillColor: [230, 230, 230],
+                    textColor: [40, 40, 40],
+                    fontStyle: 'bold',
+                    fontSize: 9,
+                  },
+                  margin: { top: 28, bottom: 15 }
+              });
+          });
+
+          // Update page footers after all pages are added
+          const finalPageCount = doc.internal.pages.length - 1;
           for (let i = 1; i <= finalPageCount; i++) {
               doc.setPage(i);
-              addHeaderAndFooterAndWatermark(doc, i, finalPageCount, watermarkImg);
+              const currentPageFooter = doc.internal.pageSize.getHeight() - 8;
+              doc.text(`Página ${i} de ${finalPageCount}`, doc.internal.pageSize.getWidth() / 2, currentPageFooter, { align: 'center' });
           }
 
-          const fileName = `Lista_Turma_${filters.ensino || ''}_${filters.serie || ''}_${filters.classe || ''}.pdf`.replace(/ /g, '_');
+          const fileName = `Listas_de_Turmas_${filters.ensino || 'Geral'}.pdf`.replace(/ /g, '_');
           doc.save(fileName);
           setIsProcessing(false);
       };
@@ -219,7 +240,6 @@ export default function ClassListGenerator() {
       setIsProcessing(false);
     }
   };
-
 
   const clearFiltersAndResults = () => {
     setFilters({ ensino: '', serie: '', turno: '', classe: '' });
@@ -320,7 +340,7 @@ export default function ClassListGenerator() {
                             <div className="mt-4 flex-1 overflow-y-auto border-t pt-4">
                                 {students.length > 0 ? (
                                      <div className='flex flex-col h-full'>
-                                        <h3 className="font-semibold text-center mb-2">{`Lista de Alunos - ${filters.ensino || ''} ${filters.serie || ''} ${filters.classe || ''} - ${filters.turno || ''}`}</h3>
+                                        <h3 className="font-semibold text-center mb-2">{`Resultado da Filtragem`}</h3>
                                         <p className="text-sm text-muted-foreground text-center mb-4">{`${students.length} alunos encontrados`}</p>
                                         <div className="flex-1 overflow-y-auto">
                                             <ul className="divide-y">
@@ -357,3 +377,5 @@ export default function ClassListGenerator() {
     </>
   );
 }
+
+    
