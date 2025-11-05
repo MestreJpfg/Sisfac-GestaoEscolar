@@ -142,10 +142,10 @@ export default function ClassListGenerator() {
         for (let i = 1; i <= pageCount; i++) {
           doc.setPage(i);
           
-          doc.setFontSize(14).setFont('helvetica', 'bold');
-          doc.text('ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 12, { align: 'center' });
+          doc.setFontSize(12).setFont('helvetica', 'bold');
+          doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 12, { align: 'center' });
           doc.setFontSize(9).setFont('helvetica', 'normal');
-          doc.text('AVENIDA PROFESSOR JOSE ARTHUR DE CARVALHO, Nº 1540, LAGOA REDONDA | INEP: 23070188', doc.internal.pageSize.getWidth() / 2, 17, { align: 'center' });
+          doc.text(`INEP: 23070188`, doc.internal.pageSize.getWidth() / 2, 17, { align: 'center' });
           
           const footerText = `Gerado em: ${formattedDate} - Página ${i} de ${pageCount}`;
           doc.setFontSize(8);
@@ -156,27 +156,25 @@ export default function ClassListGenerator() {
       doc.autoTable({
         head: [['Nº', 'Nome do Aluno', 'Data de Nascimento', 'RM']],
         body: tableData,
-        startY: 32,
+        startY: 28,
         didDrawPage: (data) => {
           if (data.pageNumber === 1) {
-            doc.setFontSize(16).setFont('helvetica', 'bold');
-            doc.text("Lista de Alunos", doc.internal.pageSize.getWidth() / 2, 24, { align: 'center' });
             doc.setFontSize(11).setFont('helvetica', 'normal');
-            doc.text(title, doc.internal.pageSize.getWidth() / 2, 29, { align: 'center' });
+            doc.text(title, doc.internal.pageSize.getWidth() / 2, 23, { align: 'center' });
           }
         },
         styles: {
           font: 'helvetica',
-          fontSize: 9,
+          fontSize: 8,
           cellPadding: 1.5,
         },
         headStyles: {
           fillColor: [230, 230, 230],
           textColor: [40, 40, 40],
           fontStyle: 'bold',
-          fontSize: 10,
+          fontSize: 9,
         },
-        margin: { top: 32, bottom: 12 }
+        margin: { top: 28, bottom: 15 }
       });
       
       addHeaderAndFooter(doc);
