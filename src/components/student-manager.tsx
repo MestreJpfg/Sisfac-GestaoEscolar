@@ -14,7 +14,6 @@ import { FirestorePermissionError } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { ThemeToggle } from "./theme-toggle";
 import { commitBatchNonBlocking } from "@/firebase/non-blocking-updates";
-import DataCorrection from "./data-correction";
 
 export default function StudentManager() {
   const [dataExists, setDataExists] = useState<boolean | null>(null);
@@ -234,10 +233,7 @@ export default function StudentManager() {
               <p className="mt-4 text-muted-foreground">{isUploading ? "Aguarde, a processar e carregar os dados..." : "A verificar a base de dados..."}</p>
             </div>
           ) : dataExists ? (
-            <>
-              <DataCorrection />
-              <StudentDataView />
-            </>
+            <StudentDataView />
           ) : (
              <FileUploader onUploadComplete={handleUploadComplete} setIsLoading={setIsUploading} />
           )}
