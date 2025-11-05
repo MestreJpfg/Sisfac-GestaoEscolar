@@ -137,50 +137,77 @@ export default function ClassListGenerator() {
       const today = new Date();
       const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(today);
 
-      const addHeaderAndFooter = (doc: jsPDF) => {
-        const pageCount = doc.internal.pages.length - 1;
-        for (let i = 1; i <= pageCount; i++) {
-          doc.setPage(i);
-          
+      const addHeaderAndFooterAndWatermark = (doc: jsPDF, pageNumber: number, pageCount: number, watermarkImg: HTMLImageElement) => {
           doc.setFontSize(12).setFont('helvetica', 'bold');
           doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 12, { align: 'center' });
           doc.setFontSize(9).setFont('helvetica', 'normal');
           doc.text(`INEP: 23070188`, doc.internal.pageSize.getWidth() / 2, 17, { align: 'center' });
           
-          const footerText = `Gerado em: ${formattedDate} - Página ${i} de ${pageCount}`;
+          // Watermark
+          const pageWidth = doc.internal.pageSize.getWidth();
+          const pageHeight = doc.internal.pageSize.getHeight();
+          const imgWidth = 100;
+          const imgHeight = 100;
+          const x = (pageWidth - imgWidth) / 2;
+          const y = (pageHeight - imgHeight) / 2;
+          doc.setGState(new doc.GState({opacity: 0.15}));
+          doc.addImage(watermarkImg, 'PNG', x, y, imgWidth, imgHeight);
+          doc.setGState(new doc.GState({opacity: 1}));
+
+          const footerText = `Gerado em: ${formattedDate} - Página ${pageNumber} de ${pageCount}`;
           doc.setFontSize(8);
           doc.text(footerText, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' });
-        }
       };
       
-      doc.autoTable({
-        head: [['Nº', 'Nome do Aluno', 'Data de Nascimento', 'RM']],
-        body: tableData,
-        startY: 28,
-        didDrawPage: (data) => {
-          if (data.pageNumber === 1) {
-            doc.setFontSize(11).setFont('helvetica', 'normal');
-            doc.text(title, doc.internal.pageSize.getWidth() / 2, 23, { align: 'center' });
-          }
-        },
-        styles: {
-          font: 'helvetica',
-          fontSize: 8,
-          cellPadding: 1.5,
-        },
-        headStyles: {
-          fillColor: [230, 230, 230],
-          textColor: [40, 40, 40],
-          fontStyle: 'bold',
-          fontSize: 9,
-        },
-        margin: { top: 28, bottom: 15 }
-      });
+      const watermarkImg = new Image();
+      watermarkImg.src = '/selo.png';
       
-      addHeaderAndFooter(doc);
+      watermarkImg.onload = () => {
+          doc.autoTable({
+            head: [['Nº', 'Nome do Aluno', 'Data de Nascimento', 'RM']],
+            body: tableData,
+            startY: 28,
+            didDrawPage: (data) => {
+              addHeaderAndFooterAndWatermark(doc, data.pageNumber, doc.internal.pages.length - 1, watermarkImg);
+              if (data.pageNumber === 1) {
+                doc.setFontSize(11).setFont('helvetica', 'normal');
+                doc.text(title, doc.internal.pageSize.getWidth() / 2, 23, { align: 'center' });
+              }
+            },
+            styles: {
+              font: 'helvetica',
+              fontSize: 8,
+              cellPadding: 1.5,
+              valign: 'middle',
+            },
+            headStyles: {
+              fillColor: [230, 230, 230],
+              textColor: [40, 40, 40],
+              fontStyle: 'bold',
+              fontSize: 9,
+            },
+            margin: { top: 28, bottom: 15 }
+          });
+          
+          const finalPageCount = doc.internal.pages.length -1;
+          for (let i = 1; i <= finalPageCount; i++) {
+              doc.setPage(i);
+              addHeaderAndFooterAndWatermark(doc, i, finalPageCount, watermarkImg);
+          }
 
-      const fileName = `Lista_Turma_${filters.ensino || ''}_${filters.serie || ''}_${filters.classe || ''}.pdf`.replace(/ /g, '_');
-      doc.save(fileName);
+          const fileName = `Lista_Turma_${filters.ensino || ''}_${filters.serie || ''}_${filters.classe || ''}.pdf`.replace(/ /g, '_');
+          doc.save(fileName);
+          setIsProcessing(false);
+      };
+
+      watermarkImg.onerror = () => {
+          toast({
+              variant: "destructive",
+              title: "Erro ao Carregar Imagem",
+              description: "Não foi possível carregar a imagem da marca d'água.",
+          });
+          setIsProcessing(false);
+      }
 
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -189,7 +216,6 @@ export default function ClassListGenerator() {
         title: "Erro ao Gerar PDF",
         description: "Ocorreu um erro ao criar o ficheiro PDF.",
       });
-    } finally {
       setIsProcessing(false);
     }
   };
