@@ -5,13 +5,13 @@ import jsPDF from "jspdf";
 import 'jspdf-autotable';
 import { useFirestore } from '@/firebase';
 import { collection, query, getDocs } from 'firebase/firestore';
-import { ClipboardList, X, Loader2, Download } from 'lucide-react';
+import { ClipboardList, X, Loader2, Download, Filter } from 'lucide-react';
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetTrigger } from './ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
-import ClassListPrintView from './class-list-print-view';
 import { useToast } from '@/hooks/use-toast';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 // Extend jsPDF with autoTable method
 declare module 'jspdf' {
@@ -176,7 +176,7 @@ export default function ClassListGenerator() {
           fontStyle: 'bold',
           fontSize: 10,
         },
-        margin: { top: 22, bottom: 12 }
+        margin: { top: 32, bottom: 12 }
       });
       
       addHeaderAndFooter(doc);
@@ -223,54 +223,66 @@ export default function ClassListGenerator() {
                                 </SheetDescription>
                             </SheetHeader>
                             
-                            <div className="space-y-4 py-4">
-                                { isLoading ? (
-                                    <div className="flex items-center justify-center h-40">
-                                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                    </div>
-                                ) : (
-                                <>
-                                    <Select value={filters.ensino} onValueChange={(value) => handleFilterChange('ensino', value)}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Filtrar por Ensino..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">Todos os Segmentos</SelectItem>
-                                            {uniqueOptions.ensinos.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                    <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)} disabled={!filters.ensino}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Filtrar por Série..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">Todas as Séries</SelectItem>
-                                            {uniqueOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                    <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)} disabled={!filters.serie}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Filtrar por Turno..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">Todos os Turnos</SelectItem>
-                                            {uniqueOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                    <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)} disabled={!filters.turno}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Filtrar por Classe..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">Todas as Classes</SelectItem>
-                                            {uniqueOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </>
-                                )}
-                            </div>
+                             <Accordion type="single" collapsible defaultValue="item-1" className="w-full">
+                                <AccordionItem value="item-1">
+                                    <AccordionTrigger>
+                                        <div className="flex items-center gap-2">
+                                            <Filter className="h-4 w-4" />
+                                            <span>Filtros de Seleção</span>
+                                        </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                        <div className="space-y-4 py-4">
+                                            { isLoading ? (
+                                                <div className="flex items-center justify-center h-40">
+                                                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                                </div>
+                                            ) : (
+                                            <>
+                                                <Select value={filters.ensino} onValueChange={(value) => handleFilterChange('ensino', value)}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Filtrar por Ensino..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">Todos os Segmentos</SelectItem>
+                                                        {uniqueOptions.ensinos.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                                <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)} disabled={!filters.ensino}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Filtrar por Série..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">Todas as Séries</SelectItem>
+                                                        {uniqueOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                                <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)} disabled={!filters.serie}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Filtrar por Turno..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">Todos os Turnos</SelectItem>
+                                                        {uniqueOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                                <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)} disabled={!filters.turno}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Filtrar por Classe..." />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">Todas as Classes</SelectItem>
+                                                        {uniqueOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </>
+                                            )}
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            </Accordion>
                             
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 pt-4">
                                 <Button onClick={handleGenerateList} disabled={!isAnyFilterSelected || isGeneratingList || isLoading} className="flex-1">
                                     {isGeneratingList ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Gerar Lista'}
                                 </Button>
