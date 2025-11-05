@@ -14,6 +14,7 @@ import { FirestorePermissionError } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { ThemeToggle } from "./theme-toggle";
 import { commitBatchNonBlocking } from "@/firebase/non-blocking-updates";
+import ClassListGenerator from "./class-list-generator";
 
 export default function StudentManager() {
   const [dataExists, setDataExists] = useState<boolean | null>(null);
@@ -196,52 +197,56 @@ export default function StudentManager() {
   const isPageLoading = dataExists === null;
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-4 sm:p-6 md:p-8">
-      <div className="w-full max-w-7xl mx-auto flex-1">
-        <header className="text-center mb-8 flex flex-col items-center relative">
-          <div className="absolute top-0 right-0">
-            <ThemeToggle />
-          </div>
-          <div className="mb-4 flex flex-col items-center">
-            <Image
-              src="/logoyuri.png"
-              alt="Logo"
-              width={120}
-              height={40}
-              className="rounded-md shadow-lg"
-            />
-             <p className="w-full text-center text-xs text-muted-foreground mt-2">{currentDateTime}</p>
-             {randomQuote && (
-              <blockquote className="mt-4 max-w-md border-l-2 border-primary/50 pl-4 italic text-xs text-muted-foreground">
-                <p>"{randomQuote.quote}"</p>
-                <cite className="mt-2 block text-right font-semibold not-italic">- {randomQuote.author}</cite>
-              </blockquote>
+    <>
+      <main className="flex min-h-screen flex-col items-center p-4 sm:p-6 md:p-8 non-printable">
+        <div className="w-full max-w-7xl mx-auto flex-1">
+          <header className="text-center mb-8 flex flex-col items-center relative">
+            <div className="absolute top-0 right-0">
+              <ThemeToggle />
+            </div>
+            <div className="mb-4 flex flex-col items-center">
+              <Image
+                src="/logoyuri.png"
+                alt="Logo"
+                width={120}
+                height={40}
+                className="rounded-md shadow-lg"
+              />
+              <p className="w-full text-center text-xs text-muted-foreground mt-2">{currentDateTime}</p>
+              {randomQuote && (
+                <blockquote className="mt-4 max-w-md border-l-2 border-primary/50 pl-4 italic text-xs text-muted-foreground">
+                  <p>"{randomQuote.quote}"</p>
+                  <cite className="mt-2 block text-right font-semibold not-italic">- {randomQuote.author}</cite>
+                </blockquote>
+              )}
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary [text-shadow:0_2px_10px_hsl(var(--primary)/0.4)] font-headline">
+              Gestão de Alunos 2025
+            </h1>
+            <p className="text-muted-foreground mt-2 text-sm sm:text-base max-w-lg mx-auto">
+              {dataExists ? "Filtre e visualize os dados dos alunos." : "Carregue o ficheiro de alunos para iniciar a gestão."}
+            </p>
+          </header>
+
+          <div className="w-full">
+            {isPageLoading || isUploading ? (
+              <div className="flex flex-col items-center justify-center h-80 rounded-lg border-2 border-dashed border-border bg-card/50">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <p className="mt-4 text-muted-foreground">{isUploading ? "Aguarde, a processar e carregar os dados..." : "A verificar a base de dados..."}</p>
+              </div>
+            ) : dataExists ? (
+              <StudentDataView />
+            ) : (
+              <FileUploader onUploadComplete={handleUploadComplete} setIsLoading={setIsUploading} />
             )}
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary [text-shadow:0_2px_10px_hsl(var(--primary)/0.4)] font-headline">
-            Gestão de Alunos 2025
-          </h1>
-          <p className="text-muted-foreground mt-2 text-sm sm:text-base max-w-lg mx-auto">
-            {dataExists ? "Filtre e visualize os dados dos alunos." : "Carregue o ficheiro de alunos para iniciar a gestão."}
-          </p>
-        </header>
-
-        <div className="w-full">
-          {isPageLoading || isUploading ? (
-            <div className="flex flex-col items-center justify-center h-80 rounded-lg border-2 border-dashed border-border bg-card/50">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <p className="mt-4 text-muted-foreground">{isUploading ? "Aguarde, a processar e carregar os dados..." : "A verificar a base de dados..."}</p>
-            </div>
-          ) : dataExists ? (
-            <StudentDataView />
-          ) : (
-             <FileUploader onUploadComplete={handleUploadComplete} setIsLoading={setIsUploading} />
-          )}
         </div>
-      </div>
-      <footer className="w-full max-w-7xl mx-auto mt-12 py-4 text-center text-xs text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} MestreJp. Todos os direitos reservados.</p>
-      </footer>
-    </main>
+        <footer className="w-full max-w-7xl mx-auto mt-12 py-4 text-center text-xs text-muted-foreground">
+          <p>&copy; {new Date().getFullYear()} MestreJp. Todos os direitos reservados.</p>
+        </footer>
+      </main>
+      
+      {dataExists && !isPageLoading && <ClassListGenerator />}
+    </>
   );
 }
