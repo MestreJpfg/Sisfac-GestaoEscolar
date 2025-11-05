@@ -1,30 +1,36 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import jsPDF from "jspdf";
+import html2canvas from 'html2canvas';
 import { useFirestore } from '@/firebase';
 import { collection, query, getDocs, where } from 'firebase/firestore';
-import { Printer, X, Loader2 } from 'lucide-react';
+import { ClipboardList, X, Loader2, Download } from 'lucide-react';
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription, SheetFooter } from './ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import ClassListPrintView from './class-list-print-view';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ClassListGenerator() {
   const firestore = useFirestore();
+  const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
-  const [isPrinting, setIsPrinting] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   const [filters, setFilters] = useState({
     ensino: '',
+    serie: '',
     turno: '',
     classe: '',
   });
 
-  const [uniqueOptions, setUniqueOptions] = useState<{ ensinos: string[], turnos: string[], classes: string[] }>({
+  const [uniqueOptions, setUniqueOptions] = useState<{ ensinos: string[], series: string[], turnos: string[], classes: string[] }>({
     ensinos: [],
+    series: [],
     turnos: [],
     classes: [],
   });
@@ -38,18 +44,21 @@ export default function ClassListGenerator() {
       const querySnapshot = await getDocs(q);
       
       const ensinos = new Set<string>();
+      const series = new Set<string>();
       const turnos = new Set<string>();
       const classes = new Set<string>();
       
       querySnapshot.docs.forEach(doc => {
         const student = doc.data();
         if (student.ensino) ensinos.add(String(student.ensino));
+        if (student.serie) series.add(String(student.serie));
         if (student.turno) turnos.add(String(student.turno));
         if (student.classe) classes.add(String(student.classe));
       });
 
       setUniqueOptions({
         ensinos: Array.from(ensinos).sort(),
+        series: Array.from(series).sort(),
         turnos: Array.from(turnos).sort(),
         classes: Array.from(classes).sort(),
       });
@@ -76,6 +85,9 @@ export default function ClassListGenerator() {
       if (filters.ensino) {
         conditions.push(where('ensino', '==', filters.ensino));
       }
+      if (filters.serie) {
+        conditions.push(where('serie', '==', filters.serie));
+      }
       if (filters.turno) {
         conditions.push(where('turno', '==', filters.turno));
       }
@@ -99,20 +111,76 @@ export default function ClassListGenerator() {
     }
   };
   
-  const handlePrint = () => {
-    setIsPrinting(true);
-    setTimeout(() => {
-        window.print();
-        setIsPrinting(false);
-    }, 500);
+  const handleDownload = async () => {
+    if (students.length === 0) return;
+
+    setIsProcessing(true);
+    const printElement = document.getElementById('class-list-print-view');
+
+    if (!printElement) {
+        toast({
+            variant: "destructive",
+            title: "Erro de Impressão",
+            description: "Não foi possível encontrar o conteúdo para impressão.",
+        });
+        setIsProcessing(false);
+        return;
+    }
+    
+    // Temporarily make it visible for capture
+    printElement.style.display = 'block';
+    printElement.style.position = 'absolute';
+    printElement.style.left = '-9999px';
+
+    try {
+        const canvas = await html2canvas(printElement, {
+            scale: 2,
+            useCORS: true,
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        const ratio = imgWidth / imgHeight;
+        let newImgWidth = pdfWidth;
+        let newImgHeight = newImgWidth / ratio;
+
+        if (newImgHeight > pdfHeight) {
+            newImgHeight = pdfHeight;
+            newImgWidth = newImgHeight * ratio;
+        }
+
+        const x = (pdfWidth - newImgWidth) / 2;
+        const y = (pdfHeight - newImgHeight) / 2;
+
+        pdf.addImage(imgData, 'PNG', x, y, newImgWidth, newImgHeight);
+        
+        const fileName = `Lista_Turma_${filters.ensino || ''}_${filters.serie || ''}_${filters.classe || ''}.pdf`.replace(/ /g, '_');
+        pdf.save(fileName);
+
+    } catch (error) {
+        console.error("Error generating PDF:", error);
+        toast({
+            variant: "destructive",
+            title: "Erro ao Gerar PDF",
+            description: "Ocorreu um erro ao criar o ficheiro PDF.",
+        });
+    } finally {
+        // Hide it again
+        printElement.style.display = 'none';
+        setIsProcessing(false);
+    }
   };
 
   const clearFiltersAndResults = () => {
-    setFilters({ ensino: '', turno: '', classe: '' });
+    setFilters({ ensino: '', serie: '', turno: '', classe: '' });
     setStudents([]);
   };
 
-  const isAnyFilterSelected = filters.ensino || filters.turno || filters.classe;
+  const isAnyFilterSelected = filters.ensino || filters.serie || filters.turno || filters.classe;
 
   return (
     <>
@@ -122,7 +190,7 @@ export default function ClassListGenerator() {
                     <Sheet open={isOpen} onOpenChange={setIsOpen}>
                         <SheetTrigger asChild>
                             <Button className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg z-50 non-printable">
-                                <Printer className="h-8 w-8" />
+                                <ClipboardList className="h-8 w-8" />
                             </Button>
                         </SheetTrigger>
                         <SheetContent className="flex flex-col">
@@ -141,6 +209,15 @@ export default function ClassListGenerator() {
                                     <SelectContent>
                                         <SelectItem value="all">Todos os Segmentos</SelectItem>
                                         {uniqueOptions.ensinos.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Filtrar por Série..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todas as Séries</SelectItem>
+                                        {uniqueOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                                 <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)}>
@@ -177,7 +254,7 @@ export default function ClassListGenerator() {
                             <div className="mt-4 flex-1 overflow-y-auto border-t pt-4">
                                 {students.length > 0 ? (
                                      <div className='flex flex-col h-full'>
-                                        <h3 className="font-semibold text-center mb-2">{`Lista de Alunos - ${filters.ensino || ''} ${filters.classe || ''} - ${filters.turno || ''}`}</h3>
+                                        <h3 className="font-semibold text-center mb-2">{`Lista de Alunos - ${filters.ensino || ''} ${filters.serie || ''} ${filters.classe || ''} - ${filters.turno || ''}`}</h3>
                                         <p className="text-sm text-muted-foreground text-center mb-4">{`${students.length} alunos encontrados`}</p>
                                         <div className="flex-1 overflow-y-auto">
                                             <ul className="divide-y">
@@ -198,9 +275,9 @@ export default function ClassListGenerator() {
                             </div>
 
                             <SheetFooter className="mt-auto pt-4 border-t">
-                                <Button onClick={handlePrint} disabled={students.length === 0 || isPrinting} className="w-full">
-                                    <Printer className="mr-2 h-4 w-4" />
-                                    {isPrinting ? 'A preparar...' : 'Imprimir Lista'}
+                                <Button onClick={handleDownload} disabled={students.length === 0 || isProcessing} className="w-full">
+                                    <Download className="mr-2 h-4 w-4" />
+                                    {isProcessing ? 'A processar...' : 'Download da Lista'}
                                 </Button>
                             </SheetFooter>
                         </SheetContent>
@@ -212,8 +289,8 @@ export default function ClassListGenerator() {
             </Tooltip>
         </TooltipProvider>
 
-        <div className="printable-content">
-            {isPrinting && <ClassListPrintView students={students} filters={filters} />}
+        <div id="class-list-print-view" className="printable-content" style={{ display: 'none' }}>
+            <ClassListPrintView students={students} filters={filters} />
         </div>
     </>
   );

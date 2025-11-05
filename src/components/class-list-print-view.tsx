@@ -6,6 +6,7 @@ interface ClassListPrintViewProps {
   students: any[];
   filters: {
     ensino: string;
+    serie: string;
     turno: string;
     classe: string;
   };
@@ -36,7 +37,7 @@ export default function ClassListPrintView({ students, filters }: ClassListPrint
                 Lista de Alunos
             </h1>
             <p className="text-base font-semibold mt-2">
-                {`${filters.ensino || ''} ${filters.classe || ''} - Turno: ${filters.turno || ''}`}
+                {`${filters.ensino || ''} ${filters.serie || ''} ${filters.classe || ''} - Turno: ${filters.turno || ''}`}
             </p>
         </div>
 
