@@ -53,7 +53,7 @@ export default function ClassListPrintView({ students, filters }: ClassListPrint
                 </thead>
                 <tbody>
                     {students.map((student, index) => (
-                        <tr key={student.id}>
+                        <tr key={student.rm}>
                             <td className="border border-gray-400 p-2 text-center">{index + 1}</td>
                             <td className="border border-gray-400 p-2">{student.nome}</td>
                             <td className="border border-gray-400 p-2 text-center">{student.data_nascimento}</td>
