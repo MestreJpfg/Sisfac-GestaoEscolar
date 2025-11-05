@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import jsPDF from "jspdf";
 import html2canvas from 'html2canvas';
 import { useFirestore } from '@/firebase';
-import { collection, query, getDocs, where } from 'firebase/firestore';
+import { collection, query, getDocs } from 'firebase/firestore';
 import { ClipboardList, X, Loader2, Download } from 'lucide-react';
 import { Button } from './ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription, SheetFooter } from './ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from './ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import ClassListPrintView from './class-list-print-view';
@@ -18,8 +18,11 @@ export default function ClassListGenerator() {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingList, setIsGeneratingList] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  const [allStudentsData, setAllStudentsData] = useState<any[]>([]);
   
   const [filters, setFilters] = useState({
     ensino: '',
@@ -28,87 +31,94 @@ export default function ClassListGenerator() {
     classe: '',
   });
 
-  const [uniqueOptions, setUniqueOptions] = useState<{ ensinos: string[], series: string[], turnos: string[], classes: string[] }>({
-    ensinos: [],
-    series: [],
-    turnos: [],
-    classes: [],
-  });
-
-  // Fetch unique options for filters
   useEffect(() => {
-    if (!firestore) return;
+    if (!firestore || !isOpen) return;
 
-    const fetchUniqueOptions = async () => {
-      const q = query(collection(firestore, 'alunos'));
-      const querySnapshot = await getDocs(q);
-      
-      const ensinos = new Set<string>();
-      const series = new Set<string>();
-      const turnos = new Set<string>();
-      const classes = new Set<string>();
-      
-      querySnapshot.docs.forEach(doc => {
-        const student = doc.data();
-        if (student.ensino) ensinos.add(String(student.ensino));
-        if (student.serie) series.add(String(student.serie));
-        if (student.turno) turnos.add(String(student.turno));
-        if (student.classe) classes.add(String(student.classe));
-      });
-
-      setUniqueOptions({
-        ensinos: Array.from(ensinos).sort(),
-        series: Array.from(series).sort(),
-        turnos: Array.from(turnos).sort(),
-        classes: Array.from(classes).sort(),
-      });
+    const fetchAllStudents = async () => {
+      setIsLoading(true);
+      if (allStudentsData.length === 0) {
+        try {
+            const q = query(collection(firestore, 'alunos'));
+            const querySnapshot = await getDocs(q);
+            const studentsData = querySnapshot.docs.map(doc => doc.data());
+            setAllStudentsData(studentsData);
+        } catch (error) {
+            console.error("Erro ao buscar dados dos alunos:", error);
+            toast({
+                variant: "destructive",
+                title: "Erro ao carregar dados",
+                description: "Não foi possível buscar os dados dos alunos."
+            });
+        }
+      }
+      setIsLoading(false);
     };
 
-    fetchUniqueOptions();
-  }, [firestore]);
+    fetchAllStudents();
+  }, [firestore, isOpen, allStudentsData.length, toast]);
+
+  const uniqueOptions = useMemo(() => {
+    let filteredData = allStudentsData;
+
+    if (filters.ensino) {
+      filteredData = filteredData.filter(s => s.ensino === filters.ensino);
+    }
+    if (filters.serie) {
+      filteredData = filteredData.filter(s => s.serie === filters.serie);
+    }
+    if (filters.turno) {
+      filteredData = filteredData.filter(s => s.turno === filters.turno);
+    }
+     if (filters.classe) {
+      filteredData = filteredData.filter(s => s.classe === filters.classe);
+    }
+
+    const getUniqueValues = (key: string, data: any[]) => 
+        Array.from(new Set(data.map(s => s[key]).filter(Boolean))).sort((a,b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
+
+    const getDynamicOptions = (key: string) => {
+        let tempFilteredData = allStudentsData;
+        if (filters.ensino) tempFilteredData = tempFilteredData.filter(s => s.ensino === filters.ensino);
+        if (filters.serie && key !== 'serie') tempFilteredData = tempFilteredData.filter(s => s.serie === filters.serie);
+        if (filters.turno && key !== 'turno') tempFilteredData = tempFilteredData.filter(s => s.turno === filters.turno);
+        if (filters.classe && key !== 'classe') tempFilteredData = tempFilteredData.filter(s => s.classe === filters.classe);
+        return getUniqueValues(key, tempFilteredData);
+    };
+
+    return {
+      ensinos: getUniqueValues('ensino', allStudentsData),
+      series: getDynamicOptions('serie'),
+      turnos: getDynamicOptions('turno'),
+      classes: getDynamicOptions('classe'),
+    };
+  }, [allStudentsData, filters]);
 
   const handleFilterChange = (name: string, value: string) => {
     const newValue = value === 'all' ? '' : value;
-    setFilters(prev => ({ ...prev, [name]: newValue }));
+    setFilters(prev => ({
+      ...prev,
+      [name]: newValue,
+      ...(name === 'ensino' && { serie: '', turno: '', classe: '' }),
+      ...(name === 'serie' && { turno: '', classe: '' }),
+      ...(name === 'turno' && { classe: '' }),
+    }));
   };
 
   const handleGenerateList = async () => {
-    if (!firestore) return;
-
-    setIsLoading(true);
+    setIsGeneratingList(true);
     setStudents([]);
 
-    try {
-      const baseQuery = collection(firestore, 'alunos');
-      let conditions = [];
-      
-      if (filters.ensino) {
-        conditions.push(where('ensino', '==', filters.ensino));
-      }
-      if (filters.serie) {
-        conditions.push(where('serie', '==', filters.serie));
-      }
-      if (filters.turno) {
-        conditions.push(where('turno', '==', filters.turno));
-      }
-      if (filters.classe) {
-        conditions.push(where('classe', '==', filters.classe));
-      }
-      
-      const finalQuery = conditions.length > 0 ? query(baseQuery, ...conditions) : query(baseQuery);
-      const querySnapshot = await getDocs(finalQuery);
-      
-      let studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    let studentsData = allStudentsData;
 
-      // Sort by name
-      studentsData.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    if (filters.ensino) studentsData = studentsData.filter(s => s.ensino === filters.ensino);
+    if (filters.serie) studentsData = studentsData.filter(s => s.serie === filters.serie);
+    if (filters.turno) studentsData = studentsData.filter(s => s.turno === filters.turno);
+    if (filters.classe) studentsData = studentsData.filter(s => s.classe === filters.classe);
 
-      setStudents(studentsData);
-    } catch (error) {
-      console.error("Erro ao gerar lista de turmas:", error);
-    } finally {
-      setIsLoading(false);
-    }
+    studentsData.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    setStudents(studentsData);
+
+    setIsGeneratingList(false);
   };
   
   const handleDownload = async () => {
@@ -127,7 +137,6 @@ export default function ClassListGenerator() {
         return;
     }
     
-    // Temporarily make it visible for capture
     printElement.style.display = 'block';
     printElement.style.position = 'absolute';
     printElement.style.left = '-9999px';
@@ -169,7 +178,6 @@ export default function ClassListGenerator() {
             description: "Ocorreu um erro ao criar o ficheiro PDF.",
         });
     } finally {
-        // Hide it again
         printElement.style.display = 'none';
         setIsProcessing(false);
     }
@@ -202,47 +210,55 @@ export default function ClassListGenerator() {
                             </SheetHeader>
                             
                             <div className="space-y-4 py-4">
-                                <Select value={filters.ensino} onValueChange={(value) => handleFilterChange('ensino', value)}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Filtrar por Ensino..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todos os Segmentos</SelectItem>
-                                        {uniqueOptions.ensinos.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Filtrar por Série..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todas as Séries</SelectItem>
-                                        {uniqueOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Filtrar por Turno..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todos os Turnos</SelectItem>
-                                        {uniqueOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Filtrar por Classe..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todas as Classes</SelectItem>
-                                        {uniqueOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                                { isLoading ? (
+                                    <div className="flex items-center justify-center h-40">
+                                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                    </div>
+                                ) : (
+                                <>
+                                    <Select value={filters.ensino} onValueChange={(value) => handleFilterChange('ensino', value)}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Filtrar por Ensino..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todos os Segmentos</SelectItem>
+                                            {uniqueOptions.ensinos.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)} disabled={!filters.ensino}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Filtrar por Série..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todas as Séries</SelectItem>
+                                            {uniqueOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)} disabled={!filters.serie}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Filtrar por Turno..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todos os Turnos</SelectItem>
+                                            {uniqueOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)} disabled={!filters.turno}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Filtrar por Classe..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todas as Classes</SelectItem>
+                                            {uniqueOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </>
+                                )}
                             </div>
                             
                             <div className="flex items-center gap-2">
-                                <Button onClick={handleGenerateList} disabled={!isAnyFilterSelected || isLoading} className="flex-1">
-                                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Gerar Lista'}
+                                <Button onClick={handleGenerateList} disabled={!isAnyFilterSelected || isGeneratingList || isLoading} className="flex-1">
+                                    {isGeneratingList ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Gerar Lista'}
                                 </Button>
                                 {isAnyFilterSelected && (
                                 <Button variant="ghost" size="icon" onClick={clearFiltersAndResults}>
@@ -259,7 +275,7 @@ export default function ClassListGenerator() {
                                         <div className="flex-1 overflow-y-auto">
                                             <ul className="divide-y">
                                                 {students.map((student, index) => (
-                                                <li key={student.id} className="py-2 text-sm flex items-center">
+                                                <li key={student.id || student.rm} className="py-2 text-sm flex items-center">
                                                     <span className="w-6 text-right mr-2 text-muted-foreground">{index + 1}.</span>
                                                     <span>{student.nome}</span>
                                                 </li>
@@ -269,7 +285,7 @@ export default function ClassListGenerator() {
                                     </div>
                                 ) : (
                                     <div className="text-center text-sm text-muted-foreground pt-10">
-                                        {isLoading ? 'A procurar...' : 'Nenhum aluno encontrado ou nenhum filtro aplicado.'}
+                                        {isGeneratingList ? 'A gerar...' : 'Nenhum aluno encontrado ou nenhum filtro aplicado.'}
                                     </div>
                                 )}
                             </div>
@@ -295,3 +311,5 @@ export default function ClassListGenerator() {
     </>
   );
 }
+
+    
