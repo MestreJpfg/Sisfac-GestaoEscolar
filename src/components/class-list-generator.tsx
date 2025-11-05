@@ -7,7 +7,7 @@ import { useFirestore } from '@/firebase';
 import { collection, query, getDocs } from 'firebase/firestore';
 import { ClipboardList, X, Loader2, Download } from 'lucide-react';
 import { Button } from './ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from './ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetTrigger } from './ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import ClassListPrintView from './class-list-print-view';
@@ -58,21 +58,6 @@ export default function ClassListGenerator() {
   }, [firestore, isOpen, allStudentsData.length, toast]);
 
   const uniqueOptions = useMemo(() => {
-    let filteredData = allStudentsData;
-
-    if (filters.ensino) {
-      filteredData = filteredData.filter(s => s.ensino === filters.ensino);
-    }
-    if (filters.serie) {
-      filteredData = filteredData.filter(s => s.serie === filters.serie);
-    }
-    if (filters.turno) {
-      filteredData = filteredData.filter(s => s.turno === filters.turno);
-    }
-     if (filters.classe) {
-      filteredData = filteredData.filter(s => s.classe === filters.classe);
-    }
-
     const getUniqueValues = (key: string, data: any[]) => 
         Array.from(new Set(data.map(s => s[key]).filter(Boolean))).sort((a,b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
 
@@ -95,13 +80,20 @@ export default function ClassListGenerator() {
 
   const handleFilterChange = (name: string, value: string) => {
     const newValue = value === 'all' ? '' : value;
-    setFilters(prev => ({
-      ...prev,
-      [name]: newValue,
-      ...(name === 'ensino' && { serie: '', turno: '', classe: '' }),
-      ...(name === 'serie' && { turno: '', classe: '' }),
-      ...(name === 'turno' && { classe: '' }),
-    }));
+    setFilters(prev => {
+        const newFilters = { ...prev, [name]: newValue };
+        if (name === 'ensino') {
+            newFilters.serie = '';
+            newFilters.turno = '';
+            newFilters.classe = '';
+        } else if (name === 'serie') {
+            newFilters.turno = '';
+            newFilters.classe = '';
+        } else if (name === 'turno') {
+            newFilters.classe = '';
+        }
+        return newFilters;
+    });
   };
 
   const handleGenerateList = async () => {
@@ -311,5 +303,3 @@ export default function ClassListGenerator() {
     </>
   );
 }
-
-    
