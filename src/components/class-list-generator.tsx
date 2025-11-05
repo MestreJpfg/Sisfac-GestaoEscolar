@@ -142,43 +142,41 @@ export default function ClassListGenerator() {
         for (let i = 1; i <= pageCount; i++) {
           doc.setPage(i);
           
-          // Header
-          // Simulating the logo and school info - for a real logo, you'd need it as a base64 string
           doc.setFontSize(14).setFont('helvetica', 'bold');
-          doc.text('ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
-          doc.setFontSize(10).setFont('helvetica', 'normal');
-          doc.text('AVENIDA PROFESSOR JOSE ARTHUR DE CARVALHO, Nº 1540, LAGOA REDONDA | INEP: 23070188', doc.internal.pageSize.getWidth() / 2, 21, { align: 'center' });
+          doc.text('ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 12, { align: 'center' });
+          doc.setFontSize(9).setFont('helvetica', 'normal');
+          doc.text('AVENIDA PROFESSOR JOSE ARTHUR DE CARVALHO, Nº 1540, LAGOA REDONDA | INEP: 23070188', doc.internal.pageSize.getWidth() / 2, 17, { align: 'center' });
           
-          // Footer
           const footerText = `Gerado em: ${formattedDate} - Página ${i} de ${pageCount}`;
           doc.setFontSize(8);
-          doc.text(footerText, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
+          doc.text(footerText, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 8, { align: 'center' });
         }
       };
       
       doc.autoTable({
         head: [['Nº', 'Nome do Aluno', 'Data de Nascimento', 'RM']],
         body: tableData,
-        startY: 40,
+        startY: 32,
         didDrawPage: (data) => {
-          // Title for the first page
           if (data.pageNumber === 1) {
-            doc.setFontSize(18).setFont('helvetica', 'bold');
-            doc.text("Lista de Alunos", doc.internal.pageSize.getWidth() / 2, 30, { align: 'center' });
-            doc.setFontSize(12).setFont('helvetica', 'normal');
-            doc.text(title, doc.internal.pageSize.getWidth() / 2, 36, { align: 'center' });
+            doc.setFontSize(16).setFont('helvetica', 'bold');
+            doc.text("Lista de Alunos", doc.internal.pageSize.getWidth() / 2, 24, { align: 'center' });
+            doc.setFontSize(11).setFont('helvetica', 'normal');
+            doc.text(title, doc.internal.pageSize.getWidth() / 2, 29, { align: 'center' });
           }
         },
         styles: {
           font: 'helvetica',
-          fontSize: 10,
+          fontSize: 9,
+          cellPadding: 1.5,
         },
         headStyles: {
           fillColor: [230, 230, 230],
           textColor: [40, 40, 40],
-          fontStyle: 'bold'
+          fontStyle: 'bold',
+          fontSize: 10,
         },
-        margin: { top: 30 }
+        margin: { top: 22, bottom: 12 }
       });
       
       addHeaderAndFooter(doc);
