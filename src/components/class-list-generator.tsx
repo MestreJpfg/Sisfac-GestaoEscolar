@@ -77,14 +77,20 @@ export default function ClassListGenerator() {
     const series = getUniqueValues('serie', filteredDataByEnsino);
 
     let filteredDataBySerie = filteredDataByEnsino;
-    if (filters.serie) {
-        filteredDataBySerie = filteredDataBySerie.filter(s => s.serie === filters.serie);
+    if (filters.ensino && filters.serie) {
+        filteredDataBySerie = allStudentsData.filter(s => s.ensino === filters.ensino && s.serie === filters.serie);
+    } else if (filters.ensino) {
+        filteredDataBySerie = allStudentsData.filter(s => s.ensino === filters.ensino);
     }
     const turnos = getUniqueValues('turno', filteredDataBySerie);
 
     let filteredDataByTurno = filteredDataBySerie;
-    if (filters.turno) {
-        filteredDataByTurno = filteredDataByTurno.filter(s => s.turno === filters.turno);
+    if (filters.ensino && filters.serie && filters.turno) {
+        filteredDataByTurno = allStudentsData.filter(s => s.ensino === filters.ensino && s.serie === filters.serie && s.turno === filters.turno);
+    } else if (filters.ensino && filters.serie) {
+        filteredDataByTurno = allStudentsData.filter(s => s.ensino === filters.ensino && s.serie === filters.serie);
+    } else if (filters.ensino) {
+        filteredDataByTurno = allStudentsData.filter(s => s.ensino === filters.ensino);
     }
     const classes = getUniqueValues('classe', filteredDataByTurno);
 
@@ -147,12 +153,12 @@ export default function ClassListGenerator() {
             const textLine2 = 'INEP: 23070188';
 
             doc.setFontSize(10).setFont('helvetica', 'bold');
-            doc.text(textLine1, pageW / 2, 12, { align: 'center' });
+            doc.text(textLine1, pageW / 2, 10, { align: 'center' });
             doc.setFontSize(8).setFont('helvetica', 'normal');
-            doc.text(textLine2, pageW / 2, 16, { align: 'center' });
+            doc.text(textLine2, pageW / 2, 14, { align: 'center' });
   
             doc.setFontSize(11).setFont('helvetica', 'normal');
-            doc.text(title, pageW / 2, 28, { align: 'center' });
+            doc.text(title, pageW / 2, 22, { align: 'center' });
   
             const footerText = `Gerado em: ${formattedDate}`;
             doc.setFontSize(8);
@@ -193,7 +199,7 @@ export default function ClassListGenerator() {
             doc.autoTable({
                 head: [['Nº', 'Nome do Aluno', 'Data de Nascimento', 'RM']],
                 body: tableData,
-                startY: 32,
+                startY: 26,
                 didDrawPage: (data) => {
                     addHeaderAndFooter(doc, title);
                     const pageNumberText = `Página ${data.pageNumber}`;
@@ -213,7 +219,7 @@ export default function ClassListGenerator() {
                     fontStyle: 'bold',
                     fontSize: 9,
                 },
-                margin: { top: 32, bottom: 15, right: 10, left: 10 }
+                margin: { top: 26, bottom: 15, right: 10, left: 10 }
             });
         }
   
@@ -283,7 +289,7 @@ export default function ClassListGenerator() {
                                                         {uniqueOptions.ensinos.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
                                                     </SelectContent>
                                                 </Select>
-                                                <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)} disabled={!filters.ensino && uniqueOptions.ensinos.length > 0}>
+                                                <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)} disabled={!filters.ensino && uniqueOptions.series.length === 0}>
                                                     <SelectTrigger>
                                                         <SelectValue placeholder="Filtrar por Série..." />
                                                     </SelectTrigger>
@@ -292,7 +298,7 @@ export default function ClassListGenerator() {
                                                         {uniqueOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                                                     </SelectContent>
                                                 </Select>
-                                                <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)} disabled={!filters.serie && uniqueOptions.series.length > 0}>
+                                                <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)} disabled={!filters.serie && !filters.ensino}>
                                                     <SelectTrigger>
                                                         <SelectValue placeholder="Filtrar por Turno..." />
                                                     </SelectTrigger>
@@ -301,7 +307,7 @@ export default function ClassListGenerator() {
                                                         {uniqueOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                                                     </SelectContent>
                                                 </Select>
-                                                <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)} disabled={!filters.turno && uniqueOptions.turnos.length > 0}>
+                                                <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)} disabled={!filters.turno && !filters.serie && !filters.ensino}>
                                                     <SelectTrigger>
                                                         <SelectValue placeholder="Filtrar por Classe..." />
                                                     </SelectTrigger>
