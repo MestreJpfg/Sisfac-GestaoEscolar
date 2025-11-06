@@ -127,6 +127,11 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
         const pdfHeight = pdf.internal.pageSize.getHeight();
         const canvasWidth = canvas.width;
         const canvasHeight = canvas.height;
+
+        if (canvasWidth === 0 || canvasHeight === 0) {
+          throw new Error("Canvas gerado com dimensões inválidas (0).");
+        }
+
         const ratio = canvasWidth / canvasHeight;
         
         let imgWidth = pdfWidth - 20; 
@@ -139,6 +144,10 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
 
         const x = (pdfWidth - imgWidth) / 2;
         const y = (pdfHeight - imgHeight) / 2;
+        
+        if (imgWidth <= 0 || imgHeight <= 0 || !isFinite(x) || !isFinite(y)) {
+          throw new Error("Coordenadas ou dimensões inválidas para a imagem no PDF.");
+        }
 
         pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight, undefined, 'MEDIUM');
         return pdf.output('blob');
@@ -416,3 +425,4 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     </>
   );
 }
+
