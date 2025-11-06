@@ -92,24 +92,25 @@ export default function ClassListGenerator() {
     const getUniqueValues = (key: string, data: any[]) => 
       [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
-    let filteredData = allStudentsData;
-    if (filters.ensino) {
-        filteredData = filteredData.filter(s => s.ensino === filters.ensino);
-    }
-    
-    let seriesData = filteredData;
     const ensinos = getUniqueValues('ensino', allStudentsData);
-    const series = getUniqueValues('serie', seriesData);
 
+    let filteredDataByEnsino = allStudentsData;
+    if (filters.ensino) {
+        filteredDataByEnsino = allStudentsData.filter(s => s.ensino === filters.ensino);
+    }
+    const series = getUniqueValues('serie', filteredDataByEnsino);
+
+    let filteredDataBySerie = filteredDataByEnsino;
     if (filters.serie) {
-        seriesData = seriesData.filter(s => s.serie === filters.serie);
+        filteredDataBySerie = filteredDataBySerie.filter(s => s.serie === filters.serie);
     }
-    const turnos = getUniqueValues('turno', seriesData);
+    const turnos = getUniqueValues('turno', filteredDataBySerie);
 
+    let filteredDataByTurno = filteredDataBySerie;
     if (filters.turno) {
-        seriesData = seriesData.filter(s => s.turno === filters.turno);
+        filteredDataByTurno = filteredDataByTurno.filter(s => s.turno === filters.turno);
     }
-    const classes = getUniqueValues('classe', seriesData);
+    const classes = getUniqueValues('classe', filteredDataByTurno);
 
     return {
         ensinos,
@@ -165,21 +166,41 @@ export default function ClassListGenerator() {
         const seloBase64 = await getBase64ImageFromUrl('/selo.png');
   
         const addHeaderAndFooter = (doc: jsPDF, title: string) => {
-            // Adiciona o selo no cabeçalho
-            doc.addImage(seloBase64, 'PNG', 10, 8, 20, 20);
+            const pageW = doc.internal.pageSize.getWidth();
+            const imgSize = 18;
+            const imgMargin = 4;
+            const textBlockY = 12;
+
+            const textLine1 = 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
+            const textLine2 = 'INEP: 23070188';
 
             doc.setFontSize(10).setFont('helvetica', 'bold');
-            doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', 35, 12);
+            const textWidth1 = doc.getTextWidth(textLine1);
             doc.setFontSize(8).setFont('helvetica', 'normal');
-            doc.text(`INEP: 23070188`, 35, 16);
+            const textWidth2 = doc.getTextWidth(textLine2);
+            
+            const maxTextWidth = Math.max(textWidth1, textWidth2);
+            const totalContentWidth = imgSize + imgMargin + maxTextWidth;
+            
+            const startX = (pageW - totalContentWidth) / 2;
+            const imgX = startX;
+            const textX = startX + imgSize + imgMargin;
+            const imgY = 8;
+            
+            doc.addImage(seloBase64, 'PNG', imgX, imgY, imgSize, imgSize);
+
+            doc.setFontSize(10).setFont('helvetica', 'bold');
+            doc.text(textLine1, textX, textBlockY);
+            doc.setFontSize(8).setFont('helvetica', 'normal');
+            doc.text(textLine2, textX, textBlockY + 4);
   
             doc.setFontSize(11).setFont('helvetica', 'normal');
-            doc.text(title, doc.internal.pageSize.getWidth() / 2, 25, { align: 'center' });
+            doc.text(title, pageW / 2, 28, { align: 'center' });
   
             const footerText = `Gerado em: ${formattedDate}`;
             doc.setFontSize(8);
             const footerY = doc.internal.pageSize.getHeight() - 8;
-            doc.text(footerText, doc.internal.pageSize.getWidth() / 2, footerY, { align: 'center' });
+            doc.text(footerText, pageW / 2, footerY, { align: 'center' });
         };
   
         const groupedStudents = students.reduce((acc, student) => {
@@ -305,7 +326,7 @@ export default function ClassListGenerator() {
                                                         {uniqueOptions.ensinos.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
                                                     </SelectContent>
                                                 </Select>
-                                                <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)} >
+                                                <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)} disabled={!filters.ensino && uniqueOptions.ensinos.length > 0}>
                                                     <SelectTrigger>
                                                         <SelectValue placeholder="Filtrar por Série..." />
                                                     </SelectTrigger>
@@ -314,7 +335,7 @@ export default function ClassListGenerator() {
                                                         {uniqueOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                                                     </SelectContent>
                                                 </Select>
-                                                <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)} >
+                                                <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)} disabled={!filters.serie && uniqueOptions.series.length > 0}>
                                                     <SelectTrigger>
                                                         <SelectValue placeholder="Filtrar por Turno..." />
                                                     </SelectTrigger>
@@ -323,7 +344,7 @@ export default function ClassListGenerator() {
                                                         {uniqueOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                                                     </SelectContent>
                                                 </Select>
-                                                <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)} >
+                                                <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)} disabled={!filters.turno && uniqueOptions.turnos.length > 0}>
                                                     <SelectTrigger>
                                                         <SelectValue placeholder="Filtrar por Classe..." />
                                                     </SelectTrigger>
