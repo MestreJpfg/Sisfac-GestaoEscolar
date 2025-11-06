@@ -97,43 +97,36 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
   };
 
   const generatePdfBlob = async (): Promise<Blob | null> => {
-    const declarationElement = document.getElementById(`declaration-${student.rm}`);
-    
-    if (!declarationElement) {
-        console.error("Elemento da declaração não encontrado.");
+    const originalElement = document.getElementById(`declaration-${student.rm}`);
+    if (!originalElement) {
+        console.error("Elemento de declaração original não encontrado.");
         toast({
-          variant: "destructive",
-          title: "Erro ao Gerar PDF",
-          description: "O elemento da declaração não foi encontrado.",
+            variant: "destructive",
+            title: "Erro ao Gerar PDF",
+            description: "O elemento da declaração não foi encontrado.",
         });
         return null;
     }
-    
-    // Temporarily make the element visible for rendering
-    declarationElement.style.position = 'absolute';
-    declarationElement.style.left = '0';
-    declarationElement.style.top = '0';
-    declarationElement.style.zIndex = '-1';
-    declarationElement.style.display = 'block';
-    declarationElement.style.opacity = '1';
 
+    // Clone the element and append it to the body to ensure it's rendered
+    const clonedElement = originalElement.cloneNode(true) as HTMLElement;
+    clonedElement.style.position = 'absolute';
+    clonedElement.style.top = '-9999px'; // Move it off-screen
+    clonedElement.style.left = '0px';
+    clonedElement.style.zIndex = '1000'; // Ensure it's on top layer for rendering
+    clonedElement.style.display = 'block';
+    clonedElement.style.opacity = '1';
+    
+    document.body.appendChild(clonedElement);
 
     try {
-        const canvas = await html2canvas(declarationElement, {
-            scale: 2, // Increased scale for better quality
+        const canvas = await html2canvas(clonedElement, {
+            scale: 2,
             useCORS: true,
-            backgroundColor: null, 
+            backgroundColor: null,
         });
-        
-        // Restore original styles
-        declarationElement.style.position = '';
-        declarationElement.style.left = '';
-        declarationElement.style.top = '';
-        declarationElement.style.zIndex = '';
-        declarationElement.style.display = '';
-        declarationElement.style.opacity = '';
 
-        const imgData = canvas.toDataURL('image/jpeg', 0.7); 
+        const imgData = canvas.toDataURL('image/jpeg', 0.9);
         const pdf = new jsPDF({
             orientation: 'p',
             unit: 'mm',
@@ -166,7 +159,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
           throw new Error("Coordenadas ou dimensões inválidas para a imagem no PDF.");
         }
 
-        pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight, undefined, 'FAST');
+        pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight, undefined, 'MEDIUM');
         return pdf.output('blob');
 
     } catch (error) {
@@ -176,16 +169,10 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
           title: "Erro ao Gerar PDF",
           description: "Ocorreu um erro ao criar o ficheiro PDF.",
         });
-        
-        // Ensure styles are restored even on error
-        declarationElement.style.position = '';
-        declarationElement.style.left = '';
-        declarationElement.style.top = '';
-        declarationElement.style.zIndex = '';
-        declarationElement.style.display = '';
-        declarationElement.style.opacity = '';
-
         return null;
+    } finally {
+        // Always remove the cloned element
+        document.body.removeChild(clonedElement);
     }
   };
 
@@ -451,3 +438,5 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     </>
   );
 }
+
+    
