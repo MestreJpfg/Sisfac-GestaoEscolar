@@ -108,14 +108,31 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
         });
         return null;
     }
+    
+    // Temporarily make the element visible for rendering
+    declarationElement.style.position = 'absolute';
+    declarationElement.style.left = '0';
+    declarationElement.style.top = '0';
+    declarationElement.style.zIndex = '-1';
+    declarationElement.style.display = 'block';
+    declarationElement.style.opacity = '1';
+
 
     try {
         const canvas = await html2canvas(declarationElement, {
-            scale: 1.5,
+            scale: 2, // Increased scale for better quality
             useCORS: true,
             backgroundColor: null, 
         });
         
+        // Restore original styles
+        declarationElement.style.position = '';
+        declarationElement.style.left = '';
+        declarationElement.style.top = '';
+        declarationElement.style.zIndex = '';
+        declarationElement.style.display = '';
+        declarationElement.style.opacity = '';
+
         const imgData = canvas.toDataURL('image/jpeg', 0.7); 
         const pdf = new jsPDF({
             orientation: 'p',
@@ -149,7 +166,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
           throw new Error("Coordenadas ou dimensões inválidas para a imagem no PDF.");
         }
 
-        pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight, undefined, 'MEDIUM');
+        pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight, undefined, 'FAST');
         return pdf.output('blob');
 
     } catch (error) {
@@ -159,6 +176,15 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
           title: "Erro ao Gerar PDF",
           description: "Ocorreu um erro ao criar o ficheiro PDF.",
         });
+        
+        // Ensure styles are restored even on error
+        declarationElement.style.position = '';
+        declarationElement.style.left = '';
+        declarationElement.style.top = '';
+        declarationElement.style.zIndex = '';
+        declarationElement.style.display = '';
+        declarationElement.style.opacity = '';
+
         return null;
     }
   };
@@ -425,4 +451,3 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     </>
   );
 }
-
