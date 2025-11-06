@@ -20,6 +20,30 @@ declare module 'jspdf' {
   }
 }
 
+const getBase64ImageFromUrl = (imageUrl: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(img, 0, 0);
+                const dataURL = canvas.toDataURL('image/png');
+                resolve(dataURL);
+            } else {
+                reject(new Error('Failed to get canvas context'));
+            }
+        };
+        img.onerror = error => {
+            reject(error);
+        };
+        img.src = imageUrl;
+    });
+};
+
 export default function ClassListGenerator() {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -64,21 +88,36 @@ export default function ClassListGenerator() {
     fetchAllStudents();
   }, [firestore, isOpen, allStudentsData.length, toast]);
 
-  const uniqueOptions = useMemo(() => {
+ const uniqueOptions = useMemo(() => {
     const getUniqueValues = (key: string, data: any[]) => 
-        Array.from(new Set(data.map(s => s[key]).filter(Boolean))).sort((a,b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
+      [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
-    const dataForSeries = filters.ensino ? allStudentsData.filter(s => s.ensino === filters.ensino) : allStudentsData;
-    const dataForTurnos = filters.serie ? dataForSeries.filter(s => s.serie === filters.serie) : dataForSeries;
-    const dataForClasses = filters.turno ? dataForTurnos.filter(s => s.turno === filters.turno) : dataForTurnos;
+    let filteredData = allStudentsData;
+    if (filters.ensino) {
+        filteredData = filteredData.filter(s => s.ensino === filters.ensino);
+    }
+    
+    let seriesData = filteredData;
+    const ensinos = getUniqueValues('ensino', allStudentsData);
+    const series = getUniqueValues('serie', seriesData);
+
+    if (filters.serie) {
+        seriesData = seriesData.filter(s => s.serie === filters.serie);
+    }
+    const turnos = getUniqueValues('turno', seriesData);
+
+    if (filters.turno) {
+        seriesData = seriesData.filter(s => s.turno === filters.turno);
+    }
+    const classes = getUniqueValues('classe', seriesData);
 
     return {
-      ensinos: getUniqueValues('ensino', allStudentsData),
-      series: getUniqueValues('serie', dataForSeries),
-      turnos: getUniqueValues('turno', dataForTurnos),
-      classes: getUniqueValues('classe', dataForClasses),
+        ensinos,
+        series,
+        turnos,
+        classes,
     };
-  }, [allStudentsData, filters]);
+}, [allStudentsData, filters]);
 
   const handleFilterChange = (name: string, value: string) => {
     const newValue = value === 'all' ? '' : value;
@@ -123,15 +162,19 @@ export default function ClassListGenerator() {
         const doc = new jsPDF();
         const today = new Date();
         const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(today);
+        const seloBase64 = await getBase64ImageFromUrl('/selo.png');
   
         const addHeaderAndFooter = (doc: jsPDF, title: string) => {
+            // Adiciona o selo no cabeçalho
+            doc.addImage(seloBase64, 'PNG', 10, 8, 20, 20);
+
             doc.setFontSize(10).setFont('helvetica', 'bold');
-            doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 12, { align: 'center' });
+            doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', 35, 12);
             doc.setFontSize(8).setFont('helvetica', 'normal');
-            doc.text(`INEP: 23070188`, doc.internal.pageSize.getWidth() / 2, 16, { align: 'center' });
+            doc.text(`INEP: 23070188`, 35, 16);
   
             doc.setFontSize(11).setFont('helvetica', 'normal');
-            doc.text(title, doc.internal.pageSize.getWidth() / 2, 23, { align: 'center' });
+            doc.text(title, doc.internal.pageSize.getWidth() / 2, 25, { align: 'center' });
   
             const footerText = `Gerado em: ${formattedDate}`;
             doc.setFontSize(8);
@@ -172,7 +215,7 @@ export default function ClassListGenerator() {
             doc.autoTable({
                 head: [['Nº', 'Nome do Aluno', 'Data de Nascimento', 'RM']],
                 body: tableData,
-                startY: 28,
+                startY: 32,
                 didDrawPage: (data) => {
                     addHeaderAndFooter(doc, title);
                     const pageNumberText = `Página ${data.pageNumber}`;
@@ -192,7 +235,7 @@ export default function ClassListGenerator() {
                     fontStyle: 'bold',
                     fontSize: 9,
                 },
-                margin: { top: 28, bottom: 15, right: 10, left: 10 }
+                margin: { top: 32, bottom: 15, right: 10, left: 10 }
             });
         }
   
@@ -347,5 +390,3 @@ export default function ClassListGenerator() {
     </>
   );
 }
-
-    
