@@ -20,30 +20,6 @@ declare module 'jspdf' {
   }
 }
 
-const getBase64ImageFromUrl = (imageUrl: string): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = 'Anonymous';
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-                ctx.drawImage(img, 0, 0);
-                const dataURL = canvas.toDataURL('image/png');
-                resolve(dataURL);
-            } else {
-                reject(new Error('Failed to get canvas context'));
-            }
-        };
-        img.onerror = error => {
-            reject(error);
-        };
-        img.src = imageUrl;
-    });
-};
-
 export default function ClassListGenerator() {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -163,36 +139,17 @@ export default function ClassListGenerator() {
         const doc = new jsPDF();
         const today = new Date();
         const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(today);
-        const seloBase64 = await getBase64ImageFromUrl('/selo.png');
   
         const addHeaderAndFooter = (doc: jsPDF, title: string) => {
             const pageW = doc.internal.pageSize.getWidth();
-            const imgSize = 18;
-            const imgMargin = 4;
-            const textBlockY = 12;
-
+            
             const textLine1 = 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
             const textLine2 = 'INEP: 23070188';
 
             doc.setFontSize(10).setFont('helvetica', 'bold');
-            const textWidth1 = doc.getTextWidth(textLine1);
+            doc.text(textLine1, pageW / 2, 12, { align: 'center' });
             doc.setFontSize(8).setFont('helvetica', 'normal');
-            const textWidth2 = doc.getTextWidth(textLine2);
-            
-            const maxTextWidth = Math.max(textWidth1, textWidth2);
-            const totalContentWidth = imgSize + imgMargin + maxTextWidth;
-            
-            const startX = (pageW - totalContentWidth) / 2;
-            const imgX = startX;
-            const textX = startX + imgSize + imgMargin;
-            const imgY = 8;
-            
-            doc.addImage(seloBase64, 'PNG', imgX, imgY, imgSize, imgSize);
-
-            doc.setFontSize(10).setFont('helvetica', 'bold');
-            doc.text(textLine1, textX, textBlockY);
-            doc.setFontSize(8).setFont('helvetica', 'normal');
-            doc.text(textLine2, textX, textBlockY + 4);
+            doc.text(textLine2, pageW / 2, 16, { align: 'center' });
   
             doc.setFontSize(11).setFont('helvetica', 'normal');
             doc.text(title, pageW / 2, 28, { align: 'center' });
