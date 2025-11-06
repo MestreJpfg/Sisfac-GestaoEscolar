@@ -119,120 +119,94 @@ export default function ClassListGenerator() {
   const handleDownload = async () => {
     if (students.length === 0) return;
     setIsProcessing(true);
-
+  
     try {
-      const doc = new jsPDF();
-      const today = new Date();
-      const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(today);
-
-      const addHeaderAndFooterAndWatermark = (doc: jsPDF, watermarkImg: HTMLImageElement, title?: string) => {
-          doc.setFontSize(10).setFont('helvetica', 'bold');
-          doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 12, { align: 'center' });
-          doc.setFontSize(8).setFont('helvetica', 'normal');
-          doc.text(`INEP: 23070188`, doc.internal.pageSize.getWidth() / 2, 16, { align: 'center' });
-          
-          if (title) {
-            doc.setFontSize(11).setFont('helvetica', 'normal');
-            doc.text(title, doc.internal.pageSize.getWidth() / 2, 23, { align: 'center' });
-          }
-
-          const pageWidth = doc.internal.pageSize.getWidth();
-          const pageHeight = doc.internal.pageSize.getHeight();
-          const imgWidth = 100;
-          const imgHeight = 100;
-          const x = (pageWidth - imgWidth) / 2;
-          const y = (pageHeight - imgHeight) / 2;
-          doc.setGState(new (doc as any).GState({opacity: 0.15}));
-          doc.addImage(watermarkImg, 'PNG', x, y, imgWidth, imgHeight);
-          doc.setGState(new (doc as any).GState({opacity: 1}));
-
-          const footerText = `Gerado em: ${formattedDate}`;
-          doc.setFontSize(8);
-          const pageCount = (doc.internal as any).getNumberOfPages();
-          for(let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
+        const doc = new jsPDF();
+        const today = new Date();
+        const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(today);
+  
+        const addHeaderAndFooter = (doc: jsPDF, title?: string) => {
+            doc.setFontSize(10).setFont('helvetica', 'bold');
+            doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 12, { align: 'center' });
+            doc.setFontSize(8).setFont('helvetica', 'normal');
+            doc.text(`INEP: 23070188`, doc.internal.pageSize.getWidth() / 2, 16, { align: 'center' });
+  
+            if (title) {
+                doc.setFontSize(11).setFont('helvetica', 'normal');
+                doc.text(title, doc.internal.pageSize.getWidth() / 2, 23, { align: 'center' });
+            }
+  
+            const footerText = `Gerado em: ${formattedDate}`;
+            doc.setFontSize(8);
             const footerY = doc.internal.pageSize.getHeight() - 8;
             doc.text(footerText, doc.internal.pageSize.getWidth() / 2, footerY, { align: 'center' });
-          }
-      };
-      
-      const watermarkImg = new Image();
-      watermarkImg.src = '/selo.png';
-      
-      watermarkImg.onload = () => {
-          const groupedStudents = students.reduce((acc, student) => {
+        };
+  
+        const groupedStudents = students.reduce((acc, student) => {
             const key = `${student.serie || 'N/A'}|${student.classe || 'N/A'}|${student.turno || 'N/A'}`;
             if (!acc[key]) {
-              acc[key] = [];
+                acc[key] = [];
             }
             acc[key].push(student);
             return acc;
-          }, {} as Record<string, any[]>);
+        }, {} as Record<string, any[]>);
+  
+        const sortedGroupKeys = Object.keys(groupedStudents).sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
 
-          let isFirstPage = true;
-
-          for (const key in groupedStudents) {
-              const group = groupedStudents[key];
-              const [serie, classe, turno] = key.split('|');
-              const tableData = group.map((student, index) => [
-                  index + 1,
-                  student.nome,
-                  student.data_nascimento || '',
-                  student.rm || ''
-              ]);
-              
-              if (!isFirstPage) {
+        let isFirstPage = true;
+  
+        for (const key of sortedGroupKeys) {
+            const group = groupedStudents[key];
+            const [serie, classe, turno] = key.split('|');
+            const tableData = group.map((student, index) => [
+                index + 1,
+                student.nome,
+                student.data_nascimento || '',
+                student.rm || ''
+            ]);
+  
+            if (!isFirstPage) {
                 doc.addPage();
-              }
-              isFirstPage = false;
-
-              const title = `Lista de Alunos - ${filters.ensino || ''} ${serie} ${classe} - Turno: ${turno}`.trim();
-              
-              doc.autoTable({
-                  head: [['Nº', 'Nome do Aluno', 'Data de Nascimento', 'RM']],
-                  body: tableData,
-                  startY: 28,
-                  didDrawPage: (data) => {
-                      addHeaderAndFooterAndWatermark(doc, watermarkImg, title);
-                  },
-                  styles: {
+            }
+            isFirstPage = false;
+  
+            const title = `Lista de Alunos - ${filters.ensino || ''} ${serie} ${classe} - Turno: ${turno}`.trim();
+  
+            doc.autoTable({
+                head: [['Nº', 'Nome do Aluno', 'Data de Nascimento', 'RM']],
+                body: tableData,
+                startY: 28,
+                didDrawPage: (data) => {
+                    addHeaderAndFooter(doc, title);
+                },
+                styles: {
                     font: 'helvetica',
                     fontSize: 8,
                     cellPadding: 1.5,
                     valign: 'middle',
-                  },
-                  headStyles: {
+                },
+                headStyles: {
                     fillColor: [230, 230, 230],
                     textColor: [40, 40, 40],
                     fontStyle: 'bold',
                     fontSize: 9,
-                  },
-                  margin: { top: 28, bottom: 15 }
-              });
-          }
-
-          const fileName = `Listas_de_Turmas_${filters.ensino || 'Geral'}.pdf`.replace(/ /g, '_');
-          doc.save(fileName);
-          setIsProcessing(false);
-      };
-
-      watermarkImg.onerror = () => {
-          toast({
-              variant: "destructive",
-              title: "Erro ao Carregar Imagem",
-              description: "Não foi possível carregar a imagem da marca d'água.",
-          });
-          setIsProcessing(false);
-      }
-
+                },
+                margin: { top: 28, bottom: 15 }
+            });
+        }
+  
+        const fileName = `Listas_de_Turmas_${filters.ensino || 'Geral'}.pdf`.replace(/ /g, '_');
+        doc.save(fileName);
+  
     } catch (error) {
-      console.error("Error generating PDF:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao Gerar PDF",
-        description: "Ocorreu um erro ao criar o ficheiro PDF.",
-      });
-      setIsProcessing(false);
+        console.error("Error generating PDF:", error);
+        toast({
+            variant: "destructive",
+            title: "Erro ao Gerar PDF",
+            description: "Ocorreu um erro ao criar o ficheiro PDF.",
+        });
+    } finally {
+        setIsProcessing(false);
     }
   };
 
