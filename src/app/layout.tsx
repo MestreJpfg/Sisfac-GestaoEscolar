@@ -21,6 +21,7 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: 'Gestão de Alunos',
   description: 'Upload e visualização de arquivos para gestão de alunos',
+  manifest: '/manifest.webmanifest'
 };
 
 export default function RootLayout({
@@ -31,6 +32,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${poppins.variable}`} suppressHydrationWarning>
       <head>
+        <meta name="theme-color" content="#1e88e5" />
         {process.env.NODE_ENV === "production" && (
           <GoogleAnalytics ga_id="GA_MEASUREMENT_ID" />
         )}
