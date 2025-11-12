@@ -8,7 +8,6 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  TableCaption,
 } from "@/components/ui/table";
 
 interface Boletim {
@@ -65,7 +64,6 @@ export default function StudentReportCard({ boletim }: StudentReportCardProps) {
 
   return (
     <Table>
-      <TableCaption>Boletim de notas do aluno.</TableCaption>
       <TableHeader>
         <TableRow>
           <TableHead className="font-bold text-foreground whitespace-nowrap min-w-[150px]">Disciplina</TableHead>
