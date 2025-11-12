@@ -64,32 +64,30 @@ export default function StudentReportCard({ boletim }: StudentReportCardProps) {
   }).sort((a, b) => a.disciplina.localeCompare(b.disciplina)); // Sort disciplines alphabetically
 
   return (
-    <div className="overflow-x-auto">
-      <Table>
-        <TableCaption>Boletim de notas do aluno.</TableCaption>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="font-bold text-foreground whitespace-nowrap">Disciplina</TableHead>
-            <TableHead className="text-center font-bold text-foreground whitespace-nowrap">Etapa 1</TableHead>
-            <TableHead className="text-center font-bold text-foreground whitespace-nowrap">Etapa 2</TableHead>
-            <TableHead className="text-center font-bold text-foreground whitespace-nowrap">Etapa 3</TableHead>
-            <TableHead className="text-center font-bold text-foreground whitespace-nowrap">Etapa 4</TableHead>
-            <TableHead className="text-center font-bold text-foreground whitespace-nowrap">Média</TableHead>
+    <Table>
+      <TableCaption>Boletim de notas do aluno.</TableCaption>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="font-bold text-foreground whitespace-nowrap min-w-[150px]">Disciplina</TableHead>
+          <TableHead className="text-center font-bold text-foreground whitespace-nowrap">Etapa 1</TableHead>
+          <TableHead className="text-center font-bold text-foreground whitespace-nowrap">Etapa 2</TableHead>
+          <TableHead className="text-center font-bold text-foreground whitespace-nowrap">Etapa 3</TableHead>
+          <TableHead className="text-center font-bold text-foreground whitespace-nowrap">Etapa 4</TableHead>
+          <TableHead className="text-center font-bold text-foreground whitespace-nowrap">Média</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {processedBoletim.map(({ disciplina, etapa1, etapa2, etapa3, etapa4, mediaFinal }) => (
+          <TableRow key={disciplina}>
+            <TableCell className="font-medium whitespace-nowrap">{disciplina}</TableCell>
+            <TableCell className={`text-center font-semibold ${getGradeColor(etapa1)}`}>{formatGrade(etapa1)}</TableCell>
+            <TableCell className={`text-center font-semibold ${getGradeColor(etapa2)}`}>{formatGrade(etapa2)}</TableCell>
+            <TableCell className={`text-center font-semibold ${getGradeColor(etapa3)}`}>{formatGrade(etapa3)}</TableCell>
+            <TableCell className={`text-center font-semibold ${getGradeColor(etapa4)}`}>{formatGrade(etapa4)}</TableCell>
+            <TableCell className={`text-center font-bold ${getGradeColor(mediaFinal)}`}>{formatGrade(mediaFinal)}</TableCell>
           </TableRow>
-        </TableHeader>
-        <TableBody>
-          {processedBoletim.map(({ disciplina, etapa1, etapa2, etapa3, etapa4, mediaFinal }) => (
-            <TableRow key={disciplina}>
-              <TableCell className="font-medium whitespace-nowrap">{disciplina}</TableCell>
-              <TableCell className={`text-center font-semibold ${getGradeColor(etapa1)}`}>{formatGrade(etapa1)}</TableCell>
-              <TableCell className={`text-center font-semibold ${getGradeColor(etapa2)}`}>{formatGrade(etapa2)}</TableCell>
-              <TableCell className={`text-center font-semibold ${getGradeColor(etapa3)}`}>{formatGrade(etapa3)}</TableCell>
-              <TableCell className={`text-center font-semibold ${getGradeColor(etapa4)}`}>{formatGrade(etapa4)}</TableCell>
-              <TableCell className={`text-center font-bold ${getGradeColor(mediaFinal)}`}>{formatGrade(mediaFinal)}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+        ))}
+      </TableBody>
+    </Table>
   );
 }

@@ -113,9 +113,9 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     // Clone the element and append it to the body to ensure it's rendered
     const clonedElement = originalElement.cloneNode(true) as HTMLElement;
     clonedElement.style.position = 'absolute';
-    clonedElement.style.top = '-9999px'; // Move it off-screen
-    clonedElement.style.left = '0px';
-    clonedElement.style.zIndex = '1000'; // Ensure it's on top layer for rendering
+    clonedElement.style.top = '0px';
+    clonedElement.style.left = '-9999px'; // Move it off-screen
+    clonedElement.style.zIndex = '-1'; 
     clonedElement.style.display = 'block';
     clonedElement.style.opacity = '1';
     
@@ -126,8 +126,18 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
             scale: 2,
             useCORS: true,
             backgroundColor: null,
+            logging: true,
+            width: clonedElement.scrollWidth,
+            height: clonedElement.scrollHeight
         });
 
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+
+        if (canvasWidth === 0 || canvasHeight === 0) {
+          throw new Error("Canvas gerado com dimensões inválidas (0).");
+        }
+        
         const imgData = canvas.toDataURL('image/jpeg', 0.9);
         const pdf = new jsPDF({
             orientation: 'p',
@@ -137,13 +147,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
 
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
-        const canvasWidth = canvas.width;
-        const canvasHeight = canvas.height;
-
-        if (canvasWidth === 0 || canvasHeight === 0) {
-          throw new Error("Canvas gerado com dimensões inválidas (0).");
-        }
-
+        
         const ratio = canvasWidth / canvasHeight;
         
         let imgWidth = pdfWidth - 20; 
@@ -345,7 +349,9 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
                     Boletim de Notas
                   </AccordionTrigger>
                   <AccordionContent className="pt-4">
-                    <StudentReportCard boletim={student.boletim} />
+                    <div className="overflow-x-auto rounded-lg border">
+                      <StudentReportCard boletim={student.boletim} />
+                    </div>
                   </AccordionContent>
                 </AccordionItem>
               )}
