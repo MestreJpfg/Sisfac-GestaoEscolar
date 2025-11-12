@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import FileUploader from "@/components/file-uploader";
+import GradesUploader from "@/components/grades-uploader";
 import { Loader2 } from "lucide-react";
 import { quotes } from "@/lib/quotes";
 import { useFirestore } from "@/firebase";
@@ -15,6 +16,7 @@ import { errorEmitter } from "@/firebase/error-emitter";
 import { ThemeToggle } from "./theme-toggle";
 import { commitBatchNonBlocking } from "@/firebase/non-blocking-updates";
 import ClassListGenerator from "./class-list-generator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function StudentManager() {
   const [dataExists, setDataExists] = useState<boolean | null>(null);
@@ -148,6 +150,7 @@ export default function StudentManager() {
 
       if (!student.rm) return null;
       student.rm = String(student.rm);
+      student.status = "ATIVO"; // Default status for uploaded students
 
       return student;
     }).filter(Boolean);
@@ -224,7 +227,7 @@ export default function StudentManager() {
               Gestão de Alunos 2025
             </h1>
             <p className="text-muted-foreground mt-2 text-sm sm:text-base max-w-lg mx-auto">
-              {dataExists ? "Filtre e visualize os dados dos alunos." : "Carregue o ficheiro de alunos para iniciar a gestão."}
+              {dataExists ? "Filtre e visualize os dados dos alunos ou carregue novos dados." : "Carregue o ficheiro de alunos para iniciar a gestão."}
             </p>
           </header>
 
@@ -235,7 +238,22 @@ export default function StudentManager() {
                 <p className="mt-4 text-muted-foreground">{isUploading ? "Aguarde, a processar e carregar os dados..." : "A verificar a base de dados..."}</p>
               </div>
             ) : dataExists ? (
-              <StudentDataView />
+              <Tabs defaultValue="view" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="view">Visualizar Alunos</TabsTrigger>
+                  <TabsTrigger value="upload_students">Carregar Alunos</TabsTrigger>
+                  <TabsTrigger value="upload_grades">Carregar Notas</TabsTrigger>
+                </TabsList>
+                <TabsContent value="view">
+                  <StudentDataView />
+                </TabsContent>
+                <TabsContent value="upload_students">
+                  <FileUploader onUploadComplete={handleUploadComplete} setIsLoading={setIsUploading} />
+                </TabsContent>
+                <TabsContent value="upload_grades">
+                  <GradesUploader />
+                </TabsContent>
+              </Tabs>
             ) : (
               <FileUploader onUploadComplete={handleUploadComplete} setIsLoading={setIsUploading} />
             )}
