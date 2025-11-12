@@ -98,6 +98,8 @@ export default function GradesUploader() {
           .replace(/é/g, 'e')
           .replace(/º/g, '')
           .replace(/\./g, '')
+          .replace(/\//g, '-') // Substitui / por -
+          .replace(/[\[\]*~]/g, '') // Remove caracteres inválidos do firestore
           .replace(/\s+/g, '_')
     );
     const rmIndex = headers.findIndex(h => h === 'matricula' || h === 'rm');
@@ -125,7 +127,7 @@ export default function GradesUploader() {
         headers.forEach((header, index) => {
             if (index === rmIndex || index === nameIndex) return;
 
-            const subject = header.replace(/\s+/g, '_').toLowerCase();
+            const subject = header;
             const gradeValue = row[index];
             
             let grade: number | null = null;
@@ -153,7 +155,7 @@ export default function GradesUploader() {
 
             headers.forEach((header, index) => {
               if (index === rmIndex || index === nameIndex) return;
-              const subject = header.replace(/\s+/g, '_').toLowerCase();
+              const subject = header;
               const gradeValue = row[index];
               let grade: number | null = null;
               if (gradeValue !== null && gradeValue !== undefined && String(gradeValue).trim() !== '') {
