@@ -349,7 +349,9 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
                     Boletim de Notas
                   </AccordionTrigger>
                   <AccordionContent className="pt-4">
-                     <StudentReportCard boletim={student.boletim} />
+                     <div className="relative w-full overflow-auto rounded-lg border">
+                        <StudentReportCard boletim={student.boletim} />
+                     </div>
                   </AccordionContent>
                 </AccordionItem>
               )}
