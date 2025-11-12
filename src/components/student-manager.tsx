@@ -3,20 +3,18 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import FileUploader from "@/components/file-uploader";
-import GradesUploader from "@/components/grades-uploader";
 import { Loader2 } from "lucide-react";
 import { quotes } from "@/lib/quotes";
 import { useFirestore } from "@/firebase";
-import { writeBatch, doc, getCountFromServer, collection } from "firebase/firestore";
+import { getCountFromServer, collection } from "firebase/firestore";
 import StudentDataView from "./student-data-view";
 import { useToast } from "@/hooks/use-toast";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { ThemeToggle } from "./theme-toggle";
-import { commitBatchNonBlocking } from "@/firebase/non-blocking-updates";
 import ClassListGenerator from "./class-list-generator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import GradesUploaderSheet from "./grades-uploader-sheet";
+import FileUploaderSheet from "./file-uploader-sheet";
 
 export default function StudentManager() {
   const [dataExists, setDataExists] = useState<boolean | null>(null);
@@ -64,140 +62,13 @@ export default function StudentManager() {
     
     checkDataExists();
   }, [firestore]);
-
-
-  const normalizeData = (data: any[]): any[] => {
-    if (!data || data.length < 2) return [];
-
-    const headers: string[] = data[0].map((header: any) => {
-        let h = String(header).trim().toLowerCase()
-          .replace(/ç/g, 'c')
-          .replace(/ã/g, 'a')
-          .replace(/é/g, 'e')
-          .replace(/º/g, '')
-          .replace(/\./g, '')
-          .replace(/\s+/g, '_');
-          
-        if (h === 'nome_do_registro_civil' || h === 'nome_registro_civil' || h === 'nome_de_registro_civil') {
-            return 'nome';
-        }
-        if (h === 'filiacao_1' || h === 'filiação_1') {
-            return 'filiacao_1';
-        }
-         if (h === 'filiacao_2' || h === 'filiação_2') {
-            return 'filiacao_2';
-        }
-        if (h === 'telefone') {
-            return 'telefones';
-        }
-        return h;
-    });
-    
-    const rmIndex = headers.indexOf('rm');
-    if (rmIndex === -1) {
-      toast({
-        variant: "destructive",
-        title: "Coluna 'RM' não encontrada",
-        description: "A planilha precisa ter uma coluna 'RM' para identificar cada aluno.",
-      });
-      return [];
-    }
-
-    return data.slice(1).map(row => {
-      const student: any = {};
-      row.forEach((value: any, index: number) => {
-        const header = headers[index];
-        if (!header) return;
-
-        let processedValue = value;
-        if (typeof value === 'string') {
-           const stringValue = value.trim().toUpperCase();
-            if (stringValue === "SIM") {
-              processedValue = true;
-            } else if (stringValue === "NÃO" || stringValue === "NAO") {
-              processedValue = false;
-            } else {
-              processedValue = value;
-            }
-        }
-        
-        if (value === null || String(value).trim() === '') {
-          processedValue = null;
-        }
-
-        if (header === 'telefones' && value) {
-            processedValue = String(value)
-                .split(/[,;/]/)
-                .map(phone => phone.replace(/\D/g, ''))
-                .filter(p => p && p.length >= 10);
-        }
-        
-        if (header === 'data_nascimento' && value) {
-          if (typeof value === 'number') {
-            const date = new Date(Math.round((value - 25569) * 86400 * 1000));
-            if (!isNaN(date.getTime())) {
-              processedValue = ('0' + date.getDate()).slice(-2) + '/' + ('0' + (date.getMonth() + 1)).slice(-2) + '/' + date.getFullYear();
-            } else {
-              processedValue = String(value);
-            }
-          } else {
-             processedValue = String(value);
-          }
-        }
-
-        student[header] = processedValue;
-      });
-
-      if (!student.rm) return null;
-      student.rm = String(student.rm);
-      student.status = "ATIVO"; // Default status for uploaded students
-
-      return student;
-    }).filter(Boolean);
-  };
-
-  const handleUploadComplete = async (data: any[]) => {
-    if (!firestore) {
-      toast({
-        variant: "destructive",
-        title: "Erro de Conexão",
-        description: "A conexão com a base de dados ainda não foi estabelecida."
-      });
-      return;
-    }
-  
-    setIsUploading(true);
-  
-    const normalizedStudents = normalizeData(data);
-    
-    if (normalizedStudents.length === 0) {
-      setIsUploading(false);
-      return;
-    }
-  
-    const alunosCollectionPath = "alunos";
-    const batch = writeBatch(firestore);
-    
-    normalizedStudents.forEach(student => {
-      if (student.rm) {
-        const docRef = doc(firestore, alunosCollectionPath, student.rm);
-        batch.set(docRef, student, { merge: true });
-      }
-    });
-  
-    commitBatchNonBlocking(batch, alunosCollectionPath);
-
-    setTimeout(() => {
-        toast({
-            title: "Sucesso!",
-            description: `${normalizedStudents.length} registros de alunos foram carregados na base de dados.`,
-        });
-        setDataExists(true);
-        setIsUploading(false);
-    }, 1500);
-  };
   
   const isPageLoading = dataExists === null;
+
+  const onUploadSuccess = () => {
+    setDataExists(true);
+    setIsUploading(false);
+  }
 
   return (
     <>
@@ -227,7 +98,7 @@ export default function StudentManager() {
               Gestão de Alunos 2025
             </h1>
             <p className="text-muted-foreground mt-2 text-sm sm:text-base max-w-lg mx-auto">
-              {dataExists ? "Filtre e visualize os dados dos alunos ou carregue novos dados." : "Carregue o ficheiro de alunos para iniciar a gestão."}
+              {dataExists ? "Filtre e visualize os dados dos alunos ou utilize os botões de ação." : "Carregue o ficheiro de alunos para iniciar a gestão."}
             </p>
           </header>
 
@@ -238,24 +109,12 @@ export default function StudentManager() {
                 <p className="mt-4 text-muted-foreground">{isUploading ? "Aguarde, a processar e carregar os dados..." : "A verificar a base de dados..."}</p>
               </div>
             ) : dataExists ? (
-              <Tabs defaultValue="view" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="view">Visualizar Alunos</TabsTrigger>
-                  <TabsTrigger value="upload_students">Carregar Alunos</TabsTrigger>
-                  <TabsTrigger value="upload_grades">Carregar Notas</TabsTrigger>
-                </TabsList>
-                <TabsContent value="view">
-                  <StudentDataView />
-                </TabsContent>
-                <TabsContent value="upload_students">
-                  <FileUploader onUploadComplete={handleUploadComplete} setIsLoading={setIsUploading} />
-                </TabsContent>
-                <TabsContent value="upload_grades">
-                  <GradesUploader />
-                </TabsContent>
-              </Tabs>
+                <StudentDataView />
             ) : (
-              <FileUploader onUploadComplete={handleUploadComplete} setIsLoading={setIsUploading} />
+                <div className="flex flex-col items-center justify-center h-80 rounded-lg border-2 border-dashed border-border bg-card/50">
+                    <p className="text-muted-foreground mb-4">Nenhum dado encontrado. Comece por carregar os dados dos alunos.</p>
+                    <FileUploaderSheet onUploadSuccess={onUploadSuccess} isPrimaryAction={true}/>
+                </div>
             )}
           </div>
         </div>
@@ -264,7 +123,13 @@ export default function StudentManager() {
         </footer>
       </main>
       
-      {dataExists && !isPageLoading && <ClassListGenerator />}
+      {dataExists && !isPageLoading && (
+        <div className="fixed bottom-6 right-6 flex flex-col gap-4 z-50 non-printable">
+            <GradesUploaderSheet />
+            <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
+            <ClassListGenerator />
+        </div>
+      )}
     </>
   );
 }
