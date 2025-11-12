@@ -18,12 +18,14 @@ import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import StudentDeclaration from "./student-declaration";
 import StudentEditDialog from "./student-edit-dialog";
-import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Download, Loader2, Share2, Pencil, Printer, MapPin } from "lucide-react";
+import StudentReportCard from "./student-report-card"; // Importa o novo componente
+import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Download, Loader2, Share2, Pencil, Printer, MapPin, BookCheck } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "./ui/accordion";
 
 const formatPhoneNumber = (phone: string): string => {
   const cleaned = ('' + phone).replace(/\D/g, '');
@@ -303,6 +305,8 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     { label: "Necessidades Especiais (NEE)", value: student.nee, icon: AlertTriangle },
   ];
 
+  const hasBoletim = student.boletim && Object.keys(student.boletim).length > 0;
+
   return (
     <>
       <Sheet open={isOpen} onOpenChange={onClose}>
@@ -318,50 +322,56 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
           </SheetHeader>
           
           <ScrollArea className="h-full pr-6 flex-1">
-            <div className="space-y-8 mt-6">
-              <div>
-                <h3 className="text-lg font-semibold text-foreground mb-4">Dados Pessoais</h3>
-                <div className="space-y-4">
+            <Accordion type="multiple" defaultValue={['personal']} className="w-full mt-6 space-y-4">
+              
+              <AccordionItem value="personal" className="border-b-0">
+                <AccordionTrigger className="text-lg font-semibold text-foreground py-2">Dados Pessoais</AccordionTrigger>
+                <AccordionContent className="pt-4 space-y-4">
                   {studentDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                </div>
-              </div>
-              
-              <Separator />
-              
-              <div>
-                <h3 className="text-lg font-semibold text-foreground mb-4">Dados Académicos</h3>
-                <div className="space-y-4">
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="academic" className="border-b-0">
+                <AccordionTrigger className="text-lg font-semibold text-foreground py-2">Dados Académicos</AccordionTrigger>
+                <AccordionContent className="pt-4 space-y-4">
                   {academicDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                </div>
-              </div>
-              
-              <Separator />
+                </AccordionContent>
+              </AccordionItem>
 
-              <div>
-                <h3 className="text-lg font-semibold text-foreground mb-4">Filiação</h3>
-                <div className="space-y-4">
+              {hasBoletim && (
+                <AccordionItem value="boletim" className="border-b-0">
+                  <AccordionTrigger className="text-lg font-semibold text-foreground py-2 flex items-center gap-2">
+                    <BookCheck className="w-5 h-5 text-primary"/>
+                    Boletim de Notas
+                  </AccordionTrigger>
+                  <AccordionContent className="pt-4">
+                    <StudentReportCard boletim={student.boletim} />
+                  </AccordionContent>
+                </AccordionItem>
+              )}
+
+              <AccordionItem value="family" className="border-b-0">
+                <AccordionTrigger className="text-lg font-semibold text-foreground py-2">Filiação</AccordionTrigger>
+                <AccordionContent className="pt-4 space-y-4">
                   {familyDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                </div>
-              </div>
+                </AccordionContent>
+              </AccordionItem>
 
-              <Separator />
-
-              <div>
-                <h3 className="text-lg font-semibold text-foreground mb-4">Endereço</h3>
-                <div className="space-y-4">
+              <AccordionItem value="address" className="border-b-0">
+                <AccordionTrigger className="text-lg font-semibold text-foreground py-2">Endereço</AccordionTrigger>
+                <AccordionContent className="pt-4 space-y-4">
                   {addressDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                </div>
-              </div>
+                </AccordionContent>
+              </AccordionItem>
 
-              <Separator />
-              
-              <div>
-                <h3 className="text-lg font-semibold text-foreground mb-4">Outras Informações</h3>
-                <div className="space-y-4">
+              <AccordionItem value="other" className="border-b-0">
+                <AccordionTrigger className="text-lg font-semibold text-foreground py-2">Outras Informações</AccordionTrigger>
+                <AccordionContent className="pt-4 space-y-4">
                   {otherDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                </div>
-              </div>
-            </div>
+                </AccordionContent>
+              </AccordionItem>
+
+            </Accordion>
           </ScrollArea>
           
           <SheetFooter className="mt-auto pt-4 border-t border-border/20">
