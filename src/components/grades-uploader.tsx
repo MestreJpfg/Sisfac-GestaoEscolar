@@ -91,8 +91,17 @@ export default function GradesUploader() {
   const updateGradesInFirestore = async (data: any[][]) => {
     if (!firestore) return;
 
-    const headers = data[0].map(h => String(h).trim());
-    const rmIndex = headers.findIndex(h => h.toLowerCase() === 'matrícula' || h.toLowerCase() === 'rm');
+    const headers: string[] = data[0].map((header: any) => 
+        String(header).trim().toLowerCase()
+          .replace(/ç/g, 'c')
+          .replace(/ã/g, 'a')
+          .replace(/é/g, 'e')
+          .replace(/º/g, '')
+          .replace(/\./g, '')
+          .replace(/\s+/g, '_')
+    );
+    const rmIndex = headers.findIndex(h => h === 'matricula' || h === 'rm');
+    const nameIndex = headers.findIndex(h => h === 'nome' || h === 'nome_do_aluno');
 
     if (rmIndex === -1) {
         throw new Error("A coluna 'Matrícula' ou 'RM' é obrigatória na planilha de notas.");
@@ -114,38 +123,50 @@ export default function GradesUploader() {
         const gradeUpdate: { [key: string]: any } = {};
 
         headers.forEach((header, index) => {
-            if (index === rmIndex || header.toLowerCase() === 'nome') return;
+            if (index === rmIndex || index === nameIndex) return;
 
             const subject = header.replace(/\s+/g, '_').toLowerCase();
-            const grade = row[index] !== null && row[index] !== '' ? Number(String(row[index]).replace(',', '.')) : null;
-
-            if (!isNaN(grade as any)) {
-                gradeUpdate[`boletim.${subject}.${etapa}`] = grade;
+            const gradeValue = row[index];
+            
+            let grade: number | null = null;
+            if (gradeValue !== null && gradeValue !== undefined && String(gradeValue).trim() !== '') {
+                const numericGrade = Number(String(gradeValue).replace(',', '.'));
+                if (!isNaN(numericGrade)) {
+                    grade = numericGrade;
+                }
             }
+            
+            gradeUpdate[`boletim.${subject}.${etapa}`] = grade;
         });
         
         if (studentDocSnap.exists()) {
             batch.update(studentDocRef, gradeUpdate);
             updatedCount++;
         } else {
+            const studentName = nameIndex !== -1 ? row[nameIndex] : `Aluno ${rm}`;
             const newStudentData: any = {
                 rm: rm,
-                nome: row[headers.findIndex(h => h.toLowerCase() === 'nome')] || `Aluno ${rm}`,
+                nome: studentName || `Aluno ${rm}`,
                 status: 'NÃO LISTADO',
                 boletim: {}
             };
 
             headers.forEach((header, index) => {
-              if (index === rmIndex || header.toLowerCase() === 'nome') return;
+              if (index === rmIndex || index === nameIndex) return;
               const subject = header.replace(/\s+/g, '_').toLowerCase();
-              const grade = row[index] !== null && row[index] !== '' ? Number(String(row[index]).replace(',', '.')) : null;
-
-              if (!isNaN(grade as any)) {
-                  if (!newStudentData.boletim[subject]) {
-                      newStudentData.boletim[subject] = {};
+              const gradeValue = row[index];
+              let grade: number | null = null;
+              if (gradeValue !== null && gradeValue !== undefined && String(gradeValue).trim() !== '') {
+                  const numericGrade = Number(String(gradeValue).replace(',', '.'));
+                  if (!isNaN(numericGrade)) {
+                      grade = numericGrade;
                   }
-                  newStudentData.boletim[subject][etapa] = grade;
               }
+
+              if (!newStudentData.boletim[subject]) {
+                  newStudentData.boletim[subject] = {};
+              }
+              newStudentData.boletim[subject][etapa] = grade;
             });
             batch.set(studentDocRef, newStudentData);
             createdCount++;
@@ -277,3 +298,5 @@ export default function GradesUploader() {
     </Card>
   );
 }
+
+    
