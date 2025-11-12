@@ -10,7 +10,6 @@ import { ClipboardList, X, Loader2, Download, Filter } from 'lucide-react';
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetTrigger } from './ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
@@ -147,28 +146,26 @@ export default function ClassListGenerator() {
         const today = new Date();
         const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(today);
   
-        const addHeaderAndFooter = (doc: jsPDF, title: string) => {
+        const addHeaderAndFooter = (doc: jsPDF, title: string, pageNumber: number) => {
             const pageW = doc.internal.pageSize.getWidth();
+            const pageH = doc.internal.pageSize.getHeight();
             
-            const textLine1 = 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
-            const textLine2 = 'INEP: 23070188';
-
             doc.setFontSize(10).setFont('helvetica', 'bold');
-            doc.text(textLine1, pageW / 2, 10, { align: 'center' });
+            doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', pageW / 2, 10, { align: 'center' });
             doc.setFontSize(8).setFont('helvetica', 'normal');
-            doc.text(textLine2, pageW / 2, 14, { align: 'center' });
+            doc.text('INEP: 23070188', pageW / 2, 14, { align: 'center' });
   
             doc.setFontSize(11).setFont('helvetica', 'normal');
             doc.text(title, pageW / 2, 20, { align: 'center' });
   
             const footerText = `Gerado em: ${formattedDate}`;
             doc.setFontSize(8);
-            const footerY = doc.internal.pageSize.getHeight() - 8;
-            doc.text(footerText, pageW / 2, footerY, { align: 'center' });
+            doc.text(footerText, pageW / 2, pageH - 8, { align: 'center' });
+            doc.text(`Página ${pageNumber}`, pageW - 10, pageH - 8, { align: 'right' });
         };
   
         const groupedStudents = students.reduce((acc, student) => {
-            const key = `${student.serie || 'N/A'}|${student.classe || 'N/A'}|${student.turno || 'N/A'}`;
+            const key = `${student.ensino || 'N/A'}|${student.serie || 'N/A'}|${student.classe || 'N/A'}|${student.turno || 'N/A'}`;
             if (!acc[key]) {
                 acc[key] = [];
             }
@@ -178,10 +175,11 @@ export default function ClassListGenerator() {
   
         const sortedGroupKeys = Object.keys(groupedStudents).sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
 
-        let isFirstPage = true;
+        let isFirstPageOfDoc = true;
   
         for (const key of sortedGroupKeys) {
             const group = groupedStudents[key];
+            const [ensino, serie, classe, turno] = key.split('|');
             const tableData = group.map((student, index) => [
                 index + 1,
                 student.nome,
@@ -189,23 +187,19 @@ export default function ClassListGenerator() {
                 student.rm || ''
             ]);
   
-            if (!isFirstPage) {
+            if (!isFirstPageOfDoc) {
                 doc.addPage();
             }
-            isFirstPage = false;
+            isFirstPageOfDoc = false;
   
-            const title = `Lista de Alunos - ${filters.ensino || ''} ${serie} ${classe} - Turno: ${turno}`.trim().replace(/ +/g, ' ');
+            const title = `Lista de Alunos - ${ensino} ${serie} ${classe} - Turno: ${turno}`.trim().replace(/N\/A/g, '').replace(/ +/g, ' ');
   
             doc.autoTable({
                 head: [['Nº', 'Nome do Aluno', 'Data de Nascimento', 'RM']],
                 body: tableData,
                 startY: 24,
                 didDrawPage: (data) => {
-                    addHeaderAndFooter(doc, title);
-                    const pageNumberText = `Página ${data.pageNumber}`;
-                    doc.setFontSize(8);
-                    const pageNumberY = doc.internal.pageSize.getHeight() - 8;
-                    doc.text(pageNumberText, doc.internal.pageSize.getWidth() - data.settings.margin.right, pageNumberY);
+                    addHeaderAndFooter(doc, title, data.pageNumber);
                 },
                 styles: {
                     font: 'helvetica',
@@ -246,129 +240,121 @@ export default function ClassListGenerator() {
   const isAnyFilterSelected = filters.ensino || filters.serie || filters.turno || filters.classe;
 
   return (
-    <TooltipProvider>
-        <Tooltip>
-            <TooltipTrigger asChild>
-                <Sheet open={isOpen} onOpenChange={setIsOpen}>
-                    <SheetTrigger asChild>
-                        <Button variant="outline" className="h-16 w-16 rounded-full shadow-lg p-0 flex items-center justify-center">
-                            <ClipboardList className="h-8 w-8" />
-                        </Button>
-                    </SheetTrigger>
-                    <SheetContent className="flex flex-col">
-                        <SheetHeader>
-                            <SheetTitle>Gerar Lista de Turma</SheetTitle>
-                            <SheetDescription>
-                                Selecione os filtros para gerar uma lista de alunos para impressão.
-                            </SheetDescription>
-                        </SheetHeader>
-                        
-                         <Accordion type="single" collapsible defaultValue="item-1" className="w-full">
-                            <AccordionItem value="item-1">
-                                <AccordionTrigger>
-                                    <div className="flex items-center gap-2">
-                                        <Filter className="h-4 w-4" />
-                                        <span>Filtros de Seleção</span>
-                                    </div>
-                                </AccordionTrigger>
-                                <AccordionContent>
-                                    <div className="space-y-4 py-4">
-                                        { isLoading ? (
-                                            <div className="flex items-center justify-center h-40">
-                                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                            </div>
-                                        ) : (
-                                        <>
-                                            <Select value={filters.ensino} onValueChange={(value) => handleFilterChange('ensino', value)}>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Filtrar por Ensino..." />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all">Todos os Segmentos</SelectItem>
-                                                    {uniqueOptions.ensinos.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
-                                                </SelectContent>
-                                            </Select>
-                                            <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)} disabled={!filters.ensino && uniqueOptions.series.length === 0}>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Filtrar por Série..." />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all">Todas as Séries</SelectItem>
-                                                    {uniqueOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                                                </SelectContent>
-                                            </Select>
-                                            <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)} disabled={!filters.serie && !filters.ensino}>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Filtrar por Turno..." />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all">Todos os Turnos</SelectItem>
-                                                    {uniqueOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                                                </SelectContent>
-                                            </Select>
-                                            <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)} disabled={!filters.turno && !filters.serie && !filters.ensino}>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Filtrar por Classe..." />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all">Todas as Classes</SelectItem>
-                                                    {uniqueOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                                                </SelectContent>
-                                            </Select>
-                                        </>
-                                        )}
-                                    </div>
-                                </AccordionContent>
-                            </AccordionItem>
-                        </Accordion>
-                        
-                        <div className="flex items-center gap-2 pt-4">
-                            <Button onClick={handleGenerateList} disabled={!isAnyFilterSelected || isGeneratingList || isLoading} className="flex-1">
-                                {isGeneratingList ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Gerar Lista'}
-                            </Button>
-                            {isAnyFilterSelected && (
-                            <Button variant="ghost" size="icon" onClick={clearFiltersAndResults}>
-                                <X className="h-4 w-4" />
-                            </Button>
-                            )}
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <SheetTrigger asChild>
+            <Button variant="secondary" className="flex items-center gap-2 shadow-lg">
+                <ClipboardList className="h-4 w-4" />
+                <span>Criar Listas</span>
+            </Button>
+        </SheetTrigger>
+        <SheetContent className="flex flex-col">
+            <SheetHeader>
+                <SheetTitle>Gerar Lista de Turma</SheetTitle>
+                <SheetDescription>
+                    Selecione os filtros para gerar uma lista de alunos para impressão.
+                </SheetDescription>
+            </SheetHeader>
+            
+             <Accordion type="single" collapsible defaultValue="item-1" className="w-full">
+                <AccordionItem value="item-1">
+                    <AccordionTrigger>
+                        <div className="flex items-center gap-2">
+                            <Filter className="h-4 w-4" />
+                            <span>Filtros de Seleção</span>
                         </div>
-
-                        <div className="mt-4 flex-1 overflow-y-auto border-t pt-4">
-                            {students.length > 0 ? (
-                                 <div className='flex flex-col h-full'>
-                                    <h3 className="font-semibold text-center mb-2">{`Resultado da Filtragem`}</h3>
-                                    <p className="text-sm text-muted-foreground text-center mb-4">{`${students.length} alunos encontrados`}</p>
-                                    <div className="flex-1 overflow-y-auto">
-                                        <ul className="divide-y">
-                                            {students.map((student) => (
-                                            <li key={student.rm} className="py-2 text-sm flex items-center">
-                                                <span className="w-6 text-right mr-2 text-muted-foreground">{students.indexOf(student) + 1}.</span>
-                                                <span>{student.nome}</span>
-                                            </li>
-                                            ))}
-                                        </ul>
-                                    </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                        <div className="space-y-4 py-4">
+                            { isLoading ? (
+                                <div className="flex items-center justify-center h-40">
+                                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
                                 </div>
                             ) : (
-                                <div className="text-center text-sm text-muted-foreground pt-10">
-                                    {isGeneratingList ? 'A gerar...' : 'Nenhum aluno encontrado ou nenhum filtro aplicado.'}
-                                </div>
+                            <>
+                                <Select value={filters.ensino} onValueChange={(value) => handleFilterChange('ensino', value)}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Filtrar por Ensino..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todos os Segmentos</SelectItem>
+                                        {uniqueOptions.ensinos.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)} disabled={!filters.ensino && uniqueOptions.series.length === 0}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Filtrar por Série..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todas as Séries</SelectItem>
+                                        {uniqueOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)} disabled={!filters.serie && !filters.ensino}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Filtrar por Turno..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todos os Turnos</SelectItem>
+                                        {uniqueOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)} disabled={!filters.turno && !filters.serie && !filters.ensino}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Filtrar por Classe..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todas as Classes</SelectItem>
+                                        {uniqueOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </>
                             )}
                         </div>
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
+            
+            <div className="flex items-center gap-2 pt-4">
+                <Button onClick={handleGenerateList} disabled={!isAnyFilterSelected || isGeneratingList || isLoading} className="flex-1">
+                    {isGeneratingList ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Gerar Lista'}
+                </Button>
+                {isAnyFilterSelected && (
+                <Button variant="ghost" size="icon" onClick={clearFiltersAndResults}>
+                    <X className="h-4 w-4" />
+                </Button>
+                )}
+            </div>
 
-                        <SheetFooter className="mt-auto pt-4 border-t">
-                            <Button onClick={handleDownload} disabled={students.length === 0 || isProcessing} className="w-full">
-                                <Download className="mr-2 h-4 w-4" />
-                                {isProcessing ? 'A processar...' : 'Download da Lista'}
-                            </Button>
-                        </SheetFooter>
-                    </SheetContent>
-                </Sheet>
-            </TooltipTrigger>
-            <TooltipContent side="left">
-                <p>Criar Listas de Turmas</p>
-            </TooltipContent>
-        </Tooltip>
-    </TooltipProvider>
+            <div className="mt-4 flex-1 overflow-y-auto border-t pt-4">
+                {students.length > 0 ? (
+                     <div className='flex flex-col h-full'>
+                        <h3 className="font-semibold text-center mb-2">{`Resultado da Filtragem`}</h3>
+                        <p className="text-sm text-muted-foreground text-center mb-4">{`${students.length} alunos encontrados`}</p>
+                        <div className="flex-1 overflow-y-auto">
+                            <ul className="divide-y">
+                                {students.map((student) => (
+                                <li key={student.rm} className="py-2 text-sm flex items-center">
+                                    <span className="w-6 text-right mr-2 text-muted-foreground">{students.indexOf(student) + 1}.</span>
+                                    <span>{student.nome}</span>
+                                </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="text-center text-sm text-muted-foreground pt-10">
+                        {isGeneratingList ? 'A gerar...' : 'Nenhum aluno encontrado ou nenhum filtro aplicado.'}
+                    </div>
+                )}
+            </div>
+
+            <SheetFooter className="mt-auto pt-4 border-t">
+                <Button onClick={handleDownload} disabled={students.length === 0 || isProcessing} className="w-full">
+                    <Download className="mr-2 h-4 w-4" />
+                    {isProcessing ? 'A processar...' : 'Download da Lista'}
+                </Button>
+            </SheetFooter>
+        </SheetContent>
+    </Sheet>
   );
 }

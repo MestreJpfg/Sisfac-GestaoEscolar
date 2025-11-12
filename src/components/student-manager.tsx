@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, X } from "lucide-react";
 import { quotes } from "@/lib/quotes";
 import { useFirestore } from "@/firebase";
 import { getCountFromServer, collection } from "firebase/firestore";
@@ -15,12 +14,15 @@ import { ThemeToggle } from "./theme-toggle";
 import ClassListGenerator from "./class-list-generator";
 import GradesUploaderSheet from "./grades-uploader-sheet";
 import FileUploaderSheet from "./file-uploader-sheet";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "./ui/button";
 
 export default function StudentManager() {
   const [dataExists, setDataExists] = useState<boolean | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [randomQuote, setRandomQuote] = useState<{ quote: string; author: string } | null>(null);
   const [currentDateTime, setCurrentDateTime] = useState('');
+  const [isFabMenuOpen, setIsFabMenuOpen] = useState(false);
 
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -68,7 +70,14 @@ export default function StudentManager() {
   const onUploadSuccess = () => {
     setDataExists(true);
     setIsUploading(false);
+    setIsFabMenuOpen(false);
   }
+
+  const fabItems = [
+    { component: <ClassListGenerator key="class-list" /> },
+    { component: <FileUploaderSheet key="file-upload" onUploadSuccess={onUploadSuccess} /> },
+    { component: <GradesUploaderSheet key="grades-upload" /> },
+  ].reverse(); // Reverse to have the main action on top
 
   return (
     <>
@@ -124,10 +133,46 @@ export default function StudentManager() {
       </main>
       
       {dataExists && !isPageLoading && (
-        <div className="fixed bottom-6 right-6 flex flex-col gap-4 z-50 non-printable">
-            <GradesUploaderSheet />
-            <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
-            <ClassListGenerator />
+        <div className="fixed bottom-6 right-6 flex flex-col items-end gap-4 z-50 non-printable">
+          <AnimatePresence>
+            {isFabMenuOpen && (
+              <motion.div
+                className="flex flex-col items-end gap-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                {fabItems.map((item, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0, transition: { delay: index * 0.1 } }}
+                    exit={{ opacity: 0, y: 20, transition: { delay: index * 0.05 } }}
+                  >
+                    {item.component}
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <Button
+            onClick={() => setIsFabMenuOpen(!isFabMenuOpen)}
+            className="h-16 w-16 rounded-full shadow-lg p-0 flex items-center justify-center"
+            aria-expanded={isFabMenuOpen}
+          >
+            <AnimatePresence initial={false}>
+              <motion.div
+                key={isFabMenuOpen ? "x" : "plus"}
+                initial={{ rotate: -45, opacity: 0, scale: 0.5 }}
+                animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                exit={{ rotate: 45, opacity: 0, scale: 0.5 }}
+                transition={{ duration: 0.2 }}
+                className="absolute"
+              >
+                {isFabMenuOpen ? <X className="h-8 w-8" /> : <Plus className="h-8 w-8" />}
+              </motion.div>
+            </AnimatePresence>
+          </Button>
         </div>
       )}
     </>
