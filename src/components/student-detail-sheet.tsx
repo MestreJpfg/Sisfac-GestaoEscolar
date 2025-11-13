@@ -350,7 +350,9 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="pt-4">
-                     <StudentReportCard boletim={student.boletim} />
+                     <div className="relative w-full overflow-auto rounded-lg border">
+                       <StudentReportCard boletim={student.boletim} />
+                     </div>
                   </AccordionContent>
                 </AccordionItem>
               )}
@@ -440,7 +442,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
         </SheetContent>
       </Sheet>
       
-      <div className="absolute -left-[9999px] top-0 opacity-0 printable-content" aria-hidden="true">
+      <div className="printable-area">
           <StudentDeclaration student={student} />
       </div>
       
