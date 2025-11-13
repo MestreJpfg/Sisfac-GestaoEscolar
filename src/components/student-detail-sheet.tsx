@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -344,9 +343,11 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
 
               {hasBoletim && (
                 <AccordionItem value="boletim" className="border-b-0">
-                  <AccordionTrigger className="text-lg font-semibold text-foreground py-2 flex items-center gap-2">
-                    <BookCheck className="w-5 h-5 text-primary"/>
-                    Boletim de Notas
+                  <AccordionTrigger className="text-lg font-semibold text-foreground py-2">
+                    <div className="flex items-center gap-2">
+                      <BookCheck className="w-5 h-5 text-primary"/>
+                      <span>Boletim de Notas</span>
+                    </div>
                   </AccordionTrigger>
                   <AccordionContent className="pt-4">
                      <div className="relative w-full overflow-auto rounded-lg border">
