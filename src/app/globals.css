@@ -90,33 +90,3 @@
     );
   }
 }
-
-.printable-area {
-  display: none;
-}
-
-@media print {
-  body {
-    background: none !important;
-    color: black !important;
-  }
-
-  .non-printable {
-    display: none !important;
-  }
-  
-  body > *:not(.printable-area) {
-    display: none !important;
-  }
-
-  .printable-area {
-    display: block !important;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: auto;
-    padding: 0;
-    margin: 0;
-  }
-}

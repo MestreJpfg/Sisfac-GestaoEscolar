@@ -98,73 +98,52 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
   };
 
   const generatePdfBlob = async (): Promise<Blob | null> => {
-    const originalElement = document.getElementById(`declaration-${student.rm}`);
-    if (!originalElement) {
-        console.error("Elemento de declaração original não encontrado.");
-        toast({
-            variant: "destructive",
-            title: "Erro ao Gerar PDF",
-            description: "O elemento da declaração não foi encontrado.",
-        });
-        return null;
-    }
-
-    // Clone the element and append it to the body to ensure it's rendered
-    const clonedElement = originalElement.cloneNode(true) as HTMLElement;
-    clonedElement.style.position = 'absolute';
-    clonedElement.style.top = '0px';
-    clonedElement.style.left = '-9999px'; // Move it off-screen
-    clonedElement.style.zIndex = '-1'; 
-    clonedElement.style.display = 'block';
-    clonedElement.style.opacity = '1';
+    // Create a temporary element to render the declaration for capturing
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px'; // Move it off-screen
+    container.style.top = '0';
+    container.style.width = '210mm'; // A4 width
     
-    document.body.appendChild(clonedElement);
+    // Create a temporary StudentDeclaration to be captured
+    const declarationElement = document.createElement('div');
+    container.appendChild(declarationElement);
+    document.body.appendChild(container);
+
+    // This is a trick to render React component into a DOM element manually
+    const reactRoot = await import('react-dom/client').then(m => m.createRoot(declarationElement));
+    await new Promise(resolve => {
+        reactRoot.render(<StudentDeclaration student={student} />);
+        setTimeout(resolve, 500); // give it time to render images etc.
+    });
 
     try {
-        const canvas = await html2canvas(clonedElement, {
+        const canvas = await html2canvas(container, {
             scale: 2,
             useCORS: true,
-            backgroundColor: null,
-            logging: true,
-            width: clonedElement.scrollWidth,
-            height: clonedElement.scrollHeight
+            width: container.scrollWidth,
+            height: container.scrollHeight,
         });
-
-        const canvasWidth = canvas.width;
-        const canvasHeight = canvas.height;
-
-        if (canvasWidth === 0 || canvasHeight === 0) {
-          throw new Error("Canvas gerado com dimensões inválidas (0).");
-        }
         
-        const imgData = canvas.toDataURL('image/jpeg', 0.9);
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
         const pdf = new jsPDF({
             orientation: 'p',
             unit: 'mm',
-            format: 'a4'
+            format: 'a4',
         });
-
+        
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
+        const ratio = canvas.width / canvas.height;
+        let imgWidth = pdfWidth;
+        let imgHeight = pdfWidth / ratio;
         
-        const ratio = canvasWidth / canvasHeight;
-        
-        let imgWidth = pdfWidth - 20; 
-        let imgHeight = imgWidth / ratio;
-
-        if (imgHeight > pdfHeight - 20) {
-            imgHeight = pdfHeight - 20;
+        if (imgHeight > pdfHeight) {
+            imgHeight = pdfHeight;
             imgWidth = imgHeight * ratio;
         }
 
-        const x = (pdfWidth - imgWidth) / 2;
-        const y = (pdfHeight - imgHeight) / 2;
-        
-        if (imgWidth <= 0 || imgHeight <= 0 || !isFinite(x) || !isFinite(y)) {
-          throw new Error("Coordenadas ou dimensões inválidas para a imagem no PDF.");
-        }
-
-        pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight, undefined, 'MEDIUM');
+        pdf.addImage(imgData, 'JPEG', (pdfWidth - imgWidth) / 2, (pdfHeight - imgHeight) / 2, imgWidth, imgHeight);
         return pdf.output('blob');
 
     } catch (error) {
@@ -176,8 +155,8 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
         });
         return null;
     } finally {
-        // Always remove the cloned element
-        document.body.removeChild(clonedElement);
+        reactRoot.unmount();
+        document.body.removeChild(container);
     }
   };
 
@@ -197,8 +176,27 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     setIsProcessing(false);
   };
   
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    setIsProcessing(true);
+    const blob = await generatePdfBlob();
+    if (blob) {
+      const url = URL.createObjectURL(blob);
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = url;
+      document.body.appendChild(iframe);
+      iframe.onload = () => {
+        setTimeout(() => {
+          iframe.contentWindow?.print();
+          // Clean up after a delay
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+            URL.revokeObjectURL(url);
+          }, 100);
+        }, 100);
+      };
+    }
+    setIsProcessing(false);
   };
 
   const handleShare = async () => {
@@ -313,7 +311,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
   return (
     <>
       <Sheet open={isOpen} onOpenChange={onClose}>
-        <SheetContent className="w-full sm:max-w-md flex flex-col non-printable">
+        <SheetContent className="w-full sm:max-w-md flex flex-col">
           <SheetHeader className="text-left">
             <SheetTitle className="text-2xl font-bold text-primary flex items-center gap-3">
               <User size={28}/>
@@ -428,7 +426,11 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="ghost" size="icon" onClick={handlePrint} disabled={isProcessing}>
+                       {isProcessing ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      ) : (
                        <Printer className="w-4 h-4 text-primary" />
+                      )}
                        <span className="sr-only">Imprimir Declaração</span>
                     </Button>
                   </TooltipTrigger>
@@ -442,8 +444,10 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
         </SheetContent>
       </Sheet>
       
-      <div className="printable-area">
-          <StudentDeclaration student={student} />
+      <div style={{ display: 'none' }}>
+        <div id={`declaration-${student.rm}`}>
+            <StudentDeclaration student={student} />
+        </div>
       </div>
       
       <StudentEditDialog
