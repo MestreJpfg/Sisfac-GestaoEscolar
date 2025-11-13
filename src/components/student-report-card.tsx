@@ -42,7 +42,7 @@ export default function StudentReportCard({ boletim }: StudentReportCardProps) {
   }
 
   const processedBoletim = Object.entries(boletim)
-    .filter(([disciplina]) => disciplina.toLowerCase() !== 'aluno' && disciplina.toLowerCase() !== 'nome_do_aluno') // Filtra a disciplina "aluno"
+    .filter(([disciplina]) => disciplina.toLowerCase() !== 'aluno' && disciplina.toLowerCase() !== 'nome_do_aluno')
     .map(([disciplina, notas]) => {
       const validGrades = [notas.etapa1, notas.etapa2, notas.etapa3, notas.etapa4].filter(
         (nota): nota is number => nota !== null && nota !== undefined
@@ -62,8 +62,8 @@ export default function StudentReportCard({ boletim }: StudentReportCardProps) {
   }).sort((a, b) => a.disciplina.localeCompare(b.disciplina));
 
   return (
-    <div className="relative w-full overflow-x-auto rounded-lg border">
-        <Table>
+    <div className="relative w-full overflow-x-auto">
+        <Table className="min-w-[600px]">
         <TableHeader>
             <TableRow>
             <TableHead className="font-bold text-foreground whitespace-nowrap min-w-[150px]">Disciplina</TableHead>
