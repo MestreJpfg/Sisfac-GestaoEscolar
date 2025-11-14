@@ -1,8 +1,9 @@
+
 "use client";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent } from "./ui/card";
-import { BookUser, Loader2, Search, ArrowUpDown } from "lucide-react";
+import { BookUser, Loader2, Search, ArrowUpDown, BookCheck } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
@@ -16,17 +17,17 @@ interface StudentTableProps {
   students: any[];
   isLoading: boolean;
   onRowClick: (student: any) => void;
+  onReportCardClick: (student: any) => void;
   hasSearched: boolean;
   onSort: (key: string) => void;
   sortConfig: SortConfig;
 }
 
-export default function StudentTable({ students, isLoading, onRowClick, hasSearched, onSort, sortConfig }: StudentTableProps) {
+export default function StudentTable({ students, isLoading, onRowClick, onReportCardClick, hasSearched, onSort, sortConfig }: StudentTableProps) {
   
   const SortableHeader = ({ sortKey, children, className }: { sortKey: string, children: React.ReactNode, className?: string }) => {
     const isSorted = sortConfig.key === sortKey;
-    const direction = sortConfig.direction === 'ascending' ? 'asc' : 'desc';
-
+    
     return (
         <TableHead className={cn("text-left", className)}>
             <Button variant="ghost" onClick={() => onSort(sortKey)} className="px-2 py-1 h-auto -ml-2">
@@ -73,6 +74,11 @@ export default function StudentTable({ students, isLoading, onRowClick, hasSearc
     )
   }
 
+  const handleReportCardClick = (e: React.MouseEvent, student: any) => {
+    e.stopPropagation();
+    onReportCardClick(student);
+  };
+
   return (
     <Card>
       <CardContent className="p-0">
@@ -84,25 +90,38 @@ export default function StudentTable({ students, isLoading, onRowClick, hasSearc
                 <SortableHeader sortKey="serie" className="text-center">Série</SortableHeader>
                 <SortableHeader sortKey="classe" className="text-center">Classe</SortableHeader>
                 <SortableHeader sortKey="turno" className="text-center">Turno</SortableHeader>
-                <SortableHeader sortKey="data_nascimento" className="text-center">Data de Nasc.</SortableHeader>
+                <TableHead className="text-center">Boletim</TableHead>
                 <SortableHeader sortKey="rm" className="text-center">RM</SortableHeader>
                 <SortableHeader sortKey="nee" className="text-center">NEE</SortableHeader>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {students.map((student) => (
-                <TableRow key={student.id} onClick={() => onRowClick(student)} className="cursor-pointer hover:bg-muted/50">
-                  <TableCell className="font-medium text-left whitespace-nowrap">{student.nome || <span className="text-muted-foreground italic">Sem nome</span>}</TableCell>
-                  <TableCell className="text-center whitespace-nowrap">{student.serie}</TableCell>
-                  <TableCell className="text-center whitespace-nowrap">{student.classe}</TableCell>
-                  <TableCell className="text-center whitespace-nowrap">{student.turno}</TableCell>
-                  <TableCell className="text-center whitespace-nowrap">{student.data_nascimento}</TableCell>
-                  <TableCell className="text-center whitespace-nowrap">{student.rm}</TableCell>
-                  <TableCell className="text-center whitespace-nowrap">
-                    {student.nee ? <Badge variant="destructive">SIM</Badge> : <Badge variant="secondary">NÃO</Badge>}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {students.map((student) => {
+                const hasBoletim = student.boletim && Object.keys(student.boletim).length > 0;
+                return (
+                  <TableRow key={student.id} onClick={() => onRowClick(student)} className="cursor-pointer hover:bg-muted/50">
+                    <TableCell className="font-medium text-left whitespace-nowrap">{student.nome || <span className="text-muted-foreground italic">Sem nome</span>}</TableCell>
+                    <TableCell className="text-center whitespace-nowrap">{student.serie}</TableCell>
+                    <TableCell className="text-center whitespace-nowrap">{student.classe}</TableCell>
+                    <TableCell className="text-center whitespace-nowrap">{student.turno}</TableCell>
+                    <TableCell className="text-center">
+                       <Button 
+                          variant="ghost" 
+                          size="icon"
+                          disabled={!hasBoletim}
+                          onClick={(e) => handleReportCardClick(e, student)}
+                          className="h-8 w-8"
+                        >
+                          <BookCheck className="h-4 w-4" />
+                       </Button>
+                    </TableCell>
+                    <TableCell className="text-center whitespace-nowrap">{student.rm}</TableCell>
+                    <TableCell className="text-center whitespace-nowrap">
+                      {student.nee ? <Badge variant="destructive">SIM</Badge> : <Badge variant="secondary">NÃO</Badge>}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

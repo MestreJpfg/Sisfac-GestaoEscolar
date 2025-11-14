@@ -19,6 +19,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
+import StudentReportCardDialog from './student-report-card-dialog';
 
 export default function StudentDataView() {
   const firestore = useFirestore();
@@ -27,6 +28,7 @@ export default function StudentDataView() {
   const [isLoading, setIsLoading] = useState(false);
   
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
+  const [reportCardStudent, setReportCardStudent] = useState<any | null>(null);
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
 
   const [filters, setFilters] = useState({
@@ -223,6 +225,10 @@ export default function StudentDataView() {
     setSelectedStudent(student);
   };
 
+  const handleOpenReportCard = (student: any) => {
+    setReportCardStudent(student);
+  };
+
   const handleCloseSheet = () => {
     setSelectedStudent(null);
   };
@@ -324,6 +330,7 @@ export default function StudentDataView() {
         students={sortedStudents}
         isLoading={isLoading}
         onRowClick={handleStudentSelect}
+        onReportCardClick={handleOpenReportCard}
         hasSearched={hasSearched}
         onSort={handleSort}
         sortConfig={sortConfig}
@@ -335,8 +342,16 @@ export default function StudentDataView() {
         onClose={handleCloseSheet}
         onUpdate={handleStudentUpdate}
       />
+
+      {reportCardStudent && (
+        <StudentReportCardDialog
+            isOpen={!!reportCardStudent}
+            onClose={() => setReportCardStudent(null)}
+            boletim={reportCardStudent.boletim || {}}
+            student={reportCardStudent}
+        />
+      )}
     </div>
   );
 }
 
-    
