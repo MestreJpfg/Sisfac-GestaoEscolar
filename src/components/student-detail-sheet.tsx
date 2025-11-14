@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -122,7 +123,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
             height: container.scrollHeight,
         });
         
-        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
         const pdf = new jsPDF({
             orientation: 'p',
             unit: 'mm',
@@ -469,3 +470,5 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     </>
   );
 }
+
+    
