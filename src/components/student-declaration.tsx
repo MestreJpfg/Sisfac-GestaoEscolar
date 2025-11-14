@@ -18,7 +18,7 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
 
     return (
         <div id={`declaration-${student.rm}`} className="bg-white text-black font-sans" style={{ width: '210mm', minHeight: '297mm', fontFamily: 'Arial, sans-serif' }}>
-            <div className="flex flex-col h-full px-6 pt-2 pb-2">
+            <div className="flex flex-col h-full px-6 pt-10 pb-2">
                 {/* Cabeçalho */}
                 <header className="flex flex-col items-center text-center text-[9px] font-bold">
                     <div className="flex items-center gap-4 mb-4">
