@@ -174,48 +174,6 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     setIsProcessing(false);
   };
   
-  const handlePrint = async () => {
-    setIsProcessing(true);
-    const blob = await generatePdfBlob();
-    if (blob) {
-      const url = URL.createObjectURL(blob);
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.src = url;
-      document.body.appendChild(iframe);
-      
-      iframe.onload = () => {
-        try {
-            if (iframe.contentWindow) {
-                iframe.contentWindow.focus();
-                iframe.contentWindow.print();
-            } else {
-                 toast({
-                  variant: "destructive",
-                  title: "Erro ao Imprimir",
-                  description: "Não foi possível aceder ao conteúdo para impressão.",
-                });
-            }
-        } catch(e) {
-             toast({
-              variant: "destructive",
-              title: "Erro ao Imprimir",
-              description: "Não foi possível abrir o diálogo de impressão. Tente desativar o bloqueador de pop-ups.",
-            });
-        }
-      };
-
-       // Clean up after a short delay
-       setTimeout(() => {
-          document.body.removeChild(iframe);
-          URL.revokeObjectURL(url);
-          setIsProcessing(false);
-        }, 2000);
-    } else {
-        setIsProcessing(false);
-    }
-  };
-
   const handleShare = async () => {
     setIsProcessing(true);
     const blob = await generatePdfBlob();
@@ -429,21 +387,6 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Partilhar Declaração</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={handlePrint} disabled={isProcessing}>
-                       {isProcessing ? (
-                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                      ) : (
-                       <Printer className="w-4 h-4 text-primary" />
-                      )}
-                       <span className="sr-only">Imprimir Declaração</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Imprimir Declaração</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
