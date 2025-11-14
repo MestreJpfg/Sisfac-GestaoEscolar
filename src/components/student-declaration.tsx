@@ -66,7 +66,7 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
                 </main>
 
                  {/* Assinatura */}
-                 <div className="pt-16 flex justify-center items-end">
+                 <div className="pt-4 flex justify-center items-end">
                     <div className="relative text-center w-[250px]">
                         <div className="absolute inset-x-0 top-0 flex justify-center items-center">
                             <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" width={200} height={100} unoptimized className="opacity-80" />
@@ -83,7 +83,7 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
 
 
                 {/* Rodapé */}
-                <footer className="pt-8">
+                <footer className="pt-4">
                      <div className="flex w-full">
                         <div className="h-2 w-full" style={{backgroundColor: '#00857F'}}></div>
                         <div className="h-2 w-1/4" style={{backgroundColor: '#F38A00'}}></div>
