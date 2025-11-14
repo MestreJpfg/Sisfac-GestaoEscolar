@@ -115,9 +115,6 @@ export default function StudentReportCardDialog({
             Boletim de Notas
             <span className="block text-base font-normal text-muted-foreground mt-1">{student?.nome}</span>
           </DialogTitle>
-          <DialogDescription>
-            Notas do aluno ao longo do ano letivo. Use os botões abaixo para fazer o download.
-          </DialogDescription>
         </DialogHeader>
         <div className="relative w-full overflow-auto mt-4">
             <StudentReportCard boletim={boletim} />
