@@ -114,7 +114,7 @@ export default function StudentReportCardDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col">
+      <DialogContent className="max-w-4xl w-full">
         <DialogHeader>
           <DialogTitle>
             Boletim de Notas
@@ -124,9 +124,11 @@ export default function StudentReportCardDialog({
             Notas do aluno ao longo do ano letivo. Use os botões abaixo para imprimir.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex-1 relative w-full overflow-y-auto mt-4 border rounded-lg">
-          <StudentReportCard boletim={boletim} />
-        </div>
+        <ScrollArea className="max-h-[60vh] w-full overflow-y-auto mt-4 border rounded-lg">
+          <div className="relative w-full overflow-auto">
+            <StudentReportCard boletim={boletim} />
+          </div>
+        </ScrollArea>
         <DialogFooter className="mt-4 pt-4 border-t flex-col sm:flex-col sm:space-x-0 gap-2">
             <p className="text-sm text-center text-muted-foreground mb-2">Opções de Impressão (PDF)</p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
