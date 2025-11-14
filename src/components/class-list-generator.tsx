@@ -265,24 +265,22 @@ export default function ClassListGenerator() {
       for (let i = 0; i < studentChunks.length; i++) {
         const chunk = studentChunks[i];
   
+        // React 18: Render is async. No callback is needed.
         await new Promise<void>(resolve => {
-          root.render(<ReportCardGrid students={chunk} />, async () => {
-            await new Promise(r => setTimeout(r, 500)); // wait for render
-            
-            const canvas = await html2canvas(renderContainer, { scale: 2, useCORS: true });
-            const imgData = canvas.toDataURL('image/jpeg', 1.0);
-            
-            if (i > 0) {
-              pdf.addPage();
-            }
-            
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-  
-            resolve();
-          });
+            root.render(<ReportCardGrid students={chunk} />);
+            setTimeout(resolve, 500); // Give it time to render
         });
+        
+        const canvas = await html2canvas(renderContainer, { scale: 2, useCORS: true });
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+        
+        if (i > 0) {
+          pdf.addPage();
+        }
+        
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
       }
       
       root.unmount();
@@ -434,5 +432,3 @@ export default function ClassListGenerator() {
     </Sheet>
   );
 }
-
-    
