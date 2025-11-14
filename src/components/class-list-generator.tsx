@@ -272,7 +272,7 @@ export default function ClassListGenerator() {
         });
         
         const canvas = await html2canvas(renderContainer, { scale: 2, useCORS: true });
-        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
         
         if (i > 0) {
           pdf.addPage();
