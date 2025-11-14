@@ -100,23 +100,20 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
   };
 
   const generatePdfBlob = async (): Promise<Blob | null> => {
-    // Create a temporary element to render the declaration for capturing
     const container = document.createElement('div');
     container.style.position = 'absolute';
-    container.style.left = '-9999px'; // Move it off-screen
+    container.style.left = '-9999px';
     container.style.top = '0';
-    container.style.width = '210mm'; // A4 width
+    container.style.width = '210mm';
     
-    // Create a temporary StudentDeclaration to be captured
     const declarationElement = document.createElement('div');
     container.appendChild(declarationElement);
     document.body.appendChild(container);
 
-    // This is a trick to render React component into a DOM element manually
     const reactRoot = await import('react-dom/client').then(m => m.createRoot(declarationElement));
     await new Promise(resolve => {
         reactRoot.render(<StudentDeclaration student={student} />);
-        setTimeout(resolve, 500); // give it time to render images etc.
+        setTimeout(resolve, 500); 
     });
 
     try {
@@ -190,7 +187,6 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
       iframe.onload = () => {
         setTimeout(() => {
           iframe.contentWindow?.print();
-          // Clean up after a delay
           setTimeout(() => {
             document.body.removeChild(iframe);
             URL.revokeObjectURL(url);
@@ -267,7 +263,6 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
 
   const address = parseAddress(student.endereco);
   
-  // Use `telefones` (plural) from student data
   const studentPhones = student.telefones || (student.telefone ? [student.telefone] : []);
 
   const studentDetails = [
@@ -335,7 +330,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
               </section>
 
               <section>
-                <SectionTitle>Dados Académicos</SectionTitle>
+                <SectionTitle>Dados Acadêmicos</SectionTitle>
                 <div className="space-y-4">
                   {academicDetails.map(item => <DetailItem key={item.label} {...item} />)}
                 </div>
@@ -345,13 +340,11 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
                 <section>
                    <SectionTitle>
                     <div className="flex items-center gap-2">
-                      <BookCheck className="w-5 h-5 text-primary"/>
+                      <BookCheck className="w-5 h-5"/>
                       <span>Boletim de Notas</span>
                     </div>
                   </SectionTitle>
-                  <div className="relative w-full overflow-auto rounded-lg border">
-                    <StudentReportCard boletim={student.boletim} />
-                  </div>
+                  <StudentReportCard boletim={student.boletim} />
                 </section>
               )}
 
