@@ -36,7 +36,10 @@ export default function StudentReportCardDialog({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl w-full">
         <DialogHeader>
-          <DialogTitle>Boletim de Notas - {studentName}</DialogTitle>
+          <DialogTitle>
+            Boletim de Notas
+            <span className="block text-base font-normal text-muted-foreground mt-1">{studentName}</span>
+          </DialogTitle>
           <DialogDescription>
             Notas do aluno ao longo do ano letivo.
           </DialogDescription>
