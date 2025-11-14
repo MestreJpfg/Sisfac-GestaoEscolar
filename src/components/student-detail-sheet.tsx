@@ -16,7 +16,7 @@ import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import StudentDeclaration from "./student-declaration";
 import StudentEditDialog from "./student-edit-dialog";
-import StudentReportCardDialog from "./student-report-card-dialog";
+import StudentReportCard from "./student-report-card";
 import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Download, Loader2, Share2, Pencil, Printer, MapPin, BookCheck } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +24,7 @@ import { useFirestore } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import StudentReportCardDialog from "./student-report-card-dialog";
 
 const formatPhoneNumber = (phone: string): string => {
   const cleaned = ('' + phone).replace(/\D/g, '');

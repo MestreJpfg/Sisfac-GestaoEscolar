@@ -13,12 +13,11 @@ import {
 } from "@/components/ui/dialog";
 import StudentReportCard from "./student-report-card";
 import { Button } from "./ui/button";
-import { Loader2, FileText, FileSpreadsheet, Files, ChevronsUpDown, Printer } from "lucide-react";
+import { Loader2, FileText, FileSpreadsheet, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ReportCardWithDeclaration from "./report-card-with-declaration";
 import ReportCardDetailed from "./report-card-detailed";
-import ReportCardCompact from "./report-card-compact";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 
 interface Boletim {
@@ -38,7 +37,7 @@ interface StudentReportCardDialogProps {
   student: any;
 }
 
-type PdfType = 'declaration' | 'detailed' | 'compact';
+type PdfType = 'declaration' | 'detailed';
 
 export default function StudentReportCardDialog({
   isOpen,
@@ -70,11 +69,6 @@ export default function StudentReportCardDialog({
             componentToRender = <ReportCardDetailed student={student} boletim={boletim} />;
             fileName = `Boletim_Detalhado_${student.nome.replace(/\s+/g, '_')}.pdf`;
             break;
-        case 'compact':
-            componentToRender = <ReportCardCompact student={student} boletim={boletim} />;
-            fileName = `Boletim_Compacto_${student.nome.replace(/\s+/g, '_')}.pdf`;
-            pdfOptions.orientation = 'l'; // Landscape for compact view
-            break;
     }
     
     const declarationElement = document.createElement('div');
@@ -96,7 +90,39 @@ export default function StudentReportCardDialog({
         const pdfHeight = pdf.internal.pageSize.getHeight();
         
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-        pdf.save(fileName);
+        
+        const blob = pdf.output('blob');
+        const url = URL.createObjectURL(blob);
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = url;
+        document.body.appendChild(iframe);
+        
+        iframe.onload = () => {
+          try {
+              if (iframe.contentWindow) {
+                  iframe.contentWindow.focus();
+                  iframe.contentWindow.print();
+              } else {
+                   toast({
+                    variant: "destructive",
+                    title: "Erro ao Imprimir",
+                    description: "Não foi possível aceder ao conteúdo para impressão.",
+                  });
+              }
+          } catch(e) {
+               toast({
+                variant: "destructive",
+                title: "Erro ao Imprimir",
+                description: "Não foi possível abrir o diálogo de impressão. Tente desativar o bloqueador de pop-ups.",
+              });
+          }
+          setTimeout(() => {
+              document.body.removeChild(iframe);
+              URL.revokeObjectURL(url);
+          }, 2000);
+        };
+
 
     } catch (error) {
         console.error("Erro ao gerar PDF:", error);
@@ -115,47 +141,47 @@ export default function StudentReportCardDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-full">
+      <DialogContent className="max-w-4xl w-full flex flex-col h-[90vh]">
         <DialogHeader>
           <DialogTitle>
             Boletim de Notas
             <span className="block text-base font-normal text-muted-foreground mt-1">{student?.nome}</span>
           </DialogTitle>
           <DialogDescription>
-            Notas do aluno ao longo do ano letivo. Expanda as opções para imprimir.
+            Notas do aluno ao longo do ano letivo. Use os botões abaixo para imprimir.
           </DialogDescription>
         </DialogHeader>
-        <div className="relative w-full overflow-auto mt-4 border rounded-lg">
-            <StudentReportCard boletim={boletim} />
-        </div>
-        <DialogFooter className="mt-4 pt-4 border-t">
-            <Collapsible className="w-full space-y-4">
-                <CollapsibleTrigger asChild>
-                    <Button variant="ghost" className="w-full flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                             <Printer className="h-4 w-4" />
-                            <span>Opções de Impressão (PDF)</span>
-                        </div>
-                        <ChevronsUpDown className="h-4 w-4" />
-                    </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
-                        <Button variant="outline" onClick={() => generatePdf('declaration')} disabled={!!isProcessing}>
-                            {isProcessing === 'declaration' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
-                            Declaração + Boletim
-                        </Button>
-                        <Button variant="outline" onClick={() => generatePdf('detailed')} disabled={!!isProcessing}>
-                            {isProcessing === 'detailed' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
-                            Boletim Detalhado
-                        </Button>
-                        <Button variant="outline" onClick={() => generatePdf('compact')} disabled={!!isProcessing}>
-                            {isProcessing === 'compact' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Files className="mr-2 h-4 w-4" />}
-                            Boletim Compacto
-                        </Button>
-                    </div>
-                </CollapsibleContent>
-            </Collapsible>
+        <ScrollArea className="flex-1 -mx-6 px-6">
+            <div className="relative w-full overflow-auto">
+                <StudentReportCard boletim={boletim} />
+            </div>
+        </ScrollArea>
+        <DialogFooter className="mt-auto pt-4 border-t">
+          <TooltipProvider>
+            <div className="flex items-center justify-center gap-2 w-full">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={() => generatePdf('declaration')} disabled={!!isProcessing}>
+                      {isProcessing === 'declaration' ? <Loader2 className="h-5 w-5 animate-spin" /> : <FileText className="h-5 w-5" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Imprimir Declaração com Boletim</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={() => generatePdf('detailed')} disabled={!!isProcessing}>
+                      {isProcessing === 'detailed' ? <Loader2 className="h-5 w-5 animate-spin" /> : <FileSpreadsheet className="h-5 w-5" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Imprimir Boletim Detalhado</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
         </DialogFooter>
       </DialogContent>
     </Dialog>
