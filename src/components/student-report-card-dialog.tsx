@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import ReportCardWithDeclaration from "./report-card-with-declaration";
 import ReportCardDetailed from "./report-card-detailed";
 import ReportCardCompact from "./report-card-compact";
+import { ScrollArea } from "./ui/scroll-area";
 
 interface Boletim {
   [disciplina: string]: {
@@ -113,7 +114,7 @@ export default function StudentReportCardDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-full">
+      <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             Boletim de Notas
@@ -123,7 +124,7 @@ export default function StudentReportCardDialog({
             Notas do aluno ao longo do ano letivo. Use os botões abaixo para imprimir.
           </DialogDescription>
         </DialogHeader>
-        <div className="relative w-full overflow-auto mt-4 border rounded-lg">
+        <div className="flex-1 relative w-full overflow-y-auto mt-4 border rounded-lg">
           <StudentReportCard boletim={boletim} />
         </div>
         <DialogFooter className="mt-4 pt-4 border-t flex-col sm:flex-col sm:space-x-0 gap-2">
