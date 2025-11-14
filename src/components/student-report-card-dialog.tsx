@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import StudentReportCard from "./student-report-card";
 import { Button } from "./ui/button";
-import { Loader2, FileText, FileSpreadsheet, Printer } from "lucide-react";
+import { Loader2, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ReportCardWithDeclaration from "./report-card-with-declaration";
 import ReportCardDetailed from "./report-card-detailed";
@@ -90,39 +90,7 @@ export default function StudentReportCardDialog({
         const pdfHeight = pdf.internal.pageSize.getHeight();
         
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-        
-        const blob = pdf.output('blob');
-        const url = URL.createObjectURL(blob);
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = url;
-        document.body.appendChild(iframe);
-        
-        iframe.onload = () => {
-          try {
-              if (iframe.contentWindow) {
-                  iframe.contentWindow.focus();
-                  iframe.contentWindow.print();
-              } else {
-                   toast({
-                    variant: "destructive",
-                    title: "Erro ao Imprimir",
-                    description: "Não foi possível aceder ao conteúdo para impressão.",
-                  });
-              }
-          } catch(e) {
-               toast({
-                variant: "destructive",
-                title: "Erro ao Imprimir",
-                description: "Não foi possível abrir o diálogo de impressão. Tente desativar o bloqueador de pop-ups.",
-              });
-          }
-          setTimeout(() => {
-              document.body.removeChild(iframe);
-              URL.revokeObjectURL(url);
-          }, 2000);
-        };
-
+        pdf.save(fileName);
 
     } catch (error) {
         console.error("Erro ao gerar PDF:", error);
@@ -148,7 +116,7 @@ export default function StudentReportCardDialog({
             <span className="block text-base font-normal text-muted-foreground mt-1">{student?.nome}</span>
           </DialogTitle>
           <DialogDescription>
-            Notas do aluno ao longo do ano letivo. Use os botões abaixo para imprimir.
+            Notas do aluno ao longo do ano letivo. Use os botões abaixo para fazer o download.
           </DialogDescription>
         </DialogHeader>
         <div className="relative w-full overflow-auto mt-4">
@@ -160,22 +128,22 @@ export default function StudentReportCardDialog({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="icon" onClick={() => generatePdf('declaration')} disabled={!!isProcessing}>
-                      {isProcessing === 'declaration' ? <Loader2 className="h-5 w-5 animate-spin" /> : <FileText className="h-5 w-5" />}
+                      {isProcessing === 'declaration' ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Imprimir Declaração com Boletim</p>
+                  <p>Download Declaração com Boletim</p>
                 </TooltipContent>
               </Tooltip>
 
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="icon" onClick={() => generatePdf('detailed')} disabled={!!isProcessing}>
-                      {isProcessing === 'detailed' ? <Loader2 className="h-5 w-5 animate-spin" /> : <FileSpreadsheet className="h-5 w-5" />}
+                      {isProcessing === 'detailed' ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Imprimir Boletim Detalhado</p>
+                  <p>Download Boletim Detalhado</p>
                 </TooltipContent>
               </Tooltip>
             </div>
