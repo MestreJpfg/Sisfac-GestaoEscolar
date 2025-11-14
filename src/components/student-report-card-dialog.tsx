@@ -13,11 +13,13 @@ import {
 } from "@/components/ui/dialog";
 import StudentReportCard from "./student-report-card";
 import { Button } from "./ui/button";
-import { Loader2, FileText, FileSpreadsheet, Files } from "lucide-react";
+import { Loader2, FileText, FileSpreadsheet, Files, ChevronsUpDown, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ReportCardWithDeclaration from "./report-card-with-declaration";
 import ReportCardDetailed from "./report-card-detailed";
 import ReportCardCompact from "./report-card-compact";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+
 
 interface Boletim {
   [disciplina: string]: {
@@ -120,28 +122,40 @@ export default function StudentReportCardDialog({
             <span className="block text-base font-normal text-muted-foreground mt-1">{student?.nome}</span>
           </DialogTitle>
           <DialogDescription>
-            Notas do aluno ao longo do ano letivo. Use os botões abaixo para imprimir.
+            Notas do aluno ao longo do ano letivo. Expanda as opções para imprimir.
           </DialogDescription>
         </DialogHeader>
         <div className="relative w-full overflow-auto mt-4 border rounded-lg">
             <StudentReportCard boletim={boletim} />
         </div>
-        <DialogFooter className="mt-4 pt-4 border-t flex-col sm:flex-col sm:space-x-0 gap-2">
-            <p className="text-sm text-center text-muted-foreground mb-2">Opções de Impressão (PDF)</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
-                <Button variant="outline" onClick={() => generatePdf('declaration')} disabled={!!isProcessing}>
-                    {isProcessing === 'declaration' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
-                    Declaração + Boletim
-                </Button>
-                <Button variant="outline" onClick={() => generatePdf('detailed')} disabled={!!isProcessing}>
-                    {isProcessing === 'detailed' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
-                    Boletim Detalhado
-                </Button>
-                <Button variant="outline" onClick={() => generatePdf('compact')} disabled={!!isProcessing}>
-                    {isProcessing === 'compact' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Files className="mr-2 h-4 w-4" />}
-                    Boletim Compacto
-                </Button>
-            </div>
+        <DialogFooter className="mt-4 pt-4 border-t">
+            <Collapsible className="w-full space-y-4">
+                <CollapsibleTrigger asChild>
+                    <Button variant="ghost" className="w-full flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                             <Printer className="h-4 w-4" />
+                            <span>Opções de Impressão (PDF)</span>
+                        </div>
+                        <ChevronsUpDown className="h-4 w-4" />
+                    </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
+                        <Button variant="outline" onClick={() => generatePdf('declaration')} disabled={!!isProcessing}>
+                            {isProcessing === 'declaration' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+                            Declaração + Boletim
+                        </Button>
+                        <Button variant="outline" onClick={() => generatePdf('detailed')} disabled={!!isProcessing}>
+                            {isProcessing === 'detailed' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
+                            Boletim Detalhado
+                        </Button>
+                        <Button variant="outline" onClick={() => generatePdf('compact')} disabled={!!isProcessing}>
+                            {isProcessing === 'compact' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Files className="mr-2 h-4 w-4" />}
+                            Boletim Compacto
+                        </Button>
+                    </div>
+                </CollapsibleContent>
+            </Collapsible>
         </DialogFooter>
       </DialogContent>
     </Dialog>
