@@ -1,4 +1,3 @@
-
 "use client";
 
 import {
@@ -9,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 interface Boletim {
   [disciplina: string]: {
@@ -22,6 +22,8 @@ interface Boletim {
 
 interface StudentReportCardProps {
   boletim: Boletim;
+  isPrintMode?: boolean;
+  compact?: boolean;
 }
 
 const formatGrade = (grade: number | null | undefined) => {
@@ -29,19 +31,20 @@ const formatGrade = (grade: number | null | undefined) => {
     return grade.toFixed(1).replace('.', ',');
 };
 
-const getGradeColor = (grade: number | null | undefined) => {
+const getGradeColor = (grade: number | null | undefined, isPrintMode?: boolean) => {
+    if (isPrintMode) return "text-black";
     if (grade === null || grade === undefined) return "text-muted-foreground";
-    if (grade < 6.0) return "text-destructive";
-    return "text-blue-500";
+    if (grade < 6.0) return "text-red-500";
+    return "text-blue-600";
 };
 
-export default function StudentReportCard({ boletim }: StudentReportCardProps) {
+export default function StudentReportCard({ boletim, isPrintMode = false, compact = false }: StudentReportCardProps) {
   if (!boletim || Object.keys(boletim).length === 0) {
     return <p className="text-sm text-muted-foreground text-center py-4">Nenhuma nota encontrada para este aluno.</p>;
   }
 
   const processedBoletim = Object.entries(boletim)
-    .filter(([disciplina]) => disciplina.toLowerCase() !== 'aluno' && disciplina.toLowerCase() !== 'nome_do_aluno')
+    .filter(([disciplina]) => !['aluno', 'nome_do_aluno', 'matricula', 'rm', 'nome'].includes(disciplina.toLowerCase()))
     .map(([disciplina, notas]) => {
       const validGrades = [notas.etapa1, notas.etapa2, notas.etapa3, notas.etapa4].filter(
         (nota): nota is number => nota !== null && nota !== undefined
@@ -62,28 +65,38 @@ export default function StudentReportCard({ boletim }: StudentReportCardProps) {
       };
   }).sort((a, b) => a.disciplina.localeCompare(b.disciplina));
 
+  const tableClasses = compact 
+    ? "text-[9px]"
+    : isPrintMode 
+    ? "text-xs" 
+    : "";
+  
+  const cellPadding = compact ? "p-1" : isPrintMode ? "p-1.5" : "p-4";
+  const headCellPadding = compact ? "px-1 py-1" : isPrintMode ? "px-2 py-1.5" : "h-12 px-4";
+
+
   return (
-    <div className="relative w-full overflow-auto rounded-lg border">
-        <Table className="min-w-[600px]">
+    <div className={cn("relative w-full", !isPrintMode && "overflow-auto rounded-lg border")}>
+        <Table className={cn(tableClasses, !isPrintMode && "min-w-[600px]")}>
         <TableHeader>
             <TableRow>
-            <TableHead className="font-bold text-foreground whitespace-nowrap">Disciplina</TableHead>
-            <TableHead className="text-center font-bold text-foreground whitespace-nowrap">Etapa 1</TableHead>
-            <TableHead className="text-center font-bold text-foreground whitespace-nowrap">Etapa 2</TableHead>
-            <TableHead className="text-center font-bold text-foreground whitespace-nowrap">Etapa 3</TableHead>
-            <TableHead className="text-center font-bold text-foreground whitespace-nowrap">Etapa 4</TableHead>
-            <TableHead className="text-center font-bold text-foreground whitespace-nowrap">Média</TableHead>
+            <TableHead className={cn("font-bold text-left", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Disciplina</TableHead>
+            <TableHead className={cn("text-center font-bold", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Etapa 1</TableHead>
+            <TableHead className={cn("text-center font-bold", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Etapa 2</TableHead>
+            <TableHead className={cn("text-center font-bold", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Etapa 3</TableHead>
+            <TableHead className={cn("text-center font-bold", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Etapa 4</TableHead>
+            <TableHead className={cn("text-center font-bold", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Média</TableHead>
             </TableRow>
         </TableHeader>
         <TableBody>
             {processedBoletim.map(({ disciplina, etapa1, etapa2, etapa3, etapa4, mediaFinal }) => (
-            <TableRow key={disciplina}>
-                <TableCell className="font-medium whitespace-nowrap">{disciplina}</TableCell>
-                <TableCell className={`text-center font-semibold ${getGradeColor(etapa1)}`}>{formatGrade(etapa1)}</TableCell>
-                <TableCell className={`text-center font-semibold ${getGradeColor(etapa2)}`}>{formatGrade(etapa2)}</TableCell>
-                <TableCell className={`text-center font-semibold ${getGradeColor(etapa3)}`}>{formatGrade(etapa3)}</TableCell>
-                <TableCell className={`text-center font-semibold ${getGradeColor(etapa4)}`}>{formatGrade(etapa4)}</TableCell>
-                <TableCell className={`text-center font-bold ${getGradeColor(mediaFinal)}`}>{formatGrade(mediaFinal)}</TableCell>
+            <TableRow key={disciplina} className={isPrintMode ? "border-b border-gray-300" : ""}>
+                <TableCell className={cn("font-medium text-left", cellPadding)}>{disciplina}</TableCell>
+                <TableCell className={cn("text-center font-semibold", getGradeColor(etapa1, isPrintMode), cellPadding)}>{formatGrade(etapa1)}</TableCell>
+                <TableCell className={cn("text-center font-semibold", getGradeColor(etapa2, isPrintMode), cellPadding)}>{formatGrade(etapa2)}</TableCell>
+                <TableCell className={cn("text-center font-semibold", getGradeColor(etapa3, isPrintMode), cellPadding)}>{formatGrade(etapa3)}</TableCell>
+                <TableCell className={cn("text-center font-semibold", getGradeColor(etapa4, isPrintMode), cellPadding)}>{formatGrade(etapa4)}</TableCell>
+                <TableCell className={cn("text-center font-bold", getGradeColor(mediaFinal, isPrintMode), cellPadding)}>{formatGrade(mediaFinal)}</TableCell>
             </TableRow>
             ))}
         </TableBody>

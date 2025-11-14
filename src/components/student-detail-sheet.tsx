@@ -335,7 +335,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
             </SheetDescription>
           </SheetHeader>
           
-          <ScrollArea className="h-full pr-6 flex-1">
+          <ScrollArea className="flex-1 -mr-6 pr-6">
             <div className="w-full mt-6 space-y-4">
               
               <section>
@@ -454,7 +454,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
             isOpen={isReportCardOpen}
             onClose={() => setIsReportCardOpen(false)}
             boletim={student.boletim}
-            studentName={student.nome}
+            student={student}
         />
       )}
       
