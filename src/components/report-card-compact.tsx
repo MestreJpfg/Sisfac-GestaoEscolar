@@ -31,7 +31,7 @@ const CompactReport = ({ student, boletim }: ReportCardCompactProps) => {
                 <span><span className="font-bold">Turno:</span> {student.turno}</span>
             </div>
             <div className="mt-2">
-                <StudentReportCard boletim={boletim} isPrintMode={true} compact={true} />
+                <StudentReportCard boletim={boletim} isPrintMode={true} compact={true} showRecoveryStatus={true} />
             </div>
         </div>
     );

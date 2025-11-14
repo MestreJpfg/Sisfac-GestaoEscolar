@@ -27,6 +27,7 @@ interface StudentReportCardProps {
   compact?: boolean;
   isEditing?: boolean;
   onGradeChange?: (disciplina: string, etapa: string, value: string) => void;
+  showRecoveryStatus?: boolean;
 }
 
 const formatGrade = (grade: number | null | undefined, isEditing = false) => {
@@ -46,7 +47,7 @@ const getGradeColor = (grade: number | null | undefined, isPrintMode?: boolean) 
     return "text-blue-600";
 };
 
-export default function StudentReportCard({ boletim, isPrintMode = false, compact = false, isEditing = false, onGradeChange = () => {} }: StudentReportCardProps) {
+export default function StudentReportCard({ boletim, isPrintMode = false, compact = false, isEditing = false, onGradeChange = () => {}, showRecoveryStatus = false }: StudentReportCardProps) {
   if (!boletim || Object.keys(boletim).length === 0) {
     return <p className="text-sm text-muted-foreground text-center py-4">Nenhuma nota encontrada para este aluno.</p>;
   }
@@ -93,38 +94,47 @@ export default function StudentReportCard({ boletim, isPrintMode = false, compac
           <TableHead className={cn("text-center font-bold", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Etapa 3</TableHead>
           <TableHead className={cn("text-center font-bold", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Etapa 4</TableHead>
           <TableHead className={cn("text-center font-bold", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Média</TableHead>
+          {showRecoveryStatus && <TableHead className={cn("text-center font-bold", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Situação</TableHead>}
           </TableRow>
       </TableHeader>
       <TableBody>
-          {processedBoletim.map(({ originalDisciplina, disciplina, etapa1, etapa2, etapa3, etapa4, mediaFinal }) => (
-          <TableRow key={disciplina} className={isPrintMode ? "border-b border-gray-300" : ""}>
-              <TableCell className={cn("font-medium text-left", cellPadding)}>{disciplina}</TableCell>
-              
-              {[
-                { value: etapa1, key: 'etapa1' },
-                { value: etapa2, key: 'etapa2' },
-                { value: etapa3, key: 'etapa3' },
-                { value: etapa4, key: 'etapa4' },
-              ].map(etapa => (
-                <TableCell key={etapa.key} className={cn("text-center font-semibold", cellPadding)}>
-                  {isEditing ? (
-                     <Input
-                        type="text"
-                        value={formatGrade(etapa.value, true)}
-                        onChange={(e) => onGradeChange(originalDisciplina, etapa.key, e.target.value)}
-                        className="w-16 h-8 text-center mx-auto"
-                     />
-                  ) : (
-                    <span className={getGradeColor(etapa.value, isPrintMode)}>
-                      {formatGrade(etapa.value)}
-                    </span>
+          {processedBoletim.map(({ originalDisciplina, disciplina, etapa1, etapa2, etapa3, etapa4, mediaFinal }) => {
+            const isRecovery = mediaFinal !== null && mediaFinal < 6.0;
+            return (
+              <TableRow key={disciplina} className={isPrintMode ? "border-b border-gray-300" : ""}>
+                  <TableCell className={cn("font-medium text-left", cellPadding)}>{disciplina}</TableCell>
+                  
+                  {[
+                    { value: etapa1, key: 'etapa1' },
+                    { value: etapa2, key: 'etapa2' },
+                    { value: etapa3, key: 'etapa3' },
+                    { value: etapa4, key: 'etapa4' },
+                  ].map(etapa => (
+                    <TableCell key={etapa.key} className={cn("text-center font-semibold", cellPadding)}>
+                      {isEditing ? (
+                         <Input
+                            type="text"
+                            value={formatGrade(etapa.value, true)}
+                            onChange={(e) => onGradeChange(originalDisciplina, etapa.key, e.target.value)}
+                            className="w-16 h-8 text-center mx-auto"
+                         />
+                      ) : (
+                        <span className={getGradeColor(etapa.value, isPrintMode)}>
+                          {formatGrade(etapa.value)}
+                        </span>
+                      )}
+                    </TableCell>
+                  ))}
+                  
+                  <TableCell className={cn("text-center font-bold", getGradeColor(mediaFinal, isPrintMode), cellPadding)}>{formatGrade(mediaFinal)}</TableCell>
+                  {showRecoveryStatus && (
+                     <TableCell className={cn("text-center font-semibold", cellPadding, isRecovery ? 'text-red-600' : 'text-blue-600')}>
+                        {mediaFinal === null ? '-' : isRecovery ? 'Recuperação' : 'Aprovado'}
+                     </TableCell>
                   )}
-                </TableCell>
-              ))}
-              
-              <TableCell className={cn("text-center font-bold", getGradeColor(mediaFinal, isPrintMode), cellPadding)}>{formatGrade(mediaFinal)}</TableCell>
-          </TableRow>
-          ))}
+              </TableRow>
+            )
+          })}
       </TableBody>
     </Table>
   );

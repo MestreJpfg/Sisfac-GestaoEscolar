@@ -38,6 +38,21 @@ export default function ReportCardDetailed({ student, boletim }: ReportCardDetai
         year: 'numeric'
     }).format(today);
 
+    const subjectsInRecovery = Object.entries(boletim)
+      .map(([disciplina, notas]) => {
+        const validGrades = [notas.etapa1, notas.etapa2, notas.etapa3, notas.etapa4].filter(
+          (nota): nota is number => nota !== null && nota !== undefined && !isNaN(nota)
+        );
+        const media = notas.mediaFinal ?? (validGrades.length > 0 ? validGrades.reduce((a, b) => a + b, 0) / validGrades.length : null);
+        
+        const cleanedDisciplina = disciplina.replace(/_/g, ' ').replace(/-/g, '/');
+        const formattedDisciplina = cleanedDisciplina.charAt(0).toUpperCase() + cleanedDisciplina.slice(1).toLowerCase();
+
+        return { disciplina: formattedDisciplina, media };
+      })
+      .filter(item => item.media !== null && item.media < 6.0)
+      .map(item => item.disciplina);
+
     return (
         <div className="bg-white text-black font-sans p-6" style={{ width: '210mm', height: '297mm', fontFamily: 'Arial, sans-serif' }}>
             <div className="flex flex-col h-full">
@@ -73,9 +88,17 @@ export default function ReportCardDetailed({ student, boletim }: ReportCardDetai
                 </div>
 
                 {/* Rodapé */}
-                <footer className="mt-auto pt-4 text-center text-xs">
-                    <p>Gerado em: {formattedDate}</p>
-                    <p className="font-bold mt-2">GESTÃO ESCOLAR</p>
+                <footer className="mt-auto pt-4 text-xs">
+                   {subjectsInRecovery.length > 0 && (
+                        <div className="border-t pt-2 mt-4">
+                            <p className="font-bold">Observações:</p>
+                            <p>O aluno encontra-se em recuperação na(s) seguinte(s) disciplina(s): {subjectsInRecovery.join(', ')}.</p>
+                        </div>
+                    )}
+                    <div className="text-center mt-4">
+                        <p>Gerado em: {formattedDate}</p>
+                        <p className="font-bold mt-2">GESTÃO ESCOLAR</p>
+                    </div>
                 </footer>
             </div>
         </div>
