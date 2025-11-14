@@ -11,20 +11,18 @@ import {
   SheetDescription,
   SheetFooter,
 } from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import StudentDeclaration from "./student-declaration";
 import StudentEditDialog from "./student-edit-dialog";
-import StudentReportCard from "./student-report-card"; // Importa o novo componente
+import StudentReportCard from "./student-report-card";
 import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Download, Loader2, Share2, Pencil, Printer, MapPin, BookCheck } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "./ui/accordion";
 
 const formatPhoneNumber = (phone: string): string => {
   const cleaned = ('' + phone).replace(/\D/g, '');
@@ -71,6 +69,10 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, lab
     </div>
   );
 };
+
+const SectionTitle = ({ children }: { children: React.ReactNode }) => (
+  <h3 className="text-lg font-semibold text-foreground py-2 border-b mb-4 mt-6 first:mt-0">{children}</h3>
+);
 
 
 export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate }: StudentDetailSheetProps) {
@@ -323,60 +325,58 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
           </SheetHeader>
           
           <ScrollArea className="h-full pr-6 flex-1">
-            <Accordion type="multiple" defaultValue={['personal']} className="w-full mt-6 space-y-4">
+            <div className="w-full mt-6 space-y-4">
               
-              <AccordionItem value="personal" className="border-b-0">
-                <AccordionTrigger className="text-lg font-semibold text-foreground py-2">Dados Pessoais</AccordionTrigger>
-                <AccordionContent className="pt-4 space-y-4">
+              <section>
+                <SectionTitle>Dados Pessoais</SectionTitle>
+                <div className="space-y-4">
                   {studentDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                </AccordionContent>
-              </AccordionItem>
+                </div>
+              </section>
 
-              <AccordionItem value="academic" className="border-b-0">
-                <AccordionTrigger className="text-lg font-semibold text-foreground py-2">Dados Académicos</AccordionTrigger>
-                <AccordionContent className="pt-4 space-y-4">
+              <section>
+                <SectionTitle>Dados Académicos</SectionTitle>
+                <div className="space-y-4">
                   {academicDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                </AccordionContent>
-              </AccordionItem>
+                </div>
+              </section>
 
               {hasBoletim && (
-                <AccordionItem value="boletim" className="border-b-0">
-                  <AccordionTrigger className="text-lg font-semibold text-foreground py-2">
+                <section>
+                   <SectionTitle>
                     <div className="flex items-center gap-2">
                       <BookCheck className="w-5 h-5 text-primary"/>
                       <span>Boletim de Notas</span>
                     </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="pt-4">
-                     <div className="relative w-full overflow-auto rounded-lg border">
-                       <StudentReportCard boletim={student.boletim} />
-                     </div>
-                  </AccordionContent>
-                </AccordionItem>
+                  </SectionTitle>
+                  <div className="relative w-full overflow-auto rounded-lg border">
+                    <StudentReportCard boletim={student.boletim} />
+                  </div>
+                </section>
               )}
 
-              <AccordionItem value="family" className="border-b-0">
-                <AccordionTrigger className="text-lg font-semibold text-foreground py-2">Filiação</AccordionTrigger>
-                <AccordionContent className="pt-4 space-y-4">
+              <section>
+                <SectionTitle>Filiação</SectionTitle>
+                <div className="space-y-4">
                   {familyDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="address" className="border-b-0">
-                <AccordionTrigger className="text-lg font-semibold text-foreground py-2">Endereço</AccordionTrigger>
-                <AccordionContent className="pt-4 space-y-4">
+                </div>
+              </section>
+              
+              <section>
+                <SectionTitle>Endereço</SectionTitle>
+                <div className="space-y-4">
                   {addressDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                </AccordionContent>
-              </AccordionItem>
+                </div>
+              </section>
 
-              <AccordionItem value="other" className="border-b-0">
-                <AccordionTrigger className="text-lg font-semibold text-foreground py-2">Outras Informações</AccordionTrigger>
-                <AccordionContent className="pt-4 space-y-4">
+              <section>
+                <SectionTitle>Outras Informações</SectionTitle>
+                <div className="space-y-4">
                   {otherDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                </AccordionContent>
-              </AccordionItem>
+                </div>
+              </section>
 
-            </Accordion>
+            </div>
           </ScrollArea>
           
           <SheetFooter className="mt-auto pt-4 border-t border-border/20">
