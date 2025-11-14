@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const formatPhoneNumber = (phone: string): string => {
   const cleaned = ('' + phone).replace(/\D/g, '');
@@ -69,11 +70,6 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, lab
     </div>
   );
 };
-
-const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-  <h3 className="text-lg font-semibold text-foreground py-2 border-b mb-4 mt-6 first:mt-0">{children}</h3>
-);
-
 
 export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate }: StudentDetailSheetProps) {
   const firestore = useFirestore();
@@ -182,17 +178,22 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     if (blob) {
       const url = URL.createObjectURL(blob);
       const iframe = document.createElement('iframe');
-      iframe.style.position = 'absolute';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = 'none';
+      iframe.style.display = 'none';
       iframe.src = url;
       document.body.appendChild(iframe);
       
       iframe.onload = () => {
         try {
-            iframe.contentWindow?.focus();
-            iframe.contentWindow?.print();
+            if (iframe.contentWindow) {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+            } else {
+                 toast({
+                  variant: "destructive",
+                  title: "Erro ao Imprimir",
+                  description: "Não foi possível aceder ao conteúdo para impressão.",
+                });
+            }
         } catch(e) {
              toast({
               variant: "destructive",
@@ -207,7 +208,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
           document.body.removeChild(iframe);
           URL.revokeObjectURL(url);
           setIsProcessing(false);
-        }, 1000);
+        }, 2000);
     } else {
         setIsProcessing(false);
     }
@@ -336,52 +337,52 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
           </SheetHeader>
           
           <ScrollArea className="flex-1 -mr-6 pr-6">
-            <div className="w-full mt-6 space-y-4">
-              
-              <section>
-                <SectionTitle>Dados Pessoais</SectionTitle>
-                <div className="space-y-4">
+            <Accordion type="multiple" defaultValue={["personal", "academic"]} className="w-full mt-6">
+
+              <AccordionItem value="personal">
+                <AccordionTrigger className="text-lg font-semibold text-foreground">Dados Pessoais</AccordionTrigger>
+                <AccordionContent className="pt-4 space-y-4">
                   {studentDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                </div>
-              </section>
+                </AccordionContent>
+              </AccordionItem>
 
-              <section>
-                <SectionTitle>Dados Acadêmicos</SectionTitle>
-                <div className="space-y-4">
+              <AccordionItem value="academic">
+                <AccordionTrigger className="text-lg font-semibold text-foreground">Dados Acadêmicos</AccordionTrigger>
+                <AccordionContent className="pt-4 space-y-4">
                   {academicDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                </div>
-                {hasBoletim && (
-                  <div className="pt-4">
-                      <Button onClick={() => setIsReportCardOpen(true)} variant="outline" className="w-full">
-                          <BookCheck className="mr-2 h-4 w-4" />
-                          Visualizar Boletim
-                      </Button>
-                  </div>
-                )}
-              </section>
-
-              <section>
-                <SectionTitle>Filiação</SectionTitle>
-                <div className="space-y-4">
-                  {familyDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                </div>
-              </section>
+                   {hasBoletim && (
+                    <div className="pt-2">
+                        <Button onClick={() => setIsReportCardOpen(true)} variant="outline" className="w-full">
+                            <BookCheck className="mr-2 h-4 w-4" />
+                            Visualizar Boletim
+                        </Button>
+                    </div>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
               
-              <section>
-                <SectionTitle>Endereço</SectionTitle>
-                <div className="space-y-4">
+              <AccordionItem value="family">
+                <AccordionTrigger className="text-lg font-semibold text-foreground">Filiação</AccordionTrigger>
+                <AccordionContent className="pt-4 space-y-4">
+                  {familyDetails.map(item => <DetailItem key={item.label} {...item} />)}
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="address">
+                <AccordionTrigger className="text-lg font-semibold text-foreground">Endereço</AccordionTrigger>
+                <AccordionContent className="pt-4 space-y-4">
                   {addressDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                </div>
-              </section>
-
-              <section>
-                <SectionTitle>Outras Informações</SectionTitle>
-                <div className="space-y-4">
+                </AccordionContent>
+              </AccordionItem>
+              
+              <AccordionItem value="other">
+                <AccordionTrigger className="text-lg font-semibold text-foreground">Outras Informações</AccordionTrigger>
+                <AccordionContent className="pt-4 space-y-4">
                   {otherDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                </div>
-              </section>
+                </AccordionContent>
+              </AccordionItem>
 
-            </div>
+            </Accordion>
           </ScrollArea>
           
           <SheetFooter className="mt-auto pt-4 border-t border-border/20">
