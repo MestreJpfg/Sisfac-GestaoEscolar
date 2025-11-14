@@ -83,7 +83,7 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
 
 
                 {/* Rodapé */}
-                <footer className="mt-auto pt-8">
+                <footer className="pt-8">
                      <div className="flex w-full">
                         <div className="h-2 w-full" style={{backgroundColor: '#00857F'}}></div>
                         <div className="h-2 w-1/4" style={{backgroundColor: '#F38A00'}}></div>
