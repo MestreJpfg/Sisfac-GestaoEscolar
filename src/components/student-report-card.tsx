@@ -76,31 +76,29 @@ export default function StudentReportCard({ boletim, isPrintMode = false, compac
 
 
   return (
-    <div className={cn("relative w-full", !isPrintMode && "overflow-auto rounded-lg border")}>
-        <Table className={cn(tableClasses, !isPrintMode && "min-w-[600px]")}>
-        <TableHeader>
-            <TableRow>
-            <TableHead className={cn("font-bold text-left", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Disciplina</TableHead>
-            <TableHead className={cn("text-center font-bold", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Etapa 1</TableHead>
-            <TableHead className={cn("text-center font-bold", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Etapa 2</TableHead>
-            <TableHead className={cn("text-center font-bold", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Etapa 3</TableHead>
-            <TableHead className={cn("text-center font-bold", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Etapa 4</TableHead>
-            <TableHead className={cn("text-center font-bold", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Média</TableHead>
-            </TableRow>
-        </TableHeader>
-        <TableBody>
-            {processedBoletim.map(({ disciplina, etapa1, etapa2, etapa3, etapa4, mediaFinal }) => (
-            <TableRow key={disciplina} className={isPrintMode ? "border-b border-gray-300" : ""}>
-                <TableCell className={cn("font-medium text-left", cellPadding)}>{disciplina}</TableCell>
-                <TableCell className={cn("text-center font-semibold", getGradeColor(etapa1, isPrintMode), cellPadding)}>{formatGrade(etapa1)}</TableCell>
-                <TableCell className={cn("text-center font-semibold", getGradeColor(etapa2, isPrintMode), cellPadding)}>{formatGrade(etapa2)}</TableCell>
-                <TableCell className={cn("text-center font-semibold", getGradeColor(etapa3, isPrintMode), cellPadding)}>{formatGrade(etapa3)}</TableCell>
-                <TableCell className={cn("text-center font-semibold", getGradeColor(etapa4, isPrintMode), cellPadding)}>{formatGrade(etapa4)}</TableCell>
-                <TableCell className={cn("text-center font-bold", getGradeColor(mediaFinal, isPrintMode), cellPadding)}>{formatGrade(mediaFinal)}</TableCell>
-            </TableRow>
-            ))}
-        </TableBody>
-        </Table>
-    </div>
+    <Table className={cn(tableClasses, !isPrintMode && "min-w-[600px]")}>
+      <TableHeader>
+          <TableRow>
+          <TableHead className={cn("font-bold text-left", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Disciplina</TableHead>
+          <TableHead className={cn("text-center font-bold", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Etapa 1</TableHead>
+          <TableHead className={cn("text-center font-bold", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Etapa 2</TableHead>
+          <TableHead className={cn("text-center font-bold", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Etapa 3</TableHead>
+          <TableHead className={cn("text-center font-bold", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Etapa 4</TableHead>
+          <TableHead className={cn("text-center font-bold", isPrintMode ? "text-black" : "text-foreground", headCellPadding)}>Média</TableHead>
+          </TableRow>
+      </TableHeader>
+      <TableBody>
+          {processedBoletim.map(({ disciplina, etapa1, etapa2, etapa3, etapa4, mediaFinal }) => (
+          <TableRow key={disciplina} className={isPrintMode ? "border-b border-gray-300" : ""}>
+              <TableCell className={cn("font-medium text-left", cellPadding)}>{disciplina}</TableCell>
+              <TableCell className={cn("text-center font-semibold", getGradeColor(etapa1, isPrintMode), cellPadding)}>{formatGrade(etapa1)}</TableCell>
+              <TableCell className={cn("text-center font-semibold", getGradeColor(etapa2, isPrintMode), cellPadding)}>{formatGrade(etapa2)}</TableCell>
+              <TableCell className={cn("text-center font-semibold", getGradeColor(etapa3, isPrintMode), cellPadding)}>{formatGrade(etapa3)}</TableCell>
+              <TableCell className={cn("text-center font-semibold", getGradeColor(etapa4, isPrintMode), cellPadding)}>{formatGrade(etapa4)}</TableCell>
+              <TableCell className={cn("text-center font-bold", getGradeColor(mediaFinal, isPrintMode), cellPadding)}>{formatGrade(mediaFinal)}</TableCell>
+          </TableRow>
+          ))}
+      </TableBody>
+    </Table>
   );
 }

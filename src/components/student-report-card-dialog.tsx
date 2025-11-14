@@ -57,7 +57,7 @@ export default function StudentReportCardDialog({
     
     let componentToRender;
     let fileName = `Boletim_${student.nome.replace(/\s+/g, '_')}.pdf`;
-    let pdfOptions = { orientation: 'p', unit: 'mm', format: 'a4' };
+    let pdfOptions: any = { orientation: 'p', unit: 'mm', format: 'a4' };
 
     switch (type) {
         case 'declaration':
@@ -92,15 +92,7 @@ export default function StudentReportCardDialog({
         
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
-        const ratio = canvas.width / canvas.height;
-        let imgWidth = pdfWidth;
-        let imgHeight = pdfWidth / ratio;
         
-        if (type !== 'compact' && imgHeight > pdfHeight) {
-            imgHeight = pdfHeight;
-            imgWidth = imgHeight * ratio;
-        }
-
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
         pdf.save(fileName);
 
@@ -131,7 +123,7 @@ export default function StudentReportCardDialog({
             Notas do aluno ao longo do ano letivo. Use os botões abaixo para imprimir.
           </DialogDescription>
         </DialogHeader>
-        <div className="relative w-full overflow-auto mt-4">
+        <div className="relative w-full overflow-auto mt-4 border rounded-lg">
           <StudentReportCard boletim={boletim} />
         </div>
         <DialogFooter className="mt-4 pt-4 border-t flex-col sm:flex-col sm:space-x-0 gap-2">
