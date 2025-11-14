@@ -4,14 +4,18 @@
 import { useState, useEffect, useMemo } from 'react';
 import jsPDF from "jspdf";
 import 'jspdf-autotable';
+import html2canvas from "html2canvas";
 import { useFirestore } from '@/firebase';
 import { collection, query, getDocs } from 'firebase/firestore';
-import { ClipboardList, X, Loader2, Download, Filter } from 'lucide-react';
+import { ClipboardList, X, Loader2, Download, Filter, BookCopy } from 'lucide-react';
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetTrigger } from './ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import ReportCardGrid from './report-card-grid';
+import { createRoot } from 'react-dom/client';
+
 
 // Extend jsPDF with autoTable method
 declare module 'jspdf' {
@@ -26,6 +30,7 @@ export default function ClassListGenerator() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingList, setIsGeneratingList] = useState(false);
+  const [isGeneratingReports, setIsGeneratingReports] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -232,6 +237,73 @@ export default function ClassListGenerator() {
     }
   };
 
+  const handleDownloadAllReports = async () => {
+    if (students.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Nenhum aluno na lista",
+        description: "Gere uma lista de alunos antes de fazer o download dos boletins.",
+      });
+      return;
+    }
+  
+    setIsGeneratingReports(true);
+  
+    try {
+      const pdf = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
+      const studentChunks = [];
+      for (let i = 0; i < students.length; i += 4) {
+        studentChunks.push(students.slice(i, i + 4));
+      }
+  
+      const renderContainer = document.createElement('div');
+      renderContainer.style.position = 'absolute';
+      renderContainer.style.left = '-9999px';
+      document.body.appendChild(renderContainer);
+      const root = createRoot(renderContainer);
+  
+      for (let i = 0; i < studentChunks.length; i++) {
+        const chunk = studentChunks[i];
+  
+        await new Promise<void>(resolve => {
+          root.render(<ReportCardGrid students={chunk} />, async () => {
+            await new Promise(r => setTimeout(r, 500)); // wait for render
+            
+            const canvas = await html2canvas(renderContainer, { scale: 2, useCORS: true });
+            const imgData = canvas.toDataURL('image/jpeg', 1.0);
+            
+            if (i > 0) {
+              pdf.addPage();
+            }
+            
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+  
+            resolve();
+          });
+        });
+      }
+      
+      root.unmount();
+      document.body.removeChild(renderContainer);
+  
+      const fileName = `Boletins_${filters.serie || 'Geral'}_${filters.classe || ''}.pdf`.replace(/ /g, '_');
+      pdf.save(fileName);
+  
+    } catch (error) {
+      console.error("Erro ao gerar os boletins em PDF:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao Gerar PDFs",
+        description: "Ocorreu um erro ao criar o ficheiro com os boletins.",
+      });
+    } finally {
+      setIsGeneratingReports(false);
+    }
+  };
+  
+
   const clearFiltersAndResults = () => {
     setFilters({ ensino: '', serie: '', turno: '', classe: '' });
     setStudents([]);
@@ -348,13 +420,19 @@ export default function ClassListGenerator() {
                 )}
             </div>
 
-            <SheetFooter className="mt-auto pt-4 border-t">
+            <SheetFooter className="mt-auto pt-4 border-t flex-col sm:flex-col sm:space-x-0 gap-2">
                 <Button onClick={handleDownload} disabled={students.length === 0 || isProcessing} className="w-full">
                     <Download className="mr-2 h-4 w-4" />
                     {isProcessing ? 'A processar...' : 'Download da Lista'}
+                </Button>
+                 <Button onClick={handleDownloadAllReports} disabled={students.length === 0 || isGeneratingReports} className="w-full">
+                    {isGeneratingReports ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BookCopy className="mr-2 h-4 w-4" />}
+                    {isGeneratingReports ? 'A gerar boletins...' : 'Download Boletins'}
                 </Button>
             </SheetFooter>
         </SheetContent>
     </Sheet>
   );
 }
+
+    
