@@ -16,7 +16,7 @@ import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import StudentDeclaration from "./student-declaration";
 import StudentEditDialog from "./student-edit-dialog";
-import StudentReportCard from "./student-report-card";
+import StudentReportCardDialog from "./student-report-card-dialog";
 import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Download, Loader2, Share2, Pencil, Printer, MapPin, BookCheck } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
@@ -79,6 +79,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
   const firestore = useFirestore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isReportCardOpen, setIsReportCardOpen] = useState(false);
   const { toast } = useToast();
 
   if (!student) return null;
@@ -181,20 +182,35 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     if (blob) {
       const url = URL.createObjectURL(blob);
       const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
+      iframe.style.position = 'absolute';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = 'none';
       iframe.src = url;
       document.body.appendChild(iframe);
+      
       iframe.onload = () => {
-        setTimeout(() => {
-          iframe.contentWindow?.print();
-          setTimeout(() => {
-            document.body.removeChild(iframe);
-            URL.revokeObjectURL(url);
-          }, 100);
-        }, 100);
+        try {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+        } catch(e) {
+             toast({
+              variant: "destructive",
+              title: "Erro ao Imprimir",
+              description: "Não foi possível abrir o diálogo de impressão. Tente desativar o bloqueador de pop-ups.",
+            });
+        }
       };
+
+       // Clean up after a short delay
+       setTimeout(() => {
+          document.body.removeChild(iframe);
+          URL.revokeObjectURL(url);
+          setIsProcessing(false);
+        }, 1000);
+    } else {
+        setIsProcessing(false);
     }
-    setIsProcessing(false);
   };
 
   const handleShare = async () => {
@@ -334,19 +350,15 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
                 <div className="space-y-4">
                   {academicDetails.map(item => <DetailItem key={item.label} {...item} />)}
                 </div>
+                {hasBoletim && (
+                  <div className="pt-4">
+                      <Button onClick={() => setIsReportCardOpen(true)} variant="outline" className="w-full">
+                          <BookCheck className="mr-2 h-4 w-4" />
+                          Visualizar Boletim
+                      </Button>
+                  </div>
+                )}
               </section>
-
-              {hasBoletim && (
-                <section>
-                   <SectionTitle>
-                    <div className="flex items-center gap-2">
-                      <BookCheck className="w-5 h-5"/>
-                      <span>Boletim de Notas</span>
-                    </div>
-                  </SectionTitle>
-                  <StudentReportCard boletim={student.boletim} />
-                </section>
-              )}
 
               <section>
                 <SectionTitle>Filiação</SectionTitle>
@@ -437,11 +449,14 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
         </SheetContent>
       </Sheet>
       
-      <div style={{ display: 'none' }}>
-        <div id={`declaration-${student.rm}`}>
-            <StudentDeclaration student={student} />
-        </div>
-      </div>
+      {hasBoletim && (
+        <StudentReportCardDialog
+            isOpen={isReportCardOpen}
+            onClose={() => setIsReportCardOpen(false)}
+            boletim={student.boletim}
+            studentName={student.nome}
+        />
+      )}
       
       <StudentEditDialog
         isOpen={isEditDialogOpen}

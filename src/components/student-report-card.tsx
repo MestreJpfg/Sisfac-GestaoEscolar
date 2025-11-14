@@ -60,7 +60,7 @@ export default function StudentReportCard({ boletim }: StudentReportCardProps) {
   }).sort((a, b) => a.disciplina.localeCompare(b.disciplina));
 
   return (
-    <Table className="min-w-[600px]">
+    <Table>
       <TableHeader>
           <TableRow>
           <TableHead className="font-bold text-foreground whitespace-nowrap">Disciplina</TableHead>
