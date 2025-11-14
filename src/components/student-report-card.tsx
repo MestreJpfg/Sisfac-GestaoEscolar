@@ -9,6 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { Input } from "./ui/input";
 
 interface Boletim {
   [disciplina: string]: {
@@ -24,11 +25,18 @@ interface StudentReportCardProps {
   boletim: Boletim;
   isPrintMode?: boolean;
   compact?: boolean;
+  isEditing?: boolean;
+  onGradeChange?: (disciplina: string, etapa: string, value: string) => void;
 }
 
-const formatGrade = (grade: number | null | undefined) => {
-    if (grade === null || grade === undefined) return "-";
-    return grade.toFixed(1).replace('.', ',');
+const formatGrade = (grade: number | null | undefined, isEditing = false) => {
+    if (grade === null || grade === undefined) return isEditing ? '' : "-";
+    const formatted = grade.toFixed(1).replace('.', ',');
+    // For editing, we don't want to show .0 for whole numbers
+    if (isEditing && formatted.endsWith(',0')) {
+        return formatted.substring(0, formatted.length - 2);
+    }
+    return formatted;
 };
 
 const getGradeColor = (grade: number | null | undefined, isPrintMode?: boolean) => {
@@ -38,7 +46,7 @@ const getGradeColor = (grade: number | null | undefined, isPrintMode?: boolean) 
     return "text-blue-600";
 };
 
-export default function StudentReportCard({ boletim, isPrintMode = false, compact = false }: StudentReportCardProps) {
+export default function StudentReportCard({ boletim, isPrintMode = false, compact = false, isEditing = false, onGradeChange = () => {} }: StudentReportCardProps) {
   if (!boletim || Object.keys(boletim).length === 0) {
     return <p className="text-sm text-muted-foreground text-center py-4">Nenhuma nota encontrada para este aluno.</p>;
   }
@@ -47,7 +55,7 @@ export default function StudentReportCard({ boletim, isPrintMode = false, compac
     .filter(([disciplina]) => !['aluno', 'nome_do_aluno', 'matricula', 'rm', 'nome'].includes(disciplina.toLowerCase()))
     .map(([disciplina, notas]) => {
       const validGrades = [notas.etapa1, notas.etapa2, notas.etapa3, notas.etapa4].filter(
-        (nota): nota is number => nota !== null && nota !== undefined
+        (nota): nota is number => nota !== null && nota !== undefined && !isNaN(nota)
       );
       const media = validGrades.length > 0 ? validGrades.reduce((a, b) => a + b, 0) / validGrades.length : null;
 
@@ -57,8 +65,8 @@ export default function StudentReportCard({ boletim, isPrintMode = false, compac
       
       const formattedDisciplina = cleanedDisciplina.charAt(0).toUpperCase() + cleanedDisciplina.slice(1).toLowerCase();
 
-
       return {
+        originalDisciplina: disciplina,
         disciplina: formattedDisciplina,
         ...notas,
         mediaFinal: notas.mediaFinal ?? media,
@@ -71,7 +79,7 @@ export default function StudentReportCard({ boletim, isPrintMode = false, compac
     ? "text-xs" 
     : "";
   
-  const cellPadding = compact ? "p-1" : isPrintMode ? "p-1.5" : "p-4";
+  const cellPadding = compact ? "p-1" : isPrintMode ? "p-1.5" : "p-2";
   const headCellPadding = compact ? "px-1 py-1" : isPrintMode ? "px-2 py-1.5" : "h-12 px-4";
 
 
@@ -88,13 +96,32 @@ export default function StudentReportCard({ boletim, isPrintMode = false, compac
           </TableRow>
       </TableHeader>
       <TableBody>
-          {processedBoletim.map(({ disciplina, etapa1, etapa2, etapa3, etapa4, mediaFinal }) => (
+          {processedBoletim.map(({ originalDisciplina, disciplina, etapa1, etapa2, etapa3, etapa4, mediaFinal }) => (
           <TableRow key={disciplina} className={isPrintMode ? "border-b border-gray-300" : ""}>
               <TableCell className={cn("font-medium text-left", cellPadding)}>{disciplina}</TableCell>
-              <TableCell className={cn("text-center font-semibold", getGradeColor(etapa1, isPrintMode), cellPadding)}>{formatGrade(etapa1)}</TableCell>
-              <TableCell className={cn("text-center font-semibold", getGradeColor(etapa2, isPrintMode), cellPadding)}>{formatGrade(etapa2)}</TableCell>
-              <TableCell className={cn("text-center font-semibold", getGradeColor(etapa3, isPrintMode), cellPadding)}>{formatGrade(etapa3)}</TableCell>
-              <TableCell className={cn("text-center font-semibold", getGradeColor(etapa4, isPrintMode), cellPadding)}>{formatGrade(etapa4)}</TableCell>
+              
+              {[
+                { value: etapa1, key: 'etapa1' },
+                { value: etapa2, key: 'etapa2' },
+                { value: etapa3, key: 'etapa3' },
+                { value: etapa4, key: 'etapa4' },
+              ].map(etapa => (
+                <TableCell key={etapa.key} className={cn("text-center font-semibold", cellPadding)}>
+                  {isEditing ? (
+                     <Input
+                        type="text"
+                        value={formatGrade(etapa.value, true)}
+                        onChange={(e) => onGradeChange(originalDisciplina, etapa.key, e.target.value)}
+                        className="w-16 h-8 text-center mx-auto"
+                     />
+                  ) : (
+                    <span className={getGradeColor(etapa.value, isPrintMode)}>
+                      {formatGrade(etapa.value)}
+                    </span>
+                  )}
+                </TableCell>
+              ))}
+              
               <TableCell className={cn("text-center font-bold", getGradeColor(mediaFinal, isPrintMode), cellPadding)}>{formatGrade(mediaFinal)}</TableCell>
           </TableRow>
           ))}

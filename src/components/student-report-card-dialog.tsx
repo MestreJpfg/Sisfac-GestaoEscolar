@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import {
@@ -8,16 +8,18 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import StudentReportCard from "./student-report-card";
 import { Button } from "./ui/button";
-import { Loader2, Download } from "lucide-react";
+import { Loader2, Download, Pencil, Save, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ReportCardWithDeclaration from "./report-card-with-declaration";
 import ReportCardDetailed from "./report-card-detailed";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { useFirestore } from "@/firebase";
+import { doc } from "firebase/firestore";
+import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 
 interface Boletim {
@@ -42,11 +44,51 @@ type PdfType = 'declaration' | 'detailed';
 export default function StudentReportCardDialog({
   isOpen,
   onClose,
-  boletim,
+  boletim: initialBoletim,
   student,
 }: StudentReportCardDialogProps) {
+  const firestore = useFirestore();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState<PdfType | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editableBoletim, setEditableBoletim] = useState<Boletim>({});
+
+  useEffect(() => {
+    if (isOpen) {
+      // Deep copy to avoid mutating the original prop
+      setEditableBoletim(JSON.parse(JSON.stringify(initialBoletim || {})));
+    }
+  }, [isOpen, initialBoletim]);
+
+  const handleGradeChange = (disciplina: string, etapa: string, value: string) => {
+    const numericValue = value === '' ? null : parseFloat(value.replace(',', '.'));
+    
+    setEditableBoletim(prev => ({
+      ...prev,
+      [disciplina]: {
+        ...prev[disciplina],
+        [etapa]: isNaN(numericValue!) ? null : numericValue,
+      },
+    }));
+  };
+  
+  const handleSaveChanges = () => {
+    if (!firestore || !student?.rm) return;
+
+    const studentDocRef = doc(firestore, 'alunos', student.rm);
+    const updatedData = { boletim: editableBoletim };
+
+    setDocumentNonBlocking(studentDocRef, updatedData, { merge: true });
+
+    toast({
+      title: "Boletim Atualizado",
+      description: "As notas foram salvas com sucesso.",
+    });
+
+    setIsEditing(false);
+    // Note: The parent component will need to refetch data to see the update immediately,
+    // or we can update the local state in the parent. The current implementation relies on `onUpdate` prop.
+  };
 
   const generatePdf = async (type: PdfType) => {
     setIsProcessing(type);
@@ -62,11 +104,11 @@ export default function StudentReportCardDialog({
 
     switch (type) {
         case 'declaration':
-            componentToRender = <ReportCardWithDeclaration student={student} boletim={boletim} />;
+            componentToRender = <ReportCardWithDeclaration student={student} boletim={editableBoletim} />;
             fileName = `Declaracao_com_Boletim_${student.nome.replace(/\s+/g, '_')}.pdf`;
             break;
         case 'detailed':
-            componentToRender = <ReportCardDetailed student={student} boletim={boletim} />;
+            componentToRender = <ReportCardDetailed student={student} boletim={editableBoletim} />;
             fileName = `Boletim_Detalhado_${student.nome.replace(/\s+/g, '_')}.pdf`;
             break;
     }
@@ -108,7 +150,12 @@ export default function StudentReportCardDialog({
 
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsEditing(false);
+          onClose();
+        }
+    }}>
       <DialogContent className="max-w-4xl w-full">
         <DialogHeader>
           <DialogTitle>
@@ -117,32 +164,56 @@ export default function StudentReportCardDialog({
           </DialogTitle>
         </DialogHeader>
         <div className="relative w-full overflow-auto mt-4">
-            <StudentReportCard boletim={boletim} />
+            <StudentReportCard boletim={editableBoletim} isEditing={isEditing} onGradeChange={handleGradeChange} />
         </div>
         <DialogFooter className="mt-auto pt-4 border-t">
           <TooltipProvider>
             <div className="flex items-center justify-center gap-2 w-full">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={() => generatePdf('declaration')} disabled={!!isProcessing}>
-                      {isProcessing === 'declaration' ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Download Declaração com Boletim</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={() => generatePdf('detailed')} disabled={!!isProcessing}>
-                      {isProcessing === 'detailed' ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Download Boletim Detalhado</p>
-                </TooltipContent>
-              </Tooltip>
+              {isEditing ? (
+                  <>
+                    <Button variant="outline" onClick={() => setIsEditing(false)}>
+                        <X className="h-4 w-4 mr-2" />
+                        Cancelar
+                    </Button>
+                    <Button onClick={handleSaveChanges}>
+                        <Save className="h-4 w-4 mr-2" />
+                        Salvar Alterações
+                    </Button>
+                  </>
+              ) : (
+                  <>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                           <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)}>
+                              <Pencil className="h-5 w-5" />
+                           </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                           <p>Editar Notas</p>
+                        </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={() => generatePdf('declaration')} disabled={!!isProcessing}>
+                            {isProcessing === 'declaration' ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Download Declaração com Boletim</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={() => generatePdf('detailed')} disabled={!!isProcessing}>
+                            {isProcessing === 'detailed' ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Download Boletim Detalhado</p>
+                      </TooltipContent>
+                    </Tooltip>
+                 </>
+              )}
             </div>
           </TooltipProvider>
         </DialogFooter>
