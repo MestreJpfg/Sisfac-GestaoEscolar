@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Loader2, Plus, ClipboardList, NotebookText, Upload } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { firestore } from "@/firebase";
 import { getCountFromServer, collection } from "firebase/firestore";
 import StudentDataView from "./student-data-view";
@@ -20,6 +20,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "./ui/button";
+
+const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+    </svg>
+);
+
 
 export default function StudentManager() {
   const [dataExists, setDataExists] = useState<boolean | null>(null);
@@ -79,6 +97,11 @@ export default function StudentManager() {
     setIsUploading(false);
   }
 
+  const phoneNumber = "5585000000000"; // Substitua pelo seu número
+  const message = "Olá! Tenho uma dúvida sobre a aplicação de Gestão de Alunos."; // Substitua pela sua mensagem
+  const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+
+
   return (
     <>
       <main className="flex min-h-screen flex-col items-center p-4 sm:p-6 md:p-8 non-printable">
@@ -134,8 +157,17 @@ export default function StudentManager() {
             )}
           </div>
         </div>
-        <footer className="w-full max-w-7xl mx-auto mt-12 py-4 text-center text-xs text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} MestreJp. Todos os direitos reservados.</p>
+        <footer className="w-full max-w-7xl mx-auto mt-12 py-4 flex items-center justify-center text-center text-xs text-muted-foreground">
+            <p>&copy; {new Date().getFullYear()} MestreJp. Todos os direitos reservados.</p>
+            <a 
+                href={whatsappUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="ml-4 text-primary hover:text-primary/80 transition-colors"
+                aria-label="Contactar via WhatsApp"
+            >
+                <WhatsAppIcon className="h-5 w-5" />
+            </a>
         </footer>
       </main>
       
@@ -153,9 +185,8 @@ export default function StudentManager() {
             <DropdownMenuContent
               align="end"
               side="top"
-              className="bg-transparent border-none shadow-none mb-2 w-auto"
+              className="w-auto p-0 border-none bg-transparent shadow-none mb-2 flex flex-col items-end gap-3"
             >
-              <div className="flex flex-col items-end gap-3">
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-pointer rounded-full">
                   <ClassListGenerator />
                 </DropdownMenuItem>
@@ -165,7 +196,6 @@ export default function StudentManager() {
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-pointer rounded-full">
                   <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
                 </DropdownMenuItem>
-              </div>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -173,3 +203,4 @@ export default function StudentManager() {
     </>
   );
 }
+
