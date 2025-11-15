@@ -50,8 +50,7 @@ export default function LoginPage() {
     } catch (error: any) {
       console.error('Erro no login:', error);
       let description = 'Ocorreu um erro. Verifique as suas credenciais.';
-      // Explicitly check for the invalid credential code.
-      if (error.code === 'auth/invalid-credential') {
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
           description = 'Credenciais inválidas. Verifique o seu email e senha.';
       } else if (error.message) {
           description = error.message;
