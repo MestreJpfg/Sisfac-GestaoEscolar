@@ -65,23 +65,23 @@ export default function StudentManager() {
     { component: <FileUploaderSheet key="file-upload" onUploadSuccess={onUploadSuccess} /> },
     { component: <GradesUploaderSheet key="grades-upload" /> },
     { component: (
-        <Link href="/profile" passHref>
-          <Button asChild variant="secondary" className="flex items-center gap-2 shadow-lg">
-            <div>
-              <User className="h-4 w-4" />
-              <span>Perfil</span>
-            </div>
-          </Button>
-        </Link>
+       <Link href="/profile" passHref legacyBehavior>
+        <Button asChild variant="secondary" className="flex items-center gap-2 shadow-lg">
+          <a>
+            <User className="h-4 w-4" />
+            <span>Perfil</span>
+          </a>
+        </Button>
+      </Link>
       )
     },
     { component: (
-        <Link href="/signup" passHref>
+        <Link href="/" passHref legacyBehavior>
           <Button asChild variant="secondary" className="flex items-center gap-2 shadow-lg">
-            <div>
+            <a>
               <UserPlus className="h-4 w-4" />
               <span>Novo Utilizador</span>
-            </div>
+            </a>
           </Button>
         </Link>
       )

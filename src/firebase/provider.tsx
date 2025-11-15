@@ -90,24 +90,20 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     isUserLoading: userAuthState.isUserLoading,
   }), [firebaseApp, firestore, auth, userAuthState]);
 
-  const isAuthPage = pathname === '/' || pathname === '/signup';
+  const isAuthPage = pathname === '/' || pathname === '/login';
 
   useEffect(() => {
-    // Don't do anything while loading
     if (userAuthState.isUserLoading) return;
 
-    // If not logged in and not on an auth page, redirect to login
     if (!userAuthState.user && !isAuthPage) {
-      router.push('/');
+      router.push('/login');
     }
 
-    // If logged in and on an auth page, redirect to dashboard
     if (userAuthState.user && isAuthPage) {
       router.push('/dashboard');
     }
   }, [userAuthState.isUserLoading, userAuthState.user, isAuthPage, pathname, router]);
 
-  // Render decisions
   if (userAuthState.isUserLoading) {
     return <GlobalLoader />;
   }
@@ -121,7 +117,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     );
   }
   
-  // If user is not logged in and is on an auth page, show the page
   if (!userAuthState.user && isAuthPage) {
       return (
           <FirebaseContext.Provider value={contextValue}>
@@ -131,7 +126,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       );
   }
   
-  // If user is logged in and not on an auth page, show the page
   if (userAuthState.user && !isAuthPage) {
        return (
           <FirebaseContext.Provider value={contextValue}>
@@ -141,7 +135,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       );
   }
 
-  // In any other case (like redirecting), show the loader
   return <GlobalLoader />;
 };
 
