@@ -78,6 +78,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const unsubscribe = onAuthStateChanged(
       auth,
       async (firebaseUser) => {
+        // We are no longer loading the firebase user, but we might still be loading the app user data.
+        setUserAuthState(prev => ({...prev, isUserLoading: false }));
         if (firebaseUser) {
           try {
             const userDocRef = doc(firestore, 'users', firebaseUser.uid);
@@ -85,9 +87,9 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
             if (userDoc.exists()) {
               setUserAuthState({ user: firebaseUser, appUser: userDoc.data() as AppUser, isUserLoading: false, userError: null });
             } else {
-              // This case can happen if the user doc creation is delayed.
-              // For now, we'll treat it as a loading state until the doc is created.
-              setUserAuthState({ user: firebaseUser, appUser: null, isUserLoading: true, userError: null });
+              // User exists in Auth but not in Firestore yet.
+              // Set firebase user but app user is null. Loading is false.
+              setUserAuthState({ user: firebaseUser, appUser: null, isUserLoading: false, userError: null });
             }
           } catch (error) {
             console.error("FirebaseProvider: Error fetching user document:", error);
