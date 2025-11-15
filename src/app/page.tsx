@@ -1,11 +1,8 @@
-import SignUpForm from "@/components/auth/signup-form";
+import StudentManager from "@/components/student-manager";
 
-export default function SignUpPage() {
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4">
-       <div className="w-full max-w-md">
-        <SignUpForm />
-      </div>
-    </div>
-  );
+/**
+ * This is a Server Component that renders the main application layout.
+ */
+export default async function DashboardPage() {
+  return <StudentManager />;
 }

@@ -1,34 +1,29 @@
-
 "use client";
 
-import { useState, useEffect, forwardRef } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Loader2, Plus, X, User, UserPlus } from "lucide-react";
-import { quotes } from "@/lib/quotes";
+import { Loader2 } from "lucide-react";
 import { useFirestore } from "@/firebase";
 import { getCountFromServer, collection } from "firebase/firestore";
 import StudentDataView from "./student-data-view";
 import { useToast } from "@/hooks/use-toast";
-import { FirestorePermissionError } from "@/firebase/errors";
-import { errorEmitter } from "@/firebase/error-emitter";
 import { ThemeToggle } from "./theme-toggle";
 import ClassListGenerator from "./class-list-generator";
 import GradesUploaderSheet from "./grades-uploader-sheet";
 import FileUploaderSheet from "./file-uploader-sheet";
-import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "./ui/button";
-import { UserNav } from "./auth/user-nav";
-import Link from 'next/link';
 
 export default function StudentManager() {
   const [dataExists, setDataExists] = useState<boolean | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [isFabMenuOpen, setIsFabMenuOpen] = useState(false);
 
   const firestore = useFirestore();
+  const { toast } = useToast();
 
   useEffect(() => {
-    if (!firestore) return;
+    if (!firestore) {
+        setDataExists(false); // Firestore not available
+        return;
+    };
 
     const checkDataExists = async () => {
       try {
@@ -36,57 +31,25 @@ export default function StudentManager() {
         const snapshot = await getCountFromServer(collectionRef);
         setDataExists(snapshot.data().count > 0);
       } catch (error) {
-        if (error instanceof Error && (error.message.includes('permission-denied') || error.message.includes('insufficient permissions'))) {
-          const permissionError = new FirestorePermissionError({
-            path: 'alunos',
-            operation: 'list',
-          });
-          errorEmitter.emit('permission-error', permissionError);
-        } else {
-            console.error("Failed to check if data exists:", error);
-        }
+        console.error("Failed to check if data exists:", error);
+        toast({
+            variant: "destructive",
+            title: "Erro de Conexão",
+            description: "Não foi possível conectar à base de dados para verificar os alunos.",
+        });
         setDataExists(false);
       }
     };
     
     checkDataExists();
-  }, [firestore]);
+  }, [firestore, toast]);
   
   const isPageLoading = dataExists === null;
 
   const onUploadSuccess = () => {
     setDataExists(true);
     setIsUploading(false);
-    setIsFabMenuOpen(false);
   }
-
-  const fabItems = [
-    { component: <ClassListGenerator key="class-list" /> },
-    { component: <FileUploaderSheet key="file-upload" onUploadSuccess={onUploadSuccess} /> },
-    { component: <GradesUploaderSheet key="grades-upload" /> },
-    { component: (
-       <Link href="/profile" passHref legacyBehavior>
-        <Button asChild variant="secondary" className="flex items-center gap-2 shadow-lg">
-          <a>
-            <User className="h-4 w-4" />
-            <span>Perfil</span>
-          </a>
-        </Button>
-      </Link>
-      )
-    },
-    { component: (
-        <Link href="/" passHref legacyBehavior>
-          <Button asChild variant="secondary" className="flex items-center gap-2 shadow-lg">
-            <a>
-              <UserPlus className="h-4 w-4" />
-              <span>Novo Utilizador</span>
-            </a>
-          </Button>
-        </Link>
-      )
-    },
-  ].reverse();
 
   return (
     <>
@@ -108,9 +71,11 @@ export default function StudentManager() {
                   {dataExists ? "Filtre e visualize os dados dos alunos ou utilize os botões de ação." : "Carregue o ficheiro de alunos para iniciar a gestão."}
                 </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
               <ThemeToggle />
-              <UserNav />
+              <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
+              <GradesUploaderSheet />
+              <ClassListGenerator />
             </div>
           </header>
 
@@ -134,50 +99,6 @@ export default function StudentManager() {
           <p>&copy; {new Date().getFullYear()} MestreJp. Todos os direitos reservados.</p>
         </footer>
       </main>
-      
-      {dataExists && !isPageLoading && (
-        <div className="fixed bottom-6 right-6 flex flex-col items-end gap-4 z-50 non-printable">
-          <AnimatePresence>
-            {isFabMenuOpen && (
-              <motion.div
-                className="flex flex-col items-end gap-4"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
-                {fabItems.map((item, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0, transition: { delay: index * 0.1 } }}
-                    exit={{ opacity: 0, y: 20, transition: { delay: index * 0.05 } }}
-                  >
-                    {item.component}
-                  </motion.div>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <Button
-            onClick={() => setIsFabMenuOpen(!isFabMenuOpen)}
-            className="h-16 w-16 rounded-full shadow-lg p-0 flex items-center justify-center"
-            aria-expanded={isFabMenuOpen}
-          >
-            <AnimatePresence initial={false}>
-              <motion.div
-                key={isFabMenuOpen ? "x" : "plus"}
-                initial={{ rotate: -45, opacity: 0, scale: 0.5 }}
-                animate={{ rotate: 0, opacity: 1, scale: 1 }}
-                exit={{ rotate: 45, opacity: 0, scale: 0.5 }}
-                transition={{ duration: 0.2 }}
-                className="absolute"
-              >
-                {isFabMenuOpen ? <X className="h-8 w-8" /> : <Plus className="h-8 w-8" />}
-              </motion.div>
-            </AnimatePresence>
-          </Button>
-        </div>
-      )}
     </>
   );
 }

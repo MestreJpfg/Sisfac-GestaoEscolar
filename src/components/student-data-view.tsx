@@ -15,14 +15,14 @@ import { useDebounce } from '@/hooks/use-debounce';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import type { SortConfig } from './student-table';
-import { FirestorePermissionError } from '@/firebase/errors';
-import { errorEmitter } from '@/firebase/error-emitter';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
 import StudentReportCardDialog from './student-report-card-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 export default function StudentDataView() {
   const firestore = useFirestore();
+  const { toast } = useToast();
 
   const [allFetchedStudents, setAllFetchedStudents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -75,19 +75,17 @@ export default function StudentDataView() {
           turnos: Array.from(turnos).sort(),
         });
       } catch (error) {
-        if (error instanceof Error && (error.message.includes('permission-denied') || error.message.includes('insufficient permissions'))) {
-          const permissionError = new FirestorePermissionError({
-            path: 'alunos',
-            operation: 'list'
-          });
-          errorEmitter.emit('permission-error', permissionError);
-        }
+        console.error("Error fetching unique options:", error);
+        toast({
+            variant: "destructive",
+            title: "Erro ao carregar filtros",
+            description: "Não foi possível buscar as opções de filtro da base de dados."
+        });
       }
     };
 
     fetchUniqueOptions();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firestore]);
+  }, [firestore, toast]);
 
 
   useEffect(() => {
@@ -139,21 +137,20 @@ export default function StudentDataView() {
           setAllFetchedStudents(studentsData);
 
         } catch (error: any) {
-          if (error instanceof Error && (error.message.includes('permission-denied') || error.message.includes('insufficient permissions'))) {
-            const permissionError = new FirestorePermissionError({
-                path: 'alunos',
-                operation: 'list',
+            console.error("Error searching students:", error);
+            toast({
+                variant: "destructive",
+                title: "Erro na Busca",
+                description: "Ocorreu um erro ao buscar os alunos. Verifique os filtros e a conexão."
             });
-            errorEmitter.emit('permission-error', permissionError);
-          }
-          setAllFetchedStudents([]);
+            setAllFetchedStudents([]);
         } finally {
           setIsLoading(false);
         }
     };
 
     searchStudents();
-  }, [firestore, debouncedNome, filters.serie, filters.classe, filters.turno, filters.nee]);
+  }, [firestore, debouncedNome, filters.serie, filters.classe, filters.turno, filters.nee, toast]);
 
   const sortedStudents = useMemo(() => {
     let sortableItems = [...allFetchedStudents];
@@ -354,4 +351,3 @@ export default function StudentDataView() {
     </div>
   );
 }
-
