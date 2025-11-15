@@ -19,22 +19,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "./ui/button";
 import { UserNav } from "./auth/user-nav";
 import Link from 'next/link';
-import { cn } from "@/lib/utils";
-
-// Reusable component for FAB menu items that are links
-const FabLinkItem = forwardRef<HTMLAnchorElement, { href: string; children: React.ReactNode; className?: string }>(
-  ({ href, children, className, ...props }, ref) => {
-    return (
-      <Link href={href} passHref>
-        <a ref={ref} className={cn("flex items-center gap-2 shadow-lg", className)} {...props}>
-          {children}
-        </a>
-      </Link>
-    );
-  }
-);
-FabLinkItem.displayName = 'FabLinkItem';
-
 
 export default function StudentManager() {
   const [dataExists, setDataExists] = useState<boolean | null>(null);
@@ -81,21 +65,25 @@ export default function StudentManager() {
     { component: <FileUploaderSheet key="file-upload" onUploadSuccess={onUploadSuccess} /> },
     { component: <GradesUploaderSheet key="grades-upload" /> },
     { component: (
-        <FabLinkItem href="/profile">
-           <Button variant="secondary" className="flex items-center gap-2 shadow-lg">
-                <User className="h-4 w-4" />
-                <span>Perfil</span>
-            </Button>
-        </FabLinkItem>
+        <Link href="/profile" passHref>
+          <Button asChild variant="secondary" className="flex items-center gap-2 shadow-lg">
+            <div>
+              <User className="h-4 w-4" />
+              <span>Perfil</span>
+            </div>
+          </Button>
+        </Link>
       )
     },
     { component: (
-        <FabLinkItem href="/signup">
-           <Button variant="secondary" className="flex items-center gap-2 shadow-lg">
-                <UserPlus className="h-4 w-4" />
-                <span>Novo Utilizador</span>
-            </Button>
-        </FabLinkItem>
+        <Link href="/signup" passHref>
+          <Button asChild variant="secondary" className="flex items-center gap-2 shadow-lg">
+            <div>
+              <UserPlus className="h-4 w-4" />
+              <span>Novo Utilizador</span>
+            </div>
+          </Button>
+        </Link>
       )
     },
   ].reverse();
