@@ -51,7 +51,9 @@ export default function LoginPage() {
       toast({
         variant: 'destructive',
         title: 'Erro no Login',
-        description: error.message || 'Ocorreu um erro. Verifique as suas credenciais.',
+        description: error.code === 'auth/invalid-credential'
+          ? 'Credenciais inválidas. Verifique o seu email e senha.'
+          : error.message || 'Ocorreu um erro. Verifique as suas credenciais.',
       });
     } finally {
       setIsLoading(false);
