@@ -125,6 +125,24 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   
   const isAuthPage = pathname === '/' || pathname === '/signup';
 
+  useEffect(() => {
+    // Wait until loading is complete before doing any redirection
+    if (contextValue.isUserLoading) {
+      return;
+    }
+
+    // If there is no user and we are not on an auth page, redirect to login
+    if (!contextValue.user && !isAuthPage) {
+      router.push('/');
+    }
+
+    // If there is a user and we are on an auth page, redirect to dashboard
+    if (contextValue.user && isAuthPage) {
+      router.push('/dashboard');
+    }
+  }, [contextValue.isUserLoading, contextValue.user, isAuthPage, router]);
+
+
   if (contextValue.isUserLoading) {
     return <GlobalLoader />;
   }
@@ -138,24 +156,19 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     );
   }
   
-  // If loading is finished, perform redirection logic
-  if (!contextValue.isUserLoading) {
-    if (!contextValue.user && !isAuthPage) {
-      router.push('/');
-      return <GlobalLoader />; // Show loader while redirecting to prevent flickering
-    }
-    if (contextValue.user && isAuthPage) {
-      router.push('/dashboard');
-      return <GlobalLoader />; // Show loader while redirecting
-    }
+  // Render children only if the redirection logic doesn't apply
+  // or if we are already on the correct page.
+  if ((contextValue.user && !isAuthPage) || (!contextValue.user && isAuthPage)) {
+    return (
+        <FirebaseContext.Provider value={contextValue}>
+          <FirebaseErrorListener />
+          {children}
+        </FirebaseContext.Provider>
+    );
   }
 
-  return (
-      <FirebaseContext.Provider value={contextValue}>
-        <FirebaseErrorListener />
-        {children}
-      </FirebaseContext.Provider>
-  );
+  // Otherwise, show loader while redirecting
+  return <GlobalLoader />;
 };
 
 export const useFirebase = (): FirebaseServicesAndUser => {
