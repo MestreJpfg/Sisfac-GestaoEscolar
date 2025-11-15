@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import {
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import StudentReportCard from "./student-report-card";
 import { Button } from "./ui/button";
-import { Loader2, Download, Pencil, Save, X } from "lucide-react";
+import { Loader2, Download, Pencil, Save, X, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ReportCardWithDeclaration from "./report-card-with-declaration";
 import ReportCardDetailed from "./report-card-detailed";
@@ -27,6 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 
 
 interface Boletim {
@@ -65,6 +66,24 @@ export default function StudentReportCardDialog({
       setEditableBoletim(JSON.parse(JSON.stringify(initialBoletim || {})));
     }
   }, [isOpen, initialBoletim]);
+
+  const subjectsInRecovery = useMemo(() => {
+    if (!editableBoletim) return [];
+    return Object.entries(editableBoletim)
+      .map(([disciplina, notas]) => {
+        const validGrades = [notas.etapa1, notas.etapa2, notas.etapa3, notas.etapa4].filter(
+          (nota): nota is number => nota !== null && nota !== undefined && !isNaN(nota)
+        );
+        const media = notas.mediaFinal ?? (validGrades.length > 0 ? validGrades.reduce((a, b) => a + b, 0) / validGrades.length : null);
+        
+        const cleanedDisciplina = disciplina.replace(/_/g, ' ').replace(/-/g, '/');
+        const formattedDisciplina = cleanedDisciplina.charAt(0).toUpperCase() + cleanedDisciplina.slice(1).toLowerCase();
+
+        return { disciplina: formattedDisciplina, media };
+      })
+      .filter(item => item.media !== null && item.media < 6.0)
+      .map(item => item.disciplina);
+  }, [editableBoletim]);
 
   const handleGradeChange = (disciplina: string, etapa: string, value: string) => {
     const numericValue = value === '' ? null : parseFloat(value.replace(',', '.'));
@@ -162,22 +181,36 @@ export default function StudentReportCardDialog({
           onClose();
         }
     }}>
-      <DialogContent className="max-w-4xl w-full">
+      <DialogContent className="max-w-4xl w-full flex flex-col">
         <DialogHeader>
           <DialogTitle>
             Boletim de Notas
             <span className="block text-base font-normal text-muted-foreground mt-1">{student?.nome}</span>
           </DialogTitle>
         </DialogHeader>
-        <div className="relative w-full overflow-auto mt-4">
+        <div className="relative w-full overflow-auto my-4 flex-1">
             <StudentReportCard boletim={editableBoletim} isEditing={isEditing} onGradeChange={handleGradeChange} />
         </div>
+
+        {subjectsInRecovery.length > 0 && !isEditing && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Atenção: Aluno em Recuperação</AlertTitle>
+              <AlertDescription>
+                O aluno encontra-se em recuperação na(s) seguinte(s) disciplina(s): {subjectsInRecovery.join(', ')}.
+              </AlertDescription>
+            </Alert>
+        )}
+
         <DialogFooter className="mt-auto pt-4 border-t">
           <TooltipProvider>
             <div className="flex items-center justify-center gap-2 w-full">
               {isEditing ? (
                   <>
-                    <Button variant="outline" onClick={() => setIsEditing(false)}>
+                    <Button variant="outline" onClick={() => {
+                        setEditableBoletim(JSON.parse(JSON.stringify(initialBoletim || {})));
+                        setIsEditing(false);
+                    }}>
                         <X className="h-4 w-4 mr-2" />
                         Cancelar
                     </Button>
