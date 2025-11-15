@@ -108,7 +108,7 @@ export default function LoginPage() {
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Não tem uma conta?{' '}
             <Link href="/signup" className="font-semibold text-primary hover:underline">
-              Registe-se
+              Registre-se
             </Link>
           </p>
         </CardContent>
