@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -49,7 +50,8 @@ export default function LoginPage() {
     } catch (error: any) {
       console.error('Erro no login:', error);
       let description = 'Ocorreu um erro. Verifique as suas credenciais.';
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+      // Explicitly check for the invalid credential code.
+      if (error.code === 'auth/invalid-credential') {
           description = 'Credenciais inválidas. Verifique o seu email e senha.';
       } else if (error.message) {
           description = error.message;
