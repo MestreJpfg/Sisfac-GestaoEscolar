@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Loader2, Plus, Upload, NotebookText } from "lucide-react";
+import { Loader2, Plus, Upload, NotebookText, ClipboardList } from "lucide-react";
 import { firestore } from "@/firebase";
 import { getCountFromServer, collection } from "firebase/firestore";
 import StudentDataView from "./student-data-view";
@@ -20,19 +20,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "./ui/button";
-
-const FabSheetTrigger = ({ icon: Icon, label, sheetTrigger }: { icon: React.ElementType, label: string, sheetTrigger: React.ReactNode }) => (
-    <div className="flex items-center gap-3">
-        {sheetTrigger}
-        <div className="flex items-center gap-3">
-            <div className="bg-background/80 backdrop-blur-sm shadow-lg rounded-full p-2">
-                <Icon className="h-5 w-5 text-primary" />
-            </div>
-            <span className="text-sm font-semibold text-foreground bg-background/80 backdrop-blur-sm shadow-lg rounded-md px-3 py-1">{label}</span>
-        </div>
-    </div>
-);
-
 
 export default function StudentManager() {
   const [dataExists, setDataExists] = useState<boolean | null>(null);
@@ -84,7 +71,7 @@ export default function StudentManager() {
     checkDataExists();
 
     return () => clearInterval(intervalId);
-  }, [firestore, toast]);
+  }, [toast]);
   
   const isPageLoading = dataExists === null;
 
@@ -99,13 +86,13 @@ export default function StudentManager() {
         <div className="w-full max-w-7xl mx-auto flex-1">
           <header className="mb-8 flex flex-col items-center text-center">
             <div className="w-full flex items-start justify-between">
-                <div/>
-                <div className="flex flex-col items-center">
+                <div className="w-10 h-10"></div>
+                <div className="flex flex-col items-center text-center">
                     <Image
                         src="/logo.png"
                         alt="Logo"
-                        width={100}
-                        height={100}
+                        width={80}
+                        height={80}
                         className="rounded-md"
                         priority
                     />
@@ -114,7 +101,6 @@ export default function StudentManager() {
                     )}
                     {randomQuote && (
                         <blockquote className="mt-2 text-sm italic text-muted-foreground max-w-sm relative">
-                            <span className="absolute left-[-1rem] top-0 text-2xl font-bold text-primary/50">“</span>
                             <p className="px-4">
                                 {randomQuote.quote}
                             </p>
@@ -156,43 +142,52 @@ export default function StudentManager() {
       
       {dataExists && (
         <div className="fixed bottom-6 right-6 z-50">
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button
-                        variant="default"
-                        className="rounded-full w-14 h-14 shadow-2xl flex items-center justify-center"
-                    >
-                        <Plus className="h-6 w-6" />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                    align="end"
-                    side="top"
-                    className="bg-transparent border-none shadow-none mb-2"
-                >
-                    <div className="flex flex-col items-end gap-3">
-                        <FabSheetTrigger 
-                            sheetTrigger={<GradesUploaderSheet />}
-                            icon={NotebookText}
-                            label="Carregar Notas"
-                        />
-                         <FabSheetTrigger 
-                            sheetTrigger={<FileUploaderSheet onUploadSuccess={onUploadSuccess} />}
-                            icon={Upload}
-                            label="Carregar Alunos"
-                        />
-                         <FabSheetTrigger 
-                            sheetTrigger={<ClassListGenerator />}
-                            icon={Upload}
-                            label="Criar Listas"
-                        />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="default"
+                className="rounded-full w-14 h-14 shadow-2xl flex items-center justify-center"
+              >
+                <Plus className="h-6 w-6" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              side="top"
+              className="bg-transparent border-none shadow-none mb-2 w-64"
+            >
+              <div className="flex flex-col items-end gap-3">
+                <DropdownMenuItem asChild className="p-0 m-0 focus:bg-transparent cursor-pointer">
+                    <div className="flex items-center justify-end gap-3">
+                         <span className="text-sm font-semibold text-foreground bg-background/80 backdrop-blur-sm shadow-lg rounded-md px-3 py-2">Criar Listas</span>
+                        <div className="bg-background/80 backdrop-blur-sm shadow-lg rounded-full p-2">
+                           <ClassListGenerator />
+                        </div>
                     </div>
-                </DropdownMenuContent>
-            </DropdownMenu>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem asChild className="p-0 m-0 focus:bg-transparent cursor-pointer">
+                     <div className="flex items-center justify-end gap-3">
+                         <span className="text-sm font-semibold text-foreground bg-background/80 backdrop-blur-sm shadow-lg rounded-md px-3 py-2">Carregar Notas</span>
+                        <div className="bg-background/80 backdrop-blur-sm shadow-lg rounded-full p-2">
+                            <GradesUploaderSheet />
+                        </div>
+                    </div>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem asChild className="p-0 m-0 focus:bg-transparent cursor-pointer">
+                     <div className="flex items-center justify-end gap-3">
+                         <span className="text-sm font-semibold text-foreground bg-background/80 backdrop-blur-sm shadow-lg rounded-md px-3 py-2">Carregar Alunos</span>
+                        <div className="bg-background/80 backdrop-blur-sm shadow-lg rounded-full p-2">
+                           <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
+                        </div>
+                    </div>
+                </DropdownMenuItem>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       )}
     </>
   );
 }
-
-    
