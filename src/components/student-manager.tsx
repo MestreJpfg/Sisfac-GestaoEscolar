@@ -97,8 +97,8 @@ export default function StudentManager() {
     setIsUploading(false);
   }
 
-  const phoneNumber = "5585000000000"; // Substitua pelo seu número
-  const message = "Olá! Tenho uma dúvida sobre a aplicação de Gestão de Alunos."; // Substitua pela sua mensagem
+  const phoneNumber = "5585987987653";
+  const message = "Olá! Poderia ajudar? Quero...";
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
 
 
@@ -203,4 +203,3 @@ export default function StudentManager() {
     </>
   );
 }
-
