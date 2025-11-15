@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "./ui/button";
+import { UserNav } from "./user-nav";
 
 const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg
@@ -130,7 +131,10 @@ export default function StudentManager() {
                         </blockquote>
                     )}
                 </div>
-                <ThemeToggle />
+                <div className="flex items-center gap-2">
+                    <ThemeToggle />
+                    <UserNav />
+                </div>
             </div>
             
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary [text-shadow:0_2px_10px_hsl(var(--primary)/0.4)] font-headline mt-6">

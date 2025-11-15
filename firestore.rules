@@ -1,88 +1,17 @@
-/**
- * @fileoverview Firestore Security Rules for XLSX File Management App
- *
- * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for XLSX files and their extracted data.
- * Each user has exclusive access to their own data, preventing unauthorized access or modification.
- *
- * Data Structure:
- * All data is nested under /users/{userId}, ensuring clear ownership.
- * - /users/{userId}/xlsxFiles/{xlsxFileId}: Stores metadata for XLSX files uploaded by the user.
- * - /users/{userId}/xlsxFiles/{xlsxFileId}/extractedData/{extractedDataId}: Stores data extracted from the XLSX file's first column.
- *
- * Key Security Decisions:
- * - User listing is disallowed to protect user privacy.
- * - All write operations require user authentication. Anonymous auth is enabled.
- * - Data consistency between the path and document's internal fields is enforced on creation and updates.
- *
- * Denormalization for Authorization:
- * The `xlsxFileId` is denormalized into the path `/users/{userId}/xlsxFiles/{xlsxFileId}/extractedData/{extractedDataId}`
- * to avoid the need to query parent documents during security checks on extracted data.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    /**
-     * @description Checks if the request is authenticated.
-     * @return {bool} True if the request is authenticated, false otherwise.
-     */
+    
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * @description Checks if the authenticated user ID matches the provided user ID.
-     * @param {string} userId The user ID to compare against the authenticated user's ID.
-     * @return {bool} True if the user IDs match, false otherwise.
-     */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+    match /users/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
     }
 
-    /**
-     * @description Checks if the user is the owner and the resource exists.
-     * @param {string} userId The user ID to check for ownership.
-     * @return {bool} True if the user is the owner and the resource exists.
-     */
-    function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-    }
-
-    /**
-     * @description Rules for the xlsxFiles collection within a user's document.
-     * @path /users/{userId}/xlsxFiles/{xlsxFileId}
-     * @allow (create) - Authenticated user with matching {userId} can create a new xlsxFile document.
-     * @allow (get, update, delete) - Authenticated user with matching {userId} can get, update or delete their own xlsxFile document.
-     * @deny (create) - Unauthenticated user cannot create a new xlsxFile document.
-     * @deny (update) - Authenticated user cannot update another user's xlsxFile document.
-     * @principle Enforces document ownership for writes, restricts access to a user's own data tree, validates relational integrity between documents.
-     */
-    match /users/{userId}/xlsxFiles/{xlsxFileId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-
-      allow create: if isOwner(userId) && request.resource.data.id == xlsxFileId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
-    }
-
-    /**
-     * @description Rules for the extractedData collection within an xlsxFile document.
-     * @path /users/{userId}/xlsxFiles/{xlsxFileId}/extractedData/{extractedDataId}
-     * @allow (create) - Authenticated user with matching {userId} can create new extractedData document under their xlsxFile.
-     * @allow (get, update, delete) - Authenticated user with matching {userId} can get, update or delete their own extractedData document.
-     * @deny (create) - Unauthenticated user cannot create a new extractedData document.
-     * @deny (update) - Authenticated user cannot update another user's extractedData document.
-     * @principle Enforces document ownership for writes, restricts access to a user's own data tree, validates relational integrity between documents.
-     */
-    match /users/{userId}/xlsxFiles/{xlsxFileId}/extractedData/{extractedDataId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-
-      allow create: if isOwner(userId) && request.resource.data.xlsxFileId == xlsxFileId;
-      allow update: if isExistingOwner(userId) && request.resource.data.xlsxFileId == resource.data.xlsxFileId;
-      allow delete: if isExistingOwner(userId);
+    match /alunos/{alunoId} {
+      allow read, write: if isSignedIn();
     }
   }
 }

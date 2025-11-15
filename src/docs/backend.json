@@ -1,25 +1,16 @@
-
 {
   "entities": {
-    "Nota": {
-      "title": "Nota",
+    "User": {
+      "title": "User",
       "type": "object",
-      "description": "Armazena as notas de um aluno para uma disciplina específica ao longo do ano.",
+      "description": "Represents a user profile.",
       "properties": {
-        "etapa1": { "type": ["number", "null"], "description": "Nota da Etapa 1." },
-        "etapa2": { "type": ["number", "null"], "description": "Nota da Etapa 2." },
-        "etapa3": { "type": ["number", "null"], "description": "Nota da Etapa 3." },
-        "etapa4": { "type": ["number", "null"], "description": "Nota da Etapa 4." },
-        "mediaFinal": { "type": ["number", "null"], "description": "Média final da disciplina." }
-      }
-    },
-    "Boletim": {
-      "title": "Boletim",
-      "type": "object",
-      "description": "Um mapa de disciplinas e suas respectivas notas para um aluno.",
-      "additionalProperties": {
-        "$ref": "#/entities/Nota"
-      }
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "email"]
     },
     "Aluno": {
       "title": "Aluno",
@@ -56,13 +47,42 @@
         }
       },
       "required": ["rm", "nome", "status"]
+    },
+    "Nota": {
+      "title": "Nota",
+      "type": "object",
+      "description": "Armazena as notas de um aluno para uma disciplina específica ao longo do ano.",
+      "properties": {
+        "etapa1": { "type": ["number", "null"], "description": "Nota da Etapa 1." },
+        "etapa2": { "type": ["number", "null"], "description": "Nota da Etapa 2." },
+        "etapa3": { "type": ["number", "null"], "description": "Nota da Etapa 3." },
+        "etapa4": { "type": ["number", "null"], "description": "Nota da Etapa 4." },
+        "mediaFinal": { "type": ["number", "null"], "description": "Média final da disciplina." }
+      }
+    },
+    "Boletim": {
+      "title": "Boletim",
+      "type": "object",
+      "description": "Um mapa de disciplinas e suas respectivas notas para um aluno.",
+      "additionalProperties": {
+        "$ref": "#/entities/Nota"
+      }
     }
   },
   "auth": {
-    "providers": []
+    "providers": [
+      "password"
+    ]
   },
   "firestore": {
     "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "schema": { "$ref": "#/entities/User" },
+          "description": "Stores user profile information."
+        }
+      },
       {
         "path": "/alunos/{alunoId}",
         "definition": {

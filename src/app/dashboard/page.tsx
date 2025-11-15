@@ -1,9 +1,12 @@
+'use client';
 
 import StudentManager from "@/components/student-manager";
+import AuthGuard from "@/components/auth-guard";
 
-/**
- * This is a Server Component that renders the main application layout.
- */
-export default async function DashboardPage() {
-  return <StudentManager />;
+export default function DashboardPage() {
+  return (
+    <AuthGuard>
+      <StudentManager />
+    </AuthGuard>
+  );
 }

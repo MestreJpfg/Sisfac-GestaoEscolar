@@ -1,8 +1,5 @@
-import StudentManager from "@/components/student-manager";
+import LoginPage from "./login/page";
 
-/**
- * This is a Server Component that renders the main application layout.
- */
-export default function Page() {
-  return <StudentManager />;
+export default function Home() {
+  return <LoginPage />;
 }
