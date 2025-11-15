@@ -1,6 +1,57 @@
 
 {
   "entities": {
+    "User": {
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the application.",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The unique identifier for the user, from Firebase Auth."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's display name."
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user.",
+          "enum": ["Admin", "Funcionário", "Professor", "Aluno", "Pais/Responsáveis"]
+        },
+        "photoURL": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL of the user's profile picture."
+        }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Nota": {
+      "title": "Nota",
+      "type": "object",
+      "description": "Armazena as notas de um aluno para uma disciplina específica ao longo do ano.",
+      "properties": {
+        "etapa1": { "type": ["number", "null"], "description": "Nota da Etapa 1." },
+        "etapa2": { "type": ["number", "null"], "description": "Nota da Etapa 2." },
+        "etapa3": { "type": ["number", "null"], "description": "Nota da Etapa 3." },
+        "etapa4": { "type": ["number", "null"], "description": "Nota da Etapa 4." },
+        "mediaFinal": { "type": ["number", "null"], "description": "Média final da disciplina." }
+      }
+    },
+    "Boletim": {
+      "title": "Boletim",
+      "type": "object",
+      "description": "Um mapa de disciplinas e suas respectivas notas para um aluno.",
+      "additionalProperties": {
+        "$ref": "#/entities/Nota"
+      }
+    },
     "Aluno": {
       "title": "Aluno",
       "type": "object",
@@ -10,77 +61,37 @@
           "type": "string",
           "description": "Registro do Aluno, usado como identificador único."
         },
-        "nome": {
-          "type": "string"
-        },
-        "ensino": {
-          "type": "string"
-        },
-        "serie": {
-          "type": "string"
-        },
-        "classe": {
-          "type": "string"
-        },
-        "turno": {
-          "type": "string"
-        },
-        "filiacao_1": {
-          "type": "string"
-        },
-        "filiacao_2": {
-          "type": "string"
-        },
-        "rg": {
-          "type": "string"
-        },
-        "nis": {
-          "type": "string"
-        },
-        "id_censo": {
-          "type": "string"
-        },
-        "cpf_aluno": {
-          "type": "string"
-        },
-        "cpffiliacao1": {
-          "type": "string"
-        },
-        "data_nascimento": {
-          "type": "string",
-          "format": "date"
-        },
-        "endereco": {
-          "type": "string"
-        },
-        "telefones": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "transporte_escolar": {
-          "type": "boolean"
-        },
-        "carteira_estudante": {
-          "type": "boolean"
-        },
-        "nee": {
-          "type": [
-            "string",
-            "null"
-          ]
+        "nome": { "type": "string" },
+        "ensino": { "type": "string" },
+        "serie": { "type": "string" },
+        "classe": { "type": "string" },
+        "turno": { "type": "string" },
+        "filiacao_1": { "type": "string" },
+        "filiacao_2": { "type": "string" },
+        "rg": { "type": "string" },
+        "nis": { "type": "string" },
+        "id_censo": { "type": "string" },
+        "cpf_aluno": { "type": "string" },
+        "cpffiliacao1": { "type": "string" },
+        "data_nascimento": { "type": "string", "format": "date" },
+        "endereco": { "type": "string" },
+        "telefones": { "type": "array", "items": { "type": "string" } },
+        "transporte_escolar": { "type": "boolean" },
+        "carteira_estudante": { "type": "boolean" },
+        "nee": { "type": ["string", "null"] },
+        "boletim": { "$ref": "#/entities/Boletim" },
+        "status": {
+            "type": "string",
+            "enum": ["ATIVO", "NÃO LISTADO"],
+            "description": "Status do aluno na base de dados."
         }
       },
-      "required": [
-        "rm",
-        "nome"
-      ]
+      "required": ["rm", "nome", "status"]
     }
   },
   "auth": {
     "providers": [
-      "anonymous"
+      "email-password"
     ]
   },
   "firestore": {
@@ -92,6 +103,15 @@
             "$ref": "#/entities/Aluno"
           },
           "description": "Coleção que armazena os dados de todos os alunos."
+        }
+      },
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "schema": {
+            "$ref": "#/entities/User"
+          },
+          "description": "Coleção que armazena perfis de utilizadores da aplicação."
         }
       }
     ]

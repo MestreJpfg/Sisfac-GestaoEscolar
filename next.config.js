@@ -34,6 +34,11 @@ const nextConfig = {
       },
     ],
   },
+  experimental: {
+      serverActions: {
+          allowedOrigins: ["localhost:9002"]
+      }
+  }
 };
 
 module.exports = withPWA(nextConfig);

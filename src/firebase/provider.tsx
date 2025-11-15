@@ -2,10 +2,13 @@
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
-import { Firestore } from 'firebase/firestore';
-import { Auth, User, onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import { Firestore, doc, getDoc } from 'firebase/firestore';
+import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 import { Loader2 } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
+import type { User as AppUser } from '@/lib/user';
+
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -14,90 +17,95 @@ interface FirebaseProviderProps {
   auth: Auth;
 }
 
-// Internal state for user authentication
 interface UserAuthState {
   user: User | null;
+  appUser: AppUser | null;
   isUserLoading: boolean;
   userError: Error | null;
 }
 
-// Combined state for the Firebase context
 export interface FirebaseContextState {
-  areServicesAvailable: boolean; // True if core services (app, firestore, auth instance) are provided
+  areServicesAvailable: boolean; 
   firebaseApp: FirebaseApp | null;
   firestore: Firestore | null;
-  auth: Auth | null; // The Auth service instance
-  // User authentication state
+  auth: Auth | null; 
   user: User | null;
-  isUserLoading: boolean; // True during initial auth check
-  userError: Error | null; // Error from auth listener
+  appUser: AppUser | null;
+  isUserLoading: boolean;
+  userError: Error | null;
 }
 
-// Return type for useFirebase()
 export interface FirebaseServicesAndUser {
   firebaseApp: FirebaseApp;
   firestore: Firestore;
   auth: Auth;
   user: User | null;
+  appUser: AppUser | null;
   isUserLoading: boolean;
   userError: Error | null;
 }
 
-// Return type for useUser() - specific to user auth state
-export interface UserHookResult { // Renamed from UserAuthHookResult for consistency if desired, or keep as UserAuthHookResult
+export interface UserHookResult {
   user: User | null;
+  appUser: AppUser | null;
   isUserLoading: boolean;
   userError: Error | null;
 }
 
-// React Context
 export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
 
-/**
- * FirebaseProvider manages and provides Firebase services and user authentication state.
- */
 export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   children,
   firebaseApp,
   firestore,
   auth,
 }) => {
+  const router = useRouter();
+  const pathname = usePathname();
   const [userAuthState, setUserAuthState] = useState<UserAuthState>({
     user: null,
-    isUserLoading: true, // Start loading until first auth event
+    appUser: null,
+    isUserLoading: true,
     userError: null,
   });
 
-  // Effect to subscribe to Firebase auth state changes
   useEffect(() => {
     if (!auth) {
-      setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
+      setUserAuthState({ user: null, appUser: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
       return;
     }
   
-    // Immediately attempt anonymous sign-in if no user is present
-    if (!auth.currentUser) {
-      signInAnonymously(auth).catch(error => {
-         console.error("FirebaseProvider: Anonymous sign-in failed on init:", error);
-         setUserAuthState({ user: null, isUserLoading: false, userError: error });
-      });
-    }
-
     const unsubscribe = onAuthStateChanged(
       auth,
-      (firebaseUser) => {
-        setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
+      async (firebaseUser) => {
+        if (firebaseUser) {
+          try {
+            const userDocRef = doc(firestore, 'users', firebaseUser.uid);
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+              setUserAuthState({ user: firebaseUser, appUser: userDoc.data() as AppUser, isUserLoading: false, userError: null });
+            } else {
+              // This case can happen if the user doc creation is delayed.
+              // For now, we'll treat it as a loading state until the doc is created.
+              setUserAuthState({ user: firebaseUser, appUser: null, isUserLoading: true, userError: null });
+            }
+          } catch (error) {
+            console.error("FirebaseProvider: Error fetching user document:", error);
+            setUserAuthState({ user: firebaseUser, appUser: null, isUserLoading: false, userError: error as Error });
+          }
+        } else {
+          setUserAuthState({ user: null, appUser: null, isUserLoading: false, userError: null });
+        }
       },
       (error) => {
         console.error("FirebaseProvider: onAuthStateChanged error:", error);
-        setUserAuthState({ user: null, isUserLoading: false, userError: error });
+        setUserAuthState({ user: null, appUser: null, isUserLoading: false, userError: error });
       }
     );
   
     return () => unsubscribe();
-  }, [auth]);
+  }, [auth, firestore]);
 
-  // Memoize the context value
   const contextValue = useMemo((): FirebaseContextState => {
     const servicesAvailable = !!(firebaseApp && firestore && auth);
     return {
@@ -106,19 +114,30 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       firestore: servicesAvailable ? firestore : null,
       auth: servicesAvailable ? auth : null,
       user: userAuthState.user,
+      appUser: userAuthState.appUser,
       isUserLoading: userAuthState.isUserLoading,
       userError: userAuthState.userError,
     };
   }, [firebaseApp, firestore, auth, userAuthState]);
-
-  // Combined loading state: wait for services AND user authentication
+  
   const isLoading = !contextValue.areServicesAvailable || contextValue.isUserLoading;
+  const isAuthPage = pathname === '/login' || pathname === '/signup';
 
-  if (isLoading) {
+  useEffect(() => {
+    if (!isLoading && !contextValue.user && !isAuthPage) {
+      router.push('/login');
+    }
+    if (!isLoading && contextValue.user && isAuthPage) {
+      router.push('/');
+    }
+  }, [isLoading, contextValue.user, isAuthPage, router]);
+
+
+  if (isLoading || (!contextValue.user && !isAuthPage)) {
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-foreground">
         <Loader2 className="mb-4 h-12 w-12 animate-spin text-primary" />
-        <h1 className="text-lg font-semibold">A estabelecer conexão segura...</h1>
+        <h1 className="text-lg font-semibold">A carregar...</h1>
         <p className="text-sm text-muted-foreground">Aguarde um momento.</p>
       </div>
     );
@@ -132,18 +151,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       </div>
     );
   }
-  
-  // Final check to ensure we have a user before rendering the app
-  if (!contextValue.user) {
-    return (
-       <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-foreground">
-        <Loader2 className="mb-4 h-12 w-12 animate-spin text-primary" />
-        <h1 className="text-lg font-semibold">A aguardar autenticação...</h1>
-        <p className="text-sm text-muted-foreground">A finalizar a configuração de segurança.</p>
-      </div>
-    )
-  }
-
 
   return (
     <FirebaseContext.Provider value={contextValue}>
@@ -153,10 +160,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   );
 };
 
-/**
- * Hook to access core Firebase services and user authentication state.
- * Throws error if core services are not available or used outside provider.
- */
 export const useFirebase = (): FirebaseServicesAndUser => {
   const context = useContext(FirebaseContext);
 
@@ -173,24 +176,22 @@ export const useFirebase = (): FirebaseServicesAndUser => {
     firestore: context.firestore,
     auth: context.auth,
     user: context.user,
+    appUser: context.appUser,
     isUserLoading: context.isUserLoading,
     userError: context.userError,
   };
 };
 
-/** Hook to access Firebase Auth instance. */
 export const useAuth = (): Auth => {
   const { auth } = useFirebase();
   return auth;
 };
 
-/** Hook to access Firestore instance. */
 export const useFirestore = (): Firestore => {
   const { firestore } = useFirebase();
   return firestore;
 };
 
-/** Hook to access Firebase App instance. */
 export const useFirebaseApp = (): FirebaseApp => {
   const { firebaseApp } = useFirebase();
   return firebaseApp;
@@ -207,12 +208,7 @@ export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | 
   return memoized;
 }
 
-/**
- * Hook specifically for accessing the authenticated user's state.
- * This provides the User object, loading status, and any auth errors.
- * @returns {UserHookResult} Object with user, isUserLoading, userError.
- */
-export const useUser = (): UserHookResult => { // Renamed from useAuthUser
-  const { user, isUserLoading, userError } = useFirebase(); // Leverages the main hook
-  return { user, isUserLoading, userError };
+export const useUser = (): UserHookResult => {
+  const { user, appUser, isUserLoading, userError } = useFirebase();
+  return { user, appUser, isUserLoading, userError };
 };
