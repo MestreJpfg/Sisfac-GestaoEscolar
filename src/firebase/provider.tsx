@@ -78,6 +78,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const unsubscribe = onAuthStateChanged(
       auth,
       async (firebaseUser) => {
+        setUserAuthState(prevState => ({ ...prevState, isUserLoading: true }));
         if (firebaseUser) {
           try {
             const userDocRef = doc(firestore, 'users', firebaseUser.uid);
@@ -132,7 +133,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     if (contextValue.user && isAuthPage) {
       router.push('/');
     }
-  }, [isLoading, contextValue.user, isAuthPage, router]);
+  }, [isLoading, contextValue.user, isAuthPage, router, pathname]);
 
 
   if (isLoading) {
@@ -153,10 +154,13 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       </div>
     );
   }
+  
+  // Render children only if:
+  // 1. User is authenticated and not on an auth page
+  // 2. User is NOT authenticated and IS on an auth page
+  const canRenderChildren = (contextValue.user && !isAuthPage) || (!contextValue.user && isAuthPage);
 
-  // Se não estiver a carregar e o utilizador não estiver logado, mas estiver numa página de autenticação,
-  // ou se o utilizador estiver logado, renderize os filhos.
-  if ((!isLoading && !contextValue.user && isAuthPage) || contextValue.user) {
+  if (canRenderChildren) {
     return (
         <FirebaseContext.Provider value={contextValue}>
           <FirebaseErrorListener />
@@ -165,7 +169,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     );
   }
 
-  // Para o caso de redirecionamento, mostre um loader para evitar piscar.
+  // If none of the above, it's a redirect scenario, so show a loader to prevent flicker.
   return (
     <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-foreground">
       <Loader2 className="mb-4 h-12 w-12 animate-spin text-primary" />
