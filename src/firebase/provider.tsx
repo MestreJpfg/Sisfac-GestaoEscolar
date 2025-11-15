@@ -7,7 +7,7 @@ import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 import { Loader2 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
-import type { AppUser as UserProfile } from '@/lib/user';
+import type { User as AppUser } from '@/lib/user';
 
 
 interface FirebaseProviderProps {
@@ -19,7 +19,7 @@ interface FirebaseProviderProps {
 
 interface UserAuthState {
   user: User | null;
-  appUser: UserProfile | null;
+  appUser: AppUser | null;
   isUserLoading: boolean;
   userError: Error | null;
 }
@@ -30,7 +30,7 @@ export interface FirebaseContextState {
   firestore: Firestore | null;
   auth: Auth | null; 
   user: User | null;
-  appUser: UserProfile | null;
+  appUser: AppUser | null;
   isUserLoading: boolean;
   userError: Error | null;
 }
@@ -40,14 +40,14 @@ export interface FirebaseServicesAndUser {
   firestore: Firestore;
   auth: Auth;
   user: User | null;
-  appUser: UserProfile | null;
+  appUser: AppUser | null;
   isUserLoading: boolean;
   userError: Error | null;
 }
 
 export interface UserHookResult {
   user: User | null;
-  appUser: UserProfile | null;
+  appUser: AppUser | null;
   isUserLoading: boolean;
   userError: Error | null;
 }
@@ -87,14 +87,15 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const unsubscribe = onAuthStateChanged(
       auth,
       async (firebaseUser) => {
-        setUserAuthState(prevState => ({ ...prevState, isUserLoading: true }));
         if (firebaseUser) {
           try {
             const userDocRef = doc(firestore, 'users', firebaseUser.uid);
             const userDoc = await getDoc(userDocRef);
             if (userDoc.exists()) {
-              setUserAuthState({ user: firebaseUser, appUser: userDoc.data() as UserProfile, isUserLoading: false, userError: null });
+              setUserAuthState({ user: firebaseUser, appUser: userDoc.data() as AppUser, isUserLoading: false, userError: null });
             } else {
+              // User exists in Auth, but not in Firestore yet (e.g., during signup).
+              // Treat as logged in, but without a full app user profile.
               setUserAuthState({ user: firebaseUser, appUser: null, isUserLoading: false, userError: null });
             }
           } catch (error) {
@@ -125,24 +126,32 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   const isAuthPage = pathname === '/' || pathname === '/signup';
 
   useEffect(() => {
-    // Don't do anything while auth state is loading
+    // Wait until the authentication status is resolved.
     if (userAuthState.isUserLoading) {
       return;
     }
 
-    // If user is not logged in and not on an auth page, redirect to login
+    // If the user is not authenticated and is trying to access a protected page, redirect to login.
     if (!userAuthState.user && !isAuthPage) {
       router.push('/');
     }
 
-    // If user is logged in and on an auth page, redirect to dashboard
+    // If the user is authenticated and is on a login/signup page, redirect to the dashboard.
     if (userAuthState.user && isAuthPage) {
       router.push('/dashboard');
     }
-  }, [userAuthState.isUserLoading, userAuthState.user, isAuthPage, router, pathname]);
+  }, [userAuthState.isUserLoading, userAuthState.user, isAuthPage, pathname, router]);
 
-  // While loading, or if a redirect is needed but hasn't happened yet, show a global loader.
-  if (userAuthState.isUserLoading || (!userAuthState.user && !isAuthPage) || (userAuthState.user && isAuthPage)) {
+
+  if (userAuthState.isUserLoading) {
+    return <GlobalLoader />;
+  }
+
+  // While redirecting, show a loader.
+  if (!userAuthState.user && !isAuthPage) {
+    return <GlobalLoader />;
+  }
+  if (userAuthState.user && isAuthPage) {
     return <GlobalLoader />;
   }
 
