@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Loader2, Plus, Upload, NotebookText, ClipboardList } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { firestore } from "@/firebase";
 import { getCountFromServer, collection } from "firebase/firestore";
 import StudentDataView from "./student-data-view";
@@ -48,6 +48,10 @@ export default function StudentManager() {
     setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
 
     const checkDataExists = async () => {
+      if (!firestore) {
+          setDataExists(false);
+          return;
+      };
       try {
         const collectionRef = collection(firestore, 'alunos');
         const snapshot = await getCountFromServer(collectionRef);
@@ -152,28 +156,17 @@ export default function StudentManager() {
               className="bg-transparent border-none shadow-none mb-2 w-auto"
             >
               <div className="flex flex-col items-end gap-3">
-                
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-default">
-                    <div className="flex items-center gap-3 justify-end">
-                        <span className="text-sm font-semibold text-foreground bg-background/80 backdrop-blur-sm shadow-lg rounded-md px-3 py-2">Criar Listas</span>
-                        <ClassListGenerator />
-                    </div>
+                    <ClassListGenerator />
                 </DropdownMenuItem>
 
                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-default">
-                     <div className="flex items-center gap-3 justify-end">
-                         <span className="text-sm font-semibold text-foreground bg-background/80 backdrop-blur-sm shadow-lg rounded-md px-3 py-2">Carregar Notas</span>
-                         <GradesUploaderSheet />
-                    </div>
+                    <GradesUploaderSheet />
                 </DropdownMenuItem>
                 
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-default">
-                     <div className="flex items-center gap-3 justify-end">
-                         <span className="text-sm font-semibold text-foreground bg-background/80 backdrop-blur-sm shadow-lg rounded-md px-3 py-2">Carregar Alunos</span>
-                         <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
-                    </div>
+                    <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
                 </DropdownMenuItem>
-
               </div>
             </DropdownMenuContent>
           </DropdownMenu>
