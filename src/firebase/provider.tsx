@@ -1,6 +1,6 @@
 'use client';
 
-import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
+import React, { createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
 import { Firestore, doc, getDoc } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
@@ -54,6 +54,15 @@ export interface UserHookResult {
 
 export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
 
+const GlobalLoader = () => (
+  <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-foreground">
+    <Loader2 className="mb-4 h-12 w-12 animate-spin text-primary" />
+    <h1 className="text-lg font-semibold">A carregar...</h1>
+    <p className="text-sm text-muted-foreground">Aguarde um momento.</p>
+  </div>
+);
+
+
 export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   children,
   firebaseApp,
@@ -78,7 +87,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const unsubscribe = onAuthStateChanged(
       auth,
       async (firebaseUser) => {
-        setUserAuthState(prevState => ({ ...prevState, isUserLoading: true }));
         if (firebaseUser) {
           try {
             const userDocRef = doc(firestore, 'users', firebaseUser.uid);
@@ -86,8 +94,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
             if (userDoc.exists()) {
               setUserAuthState({ user: firebaseUser, appUser: userDoc.data() as AppUser, isUserLoading: false, userError: null });
             } else {
-              // User exists in Auth but not in Firestore yet.
-              // This can happen right after sign up. The app should handle this state gracefully.
+              // This can happen right after sign up. The user document might not be created yet.
+              // We'll still set loading to false to allow redirection or show a specific state.
               setUserAuthState({ user: firebaseUser, appUser: null, isUserLoading: false, userError: null });
             }
           } catch (error) {
@@ -107,73 +115,46 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     return () => unsubscribe();
   }, [auth, firestore]);
 
-  const contextValue = useMemo((): FirebaseContextState => {
-    const servicesAvailable = !!(firebaseApp && firestore && auth);
-    return {
-      areServicesAvailable: servicesAvailable,
-      firebaseApp: servicesAvailable ? firebaseApp : null,
-      firestore: servicesAvailable ? firestore : null,
-      auth: servicesAvailable ? auth : null,
-      user: userAuthState.user,
-      appUser: userAuthState.appUser,
-      isUserLoading: userAuthState.isUserLoading,
-      userError: userAuthState.userError,
-    };
-  }, [firebaseApp, firestore, auth, userAuthState]);
+  const contextValue = useMemo((): FirebaseContextState => ({
+    areServicesAvailable: !!(firebaseApp && firestore && auth),
+    firebaseApp: firebaseApp,
+    firestore: firestore,
+    auth: auth,
+    ...userAuthState,
+  }), [firebaseApp, firestore, auth, userAuthState]);
   
-  const isLoading = !contextValue.areServicesAvailable || contextValue.isUserLoading;
   const isAuthPage = pathname === '/login' || pathname === '/signup';
 
-  useEffect(() => {
-    if (isLoading) return; // Wait until loading is complete before doing any routing
-
-    if (!contextValue.user && !isAuthPage) {
-      router.push('/login');
-    }
-    if (contextValue.user && isAuthPage) {
-      router.push('/');
-    }
-  }, [isLoading, contextValue.user, isAuthPage, router, pathname]);
-
-
-  if (isLoading) {
-    return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-foreground">
-        <Loader2 className="mb-4 h-12 w-12 animate-spin text-primary" />
-        <h1 className="text-lg font-semibold">A carregar...</h1>
-        <p className="text-sm text-muted-foreground">Aguarde um momento.</p>
-      </div>
-    );
+  if (contextValue.isUserLoading) {
+    return <GlobalLoader />;
   }
-  
-  if (contextValue.userError) {
+
+  if (userAuthState.userError) {
      return (
       <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-destructive-foreground">
         <h1 className="text-lg font-semibold">Erro de Autenticação</h1>
-        <p className="text-sm">{contextValue.userError.message}</p>
+        <p className="text-sm">{userAuthState.userError.message}</p>
       </div>
     );
   }
   
-  // Render children only if:
-  // 1. User is authenticated and not on an auth page
-  // 2. User is NOT authenticated and IS on an auth page
-  const canRenderChildren = (contextValue.user && !isAuthPage) || (!contextValue.user && isAuthPage);
-
-  if (canRenderChildren) {
-    return (
-        <FirebaseContext.Provider value={contextValue}>
-          <FirebaseErrorListener />
-          {children}
-        </FirebaseContext.Provider>
-    );
+  // If loading is finished, perform redirection logic
+  if (!contextValue.isUserLoading) {
+    if (!contextValue.user && !isAuthPage) {
+      router.push('/login');
+      return <GlobalLoader />; // Show loader while redirecting
+    }
+    if (contextValue.user && isAuthPage) {
+      router.push('/');
+      return <GlobalLoader />; // Show loader while redirecting
+    }
   }
 
-  // If none of the above, it's a redirect scenario, so show a loader to prevent flicker.
   return (
-    <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-foreground">
-      <Loader2 className="mb-4 h-12 w-12 animate-spin text-primary" />
-    </div>
+      <FirebaseContext.Provider value={contextValue}>
+        <FirebaseErrorListener />
+        {children}
+      </FirebaseContext.Provider>
   );
 };
 
@@ -216,7 +197,7 @@ export const useFirebaseApp = (): FirebaseApp => {
 
 type MemoFirebase <T> = T & {__memo?: boolean};
 
-export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | (MemoFirebase<T>) {
+export function useMemoFirebase<T>(factory: () => T, deps: React.DependencyList): T | (MemoFirebase<T>) {
   const memoized = useMemo(factory, deps);
   
   if(typeof memoized !== 'object' || memoized === null) return memoized;
