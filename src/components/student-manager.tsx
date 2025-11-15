@@ -154,33 +154,28 @@ export default function StudentManager() {
             <DropdownMenuContent
               align="end"
               side="top"
-              className="bg-transparent border-none shadow-none mb-2 w-64"
+              className="bg-transparent border-none shadow-none mb-2 w-auto"
+              onCloseAutoFocus={(e) => e.preventDefault()}
             >
               <div className="flex flex-col items-end gap-3">
-                <DropdownMenuItem asChild className="p-0 m-0 focus:bg-transparent cursor-pointer">
-                    <div className="flex items-center justify-end gap-3">
-                         <span className="text-sm font-semibold text-foreground bg-background/80 backdrop-blur-sm shadow-lg rounded-md px-3 py-2">Criar Listas</span>
-                        <div className="bg-background/80 backdrop-blur-sm shadow-lg rounded-full p-2">
-                           <ClassListGenerator />
-                        </div>
+                <DropdownMenuItem className="p-0 m-0 focus:bg-transparent cursor-default" asChild>
+                    <div className="flex items-center gap-3 justify-end">
+                        <span className="text-sm font-semibold text-foreground bg-background/80 backdrop-blur-sm shadow-lg rounded-md px-3 py-2">Criar Listas</span>
+                        <ClassListGenerator />
                     </div>
                 </DropdownMenuItem>
 
-                <DropdownMenuItem asChild className="p-0 m-0 focus:bg-transparent cursor-pointer">
-                     <div className="flex items-center justify-end gap-3">
+                 <DropdownMenuItem className="p-0 m-0 focus:bg-transparent cursor-default" asChild>
+                     <div className="flex items-center gap-3 justify-end">
                          <span className="text-sm font-semibold text-foreground bg-background/80 backdrop-blur-sm shadow-lg rounded-md px-3 py-2">Carregar Notas</span>
-                        <div className="bg-background/80 backdrop-blur-sm shadow-lg rounded-full p-2">
-                            <GradesUploaderSheet />
-                        </div>
+                         <GradesUploaderSheet />
                     </div>
                 </DropdownMenuItem>
-
-                <DropdownMenuItem asChild className="p-0 m-0 focus:bg-transparent cursor-pointer">
-                     <div className="flex items-center justify-end gap-3">
+                
+                <DropdownMenuItem className="p-0 m-0 focus:bg-transparent cursor-default" asChild>
+                     <div className="flex items-center gap-3 justify-end">
                          <span className="text-sm font-semibold text-foreground bg-background/80 backdrop-blur-sm shadow-lg rounded-md px-3 py-2">Carregar Alunos</span>
-                        <div className="bg-background/80 backdrop-blur-sm shadow-lg rounded-full p-2">
-                           <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
-                        </div>
+                         <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
                     </div>
                 </DropdownMenuItem>
               </div>
