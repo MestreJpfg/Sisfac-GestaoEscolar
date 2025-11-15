@@ -20,6 +20,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 const formSchema = z.object({
   email: z.string().email('Email inválido.'),
@@ -28,6 +29,7 @@ const formSchema = z.object({
 
 export default function LoginForm() {
   const auth = useAuth();
+  const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -47,7 +49,7 @@ export default function LoginForm() {
         title: "Login bem-sucedido!",
         description: "Bem-vindo(a) de volta.",
       });
-      // A redirecionamento é tratado pelo FirebaseProvider
+      router.push('/dashboard');
     } catch (error: any) {
       console.error(error);
       let description = "Ocorreu um erro ao tentar fazer login.";

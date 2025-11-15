@@ -28,7 +28,7 @@ export function UserNav() {
 
   const handleLogout = async () => {
     await signOut(auth);
-    router.push('/login');
+    router.push('/');
   };
 
   const getInitials = (name?: string | null) => {
@@ -86,4 +86,3 @@ export function UserNav() {
     </DropdownMenu>
   );
 }
-

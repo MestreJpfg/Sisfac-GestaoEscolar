@@ -1,9 +1,11 @@
+import LoginForm from "@/components/auth/login-form";
 
-import StudentManager from "@/components/student-manager";
-
-/**
- * This is a Server Component that renders the main application layout.
- */
-export default async function Home() {
-  return <StudentManager />;
+export default function LoginPage() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <LoginForm />
+      </div>
+    </div>
+  );
 }

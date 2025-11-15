@@ -63,7 +63,7 @@ export default function SignUpForm() {
         description: "Foi redirecionado para a página principal.",
       });
 
-      router.push('/'); // Redireciona para a página principal após o sucesso
+      router.push('/dashboard'); // Redireciona para a página principal após o sucesso
     } catch (error: any) {
       console.error(error);
       let description = "Ocorreu um erro ao tentar criar a sua conta.";
@@ -161,7 +161,7 @@ export default function SignUpForm() {
       <CardFooter className="flex justify-center">
         <p className="text-sm text-muted-foreground">
           Já tem uma conta?{' '}
-          <Link href="/login" className="text-primary hover:underline">
+          <Link href="/" className="text-primary hover:underline">
             Faça login aqui.
           </Link>
         </p>

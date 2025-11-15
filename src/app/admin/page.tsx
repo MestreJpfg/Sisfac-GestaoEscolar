@@ -13,7 +13,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!isUserLoading && appUser?.role !== 'Admin') {
-      router.push('/');
+      router.push('/dashboard');
     }
   }, [appUser, isUserLoading, router]);
 
@@ -41,7 +41,7 @@ export default function AdminPage() {
         </CardContent>
       </Card>
        <Button asChild className="mt-4">
-          <Link href="/">Voltar à Página Principal</Link>
+          <Link href="/dashboard">Voltar à Página Principal</Link>
       </Button>
     </div>
   );

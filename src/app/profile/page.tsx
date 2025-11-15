@@ -21,7 +21,7 @@ export default function ProfilePage() {
       <div className="flex h-screen items-center justify-center">
         <p>Utilizador não encontrado.</p>
          <Button asChild className="mt-4">
-            <Link href="/">Voltar à Página Principal</Link>
+            <Link href="/dashboard">Voltar à Página Principal</Link>
         </Button>
       </div>
     );
@@ -53,7 +53,7 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
        <Button asChild className="mt-4">
-          <Link href="/">Voltar à Página Principal</Link>
+          <Link href="/dashboard">Voltar à Página Principal</Link>
       </Button>
     </div>
   );

@@ -58,7 +58,7 @@ const GlobalLoader = () => (
   <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-foreground">
     <Loader2 className="mb-4 h-12 w-12 animate-spin text-primary" />
     <h1 className="text-lg font-semibold">A carregar...</h1>
-    <p className="text-sm text-muted-foreground">Aguarde um momento.</p>
+    <p className="text-sm text-muted-foreground">A verificar autenticação.</p>
   </div>
 );
 
@@ -94,8 +94,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
             if (userDoc.exists()) {
               setUserAuthState({ user: firebaseUser, appUser: userDoc.data() as AppUser, isUserLoading: false, userError: null });
             } else {
-              // This can happen right after sign up. The user document might not be created yet.
-              // We'll still set loading to false to allow redirection or show a specific state.
               setUserAuthState({ user: firebaseUser, appUser: null, isUserLoading: false, userError: null });
             }
           } catch (error) {
@@ -123,7 +121,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     ...userAuthState,
   }), [firebaseApp, firestore, auth, userAuthState]);
   
-  const isAuthPage = pathname === '/login' || pathname === '/signup';
+  const isAuthPage = pathname === '/' || pathname === '/signup';
 
   if (contextValue.isUserLoading) {
     return <GlobalLoader />;
@@ -141,11 +139,11 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   // If loading is finished, perform redirection logic
   if (!contextValue.isUserLoading) {
     if (!contextValue.user && !isAuthPage) {
-      router.push('/login');
+      router.push('/');
       return <GlobalLoader />; // Show loader while redirecting
     }
     if (contextValue.user && isAuthPage) {
-      router.push('/');
+      router.push('/dashboard');
       return <GlobalLoader />; // Show loader while redirecting
     }
   }
