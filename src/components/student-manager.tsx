@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef } from "react";
 import Image from "next/image";
-import { Loader2, Plus, X } from "lucide-react";
+import { Loader2, Plus, X, User, UserPlus } from "lucide-react";
 import { quotes } from "@/lib/quotes";
 import { useFirestore } from "@/firebase";
 import { getCountFromServer, collection } from "firebase/firestore";
@@ -18,29 +18,30 @@ import FileUploaderSheet from "./file-uploader-sheet";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "./ui/button";
 import { UserNav } from "./auth/user-nav";
+import Link from 'next/link';
+import { cn } from "@/lib/utils";
+
+// Reusable component for FAB menu items that are links
+const FabLinkItem = forwardRef<HTMLAnchorElement, { href: string; children: React.ReactNode; className?: string }>(
+  ({ href, children, className, ...props }, ref) => {
+    return (
+      <Link href={href} passHref>
+        <a ref={ref} className={cn("flex items-center gap-2 shadow-lg", className)} {...props}>
+          {children}
+        </a>
+      </Link>
+    );
+  }
+);
+FabLinkItem.displayName = 'FabLinkItem';
+
 
 export default function StudentManager() {
   const [dataExists, setDataExists] = useState<boolean | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [randomQuote, setRandomQuote] = useState<{ quote: string; author: string } | null>(null);
-  const [currentDateTime, setCurrentDateTime] = useState('');
   const [isFabMenuOpen, setIsFabMenuOpen] = useState(false);
 
   const firestore = useFirestore();
-  const { toast } = useToast();
-
-  useEffect(() => {
-    setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
-    const updateDateTime = () => {
-      const now = new Date();
-      const datePart = now.toLocaleDateString('pt-BR', { dateStyle: 'full' });
-      const timePart = now.toLocaleTimeString('pt-BR', { timeStyle: 'short' });
-      setCurrentDateTime(`${datePart} - ${timePart}`);
-    };
-    updateDateTime();
-    const timer = setInterval(updateDateTime, 60000); // Update every minute
-    return () => clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     if (!firestore) return;
@@ -60,7 +61,7 @@ export default function StudentManager() {
         } else {
             console.error("Failed to check if data exists:", error);
         }
-        setDataExists(false); // Assume no data if check fails
+        setDataExists(false);
       }
     };
     
@@ -79,7 +80,25 @@ export default function StudentManager() {
     { component: <ClassListGenerator key="class-list" /> },
     { component: <FileUploaderSheet key="file-upload" onUploadSuccess={onUploadSuccess} /> },
     { component: <GradesUploaderSheet key="grades-upload" /> },
-  ].reverse(); // Reverse to have the main action on top
+    { component: (
+        <FabLinkItem href="/profile">
+           <Button variant="secondary" className="flex items-center gap-2 shadow-lg">
+                <User className="h-4 w-4" />
+                <span>Perfil</span>
+            </Button>
+        </FabLinkItem>
+      )
+    },
+    { component: (
+        <FabLinkItem href="/signup">
+           <Button variant="secondary" className="flex items-center gap-2 shadow-lg">
+                <UserPlus className="h-4 w-4" />
+                <span>Novo Utilizador</span>
+            </Button>
+        </FabLinkItem>
+      )
+    },
+  ].reverse();
 
   return (
     <>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -16,7 +15,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAuth, useUser } from "@/firebase";
+import { useAuth } from "@/firebase";
+import { useUser } from "@/firebase/provider";
 import { signOut } from "firebase/auth";
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
@@ -27,8 +27,12 @@ export function UserNav() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    await signOut(auth);
-    router.push('/');
+    try {
+        await signOut(auth);
+        router.push('/');
+    } catch (error) {
+        console.error("Erro ao fazer logout:", error);
+    }
   };
 
   const getInitials = (name?: string | null) => {
