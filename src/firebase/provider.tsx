@@ -79,7 +79,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       auth,
       async (firebaseUser) => {
         // We are no longer loading the firebase user, but we might still be loading the app user data.
-        setUserAuthState(prev => ({...prev, isUserLoading: false }));
+        setUserAuthState(prev => ({...prev, isUserLoading: true }));
         if (firebaseUser) {
           try {
             const userDocRef = doc(firestore, 'users', firebaseUser.uid);
@@ -88,7 +88,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
               setUserAuthState({ user: firebaseUser, appUser: userDoc.data() as AppUser, isUserLoading: false, userError: null });
             } else {
               // User exists in Auth but not in Firestore yet.
-              // Set firebase user but app user is null. Loading is false.
+              // This can happen right after sign up. The app should handle this state gracefully.
               setUserAuthState({ user: firebaseUser, appUser: null, isUserLoading: false, userError: null });
             }
           } catch (error) {
@@ -126,16 +126,18 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   const isAuthPage = pathname === '/login' || pathname === '/signup';
 
   useEffect(() => {
-    if (!isLoading && !contextValue.user && !isAuthPage) {
+    if (isLoading) return; // Wait until loading is complete before doing any routing
+
+    if (!contextValue.user && !isAuthPage) {
       router.push('/login');
     }
-    if (!isLoading && contextValue.user && isAuthPage) {
+    if (contextValue.user && isAuthPage) {
       router.push('/');
     }
   }, [isLoading, contextValue.user, isAuthPage, router]);
 
 
-  if (isLoading || (!contextValue.user && !isAuthPage)) {
+  if (isLoading) {
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-foreground">
         <Loader2 className="mb-4 h-12 w-12 animate-spin text-primary" />
@@ -144,7 +146,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       </div>
     );
   }
-
+  
   if (contextValue.userError) {
      return (
       <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-destructive-foreground">
