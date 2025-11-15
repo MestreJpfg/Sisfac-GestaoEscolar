@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, Upload, NotebookText } from "lucide-react";
 import { firestore } from "@/firebase";
 import { getCountFromServer, collection } from "firebase/firestore";
 import StudentDataView from "./student-data-view";
@@ -12,13 +12,54 @@ import { ThemeToggle } from "./theme-toggle";
 import ClassListGenerator from "./class-list-generator";
 import GradesUploaderSheet from "./grades-uploader-sheet";
 import FileUploaderSheet from "./file-uploader-sheet";
+import { quotes, type Quote } from "@/lib/quotes";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "./ui/button";
+
+const FabSheetTrigger = ({ icon: Icon, label, sheetTrigger }: { icon: React.ElementType, label: string, sheetTrigger: React.ReactNode }) => (
+    <div className="flex items-center gap-3">
+        {sheetTrigger}
+        <div className="flex items-center gap-3">
+            <div className="bg-background/80 backdrop-blur-sm shadow-lg rounded-full p-2">
+                <Icon className="h-5 w-5 text-primary" />
+            </div>
+            <span className="text-sm font-semibold text-foreground bg-background/80 backdrop-blur-sm shadow-lg rounded-md px-3 py-1">{label}</span>
+        </div>
+    </div>
+);
+
 
 export default function StudentManager() {
   const [dataExists, setDataExists] = useState<boolean | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [currentDate, setCurrentDate] = useState('');
+  const [randomQuote, setRandomQuote] = useState<Quote | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
+    const updateDate = () => {
+      const now = new Date();
+      const options: Intl.DateTimeFormatOptions = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      };
+      setCurrentDate(new Intl.DateTimeFormat('pt-BR', options).format(now));
+    };
+    
+    updateDate();
+    const intervalId = setInterval(updateDate, 60000); // Update every minute
+
+    setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
+
     if (!firestore) {
         setDataExists(false); // Firestore not available
         return;
@@ -41,6 +82,8 @@ export default function StudentManager() {
     };
     
     checkDataExists();
+
+    return () => clearInterval(intervalId);
   }, [firestore, toast]);
   
   const isPageLoading = dataExists === null;
@@ -54,28 +97,40 @@ export default function StudentManager() {
     <>
       <main className="flex min-h-screen flex-col items-center p-4 sm:p-6 md:p-8 non-printable">
         <div className="w-full max-w-7xl mx-auto flex-1">
-          <header className="mb-8 flex items-center justify-between">
-            <div className="flex flex-col items-start">
-                <Image
-                    src="/logoyuri.png"
-                    alt="Logo"
-                    width={100}
-                    height={33}
-                    className="rounded-md"
-                />
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary [text-shadow:0_2px_10px_hsl(var(--primary)/0.4)] font-headline mt-2">
-                    Gestão de Alunos 2025
-                </h1>
-                <p className="text-muted-foreground text-xs sm:text-sm max-w-lg">
-                  {dataExists ? "Filtre e visualize os dados dos alunos ou utilize os botões de ação." : "Carregue o ficheiro de alunos para iniciar a gestão."}
-                </p>
+          <header className="mb-8 flex flex-col items-center text-center">
+            <div className="w-full flex items-start justify-between">
+                <div/>
+                <div className="flex flex-col items-center">
+                    <Image
+                        src="/logo.png"
+                        alt="Logo"
+                        width={100}
+                        height={100}
+                        className="rounded-md"
+                        priority
+                    />
+                     {currentDate && (
+                        <p className="text-sm text-muted-foreground mt-4">{currentDate}</p>
+                    )}
+                    {randomQuote && (
+                        <blockquote className="mt-2 text-sm italic text-muted-foreground max-w-sm relative">
+                            <span className="absolute left-[-1rem] top-0 text-2xl font-bold text-primary/50">“</span>
+                            <p className="px-4">
+                                {randomQuote.quote}
+                            </p>
+                            <cite className="block text-right mt-1 not-italic text-xs">- {randomQuote.author}</cite>
+                        </blockquote>
+                    )}
+                </div>
+                <ThemeToggle />
             </div>
-            <div className="flex items-center gap-4">
-              <ThemeToggle />
-              <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
-              <GradesUploaderSheet />
-              <ClassListGenerator />
-            </div>
+            
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary [text-shadow:0_2px_10px_hsl(var(--primary)/0.4)] font-headline mt-6">
+                Gestão de Alunos 2025
+            </h1>
+            <p className="text-muted-foreground text-sm max-w-lg mt-2">
+              {dataExists ? "Filtre e visualize os dados dos alunos ou utilize os botões de ação." : "Carregue o ficheiro de alunos para iniciar a gestão."}
+            </p>
           </header>
 
           <div className="w-full">
@@ -98,6 +153,46 @@ export default function StudentManager() {
           <p>&copy; {new Date().getFullYear()} MestreJp. Todos os direitos reservados.</p>
         </footer>
       </main>
+      
+      {dataExists && (
+        <div className="fixed bottom-6 right-6 z-50">
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button
+                        variant="default"
+                        className="rounded-full w-14 h-14 shadow-2xl flex items-center justify-center"
+                    >
+                        <Plus className="h-6 w-6" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                    align="end"
+                    side="top"
+                    className="bg-transparent border-none shadow-none mb-2"
+                >
+                    <div className="flex flex-col items-end gap-3">
+                        <FabSheetTrigger 
+                            sheetTrigger={<GradesUploaderSheet />}
+                            icon={NotebookText}
+                            label="Carregar Notas"
+                        />
+                         <FabSheetTrigger 
+                            sheetTrigger={<FileUploaderSheet onUploadSuccess={onUploadSuccess} />}
+                            icon={Upload}
+                            label="Carregar Alunos"
+                        />
+                         <FabSheetTrigger 
+                            sheetTrigger={<ClassListGenerator />}
+                            icon={Upload}
+                            label="Criar Listas"
+                        />
+                    </div>
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
+      )}
     </>
   );
 }
+
+    
