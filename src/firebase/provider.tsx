@@ -78,8 +78,6 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const unsubscribe = onAuthStateChanged(
       auth,
       async (firebaseUser) => {
-        // We are no longer loading the firebase user, but we might still be loading the app user data.
-        setUserAuthState(prev => ({...prev, isUserLoading: true }));
         if (firebaseUser) {
           try {
             const userDocRef = doc(firestore, 'users', firebaseUser.uid);
@@ -156,11 +154,22 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     );
   }
 
+  // Se não estiver a carregar e o utilizador não estiver logado, mas estiver numa página de autenticação,
+  // ou se o utilizador estiver logado, renderize os filhos.
+  if ((!isLoading && !contextValue.user && isAuthPage) || contextValue.user) {
+    return (
+        <FirebaseContext.Provider value={contextValue}>
+          <FirebaseErrorListener />
+          {children}
+        </FirebaseContext.Provider>
+    );
+  }
+
+  // Para o caso de redirecionamento, mostre um loader para evitar piscar.
   return (
-    <FirebaseContext.Provider value={contextValue}>
-      <FirebaseErrorListener />
-      {children}
-    </FirebaseContext.Provider>
+    <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-foreground">
+      <Loader2 className="mb-4 h-12 w-12 animate-spin text-primary" />
+    </div>
   );
 };
 
