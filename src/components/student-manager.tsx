@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, ClipboardList, NotebookText, Upload } from "lucide-react";
 import { firestore } from "@/firebase";
 import { getCountFromServer, collection } from "firebase/firestore";
 import StudentDataView from "./student-data-view";
@@ -96,14 +96,14 @@ export default function StudentManager() {
                         priority
                     />
                      {currentDate && (
-                        <p className="text-sm text-muted-foreground mt-4">{currentDate}</p>
+                        <p className="text-xs text-muted-foreground mt-6">{currentDate}</p>
                     )}
                     {randomQuote && (
-                        <blockquote className="mt-2 text-sm italic text-muted-foreground max-w-sm relative">
+                        <blockquote className="mt-2 text-xs italic text-muted-foreground max-w-sm relative">
                             <p className="px-4">
                                 {randomQuote.quote}
                             </p>
-                            <cite className="block text-right mt-1 not-italic text-xs">- {randomQuote.author}</cite>
+                            <cite className="block text-right mt-1 not-italic">- {randomQuote.author}</cite>
                         </blockquote>
                     )}
                 </div>
@@ -156,16 +156,14 @@ export default function StudentManager() {
               className="bg-transparent border-none shadow-none mb-2 w-auto"
             >
               <div className="flex flex-col items-end gap-3">
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-default">
-                    <ClassListGenerator />
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-pointer rounded-full">
+                  <ClassListGenerator />
                 </DropdownMenuItem>
-
-                 <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-default">
-                    <GradesUploaderSheet />
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-pointer rounded-full">
+                  <GradesUploaderSheet />
                 </DropdownMenuItem>
-                
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-default">
-                    <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-pointer rounded-full">
+                  <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
                 </DropdownMenuItem>
               </div>
             </DropdownMenuContent>
