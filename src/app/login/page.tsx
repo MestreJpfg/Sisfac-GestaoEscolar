@@ -48,12 +48,16 @@ export default function LoginPage() {
       router.push('/dashboard');
     } catch (error: any) {
       console.error('Erro no login:', error);
+      let description = 'Ocorreu um erro. Verifique as suas credenciais.';
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+          description = 'Credenciais inválidas. Verifique o seu email e senha.';
+      } else if (error.message) {
+          description = error.message;
+      }
       toast({
         variant: 'destructive',
         title: 'Erro no Login',
-        description: error.code === 'auth/invalid-credential'
-          ? 'Credenciais inválidas. Verifique o seu email e senha.'
-          : error.message || 'Ocorreu um erro. Verifique as suas credenciais.',
+        description: description,
       });
     } finally {
       setIsLoading(false);
