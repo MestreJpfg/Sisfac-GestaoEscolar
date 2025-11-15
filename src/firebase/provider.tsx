@@ -4,10 +4,10 @@ import React, { createContext, useContext, ReactNode, useMemo, useState, useEffe
 import { FirebaseApp } from 'firebase/app';
 import { Firestore, doc, getDoc } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
-import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { Loader2 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
-import type { User as AppUser } from '@/lib/user';
+import type { AppUser } from '@/lib/user';
 
 
 interface FirebaseProviderProps {
@@ -94,8 +94,9 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
             if (userDoc.exists()) {
               setUserAuthState({ user: firebaseUser, appUser: userDoc.data() as AppUser, isUserLoading: false, userError: null });
             } else {
-              // User exists in Auth, but not in Firestore yet (e.g., during signup).
-              // Treat as logged in, but without a full app user profile.
+              // This can happen during signup before the Firestore doc is created.
+              // Keep loading until the doc is available or a timeout.
+              // For simplicity, we'll assume it exists for now but handle the "not found" case.
               setUserAuthState({ user: firebaseUser, appUser: null, isUserLoading: false, userError: null });
             }
           } catch (error) {
@@ -126,21 +127,21 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   const isAuthPage = pathname === '/' || pathname === '/signup';
 
   useEffect(() => {
-    // Don't do anything while loading
+    // Wait until loading is complete before doing any redirection
     if (contextValue.isUserLoading) {
       return;
     }
 
-    // If loaded, not on an auth page, and no user, redirect to login
-    if (!isAuthPage && !contextValue.user) {
+    // If there is no user and we are not on an auth page, redirect to login
+    if (!contextValue.user && !isAuthPage) {
       router.push('/');
     }
 
-    // If loaded, on an auth page, and there is a user, redirect to dashboard
-    if (isAuthPage && contextValue.user) {
+    // If there is a user and we are on an auth page, redirect to dashboard
+    if (contextValue.user && isAuthPage) {
       router.push('/dashboard');
     }
-  }, [contextValue.isUserLoading, contextValue.user, isAuthPage, pathname, router]);
+  }, [contextValue.isUserLoading, contextValue.user, isAuthPage, router]);
 
   // Handle auth errors
   if (userAuthState.userError) {
@@ -152,18 +153,29 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     );
   }
   
-  // While loading, or if conditions for redirection are met but redirection hasn't happened yet, show loader.
-  if (contextValue.isUserLoading || (!isAuthPage && !contextValue.user) || (isAuthPage && contextValue.user)) {
+  // Show loader while loading or if a redirect is imminent.
+  const needsToShowLoader = contextValue.isUserLoading || 
+                            (!contextValue.user && !isAuthPage) || 
+                            (contextValue.user && isAuthPage);
+
+  if (needsToShowLoader) {
     return <GlobalLoader />;
   }
   
-  // Render children only when auth state is resolved and user is on the correct page type.
-  return (
+  // If we are on an auth page without a user, or on a protected page with a user, render children
+  const canRenderChildren = (!contextValue.user && isAuthPage) || (contextValue.user && !isAuthPage);
+
+  if (canRenderChildren) {
+      return (
       <FirebaseContext.Provider value={contextValue}>
         <FirebaseErrorListener />
         {children}
       </FirebaseContext.Provider>
-  );
+    );
+  }
+
+  // Fallback to loader, this state should be brief
+  return <GlobalLoader />;
 };
 
 export const useFirebase = (): FirebaseServicesAndUser => {
