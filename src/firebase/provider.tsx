@@ -94,6 +94,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
             if (userDoc.exists()) {
               setUserAuthState({ user: firebaseUser, appUser: userDoc.data() as AppUser, isUserLoading: false, userError: null });
             } else {
+              // If user exists in Auth but not in Firestore yet (e.g., during signup)
               setUserAuthState({ user: firebaseUser, appUser: null, isUserLoading: false, userError: null });
             }
           } catch (error) {
@@ -101,6 +102,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
             setUserAuthState({ user: firebaseUser, appUser: null, isUserLoading: false, userError: error as Error });
           }
         } else {
+          // No user is signed in
           setUserAuthState({ user: null, appUser: null, isUserLoading: false, userError: null });
         }
       },
@@ -140,7 +142,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   if (!contextValue.isUserLoading) {
     if (!contextValue.user && !isAuthPage) {
       router.push('/');
-      return <GlobalLoader />; // Show loader while redirecting
+      return <GlobalLoader />; // Show loader while redirecting to prevent flickering
     }
     if (contextValue.user && isAuthPage) {
       router.push('/dashboard');
