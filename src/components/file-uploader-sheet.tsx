@@ -5,7 +5,7 @@ import { useState } from "react";
 import * as XLSX from "xlsx";
 import { useToast } from "@/hooks/use-toast";
 import { doc, writeBatch } from "firebase/firestore";
-import { useFirestore } from "@/firebase";
+import { firestore } from "@/firebase";
 import { commitBatchNonBlocking } from "@/firebase/non-blocking-updates";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +27,6 @@ interface FileUploaderSheetProps {
 export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = false }: FileUploaderSheetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const firestore = useFirestore();
   const { toast } = useToast();
 
   const normalizeData = (data: any[]): any[] => {

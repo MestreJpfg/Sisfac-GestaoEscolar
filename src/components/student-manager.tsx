@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Loader2 } from "lucide-react";
-import { useFirestore } from "@/firebase";
+import { firestore } from "@/firebase";
 import { getCountFromServer, collection } from "firebase/firestore";
 import StudentDataView from "./student-data-view";
 import { useToast } from "@/hooks/use-toast";
@@ -15,8 +16,6 @@ import FileUploaderSheet from "./file-uploader-sheet";
 export default function StudentManager() {
   const [dataExists, setDataExists] = useState<boolean | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-
-  const firestore = useFirestore();
   const { toast } = useToast();
 
   useEffect(() => {

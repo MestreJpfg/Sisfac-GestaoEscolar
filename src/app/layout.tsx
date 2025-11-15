@@ -2,7 +2,6 @@ import type {Metadata} from 'next';
 import { Inter, Poppins } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
-import { FirebaseProvider } from '@/firebase/provider';
 import GoogleAnalytics from '@/components/google-analytics';
 import { ThemeProvider } from '@/components/theme-provider';
 
@@ -44,9 +43,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
         >
-          <FirebaseProvider>
-            {children}
-          </FirebaseProvider>
+          {children}
           <Toaster />
         </ThemeProvider>
       </body>

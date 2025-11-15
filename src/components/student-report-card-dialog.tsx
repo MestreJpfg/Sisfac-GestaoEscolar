@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -17,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import ReportCardWithDeclaration from "./report-card-with-declaration";
 import ReportCardDetailed from "./report-card-detailed";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { useFirestore } from "@/firebase";
+import { firestore } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import {
@@ -53,7 +54,6 @@ export default function StudentReportCardDialog({
   boletim: initialBoletim,
   student,
 }: StudentReportCardDialogProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState<PdfType | null>(null);
   const [isEditing, setIsEditing] = useState(false);

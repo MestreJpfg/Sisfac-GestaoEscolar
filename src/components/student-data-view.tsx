@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { useFirestore } from '@/firebase';
+import { firestore } from '@/firebase';
 import { collection, query, getDocs, where } from 'firebase/firestore';
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown, AlertTriangle } from 'lucide-react';
@@ -21,7 +21,6 @@ import StudentReportCardDialog from './student-report-card-dialog';
 import { useToast } from '@/hooks/use-toast';
 
 export default function StudentDataView() {
-  const firestore = useFirestore();
   const { toast } = useToast();
 
   const [allFetchedStudents, setAllFetchedStudents] = useState<any[]>([]);

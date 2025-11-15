@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import jsPDF from "jspdf";
 import 'jspdf-autotable';
 import html2canvas from "html2canvas";
-import { useFirestore } from '@/firebase';
+import { firestore } from '@/firebase';
 import { collection, query, getDocs } from 'firebase/firestore';
 import { ClipboardList, X, Loader2, Download, Filter, BookCopy } from 'lucide-react';
 import { Button } from './ui/button';
@@ -25,7 +25,6 @@ declare module 'jspdf' {
 }
 
 export default function ClassListGenerator() {
-  const firestore = useFirestore();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
