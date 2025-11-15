@@ -64,13 +64,13 @@ export default function SignupPage() {
       router.push('/dashboard');
 
     } catch (error: any) {
-      console.error('Erro no registo:', error);
+      console.error('Erro no registro:', error);
        toast({
         variant: 'destructive',
-        title: 'Erro no Registo',
+        title: 'Erro no Registro',
         description: error.code === 'auth/email-already-in-use' 
             ? 'Este email já está a ser utilizado por outra conta.'
-            : error.message || 'Ocorreu um erro durante o registo.',
+            : error.message || 'Ocorreu um erro durante o registro.',
       });
     } finally {
       setIsLoading(false);
@@ -83,7 +83,7 @@ export default function SignupPage() {
         <CardHeader className="text-center">
           <Image src="/logo.png" alt="Logo" width={80} height={80} className="mx-auto mb-4 rounded-md" />
           <CardTitle>Crie a sua Conta</CardTitle>
-          <CardDescription>Registe-se para começar a gerir os alunos.</CardDescription>
+          <CardDescription>Registre-se para começar a gerir os alunos.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
