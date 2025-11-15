@@ -47,7 +47,6 @@ export default function LoginPage() {
       console.error('Erro no login:', error.code);
       let description = 'Ocorreu um erro ao tentar fazer login. Tente novamente.';
       
-      // Firebase auth errors have a 'code' property.
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
           description = 'Credenciais inválidas. Verifique o seu email e senha.';
       }
