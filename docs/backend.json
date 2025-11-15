@@ -1,119 +1,115 @@
-
 {
   "entities": {
-    "User": {
-      "title": "User",
+    "XlsxFile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "XlsxFile",
       "type": "object",
-      "description": "Represents a user of the application.",
+      "description": "Represents an uploaded XLSX file and its associated data.",
       "properties": {
-        "uid": {
+        "id": {
           "type": "string",
-          "description": "The unique identifier for the user, from Firebase Auth."
+          "description": "Unique identifier for the XLSX file entity."
         },
-        "email": {
+        "fileName": {
           "type": "string",
-          "format": "email",
-          "description": "The user's email address."
+          "description": "The original file name of the uploaded XLSX file."
         },
-        "displayName": {
+        "uploadDate": {
           "type": "string",
-          "description": "The user's display name."
-        },
-        "role": {
-          "type": "string",
-          "description": "The role of the user.",
-          "enum": ["Admin", "Funcionário", "Professor", "Aluno", "Pais/Responsáveis"]
-        },
-        "photoURL": {
-            "type": "string",
-            "format": "uri",
-            "description": "URL of the user's profile picture."
+          "description": "The date and time when the XLSX file was uploaded.",
+          "format": "date-time"
         }
       },
-      "required": ["uid", "email", "role"]
+      "required": [
+        "id",
+        "fileName",
+        "uploadDate"
+      ]
     },
-    "Nota": {
-      "title": "Nota",
+    "ExtractedData": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ExtractedData",
       "type": "object",
-      "description": "Armazena as notas de um aluno para uma disciplina específica ao longo do ano.",
+      "description": "Represents data extracted from the first column of an XLSX file.",
       "properties": {
-        "etapa1": { "type": ["number", "null"], "description": "Nota da Etapa 1." },
-        "etapa2": { "type": ["number", "null"], "description": "Nota da Etapa 2." },
-        "etapa3": { "type": ["number", "null"], "description": "Nota da Etapa 3." },
-        "etapa4": { "type": ["number", "null"], "description": "Nota da Etapa 4." },
-        "mediaFinal": { "type": ["number", "null"], "description": "Média final da disciplina." }
-      }
-    },
-    "Boletim": {
-      "title": "Boletim",
-      "type": "object",
-      "description": "Um mapa de disciplinas e suas respectivas notas para um aluno.",
-      "additionalProperties": {
-        "$ref": "#/entities/Nota"
-      }
-    },
-    "Aluno": {
-      "title": "Aluno",
-      "type": "object",
-      "description": "Representa um único aluno na base de dados escolar.",
-      "properties": {
-        "rm": {
+        "id": {
           "type": "string",
-          "description": "Registro do Aluno, usado como identificador único."
+          "description": "Unique identifier for the extracted data entry."
         },
-        "nome": { "type": "string" },
-        "ensino": { "type": "string" },
-        "serie": { "type": "string" },
-        "classe": { "type": "string" },
-        "turno": { "type": "string" },
-        "filiacao_1": { "type": "string" },
-        "filiacao_2": { "type": "string" },
-        "rg": { "type": "string" },
-        "nis": { "type": "string" },
-        "id_censo": { "type": "string" },
-        "cpf_aluno": { "type": "string" },
-        "cpffiliacao1": { "type": "string" },
-        "data_nascimento": { "type": "string", "format": "date" },
-        "endereco": { "type": "string" },
-        "telefones": { "type": "array", "items": { "type": "string" } },
-        "transporte_escolar": { "type": "boolean" },
-        "carteira_estudante": { "type": "boolean" },
-        "nee": { "type": ["string", "null"] },
-        "boletim": { "$ref": "#/entities/Boletim" },
-        "status": {
-            "type": "string",
-            "enum": ["ATIVO", "NÃO LISTADO"],
-            "description": "Status do aluno na base de dados."
+        "xlsxFileId": {
+          "type": "string",
+          "description": "Reference to the XlsxFile entity. (Relationship: XlsxFile 1:N ExtractedData)"
+        },
+        "columnValue": {
+          "type": "string",
+          "description": "The value extracted from the first column of the XLSX file."
+        },
+        "rowIndex": {
+          "type": "number",
+          "description": "The row index from which the data was extracted."
         }
       },
-      "required": ["rm", "nome", "status"]
+      "required": [
+        "id",
+        "xlsxFileId",
+        "columnValue",
+        "rowIndex"
+      ]
     }
   },
   "auth": {
     "providers": [
-      "email-password"
+      "password",
+      "anonymous"
     ]
   },
   "firestore": {
     "structure": [
       {
-        "path": "/alunos/{alunoId}",
+        "path": "/users/{userId}/xlsxFiles/{xlsxFileId}",
         "definition": {
+          "entityName": "XlsxFile",
           "schema": {
-            "$ref": "#/entities/Aluno"
+            "$ref": "#/backend/entities/XlsxFile"
           },
-          "description": "Coleção que armazena os dados de todos os alunos."
+          "description": "Stores XLSX file metadata. Each user has their own collection of XLSX files.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The ID of the user who owns the XLSX file."
+            },
+            {
+              "name": "xlsxFileId",
+              "description": "The ID of the XLSX file."
+            }
+          ]
         }
       },
       {
-        "path": "/users/{userId}",
+        "path": "/users/{userId}/xlsxFiles/{xlsxFileId}/extractedData/{extractedDataId}",
         "definition": {
+          "entityName": "ExtractedData",
           "schema": {
-            "$ref": "#/entities/User"
+            "$ref": "#/backend/entities/ExtractedData"
           },
-          "description": "Coleção que armazena perfis de utilizadores da aplicação."
+          "description": "Stores extracted data from each XLSX file. Organized as a subcollection under each XLSX file.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The ID of the user who owns the XLSX file and extracted data."
+            },
+            {
+              "name": "xlsxFileId",
+              "description": "The ID of the XLSX file from which the data was extracted."
+            },
+            {
+              "name": "extractedDataId",
+              "description": "The ID of the extracted data entry."
+            }
+          ]
         }
       }
-    ]
+    ],
+    "reasoning": "The Firestore structure is designed to store XLSX files and the extracted data from their first columns. It follows the principles of Authorization Independence and Structural Segregation. Path-based ownership is used to secure XLSX files, where each user owns their files. The extracted data is stored as subcollections under each XLSX file. The structure supports QAPs by segregating data based on ownership, enabling secure list operations within a user's own files. This approach avoids complex security rules and ensures data integrity."
   }
 }
