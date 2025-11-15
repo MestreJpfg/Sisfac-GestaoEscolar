@@ -47,11 +47,6 @@ export default function StudentManager() {
 
     setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
 
-    if (!firestore) {
-        setDataExists(false); // Firestore not available
-        return;
-    };
-
     const checkDataExists = async () => {
       try {
         const collectionRef = collection(firestore, 'alunos');
@@ -85,7 +80,7 @@ export default function StudentManager() {
       <main className="flex min-h-screen flex-col items-center p-4 sm:p-6 md:p-8 non-printable">
         <div className="w-full max-w-7xl mx-auto flex-1">
           <header className="mb-8 flex flex-col items-center text-center">
-            <div className="w-full flex items-start justify-between">
+             <div className="w-full flex items-start justify-between">
                 <div className="w-10 h-10"></div>
                 <div className="flex flex-col items-center text-center">
                     <Image
@@ -155,29 +150,30 @@ export default function StudentManager() {
               align="end"
               side="top"
               className="bg-transparent border-none shadow-none mb-2 w-auto"
-              onCloseAutoFocus={(e) => e.preventDefault()}
             >
               <div className="flex flex-col items-end gap-3">
-                <DropdownMenuItem className="p-0 m-0 focus:bg-transparent cursor-default" asChild>
+                
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-default">
                     <div className="flex items-center gap-3 justify-end">
                         <span className="text-sm font-semibold text-foreground bg-background/80 backdrop-blur-sm shadow-lg rounded-md px-3 py-2">Criar Listas</span>
                         <ClassListGenerator />
                     </div>
                 </DropdownMenuItem>
 
-                 <DropdownMenuItem className="p-0 m-0 focus:bg-transparent cursor-default" asChild>
+                 <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-default">
                      <div className="flex items-center gap-3 justify-end">
                          <span className="text-sm font-semibold text-foreground bg-background/80 backdrop-blur-sm shadow-lg rounded-md px-3 py-2">Carregar Notas</span>
                          <GradesUploaderSheet />
                     </div>
                 </DropdownMenuItem>
                 
-                <DropdownMenuItem className="p-0 m-0 focus:bg-transparent cursor-default" asChild>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-default">
                      <div className="flex items-center gap-3 justify-end">
                          <span className="text-sm font-semibold text-foreground bg-background/80 backdrop-blur-sm shadow-lg rounded-md px-3 py-2">Carregar Alunos</span>
                          <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
                     </div>
                 </DropdownMenuItem>
+
               </div>
             </DropdownMenuContent>
           </DropdownMenu>
