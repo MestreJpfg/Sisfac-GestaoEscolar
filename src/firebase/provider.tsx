@@ -126,34 +126,21 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   const isAuthPage = pathname === '/' || pathname === '/signup';
 
   useEffect(() => {
-    // Wait until the authentication status is resolved.
-    if (userAuthState.isUserLoading) {
+    // Don't do anything while loading
+    if (contextValue.isUserLoading) {
       return;
     }
 
-    // If the user is not authenticated and is trying to access a protected page, redirect to login.
-    if (!userAuthState.user && !isAuthPage) {
+    // If loaded, not on an auth page, and no user, redirect to login
+    if (!isAuthPage && !contextValue.user) {
       router.push('/');
     }
 
-    // If the user is authenticated and is on a login/signup page, redirect to the dashboard.
-    if (userAuthState.user && isAuthPage) {
+    // If loaded, on an auth page, and there is a user, redirect to dashboard
+    if (isAuthPage && contextValue.user) {
       router.push('/dashboard');
     }
-  }, [userAuthState.isUserLoading, userAuthState.user, isAuthPage, pathname, router]);
-
-
-  if (userAuthState.isUserLoading) {
-    return <GlobalLoader />;
-  }
-
-  // While redirecting, show a loader.
-  if (!userAuthState.user && !isAuthPage) {
-    return <GlobalLoader />;
-  }
-  if (userAuthState.user && isAuthPage) {
-    return <GlobalLoader />;
-  }
+  }, [contextValue.isUserLoading, contextValue.user, isAuthPage, pathname, router]);
 
   // Handle auth errors
   if (userAuthState.userError) {
@@ -165,7 +152,12 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     );
   }
   
-  // Render children only when the auth state is stable and the user is on the correct page.
+  // While loading, or if conditions for redirection are met but redirection hasn't happened yet, show loader.
+  if (contextValue.isUserLoading || (!isAuthPage && !contextValue.user) || (isAuthPage && contextValue.user)) {
+    return <GlobalLoader />;
+  }
+  
+  // Render children only when auth state is resolved and user is on the correct page type.
   return (
       <FirebaseContext.Provider value={contextValue}>
         <FirebaseErrorListener />
