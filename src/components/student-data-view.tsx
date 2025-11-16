@@ -67,22 +67,15 @@ export default function StudentDataView() {
             filters.serie ? where('serie', '==', filters.serie) : null,
             filters.classe ? where('classe', '==', filters.classe) : null,
             filters.turno ? where('turno', '==', filters.turno) : null,
-            filters.nee ? where('nee', '!=', false) : null,
+            filters.nee ? where('nee', '==', true) : null,
         ].filter(Boolean) as any[];
         
-        // Add name filter at the end if it exists. Firestore is limited with inequalities.
-        const nameSearch = debouncedNome.trim().toUpperCase();
-
-        if (filterConditions.length > 0) {
-            q = query(q, ...filterConditions, orderBy('nome'));
-        } else if (nameSearch) {
-            q = query(q, orderBy('nome'));
-        }
+        q = query(q, ...filterConditions, orderBy('nome'));
 
         const querySnapshot = await getDocs(q);
         let studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        // Client-side filtering for name if combined with other filters
+        const nameSearch = debouncedNome.trim().toUpperCase();
         if (nameSearch) {
              studentsData = studentsData.filter(student => 
                 student.nome && student.nome.toUpperCase().includes(nameSearch)
@@ -325,4 +318,5 @@ export default function StudentDataView() {
     
 
     
+
 
