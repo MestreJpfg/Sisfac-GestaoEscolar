@@ -1,12 +1,11 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Loader2, Plus } from 'lucide-react';
-import { useFirestore } from '@/firebase';
-import { getCountFromServer, collection } from 'firebase/firestore';
+import { useUser } from '@/firebase';
 import StudentDataView from './student-data-view';
-import { useToast } from '@/hooks/use-toast';
 import { ThemeToggle } from './theme-toggle';
 import ClassListGenerator from './class-list-generator';
 import GradesUploaderSheet from './grades-uploader-sheet';
@@ -22,14 +21,18 @@ import {
 import { Button } from './ui/button';
 import { UserNav } from './user-nav';
 import AppFooter from './app-footer';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection, query } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
 
 export default function StudentManager() {
-  const [dataExists, setDataExists] = useState<boolean | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const { isUserLoading } = useUser();
+  const firestore = useFirestore();
   const [currentDate, setCurrentDate] = useState('');
   const [randomQuote, setRandomQuote] = useState<Quote | null>(null);
-  const { toast } = useToast();
-  const firestore = useFirestore();
+
+  const studentsQuery = query(collection(firestore, 'alunos'));
+  const { data: students, isLoading: isDataLoading } = useCollection(studentsQuery);
 
   useEffect(() => {
     const updateDate = () => {
@@ -46,54 +49,19 @@ export default function StudentManager() {
     };
 
     updateDate();
-    const intervalId = setInterval(updateDate, 60000); // Update every minute
+    const intervalId = setInterval(updateDate, 60000); 
 
     setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
 
     return () => clearInterval(intervalId);
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
-    const checkDataExists = async () => {
-      if (!firestore) return;
-
-      try {
-        const collectionRef = collection(firestore, 'alunos');
-        const snapshot = await getCountFromServer(collectionRef);
-        if (isMounted) {
-          setDataExists(snapshot.data().count > 0);
-        }
-      } catch (error) {
-        console.error('Failed to check if data exists:', error);
-        if (isMounted) {
-          toast({
-            variant: 'destructive',
-            title: 'Erro de Conexão',
-            description: 'Não foi possível conectar à base de dados para verificar os alunos.',
-          });
-          setDataExists(false);
-        }
-      }
-    };
-
-    if (dataExists === null) {
-      checkDataExists();
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [firestore, toast, dataExists]);
-
-  const isPageLoading = dataExists === null;
-
   const onUploadSuccess = () => {
-    setDataExists(true);
-    setIsUploading(false);
-    // Trigger a refetch in StudentDataView if necessary
-    // This could be done with a shared state or a key prop on StudentDataView
+    // O hook useCollection irá atualizar automaticamente a UI.
   };
+
+  const isPageLoading = isUserLoading || isDataLoading;
+  const dataExists = students && students.length > 0;
 
   return (
     <>
@@ -127,10 +95,10 @@ export default function StudentManager() {
           </header>
 
           <div className="w-full">
-            {isPageLoading || isUploading ? (
+            {isPageLoading ? (
               <div className="flex flex-col items-center justify-center h-80 rounded-lg border-2 border-dashed border-border bg-card/50">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="mt-4 text-muted-foreground">{isUploading ? 'Aguarde, a processar e carregar os dados...' : 'A verificar a base de dados...'}</p>
+                <p className="mt-4 text-muted-foreground">A verificar a base de dados...</p>
               </div>
             ) : dataExists ? (
               <StudentDataView />
@@ -145,7 +113,7 @@ export default function StudentManager() {
         <AppFooter />
       </main>
 
-      {dataExists && (
+      {dataExists && !isPageLoading && (
         <div className="fixed bottom-6 right-6 z-50">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
