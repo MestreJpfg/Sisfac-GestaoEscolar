@@ -6,28 +6,15 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Regra para documentos individuais na coleção 'users'
-    // Permite que um utilizador leia e escreva o seu próprio documento.
     match /users/{userId} {
       allow read, write: if isSignedIn() && request.auth.uid == userId;
-    }
-
-    // Regra para a coleção 'users'
-    // Permite que qualquer utilizador autenticado liste os documentos.
-    match /users {
+      // Permitir a listagem de utilizadores a qualquer pessoa autenticada
       allow list: if isSignedIn();
     }
     
-    // Regra para documentos individuais na coleção 'alunos'
-    // Permite a qualquer utilizador autenticado ler e escrever em qualquer documento.
-    match /alunos/{document=**} {
+    match /alunos/{alunoId} {
+      // Permitir a qualquer utilizador autenticado ler (get, list) e escrever (create, update, delete) em qualquer documento de aluno.
       allow read, write: if isSignedIn();
-    }
-    
-    // Regra para a coleção 'alunos'
-    // Permite que qualquer utilizador autenticado liste os documentos.
-    match /alunos {
-      allow list: if isSignedIn();
     }
   }
 }
