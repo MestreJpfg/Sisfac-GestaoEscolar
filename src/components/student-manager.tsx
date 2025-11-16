@@ -54,32 +54,38 @@ export default function StudentManager() {
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
     const checkDataExists = async () => {
       if (!firestore) {
-        // This case might happen if Firebase is not yet initialized.
-        // We'll retry in a bit.
-        setTimeout(checkDataExists, 500);
+        setTimeout(() => {
+          if (isMounted) checkDataExists();
+        }, 500);
         return;
       }
       try {
         const collectionRef = collection(firestore, 'alunos');
         const snapshot = await getCountFromServer(collectionRef);
-        setDataExists(snapshot.data().count > 0);
+        if (isMounted) {
+          setDataExists(snapshot.data().count > 0);
+        }
       } catch (error) {
         console.error("Failed to check if data exists:", error);
-        toast({
-            variant: "destructive",
-            title: "Erro de Conexão",
-            description: "Não foi possível conectar à base de dados para verificar os alunos.",
-        });
-        setDataExists(false);
+        if (isMounted) {
+            toast({
+                variant: "destructive",
+                title: "Erro de Conexão",
+                description: "Não foi possível conectar à base de dados para verificar os alunos.",
+            });
+            setDataExists(false);
+        }
       }
     };
     
-    // Set loading state to null initially to show loader
-    setDataExists(null); 
     checkDataExists();
 
+    return () => {
+        isMounted = false;
+    };
   }, [firestore, toast]);
   
   const isPageLoading = dataExists === null;
