@@ -18,13 +18,11 @@ import { Switch } from './ui/switch';
 import { Label } from './ui/label';
 import StudentReportCardDialog from './student-report-card-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useCollection } from '@/firebase/firestore/use-collection';
 
 export default function StudentDataView() {
   const { toast } = useToast();
   const { isUserLoading } = useUser();
-
-  const [allStudents, setAllStudents] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [reportCardStudent, setReportCardStudent] = useState<any | null>(null);
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
@@ -41,36 +39,33 @@ export default function StudentDataView() {
 
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'serie', direction: 'ascending' });
 
-  const fetchStudents = useCallback(async () => {
-    if (!firestore) return;
-    setIsLoading(true);
+  // Memoize the Firestore query to ensure it's stable across re-renders
+  const studentsQuery = useMemo(() => {
+    if (isUserLoading || !firestore) {
+      return null;
+    }
+    return query(collection(firestore, 'alunos'), orderBy('nome'));
+  }, [isUserLoading, firestore]);
 
-    try {
-      const q = query(collection(firestore, 'alunos'), orderBy('nome'));
-      const querySnapshot = await getDocs(q);
-      const studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setAllStudents(studentsData);
-    } catch (error: any) {
+  // useCollection will handle loading, error, and data fetching automatically
+  const { data: allStudents, isLoading, error } = useCollection(studentsQuery);
+
+  useEffect(() => {
+    if (error) {
       console.error("Error fetching students:", error);
       toast({
         variant: "destructive",
         title: "Erro na Busca",
         description: "Ocorreu um erro ao buscar os alunos. Verifique a sua conexão e as permissões do Firestore."
       });
-      setAllStudents([]);
-    } finally {
-      setIsLoading(false);
     }
-  }, [firestore, toast]);
+  }, [error, toast]);
 
-  useEffect(() => {
-    // Only fetch students after the user's auth state is resolved.
-    if (!isUserLoading) {
-      fetchStudents();
-    }
-  }, [isUserLoading, fetchStudents]);
 
   const filteredAndSortedStudents = useMemo(() => {
+    if (!allStudents) {
+      return [];
+    }
     let filtered = [...allStudents];
 
     // Client-side filtering
@@ -140,9 +135,9 @@ export default function StudentDataView() {
       [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
     return {
-        series: getUniqueValues('serie', allStudents),
-        classes: getUniqueValues('classe', allStudents),
-        turnos: getUniqueValues('turno', allStudents),
+        series: getUniqueValues('serie', allStudents || []),
+        classes: getUniqueValues('classe', allStudents || []),
+        turnos: getUniqueValues('turno', allStudents || []),
     };
   }, [allStudents]);
 
@@ -184,7 +179,12 @@ export default function StudentDataView() {
   };
 
   const handleStudentUpdate = () => {
-    fetchStudents(); // Refetch students after an update
+    // Data is refetched automatically by useCollection on Firestore updates
+    // but we can add a toast or other feedback here if needed
+    toast({
+        title: "Atualização em andamento...",
+        description: "Os dados do aluno estão sendo atualizados na lista.",
+    });
   };
   
   return (
@@ -264,7 +264,7 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {!isLoading && (
+        {!isLoading && allStudents && (
           <p>
             {filteredAndSortedStudents.length > 0 
               ? `${filteredAndSortedStudents.length} de ${allStudents.length} alunos encontrados.`
@@ -280,7 +280,7 @@ export default function StudentDataView() {
         isLoading={isLoading}
         onRowClick={handleStudentSelect}
         onReportCardClick={handleOpenReportCard}
-        hasSearched={true}
+        hasSearched={true} // We can simplify this prop now
         onSort={handleSort}
         sortConfig={sortConfig}
       />
