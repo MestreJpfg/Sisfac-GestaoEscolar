@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { firestore } from '@/firebase';
 import { collection, query, getDocs, where, limit, Query } from 'firebase/firestore';
 import StudentTable from './student-table';
@@ -86,68 +86,62 @@ export default function StudentDataView() {
     fetchUniqueOptions();
   }, [firestore, toast]);
 
-  const studentsQuery = useMemo(() => {
-    if (!firestore) return null;
+  const fetchStudents = useCallback(async () => {
+    if (!firestore) return;
 
-    const baseQuery = collection(firestore, 'alunos');
-    let conditions = [];
+    setIsLoading(true);
+    setHasSearched(true);
 
-    if (filters.serie) conditions.push(where('serie', '==', filters.serie));
-    if (filters.classe) conditions.push(where('classe', '==', filters.classe));
-    if (filters.turno) conditions.push(where('turno', '==', filters.turno));
-    if (filters.nee) conditions.push(where('nee', '!=', null));
-    
-    // If no filters and no name search, load initial data
-    const hasActiveFilters = conditions.length > 0 || debouncedNome.trim().length >= 3;
-    
-    if (conditions.length > 0) {
-      return query(baseQuery, ...conditions);
-    }
-    
-    if (!hasActiveFilters) {
-      return query(baseQuery, limit(200));
-    }
-    
-    // For name search, we fetch all and filter client-side as Firestore doesn't support partial string match on its own.
-    // If other filters are active, we respect them. If not, we query the whole collection.
-    return query(baseQuery);
-  }, [firestore, filters.serie, filters.classe, filters.turno, filters.nee, debouncedNome]);
+    try {
+        const baseQuery = collection(firestore, 'alunos');
+        let finalQuery: Query;
 
-  // Effect to fetch students based on the memoized query
-  useEffect(() => {
-    const searchStudents = async () => {
-      if (!studentsQuery) return;
-
-      setIsLoading(true);
-      setHasSearched(true);
-        
-      try {
-        const querySnapshot = await getDocs(studentsQuery);
-        let studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const filterConditions = [
+            filters.serie ? where('serie', '==', filters.serie) : null,
+            filters.classe ? where('classe', '==', filters.classe) : null,
+            filters.turno ? where('turno', '==', filters.turno) : null,
+            filters.nee ? where('nee', '!=', null) : null
+        ].filter(Boolean) as any[];
 
         const nameSearch = debouncedNome.trim().toUpperCase();
-        if (nameSearch.length >= 3) {
-          studentsData = studentsData.filter(student => 
-              student.nome && student.nome.toUpperCase().includes(nameSearch)
-          );
+        const hasActiveFilters = filterConditions.length > 0 || nameSearch.length > 0;
+
+        if (filterConditions.length > 0) {
+            finalQuery = query(baseQuery, ...filterConditions);
+        } else if (!hasActiveFilters) {
+            finalQuery = query(baseQuery, limit(200));
+        } else {
+            finalQuery = query(baseQuery);
+        }
+
+        const querySnapshot = await getDocs(finalQuery);
+        let studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        if (nameSearch.length > 0) {
+            studentsData = studentsData.filter(student => 
+                student.nome && student.nome.toUpperCase().includes(nameSearch)
+            );
         }
 
         setAllFetchedStudents(studentsData);
-      } catch (error: any) {
-          console.error("Error searching students:", error);
-          toast({
-              variant: "destructive",
-              title: "Erro na Busca",
-              description: "Ocorreu um erro ao buscar os alunos. Verifique os filtros e a conexão."
-          });
-          setAllFetchedStudents([]);
-      } finally {
+    } catch (error: any) {
+        console.error("Error searching students:", error);
+        toast({
+            variant: "destructive",
+            title: "Erro na Busca",
+            description: "Ocorreu um erro ao buscar os alunos. Verifique os filtros e a conexão."
+        });
+        setAllFetchedStudents([]);
+    } finally {
         setIsLoading(false);
-      }
-    };
+    }
+  }, [firestore, filters, debouncedNome, toast]);
 
-    searchStudents();
-  }, [studentsQuery, debouncedNome, toast]);
+  // Effect to fetch students based on filters
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
+
 
   const sortedStudents = useMemo(() => {
     let sortableItems = [...allFetchedStudents];
@@ -226,9 +220,7 @@ export default function StudentDataView() {
   };
 
   const handleStudentUpdate = () => {
-    // This will trigger a refetch because the query depends on filters that may have changed.
-    // To force a refetch even if filters didn't change, we could add a manual trigger.
-    // For now, this is sufficient as updates happen in a dialog and this component re-evaluates.
+    fetchStudents(); // Refetch students after an update
   };
 
 
@@ -348,5 +340,6 @@ export default function StudentDataView() {
     </div>
   );
 }
+    
 
     
