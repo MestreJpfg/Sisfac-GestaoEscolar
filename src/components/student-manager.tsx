@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Loader2, Plus } from "lucide-react";
-import { firestore } from "@/firebase";
+import { useFirestore } from "@/firebase";
 import { getCountFromServer, collection } from "firebase/firestore";
 import StudentDataView from "./student-data-view";
 import { useToast } from "@/hooks/use-toast";
@@ -30,6 +30,7 @@ export default function StudentManager() {
   const [currentDate, setCurrentDate] = useState('');
   const [randomQuote, setRandomQuote] = useState<Quote | null>(null);
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   useEffect(() => {
     const updateDate = () => {
@@ -56,11 +57,8 @@ export default function StudentManager() {
   useEffect(() => {
     let isMounted = true;
     const checkDataExists = async () => {
-      if (!firestore) {
-        // This can happen on initial renders. We'll let it re-run.
-        // A more robust solution might use a state to track firestore availability
-        return;
-      }
+      if (!firestore) return;
+
       try {
         const collectionRef = collection(firestore, 'alunos');
         const snapshot = await getCountFromServer(collectionRef);
@@ -75,7 +73,7 @@ export default function StudentManager() {
                 title: "Erro de Conexão",
                 description: "Não foi possível conectar à base de dados para verificar os alunos.",
             });
-            setDataExists(false); // Assume no data on error
+            setDataExists(false);
         }
       }
     };
@@ -88,7 +86,7 @@ export default function StudentManager() {
     return () => {
         isMounted = false;
     };
-  }, [firestore, toast, dataExists]); // Added dataExists to dependency array
+  }, [firestore, toast, dataExists]); 
   
   const isPageLoading = dataExists === null;
 
