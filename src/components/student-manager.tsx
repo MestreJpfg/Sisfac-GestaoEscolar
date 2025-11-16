@@ -57,9 +57,8 @@ export default function StudentManager() {
     let isMounted = true;
     const checkDataExists = async () => {
       if (!firestore) {
-        setTimeout(() => {
-          if (isMounted) checkDataExists();
-        }, 500);
+        // This can happen on initial renders. We'll let it re-run.
+        // A more robust solution might use a state to track firestore availability
         return;
       }
       try {
@@ -76,17 +75,20 @@ export default function StudentManager() {
                 title: "Erro de Conexão",
                 description: "Não foi possível conectar à base de dados para verificar os alunos.",
             });
-            setDataExists(false);
+            setDataExists(false); // Assume no data on error
         }
       }
     };
     
-    checkDataExists();
+    // Only run check if dataExists is null (initial state)
+    if (dataExists === null) {
+      checkDataExists();
+    }
 
     return () => {
         isMounted = false;
     };
-  }, [firestore, toast]);
+  }, [firestore, toast, dataExists]); // Added dataExists to dependency array
   
   const isPageLoading = dataExists === null;
 
