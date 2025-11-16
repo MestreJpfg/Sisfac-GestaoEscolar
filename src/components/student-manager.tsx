@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { Loader2, Plus } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
@@ -31,7 +30,11 @@ export default function StudentManager() {
   const [randomQuote, setRandomQuote] = useState<Quote | null>(null);
 
   // A query só é definida quando o firestore está disponível.
-  const studentsQuery = firestore ? query(collection(firestore, 'alunos'), orderBy('nome')) : null;
+  const studentsQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'alunos'), orderBy('nome'));
+  }, [firestore]);
+
   const { data: students, isLoading: isDataLoading } = useCollection(studentsQuery);
 
   useEffect(() => {
