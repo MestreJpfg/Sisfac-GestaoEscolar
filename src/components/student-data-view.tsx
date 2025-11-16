@@ -27,6 +27,7 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
 
   const [filters, setFilters] = useState({
     nome: '',
+    ensino: '',
     serie: '',
     classe: '',
     turno: '',
@@ -44,10 +45,13 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
 
     // Client-side filtering
     const nameSearch = debouncedNome.trim().toUpperCase();
-    if (nameSearch) {
+    if (nameSearch && nameSearch.length >= 3) {
       filtered = filtered.filter(student =>
         student.nome && student.nome.toUpperCase().includes(nameSearch)
       );
+    }
+    if (filters.ensino) {
+      filtered = filtered.filter(s => s.ensino === filters.ensino);
     }
     if (filters.serie) {
       filtered = filtered.filter(s => s.serie === filters.serie);
@@ -109,6 +113,7 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
       [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
     return {
+        ensinos: getUniqueValues('ensino', allStudents || []),
         series: getUniqueValues('serie', allStudents || []),
         classes: getUniqueValues('classe', allStudents || []),
         turnos: getUniqueValues('turno', allStudents || []),
@@ -116,7 +121,7 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
   }, [allStudents]);
 
   const hasActiveFilters = useMemo(() => {
-    return debouncedNome.trim().length > 0 || filters.serie || filters.classe || filters.turno || filters.nee;
+    return (debouncedNome.trim().length > 0 && debouncedNome.trim().length < 3) || debouncedNome.trim().length >= 3 || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
   }, [debouncedNome, filters]);
 
   const handleSort = (key: string) => {
@@ -133,6 +138,7 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
   const clearFilters = () => {
     setFilters({
       nome: '',
+      ensino: '',
       serie: '',
       classe: '',
       turno: '',
@@ -165,7 +171,7 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
         <CardContent className="p-4 space-y-4">
           <Input
             name="nome"
-            placeholder="Buscar por nome..."
+            placeholder="Buscar por nome (mín. 3 caracteres)..."
             value={filters.nome}
             onChange={(e) => handleFilterChange('nome', e.target.value)}
           />
@@ -179,7 +185,16 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-4 pt-4 data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Select value={filters.ensino || ''} onValueChange={(value) => handleFilterChange('ensino', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filtrar por ensino..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os ensinos</SelectItem>
+                      {uniqueFilterOptions.ensinos.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                   <Select value={filters.serie || ''} onValueChange={(value) => handleFilterChange('serie', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filtrar por série..." />
@@ -238,14 +253,17 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
       <div className="text-sm text-muted-foreground h-5">
         {allStudents && (
           <p>
-            {filteredAndSortedStudents.length > 0 
+            {filteredAndSortedStudents.length > 0
               ? `${filteredAndSortedStudents.length} de ${allStudents.length} alunos encontrados.`
               : hasActiveFilters
-              ? `Nenhum aluno encontrado com os critérios fornecidos.`
+              ? (debouncedNome.trim().length > 0 && debouncedNome.trim().length < 3)
+                ? 'Digite pelo menos 3 caracteres para buscar por nome.'
+                : 'Nenhum aluno encontrado com os critérios fornecidos.'
               : `${allStudents.length} alunos carregados.`}
           </p>
         )}
       </div>
+
 
       <StudentTable
         students={filteredAndSortedStudents}
