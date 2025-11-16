@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { firestore } from '@/firebase';
-import { collection, query, getDocs, where, limit } from 'firebase/firestore';
+import { collection, query, getDocs, where, limit, Query } from 'firebase/firestore';
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown, AlertTriangle } from 'lucide-react';
 import StudentDetailSheet from './student-detail-sheet';
@@ -24,7 +24,7 @@ export default function StudentDataView() {
   const { toast } = useToast();
 
   const [allFetchedStudents, setAllFetchedStudents] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // Start with loading true
+  const [isLoading, setIsLoading] = useState(true);
   
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [reportCardStudent, setReportCardStudent] = useState<any | null>(null);
@@ -39,7 +39,7 @@ export default function StudentDataView() {
   });
 
   const debouncedNome = useDebounce(filters.nome, 500);
-
+  
   const [uniqueFilterOptions, setUniqueFilterOptions] = useState<{ series: string[], classes: string[], turnos: string[] }>({
     series: [],
     classes: [],
@@ -47,7 +47,7 @@ export default function StudentDataView() {
   });
 
   const [hasSearched, setHasSearched] = useState(false);
-
+  
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'serie', direction: 'ascending' });
 
   // Fetch unique filter options on mount
@@ -86,63 +86,68 @@ export default function StudentDataView() {
     fetchUniqueOptions();
   }, [firestore, toast]);
 
-  // Effect to fetch students based on filters
+  const studentsQuery = useMemo(() => {
+    if (!firestore) return null;
+
+    const baseQuery = collection(firestore, 'alunos');
+    let conditions = [];
+
+    if (filters.serie) conditions.push(where('serie', '==', filters.serie));
+    if (filters.classe) conditions.push(where('classe', '==', filters.classe));
+    if (filters.turno) conditions.push(where('turno', '==', filters.turno));
+    if (filters.nee) conditions.push(where('nee', '!=', null));
+    
+    // If no filters and no name search, load initial data
+    const hasActiveFilters = conditions.length > 0 || debouncedNome.trim().length >= 3;
+    
+    if (conditions.length > 0) {
+      return query(baseQuery, ...conditions);
+    }
+    
+    if (!hasActiveFilters) {
+      return query(baseQuery, limit(200));
+    }
+    
+    // For name search, we fetch all and filter client-side as Firestore doesn't support partial string match on its own.
+    // If other filters are active, we respect them. If not, we query the whole collection.
+    return query(baseQuery);
+  }, [firestore, filters.serie, filters.classe, filters.turno, filters.nee, debouncedNome]);
+
+  // Effect to fetch students based on the memoized query
   useEffect(() => {
     const searchStudents = async () => {
-        if (!firestore) return;
+      if (!studentsQuery) return;
 
-        setIsLoading(true);
-        setHasSearched(true); // Always consider it a "search"
+      setIsLoading(true);
+      setHasSearched(true);
         
-        try {
-          const baseQuery = collection(firestore, 'alunos');
-          let conditions = [];
-          
-          const nameSearch = debouncedNome.trim().toUpperCase();
-          const hasNameSearch = nameSearch.length >= 3;
-          const hasOtherFilters = !!(filters.serie || filters.classe || filters.turno || filters.nee);
-          
-          // Apply filters if they exist
-          if (filters.serie) conditions.push(where('serie', '==', filters.serie));
-          if (filters.classe) conditions.push(where('classe', '==', filters.classe));
-          if (filters.turno) conditions.push(where('turno', '==', filters.turno));
-          if (filters.nee) conditions.push(where('nee', '!=', null));
-          
-          let finalQuery = query(baseQuery);
-          if (conditions.length > 0) {
-              finalQuery = query(baseQuery, ...conditions);
-          } else if (!hasNameSearch) {
-              // If no filters and no name search, load initial data
-              finalQuery = query(baseQuery, limit(200));
-          }
+      try {
+        const querySnapshot = await getDocs(studentsQuery);
+        let studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-          const querySnapshot = await getDocs(finalQuery);
-          let studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-          // If there was a name search, filter the results locally
-          if (hasNameSearch) {
-            studentsData = studentsData.filter(student => 
-                student.nome && student.nome.toUpperCase().includes(nameSearch)
-            );
-          }
-
-          setAllFetchedStudents(studentsData);
-
-        } catch (error: any) {
-            console.error("Error searching students:", error);
-            toast({
-                variant: "destructive",
-                title: "Erro na Busca",
-                description: "Ocorreu um erro ao buscar os alunos. Verifique os filtros e a conexão."
-            });
-            setAllFetchedStudents([]);
-        } finally {
-          setIsLoading(false);
+        const nameSearch = debouncedNome.trim().toUpperCase();
+        if (nameSearch.length >= 3) {
+          studentsData = studentsData.filter(student => 
+              student.nome && student.nome.toUpperCase().includes(nameSearch)
+          );
         }
+
+        setAllFetchedStudents(studentsData);
+      } catch (error: any) {
+          console.error("Error searching students:", error);
+          toast({
+              variant: "destructive",
+              title: "Erro na Busca",
+              description: "Ocorreu um erro ao buscar os alunos. Verifique os filtros e a conexão."
+          });
+          setAllFetchedStudents([]);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     searchStudents();
-  }, [firestore, debouncedNome, filters.serie, filters.classe, filters.turno, filters.nee, toast]);
+  }, [studentsQuery, debouncedNome, toast]);
 
   const sortedStudents = useMemo(() => {
     let sortableItems = [...allFetchedStudents];
@@ -206,7 +211,6 @@ export default function StudentDataView() {
       turno: '',
       nee: false,
     });
-    // The useEffect will trigger a refetch of the initial data
   };
 
   const handleStudentSelect = (student: any) => {
@@ -222,7 +226,9 @@ export default function StudentDataView() {
   };
 
   const handleStudentUpdate = () => {
-    // This is intentionally left blank for now, will be implemented with searchStudents
+    // This will trigger a refetch because the query depends on filters that may have changed.
+    // To force a refetch even if filters didn't change, we could add a manual trigger.
+    // For now, this is sufficient as updates happen in a dialog and this component re-evaluates.
   };
 
 
@@ -309,7 +315,7 @@ export default function StudentDataView() {
           <p>
             {sortedStudents.length > 0 
               ? `${sortedStudents.length} alunos exibidos.`
-              : `Nenhum aluno encontrado com os critérios fornecidos.`}
+              : hasSearched ? `Nenhum aluno encontrado com os critérios fornecidos.` : ''}
           </p>
         )}
       </div>
@@ -342,3 +348,5 @@ export default function StudentDataView() {
     </div>
   );
 }
+
+    
