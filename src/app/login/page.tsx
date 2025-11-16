@@ -16,6 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import Image from 'next/image';
+import AppFooter from '@/components/app-footer';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Por favor, insira um email válido.' }),
@@ -61,57 +62,60 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-4">
-       <div className="absolute top-8 right-8">
-       </div>
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <Image src="/logo.png" alt="Logo" width={80} height={80} className="mx-auto mb-4 rounded-md" />
-          <CardTitle>Bem-vindo de Volta!</CardTitle>
-          <CardDescription>Faça login para aceder à Gestão de Alunos.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="seu@email.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Senha</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="Sua senha" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Entrar'}
-              </Button>
-            </form>
-          </Form>
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            Não tem uma conta?{' '}
-            <Link href="/signup" className="font-semibold text-primary hover:underline">
-              Registre-se
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
-    </main>
+    <div className="flex min-h-screen flex-col">
+        <main className="flex-grow flex flex-col items-center justify-center p-4">
+        <div className="absolute top-8 right-8">
+        </div>
+        <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+            <Image src="/logo.png" alt="Logo" width={80} height={80} className="mx-auto mb-4 rounded-md" />
+            <CardTitle>Bem-vindo de Volta!</CardTitle>
+            <CardDescription>Faça login para aceder à Gestão de Alunos.</CardDescription>
+            </CardHeader>
+            <CardContent>
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                        <Input placeholder="seu@email.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Senha</FormLabel>
+                        <FormControl>
+                        <Input type="password" placeholder="Sua senha" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Entrar'}
+                </Button>
+                </form>
+            </Form>
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+                Não tem uma conta?{' '}
+                <Link href="/signup" className="font-semibold text-primary hover:underline">
+                Registre-se
+                </Link>
+            </p>
+            </CardContent>
+        </Card>
+        </main>
+        <AppFooter />
+    </div>
   );
 }
