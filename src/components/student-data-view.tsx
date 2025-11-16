@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { firestore } from '@/firebase';
-import { collection, query, getDocs, where, Query, orderBy } from 'firebase/firestore';
+import { firestore, useUser } from '@/firebase';
+import { collection, query, getDocs, orderBy } from 'firebase/firestore';
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown, AlertTriangle } from 'lucide-react';
 import StudentDetailSheet from './student-detail-sheet';
@@ -21,13 +21,13 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function StudentDataView() {
   const { toast } = useToast();
+  const { isUserLoading } = useUser();
 
-  const [allFetchedStudents, setAllFetchedStudents] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [allStudents, setAllStudents] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [reportCardStudent, setReportCardStudent] = useState<any | null>(null);
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
 
   const [filters, setFilters] = useState({
     nome: '',
@@ -37,84 +37,65 @@ export default function StudentDataView() {
     nee: false,
   });
 
-  const debouncedNome = useDebounce(filters.nome, 500);
+  const debouncedNome = useDebounce(filters.nome, 300);
 
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'serie', direction: 'ascending' });
 
-  const hasActiveFilters = useMemo(() => {
-    return debouncedNome.trim().length > 0 || filters.serie || filters.classe || filters.turno || filters.nee;
-  }, [debouncedNome, filters.serie, filters.classe, filters.turno, filters.nee]);
-
   const fetchStudents = useCallback(async () => {
     if (!firestore) return;
-    
-    // Only search if there are active filters
-    if (!hasActiveFilters) {
-      setAllFetchedStudents([]);
-      if (hasSearched) setHasSearched(false);
-      setIsLoading(false);
-      return;
-    }
-
     setIsLoading(true);
-    setHasSearched(true);
 
     try {
-      let q: Query = collection(firestore, 'alunos');
-
-      // Build Firestore query with supported filters
-      const firestoreConditions = [
-        filters.serie ? where('serie', '==', filters.serie) : null,
-        filters.classe ? where('classe', '==', filters.classe) : null,
-        filters.turno ? where('turno', '==', filters.turno) : null,
-        filters.nee ? where('nee', '==', true) : null,
-      ].filter(Boolean) as any[];
-
-      if (firestoreConditions.length > 0) {
-        q = query(q, ...firestoreConditions);
-      }
-      
+      const q = query(collection(firestore, 'alunos'), orderBy('nome'));
       const querySnapshot = await getDocs(q);
-      let studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-      // Client-side filtering for name
-      const nameSearch = debouncedNome.trim().toUpperCase();
-      if (nameSearch) {
-        studentsData = studentsData.filter(student =>
-          student.nome && student.nome.toUpperCase().includes(nameSearch)
-        );
-      }
-
-      setAllFetchedStudents(studentsData);
+      const studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setAllStudents(studentsData);
     } catch (error: any) {
-      console.error("Error searching students:", error);
-      if (error.code === 'failed-precondition') {
-        toast({
-          variant: "destructive",
-          title: "Consulta Complexa",
-          description: "A sua busca é muito complexa. Tente usar menos filtros ou peça para criar um índice no Firestore."
-        });
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Erro na Busca",
-          description: "Ocorreu um erro ao buscar os alunos. Verifique os filtros e a conexão."
-        });
-      }
-      setAllFetchedStudents([]);
+      console.error("Error fetching students:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro na Busca",
+        description: "Ocorreu um erro ao buscar os alunos. Verifique a sua conexão e as permissões do Firestore."
+      });
+      setAllStudents([]);
     } finally {
       setIsLoading(false);
     }
-  }, [firestore, hasActiveFilters, filters.serie, filters.classe, filters.turno, filters.nee, debouncedNome, toast]);
+  }, [firestore, toast]);
 
   useEffect(() => {
-    fetchStudents();
-  }, [fetchStudents]);
+    // Only fetch students after the user's auth state is resolved.
+    if (!isUserLoading) {
+      fetchStudents();
+    }
+  }, [isUserLoading, fetchStudents]);
 
-  const sortedStudents = useMemo(() => {
-    let sortableItems = [...allFetchedStudents];
+  const filteredAndSortedStudents = useMemo(() => {
+    let filtered = [...allStudents];
+
+    // Client-side filtering
+    const nameSearch = debouncedNome.trim().toUpperCase();
+    if (nameSearch) {
+      filtered = filtered.filter(student =>
+        student.nome && student.nome.toUpperCase().includes(nameSearch)
+      );
+    }
+    if (filters.serie) {
+      filtered = filtered.filter(s => s.serie === filters.serie);
+    }
+    if (filters.classe) {
+      filtered = filtered.filter(s => s.classe === filters.classe);
+    }
+    if (filters.turno) {
+      filtered = filtered.filter(s => s.turno === filters.turno);
+    }
+    if (filters.nee) {
+      filtered = filtered.filter(s => s.nee);
+    }
+
+    // Sorting
     if (sortConfig.key !== null) {
-      sortableItems.sort((a, b) => {
+      filtered.sort((a, b) => {
         const aValue = a[sortConfig.key] || '';
         const bValue = b[sortConfig.key] || '';
 
@@ -141,8 +122,9 @@ export default function StudentDataView() {
       });
     }
 
+    // Secondary sort by name if primary sort key is the same
     if (sortConfig.key !== 'nome') {
-        sortableItems.sort((a, b) => {
+        filtered.sort((a, b) => {
              if (a[sortConfig.key] === b[sortConfig.key]) {
                 return a.nome.localeCompare(b.nome, 'pt-BR');
             }
@@ -150,19 +132,23 @@ export default function StudentDataView() {
         });
     }
 
-    return sortableItems;
-  }, [allFetchedStudents, sortConfig]);
+    return filtered;
+  }, [allStudents, debouncedNome, filters, sortConfig]);
 
   const uniqueFilterOptions = useMemo(() => {
     const getUniqueValues = (key: string, data: any[]) => 
       [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
     return {
-        series: getUniqueValues('serie', sortedStudents),
-        classes: getUniqueValues('classe', sortedStudents),
-        turnos: getUniqueValues('turno', sortedStudents),
+        series: getUniqueValues('serie', allStudents),
+        classes: getUniqueValues('classe', allStudents),
+        turnos: getUniqueValues('turno', allStudents),
     };
-}, [sortedStudents]);
+  }, [allStudents]);
+
+  const hasActiveFilters = useMemo(() => {
+    return debouncedNome.trim().length > 0 || filters.serie || filters.classe || filters.turno || filters.nee;
+  }, [debouncedNome, filters]);
 
   const handleSort = (key: string) => {
     setSortConfig(prevConfig => ({
@@ -278,21 +264,23 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {!isLoading && hasSearched && (
+        {!isLoading && (
           <p>
-            {sortedStudents.length > 0 
-              ? `${sortedStudents.length} alunos encontrados.`
-              : `Nenhum aluno encontrado com os critérios fornecidos.`}
+            {filteredAndSortedStudents.length > 0 
+              ? `${filteredAndSortedStudents.length} de ${allStudents.length} alunos encontrados.`
+              : hasActiveFilters
+              ? `Nenhum aluno encontrado com os critérios fornecidos.`
+              : `${allStudents.length} alunos carregados.`}
           </p>
         )}
       </div>
 
       <StudentTable
-        students={sortedStudents}
+        students={filteredAndSortedStudents}
         isLoading={isLoading}
         onRowClick={handleStudentSelect}
         onReportCardClick={handleOpenReportCard}
-        hasSearched={hasSearched}
+        hasSearched={true}
         onSort={handleSort}
         sortConfig={sortConfig}
       />

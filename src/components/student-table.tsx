@@ -67,9 +67,9 @@ export default function StudentTable({ students, isLoading, onRowClick, onReport
             ) : (
                 <>
                     <Search className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-medium text-foreground">Aguardando a sua busca</h3>
+                    <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum aluno na base de dados</h3>
                     <p className="mt-1 text-sm text-muted-foreground">
-                       Utilize a busca por nome ou os filtros avançados para encontrar os alunos.
+                       Comece por carregar um ficheiro de alunos para visualizar os dados.
                     </p>
                 </>
             )}
