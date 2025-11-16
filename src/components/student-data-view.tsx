@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { firestore } from '@/firebase';
-import { collection, query, getDocs, where, limit, Query } from 'firebase/firestore';
+import { collection, query, getDocs, where, limit, Query, orderBy } from 'firebase/firestore';
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown, AlertTriangle } from 'lucide-react';
 import StudentDetailSheet from './student-detail-sheet';
@@ -40,51 +40,9 @@ export default function StudentDataView() {
 
   const debouncedNome = useDebounce(filters.nome, 500);
   
-  const [uniqueFilterOptions, setUniqueFilterOptions] = useState<{ series: string[], classes: string[], turnos: string[] }>({
-    series: [],
-    classes: [],
-    turnos: [],
-  });
-
   const [hasSearched, setHasSearched] = useState(false);
   
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'serie', direction: 'ascending' });
-
-  // Fetch unique filter options on mount
-  useEffect(() => {
-    if (!firestore) return;
-
-    const fetchUniqueOptions = async () => {
-      try {
-        const studentsCollectionRef = collection(firestore, 'alunos');
-        const querySnapshot = await getDocs(query(studentsCollectionRef)); 
-        
-        const series = new Set<string>();
-        const classes = new Set<string>();
-        const turnos = new Set<string>();
-        querySnapshot.docs.forEach(doc => {
-          const student = doc.data();
-          if (student.serie && String(student.serie).trim() !== '') series.add(String(student.serie));
-          if (student.classe && String(student.classe).trim() !== '') classes.add(String(student.classe));
-          if (student.turno && String(student.turno).trim() !== '') turnos.add(String(student.turno));
-        });
-        setUniqueFilterOptions({
-          series: Array.from(series).sort(),
-          classes: Array.from(classes).sort(),
-          turnos: Array.from(turnos).sort(),
-        });
-      } catch (error) {
-        console.error("Error fetching unique options:", error);
-        toast({
-            variant: "destructive",
-            title: "Erro ao carregar filtros",
-            description: "Não foi possível buscar as opções de filtro da base de dados."
-        });
-      }
-    };
-
-    fetchUniqueOptions();
-  }, [firestore, toast]);
 
   const fetchStudents = useCallback(async () => {
     if (!firestore) return;
@@ -93,28 +51,29 @@ export default function StudentDataView() {
     setHasSearched(true);
 
     try {
-        const baseQuery = collection(firestore, 'alunos');
-        let finalQuery: Query;
+        let q: Query = collection(firestore, 'alunos');
 
         const filterConditions = [
             filters.serie ? where('serie', '==', filters.serie) : null,
             filters.classe ? where('classe', '==', filters.classe) : null,
             filters.turno ? where('turno', '==', filters.turno) : null,
-            filters.nee ? where('nee', '!=', null) : null
+            filters.nee ? where('nee', '!=', false) : null,
         ].filter(Boolean) as any[];
 
-        const nameSearch = debouncedNome.trim().toUpperCase();
-        const hasActiveFilters = filterConditions.length > 0 || nameSearch.length > 0;
-
         if (filterConditions.length > 0) {
-            finalQuery = query(baseQuery, ...filterConditions);
-        } else if (!hasActiveFilters) {
-            finalQuery = query(baseQuery, limit(200));
-        } else {
-            finalQuery = query(baseQuery);
+            q = query(q, ...filterConditions);
         }
 
-        const querySnapshot = await getDocs(finalQuery);
+        const nameSearch = debouncedNome.trim().toUpperCase();
+        
+        // Se não houver filtros ativos (incluindo nome), limita a 200 resultados.
+        if (filterConditions.length === 0 && nameSearch.length === 0) {
+            q = query(q, orderBy('serie'), orderBy('nome'), limit(200));
+        } else {
+             q = query(q, orderBy('serie'), orderBy('nome'));
+        }
+
+        const querySnapshot = await getDocs(q);
         let studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         if (nameSearch.length > 0) {
@@ -137,7 +96,6 @@ export default function StudentDataView() {
     }
   }, [firestore, filters, debouncedNome, toast]);
 
-  // Effect to fetch students based on filters
   useEffect(() => {
     fetchStudents();
   }, [fetchStudents]);
@@ -184,6 +142,18 @@ export default function StudentDataView() {
 
     return sortableItems;
   }, [allFetchedStudents, sortConfig]);
+
+  const uniqueFilterOptions = useMemo(() => {
+    const getUniqueValues = (key: string, data: any[]) => 
+      [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
+
+    return {
+        series: getUniqueValues('serie', sortedStudents),
+        classes: getUniqueValues('classe', sortedStudents),
+        turnos: getUniqueValues('turno', sortedStudents),
+    };
+}, [sortedStudents]);
+
 
   const handleSort = (key: string) => {
     setSortConfig(prevConfig => ({
