@@ -1,5 +1,4 @@
-
-"use client";
+'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { firestore } from '@/firebase';
@@ -25,10 +24,10 @@ export default function StudentDataView() {
 
   const [allFetchedStudents, setAllFetchedStudents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [reportCardStudent, setReportCardStudent] = useState<any | null>(null);
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
   const [filters, setFilters] = useState({
     nome: '',
@@ -39,75 +38,78 @@ export default function StudentDataView() {
   });
 
   const debouncedNome = useDebounce(filters.nome, 500);
-  
-  const [hasSearched, setHasSearched] = useState(false);
-  
+
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'serie', direction: 'ascending' });
 
   const hasActiveFilters = useMemo(() => {
     return debouncedNome.trim().length > 0 || filters.serie || filters.classe || filters.turno || filters.nee;
   }, [debouncedNome, filters.serie, filters.classe, filters.turno, filters.nee]);
 
-
   const fetchStudents = useCallback(async () => {
-    if (!firestore || !hasActiveFilters) {
+    if (!firestore) return;
+    
+    // Only search if there are active filters
+    if (!hasActiveFilters) {
       setAllFetchedStudents([]);
-      setIsLoading(false);
       if (hasSearched) setHasSearched(false);
+      setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
-    if (!hasSearched) setHasSearched(true);
+    setHasSearched(true);
 
     try {
-        let q: Query = collection(firestore, 'alunos');
+      let q: Query = collection(firestore, 'alunos');
 
-        const filterConditions = [
-            filters.serie ? where('serie', '==', filters.serie) : null,
-            filters.classe ? where('classe', '==', filters.classe) : null,
-            filters.turno ? where('turno', '==', filters.turno) : null,
-            filters.nee ? where('nee', '==', true) : null,
-        ].filter(Boolean) as any[];
-        
-        q = query(q, ...filterConditions, orderBy('nome'));
+      // Build Firestore query with supported filters
+      const firestoreConditions = [
+        filters.serie ? where('serie', '==', filters.serie) : null,
+        filters.classe ? where('classe', '==', filters.classe) : null,
+        filters.turno ? where('turno', '==', filters.turno) : null,
+        filters.nee ? where('nee', '==', true) : null,
+      ].filter(Boolean) as any[];
 
-        const querySnapshot = await getDocs(q);
-        let studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      if (firestoreConditions.length > 0) {
+        q = query(q, ...firestoreConditions);
+      }
+      
+      const querySnapshot = await getDocs(q);
+      let studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        const nameSearch = debouncedNome.trim().toUpperCase();
-        if (nameSearch) {
-             studentsData = studentsData.filter(student => 
-                student.nome && student.nome.toUpperCase().includes(nameSearch)
-            );
-        }
+      // Client-side filtering for name
+      const nameSearch = debouncedNome.trim().toUpperCase();
+      if (nameSearch) {
+        studentsData = studentsData.filter(student =>
+          student.nome && student.nome.toUpperCase().includes(nameSearch)
+        );
+      }
 
-        setAllFetchedStudents(studentsData);
+      setAllFetchedStudents(studentsData);
     } catch (error: any) {
-        console.error("Error searching students:", error);
-        if (error.code === 'failed-precondition') {
-             toast({
-                variant: "destructive",
-                title: "Consulta Complexa",
-                description: "A sua busca é muito complexa. Tente usar menos filtros ou peça para criar um índice no Firestore."
-            });
-        } else {
-            toast({
-                variant: "destructive",
-                title: "Erro na Busca",
-                description: "Ocorreu um erro ao buscar os alunos. Verifique os filtros e a conexão."
-            });
-        }
-        setAllFetchedStudents([]);
+      console.error("Error searching students:", error);
+      if (error.code === 'failed-precondition') {
+        toast({
+          variant: "destructive",
+          title: "Consulta Complexa",
+          description: "A sua busca é muito complexa. Tente usar menos filtros ou peça para criar um índice no Firestore."
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Erro na Busca",
+          description: "Ocorreu um erro ao buscar os alunos. Verifique os filtros e a conexão."
+        });
+      }
+      setAllFetchedStudents([]);
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
-  }, [firestore, hasActiveFilters, filters.serie, filters.classe, filters.turno, filters.nee, debouncedNome, toast, hasSearched]);
+  }, [firestore, hasActiveFilters, filters.serie, filters.classe, filters.turno, filters.nee, debouncedNome, toast]);
 
   useEffect(() => {
     fetchStudents();
   }, [fetchStudents]);
-
 
   const sortedStudents = useMemo(() => {
     let sortableItems = [...allFetchedStudents];
@@ -162,7 +164,6 @@ export default function StudentDataView() {
     };
 }, [sortedStudents]);
 
-
   const handleSort = (key: string) => {
     setSortConfig(prevConfig => ({
         key,
@@ -173,7 +174,6 @@ export default function StudentDataView() {
   const handleFilterChange = (name: string, value: string | boolean) => {
     setFilters(prev => ({ ...prev, [name]: typeof value === 'string' && value === 'all' ? '' : value }));
   };
-
 
   const clearFilters = () => {
     setFilters({
@@ -316,7 +316,3 @@ export default function StudentDataView() {
   );
 }
     
-
-    
-
-
