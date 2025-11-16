@@ -4,7 +4,7 @@
 import { useState, useMemo } from 'react';
 import { useUser } from '@/firebase';
 import StudentTable from './student-table';
-import { Filter, X, ChevronDown, AlertTriangle } from 'lucide-react';
+import { Filter, X, ChevronDown, AlertTriangle, Search } from 'lucide-react';
 import StudentDetailSheet from './student-detail-sheet';
 import { Input } from './ui/input';
 import { Card, CardContent } from './ui/card';
@@ -37,10 +37,15 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
   const debouncedNome = useDebounce(filters.nome, 300);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'serie', direction: 'ascending' });
 
+  const hasActiveFilters = useMemo(() => {
+    return debouncedNome.trim().length >= 3 || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
+  }, [debouncedNome, filters]);
+
   const filteredAndSortedStudents = useMemo(() => {
-    if (!allStudents) {
+    if (!allStudents || !hasActiveFilters) {
       return [];
     }
+
     let filtered = [...allStudents];
 
     // Client-side filtering
@@ -106,7 +111,7 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
     }
 
     return filtered;
-  }, [allStudents, debouncedNome, filters, sortConfig]);
+  }, [allStudents, debouncedNome, filters, sortConfig, hasActiveFilters]);
 
   const uniqueFilterOptions = useMemo(() => {
     const getUniqueValues = (key: string, data: any[]) => 
@@ -119,10 +124,6 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
         turnos: getUniqueValues('turno', allStudents || []),
     };
   }, [allStudents]);
-
-  const hasActiveFilters = useMemo(() => {
-    return (debouncedNome.trim().length > 0 && debouncedNome.trim().length < 3) || debouncedNome.trim().length >= 3 || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
-  }, [debouncedNome, filters]);
 
   const handleSort = (key: string) => {
     setSortConfig(prevConfig => ({
@@ -251,29 +252,38 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {allStudents && (
+        {allStudents && hasActiveFilters && (
           <p>
             {filteredAndSortedStudents.length > 0
               ? `${filteredAndSortedStudents.length} de ${allStudents.length} alunos encontrados.`
-              : hasActiveFilters
-              ? (debouncedNome.trim().length > 0 && debouncedNome.trim().length < 3)
+              : (debouncedNome.trim().length > 0 && debouncedNome.trim().length < 3)
                 ? 'Digite pelo menos 3 caracteres para buscar por nome.'
                 : 'Nenhum aluno encontrado com os critérios fornecidos.'
-              : `${allStudents.length} alunos carregados.`}
+            }
           </p>
         )}
       </div>
 
-
-      <StudentTable
-        students={filteredAndSortedStudents}
-        isLoading={!allStudents}
-        onRowClick={handleStudentSelect}
-        onReportCardClick={handleOpenReportCard}
-        hasSearched={hasActiveFilters}
-        onSort={handleSort}
-        sortConfig={sortConfig}
-      />
+      {hasActiveFilters ? (
+        <StudentTable
+            students={filteredAndSortedStudents}
+            isLoading={!allStudents}
+            onRowClick={handleStudentSelect}
+            onReportCardClick={handleOpenReportCard}
+            onSort={handleSort}
+            sortConfig={sortConfig}
+        />
+      ) : (
+         <Card>
+            <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
+                <Search className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-medium text-foreground">Inicie uma Busca</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                    Utilize a busca por nome ou os filtros avançados para encontrar os alunos.
+                </p>
+            </CardContent>
+        </Card>
+      )}
       
       <StudentDetailSheet
         student={selectedStudent}

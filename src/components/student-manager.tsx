@@ -129,7 +129,7 @@ export default function StudentManager() {
                 <DataExporter />
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-pointer rounded-full">
-                <ClassListGenerator />
+                <ClassListGenerator allStudents={students} />
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-pointer rounded-full">
                 <GradesUploaderSheet />

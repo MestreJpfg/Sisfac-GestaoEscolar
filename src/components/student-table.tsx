@@ -18,12 +18,11 @@ interface StudentTableProps {
   isLoading: boolean;
   onRowClick: (student: any) => void;
   onReportCardClick: (student: any) => void;
-  hasSearched: boolean;
   onSort: (key: string) => void;
   sortConfig: SortConfig;
 }
 
-export default function StudentTable({ students, isLoading, onRowClick, onReportCardClick, hasSearched, onSort, sortConfig }: StudentTableProps) {
+export default function StudentTable({ students, isLoading, onRowClick, onReportCardClick, onSort, sortConfig }: StudentTableProps) {
   
   const SortableHeader = ({ sortKey, children, className }: { sortKey: string, children: React.ReactNode, className?: string }) => {
     const isSorted = sortConfig.key === sortKey;
@@ -54,25 +53,13 @@ export default function StudentTable({ students, isLoading, onRowClick, onReport
 
   if (students.length === 0) {
     return (
-      <Card>
+       <Card>
         <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
-            {hasSearched ? (
-                <>
-                    <BookUser className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum aluno encontrado</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Tente um termo de busca diferente ou refine os seus filtros.
-                    </p>
-                </>
-            ) : (
-                <>
-                    <Search className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum aluno na base de dados</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                       Comece por carregar um ficheiro de alunos para visualizar os dados.
-                    </p>
-                </>
-            )}
+            <BookUser className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum aluno encontrado</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+                Tente um termo de busca diferente ou refine os seus filtros.
+            </p>
         </CardContent>
       </Card>
     )

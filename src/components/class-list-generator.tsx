@@ -5,8 +5,6 @@ import { useState, useEffect, useMemo } from 'react';
 import jsPDF from "jspdf";
 import 'jspdf-autotable';
 import html2canvas from "html2canvas";
-import { firestore } from '@/firebase';
-import { collection, query, getDocs } from 'firebase/firestore';
 import { ClipboardList, X, Loader2, Download, Filter, BookCopy } from 'lucide-react';
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetTrigger } from './ui/sheet';
@@ -24,16 +22,17 @@ declare module 'jspdf' {
   }
 }
 
-export default function ClassListGenerator() {
+interface ClassListGeneratorProps {
+  allStudents: any[];
+}
+
+export default function ClassListGenerator({ allStudents }: ClassListGeneratorProps) {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingList, setIsGeneratingList] = useState(false);
   const [isGeneratingReports, setIsGeneratingReports] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-
-  const [allStudentsData, setAllStudentsData] = useState<any[]>([]);
   
   const [filters, setFilters] = useState({
     ensino: '',
@@ -42,59 +41,35 @@ export default function ClassListGenerator() {
     classe: '',
   });
 
-  useEffect(() => {
-    if (!firestore || !isOpen) return;
-
-    const fetchAllStudents = async () => {
-      setIsLoading(true);
-      if (allStudentsData.length === 0) {
-        try {
-            const q = query(collection(firestore, 'alunos'));
-            const querySnapshot = await getDocs(q);
-            const studentsData = querySnapshot.docs.map(doc => doc.data());
-            setAllStudentsData(studentsData);
-        } catch (error) {
-            console.error("Erro ao buscar dados dos alunos:", error);
-            toast({
-                variant: "destructive",
-                title: "Erro ao carregar dados",
-                description: "Não foi possível buscar os dados dos alunos."
-            });
-        }
-      }
-      setIsLoading(false);
-    };
-
-    fetchAllStudents();
-  }, [firestore, isOpen, allStudentsData.length, toast]);
-
- const uniqueOptions = useMemo(() => {
+  const uniqueOptions = useMemo(() => {
+    if (!allStudents) return { ensinos: [], series: [], turnos: [], classes: [] };
+    
     const getUniqueValues = (key: string, data: any[]) => 
       [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
-    const ensinos = getUniqueValues('ensino', allStudentsData);
+    const ensinos = getUniqueValues('ensino', allStudents);
 
-    let filteredDataByEnsino = allStudentsData;
+    let filteredDataByEnsino = allStudents;
     if (filters.ensino) {
-        filteredDataByEnsino = allStudentsData.filter(s => s.ensino === filters.ensino);
+        filteredDataByEnsino = allStudents.filter(s => s.ensino === filters.ensino);
     }
     const series = getUniqueValues('serie', filteredDataByEnsino);
 
     let filteredDataBySerie = filteredDataByEnsino;
     if (filters.ensino && filters.serie) {
-        filteredDataBySerie = allStudentsData.filter(s => s.ensino === filters.ensino && s.serie === filters.serie);
+        filteredDataBySerie = allStudents.filter(s => s.ensino === filters.ensino && s.serie === filters.serie);
     } else if (filters.ensino) {
-        filteredDataBySerie = allStudentsData.filter(s => s.ensino === filters.ensino);
+        filteredDataBySerie = allStudents.filter(s => s.ensino === filters.ensino);
     }
     const turnos = getUniqueValues('turno', filteredDataBySerie);
 
     let filteredDataByTurno = filteredDataBySerie;
     if (filters.ensino && filters.serie && filters.turno) {
-        filteredDataByTurno = allStudentsData.filter(s => s.ensino === filters.ensino && s.serie === filters.serie && s.turno === filters.turno);
+        filteredDataByTurno = allStudents.filter(s => s.ensino === filters.ensino && s.serie === filters.serie && s.turno === filters.turno);
     } else if (filters.ensino && filters.serie) {
-        filteredDataByTurno = allStudentsData.filter(s => s.ensino === filters.ensino && s.serie === filters.serie);
+        filteredDataByTurno = allStudents.filter(s => s.ensino === filters.ensino && s.serie === filters.serie);
     } else if (filters.ensino) {
-        filteredDataByTurno = allStudentsData.filter(s => s.ensino === filters.ensino);
+        filteredDataByTurno = allStudents.filter(s => s.ensino === filters.ensino);
     }
     const classes = getUniqueValues('classe', filteredDataByTurno);
 
@@ -104,7 +79,7 @@ export default function ClassListGenerator() {
         turnos,
         classes,
     };
-}, [allStudentsData, filters]);
+}, [allStudents, filters]);
 
   const handleFilterChange = (name: string, value: string) => {
     const newValue = value === 'all' ? '' : value;
@@ -128,7 +103,7 @@ export default function ClassListGenerator() {
     setIsGeneratingList(true);
     setStudents([]);
 
-    let studentsData = allStudentsData;
+    let studentsData = allStudents;
 
     if (filters.ensino) studentsData = studentsData.filter(s => s.ensino === filters.ensino);
     if (filters.serie) studentsData = studentsData.filter(s => s.serie === filters.serie);
@@ -334,7 +309,7 @@ export default function ClassListGenerator() {
                     </AccordionTrigger>
                     <AccordionContent>
                         <div className="space-y-4 py-4">
-                            { isLoading ? (
+                            { !allStudents ? (
                                 <div className="flex items-center justify-center h-40">
                                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                                 </div>
@@ -384,7 +359,7 @@ export default function ClassListGenerator() {
             </Accordion>
             
             <div className="flex items-center gap-2 pt-4">
-                <Button onClick={handleGenerateList} disabled={!isAnyFilterSelected || isGeneratingList || isLoading} className="flex-1">
+                <Button onClick={handleGenerateList} disabled={!isAnyFilterSelected || isGeneratingList || !allStudents} className="flex-1">
                     {isGeneratingList ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Gerar Lista'}
                 </Button>
                 {isAnyFilterSelected && (
@@ -431,5 +406,3 @@ export default function ClassListGenerator() {
     </Sheet>
   );
 }
-
-    
