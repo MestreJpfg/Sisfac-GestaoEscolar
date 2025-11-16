@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { firestore } from '@/firebase';
-import { collection, query, getDocs, where } from 'firebase/firestore';
+import { collection, query, getDocs, where, limit } from 'firebase/firestore';
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown, AlertTriangle } from 'lucide-react';
 import StudentDetailSheet from './student-detail-sheet';
@@ -24,7 +24,7 @@ export default function StudentDataView() {
   const { toast } = useToast();
 
   const [allFetchedStudents, setAllFetchedStudents] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Start with loading true
   
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [reportCardStudent, setReportCardStudent] = useState<any | null>(null);
@@ -50,7 +50,7 @@ export default function StudentDataView() {
 
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'serie', direction: 'ascending' });
 
-
+  // Fetch unique filter options on mount
   useEffect(() => {
     if (!firestore) return;
 
@@ -86,47 +86,40 @@ export default function StudentDataView() {
     fetchUniqueOptions();
   }, [firestore, toast]);
 
-
+  // Effect to fetch students based on filters
   useEffect(() => {
     const searchStudents = async () => {
         if (!firestore) return;
 
-        const nameSearch = debouncedNome.trim().toUpperCase();
-        const hasNameSearch = nameSearch.length >= 3;
-        const hasOtherFilters = !!(filters.serie || filters.classe || filters.turno || filters.nee);
-
-        if (!hasNameSearch && !hasOtherFilters) {
-          setAllFetchedStudents([]);
-          setHasSearched(false);
-          return;
-        }
-        
         setIsLoading(true);
-        setHasSearched(true);
+        setHasSearched(true); // Always consider it a "search"
         
         try {
           const baseQuery = collection(firestore, 'alunos');
           let conditions = [];
           
-          if (filters.serie) {
-            conditions.push(where('serie', '==', filters.serie));
-          }
-          if (filters.classe) {
-            conditions.push(where('classe', '==', filters.classe));
-          }
-          if (filters.turno) {
-            conditions.push(where('turno', '==', filters.turno));
-          }
-           if (filters.nee) {
-            conditions.push(where('nee', '!=', null));
-          }
+          const nameSearch = debouncedNome.trim().toUpperCase();
+          const hasNameSearch = nameSearch.length >= 3;
+          const hasOtherFilters = !!(filters.serie || filters.classe || filters.turno || filters.nee);
           
-          const finalQuery = conditions.length > 0 ? query(baseQuery, ...conditions) : query(baseQuery);
+          // Apply filters if they exist
+          if (filters.serie) conditions.push(where('serie', '==', filters.serie));
+          if (filters.classe) conditions.push(where('classe', '==', filters.classe));
+          if (filters.turno) conditions.push(where('turno', '==', filters.turno));
+          if (filters.nee) conditions.push(where('nee', '!=', null));
+          
+          let finalQuery = query(baseQuery);
+          if (conditions.length > 0) {
+              finalQuery = query(baseQuery, ...conditions);
+          } else if (!hasNameSearch) {
+              // If no filters and no name search, load initial data
+              finalQuery = query(baseQuery, limit(200));
+          }
 
           const querySnapshot = await getDocs(finalQuery);
-          
           let studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+          // If there was a name search, filter the results locally
           if (hasNameSearch) {
             studentsData = studentsData.filter(student => 
                 student.nome && student.nome.toUpperCase().includes(nameSearch)
@@ -213,8 +206,7 @@ export default function StudentDataView() {
       turno: '',
       nee: false,
     });
-    setAllFetchedStudents([]);
-    setHasSearched(false);
+    // The useEffect will trigger a refetch of the initial data
   };
 
   const handleStudentSelect = (student: any) => {
@@ -234,7 +226,7 @@ export default function StudentDataView() {
   };
 
 
-  const hasActiveFilters = Object.values(filters).some(val => val);
+  const hasActiveFilters = Object.values(filters).some(val => val) || filters.nome.length > 0;
   
   return (
     <div className="space-y-6">
@@ -242,7 +234,7 @@ export default function StudentDataView() {
         <CardContent className="p-4 space-y-4">
           <Input
             name="nome"
-            placeholder="Digite 3+ letras do nome para buscar..."
+            placeholder="Buscar por nome..."
             value={filters.nome}
             onChange={(e) => handleFilterChange('nome', e.target.value)}
           />
@@ -313,10 +305,10 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {hasSearched && !isLoading && (
+        {!isLoading && (
           <p>
             {sortedStudents.length > 0 
-              ? `Encontrados ${sortedStudents.length} alunos.`
+              ? `${sortedStudents.length} alunos exibidos.`
               : `Nenhum aluno encontrado com os critérios fornecidos.`}
           </p>
         )}
@@ -327,7 +319,7 @@ export default function StudentDataView() {
         isLoading={isLoading}
         onRowClick={handleStudentSelect}
         onReportCardClick={handleOpenReportCard}
-        hasSearched={hasSearched}
+        hasActiveFilters={hasActiveFilters}
         onSort={handleSort}
         sortConfig={sortConfig}
       />
