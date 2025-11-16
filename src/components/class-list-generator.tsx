@@ -349,7 +349,7 @@ export default function ClassListGenerator() {
                                         {uniqueOptions.ensinos.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
-                                <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)} disabled={!filters.ensino && uniqueOptions.series.length === 0}>
+                                <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)} disabled={!filters.ensino}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Filtrar por Série..." />
                                     </SelectTrigger>
@@ -358,7 +358,7 @@ export default function ClassListGenerator() {
                                         {uniqueOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
-                                <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)} disabled={!filters.serie && !filters.ensino}>
+                                <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)} disabled={!filters.serie}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Filtrar por Turno..." />
                                     </SelectTrigger>
@@ -367,7 +367,7 @@ export default function ClassListGenerator() {
                                         {uniqueOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
-                                <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)} disabled={!filters.turno && !filters.serie && !filters.ensino}>
+                                <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)} disabled={!filters.turno}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Filtrar por Classe..." />
                                     </SelectTrigger>
@@ -431,3 +431,5 @@ export default function ClassListGenerator() {
     </Sheet>
   );
 }
+
+    
