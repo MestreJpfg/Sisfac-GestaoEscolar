@@ -66,7 +66,6 @@ export default function StudentDataView() {
 
         const nameSearch = debouncedNome.trim().toUpperCase();
         
-        // Se não houver filtros ativos (incluindo nome), limita a 200 resultados.
         if (filterConditions.length === 0 && nameSearch.length === 0) {
             q = query(q, orderBy('serie'), orderBy('nome'), limit(200));
         } else {
@@ -94,7 +93,7 @@ export default function StudentDataView() {
     } finally {
         setIsLoading(false);
     }
-  }, [firestore, filters, debouncedNome, toast]);
+  }, [firestore, filters.serie, filters.classe, filters.turno, filters.nee, debouncedNome, toast]);
 
   useEffect(() => {
     fetchStudents();
