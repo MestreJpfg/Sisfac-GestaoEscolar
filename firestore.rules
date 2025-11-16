@@ -10,6 +10,11 @@ service cloud.firestore {
       allow read, write: if isSignedIn() && request.auth.uid == userId;
     }
 
+    // Adiciona a regra para permitir a listagem da coleção /users
+    match /users {
+      allow list: if isSignedIn();
+    }
+
     match /alunos/{document=**} {
       allow read, write: if isSignedIn();
     }
