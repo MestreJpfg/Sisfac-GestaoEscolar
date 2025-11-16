@@ -87,8 +87,10 @@ export default function StudentManager() {
       <main className="flex min-h-screen flex-col items-center p-4 sm:p-6 md:p-8 non-printable">
         <div className="w-full max-w-7xl mx-auto flex-1">
           <header className="mb-8 flex flex-col items-center text-center">
-             <div className="w-full flex items-start justify-between">
-                <div className="w-10 h-10"></div>
+             <div className="w-full flex items-center justify-between">
+                <div>
+                  <ThemeToggle />
+                </div>
                 <div className="flex flex-col items-center text-center">
                     <Image
                         src="/logo.png"
@@ -110,8 +112,7 @@ export default function StudentManager() {
                         </blockquote>
                     )}
                 </div>
-                <div className="flex items-center gap-2">
-                    <ThemeToggle />
+                <div>
                     <UserNav />
                 </div>
             </div>
