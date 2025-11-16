@@ -10,7 +10,7 @@ service cloud.firestore {
       allow read, write: if isSignedIn() && request.auth.uid == userId;
     }
 
-    match /alunos/{alunoId} {
+    match /alunos/{document=**} {
       allow read, write: if isSignedIn();
     }
   }
