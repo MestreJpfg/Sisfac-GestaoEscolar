@@ -50,11 +50,17 @@ export default function StudentManager() {
 
     setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
 
+    return () => clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
     const checkDataExists = async () => {
       if (!firestore) {
-          setDataExists(false);
-          return;
-      };
+        // This case might happen if Firebase is not yet initialized.
+        // We'll retry in a bit.
+        setTimeout(checkDataExists, 500);
+        return;
+      }
       try {
         const collectionRef = collection(firestore, 'alunos');
         const snapshot = await getCountFromServer(collectionRef);
@@ -70,10 +76,11 @@ export default function StudentManager() {
       }
     };
     
+    // Set loading state to null initially to show loader
+    setDataExists(null); 
     checkDataExists();
 
-    return () => clearInterval(intervalId);
-  }, [toast]);
+  }, [firestore, toast]);
   
   const isPageLoading = dataExists === null;
 
@@ -87,10 +94,8 @@ export default function StudentManager() {
       <main className="flex min-h-screen flex-col items-center p-4 sm:p-6 md:p-8 non-printable">
         <div className="w-full max-w-7xl mx-auto flex-1">
           <header className="mb-8 flex flex-col items-center text-center">
-             <div className="w-full flex items-center justify-between">
-                <div>
-                  <ThemeToggle />
-                </div>
+             <div className="w-full flex items-start justify-between">
+                <div className="w-24"></div>
                 <div className="flex flex-col items-center text-center">
                     <Image
                         src="/logo.png"
@@ -112,7 +117,8 @@ export default function StudentManager() {
                         </blockquote>
                     )}
                 </div>
-                <div>
+                <div className="flex items-center gap-2">
+                    <ThemeToggle />
                     <UserNav />
                 </div>
             </div>
@@ -166,7 +172,7 @@ export default function StudentManager() {
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-pointer rounded-full">
                   <GradesUploaderSheet />
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-pointer rounded-full">
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus_bg-transparent cursor-pointer rounded-full">
                   <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
                 </DropdownMenuItem>
             </DropdownMenuContent>
