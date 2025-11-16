@@ -44,7 +44,6 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, data.email, data.password);
       router.push('/dashboard');
     } catch (error: any) {
-      console.error('Erro no login:', error.code);
       let description = 'Ocorreu um erro ao tentar fazer login. Tente novamente.';
       
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
