@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Loader2, Plus } from 'lucide-react';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore } from '@/firebase';
 import StudentDataView from './student-data-view';
 import { ThemeToggle } from './theme-toggle';
 import ClassListGenerator from './class-list-generator';
@@ -22,8 +22,7 @@ import { Button } from './ui/button';
 import { UserNav } from './user-nav';
 import AppFooter from './app-footer';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
 
 export default function StudentManager() {
   const { isUserLoading } = useUser();
@@ -31,7 +30,7 @@ export default function StudentManager() {
   const [currentDate, setCurrentDate] = useState('');
   const [randomQuote, setRandomQuote] = useState<Quote | null>(null);
 
-  const studentsQuery = query(collection(firestore, 'alunos'));
+  const studentsQuery = query(collection(firestore, 'alunos'), orderBy('nome'));
   const { data: students, isLoading: isDataLoading } = useCollection(studentsQuery);
 
   useEffect(() => {
@@ -98,10 +97,10 @@ export default function StudentManager() {
             {isPageLoading ? (
               <div className="flex flex-col items-center justify-center h-80 rounded-lg border-2 border-dashed border-border bg-card/50">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="mt-4 text-muted-foreground">A verificar a base de dados...</p>
+                <p className="mt-4 text-muted-foreground">A carregar a base de dados...</p>
               </div>
             ) : dataExists ? (
-              <StudentDataView />
+              <StudentDataView allStudents={students} />
             ) : (
               <div className="flex flex-col items-center justify-center h-80 rounded-lg border-2 border-dashed border-border bg-card/50">
                 <p className="text-muted-foreground mb-4">Nenhum dado encontrado. Comece por carregar os dados dos alunos.</p>

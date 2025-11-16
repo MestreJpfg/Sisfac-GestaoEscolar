@@ -1,8 +1,8 @@
+
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { firestore, useUser } from '@/firebase';
-import { collection, query, getDocs, orderBy } from 'firebase/firestore';
+import { useState, useMemo } from 'react';
+import { useUser } from '@/firebase';
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown, AlertTriangle } from 'lucide-react';
 import StudentDetailSheet from './student-detail-sheet';
@@ -18,11 +18,9 @@ import { Switch } from './ui/switch';
 import { Label } from './ui/label';
 import StudentReportCardDialog from './student-report-card-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useCollection } from '@/firebase/firestore/use-collection';
 
-export default function StudentDataView() {
+export default function StudentDataView({ allStudents }: { allStudents: any[] }) {
   const { toast } = useToast();
-  const { isUserLoading } = useUser();
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [reportCardStudent, setReportCardStudent] = useState<any | null>(null);
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
@@ -36,31 +34,7 @@ export default function StudentDataView() {
   });
 
   const debouncedNome = useDebounce(filters.nome, 300);
-
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'serie', direction: 'ascending' });
-
-  // Memoize the Firestore query to ensure it's stable across re-renders
-  const studentsQuery = useMemo(() => {
-    if (isUserLoading || !firestore) {
-      return null;
-    }
-    return query(collection(firestore, 'alunos'), orderBy('nome'));
-  }, [isUserLoading, firestore]);
-
-  // useCollection will handle loading, error, and data fetching automatically
-  const { data: allStudents, isLoading, error } = useCollection(studentsQuery);
-
-  useEffect(() => {
-    if (error) {
-      console.error("Error fetching students:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro na Busca",
-        description: "Ocorreu um erro ao buscar os alunos. Verifique a sua conexão e as permissões do Firestore."
-      });
-    }
-  }, [error, toast]);
-
 
   const filteredAndSortedStudents = useMemo(() => {
     if (!allStudents) {
@@ -179,8 +153,6 @@ export default function StudentDataView() {
   };
 
   const handleStudentUpdate = () => {
-    // Data is refetched automatically by useCollection on Firestore updates
-    // but we can add a toast or other feedback here if needed
     toast({
         title: "Atualização em andamento...",
         description: "Os dados do aluno estão sendo atualizados na lista.",
@@ -264,7 +236,7 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {!isLoading && allStudents && (
+        {allStudents && (
           <p>
             {filteredAndSortedStudents.length > 0 
               ? `${filteredAndSortedStudents.length} de ${allStudents.length} alunos encontrados.`
@@ -277,10 +249,10 @@ export default function StudentDataView() {
 
       <StudentTable
         students={filteredAndSortedStudents}
-        isLoading={isLoading}
+        isLoading={!allStudents}
         onRowClick={handleStudentSelect}
         onReportCardClick={handleOpenReportCard}
-        hasSearched={true} // We can simplify this prop now
+        hasSearched={hasActiveFilters}
         onSort={handleSort}
         sortConfig={sortConfig}
       />
@@ -303,4 +275,3 @@ export default function StudentDataView() {
     </div>
   );
 }
-    
