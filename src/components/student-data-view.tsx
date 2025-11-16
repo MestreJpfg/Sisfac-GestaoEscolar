@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { firestore } from '@/firebase';
-import { collection, query, getDocs, where, limit, Query, orderBy } from 'firebase/firestore';
+import { collection, query, getDocs, where, Query, orderBy } from 'firebase/firestore';
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown, AlertTriangle } from 'lucide-react';
 import StudentDetailSheet from './student-detail-sheet';
@@ -24,7 +24,7 @@ export default function StudentDataView() {
   const { toast } = useToast();
 
   const [allFetchedStudents, setAllFetchedStudents] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [reportCardStudent, setReportCardStudent] = useState<any | null>(null);
@@ -44,11 +44,21 @@ export default function StudentDataView() {
   
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'serie', direction: 'ascending' });
 
+  const hasActiveFilters = useMemo(() => {
+    return debouncedNome.trim().length > 0 || filters.serie || filters.classe || filters.turno || filters.nee;
+  }, [debouncedNome, filters.serie, filters.classe, filters.turno, filters.nee]);
+
+
   const fetchStudents = useCallback(async () => {
-    if (!firestore) return;
+    if (!firestore || !hasActiveFilters) {
+      setAllFetchedStudents([]);
+      setIsLoading(false);
+      if (hasSearched) setHasSearched(false);
+      return;
+    }
 
     setIsLoading(true);
-    setHasSearched(true);
+    if (!hasSearched) setHasSearched(true);
 
     try {
         let q: Query = collection(firestore, 'alunos');
@@ -59,24 +69,22 @@ export default function StudentDataView() {
             filters.turno ? where('turno', '==', filters.turno) : null,
             filters.nee ? where('nee', '!=', false) : null,
         ].filter(Boolean) as any[];
+        
+        // Add name filter at the end if it exists. Firestore is limited with inequalities.
+        const nameSearch = debouncedNome.trim().toUpperCase();
 
         if (filterConditions.length > 0) {
-            q = query(q, ...filterConditions);
-        }
-
-        const nameSearch = debouncedNome.trim().toUpperCase();
-        
-        if (filterConditions.length === 0 && nameSearch.length === 0) {
-            q = query(q, orderBy('serie'), orderBy('nome'), limit(200));
-        } else {
-             q = query(q, orderBy('serie'), orderBy('nome'));
+            q = query(q, ...filterConditions, orderBy('nome'));
+        } else if (nameSearch) {
+            q = query(q, orderBy('nome'));
         }
 
         const querySnapshot = await getDocs(q);
         let studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        if (nameSearch.length > 0) {
-            studentsData = studentsData.filter(student => 
+        // Client-side filtering for name if combined with other filters
+        if (nameSearch) {
+             studentsData = studentsData.filter(student => 
                 student.nome && student.nome.toUpperCase().includes(nameSearch)
             );
         }
@@ -84,16 +92,24 @@ export default function StudentDataView() {
         setAllFetchedStudents(studentsData);
     } catch (error: any) {
         console.error("Error searching students:", error);
-        toast({
-            variant: "destructive",
-            title: "Erro na Busca",
-            description: "Ocorreu um erro ao buscar os alunos. Verifique os filtros e a conexão."
-        });
+        if (error.code === 'failed-precondition') {
+             toast({
+                variant: "destructive",
+                title: "Consulta Complexa",
+                description: "A sua busca é muito complexa. Tente usar menos filtros ou peça para criar um índice no Firestore."
+            });
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Erro na Busca",
+                description: "Ocorreu um erro ao buscar os alunos. Verifique os filtros e a conexão."
+            });
+        }
         setAllFetchedStudents([]);
     } finally {
         setIsLoading(false);
     }
-  }, [firestore, filters.serie, filters.classe, filters.turno, filters.nee, debouncedNome, toast]);
+  }, [firestore, hasActiveFilters, filters.serie, filters.classe, filters.turno, filters.nee, debouncedNome, toast, hasSearched]);
 
   useEffect(() => {
     fetchStudents();
@@ -191,9 +207,6 @@ export default function StudentDataView() {
   const handleStudentUpdate = () => {
     fetchStudents(); // Refetch students after an update
   };
-
-
-  const hasActiveFilters = Object.values(filters).some(val => val) || filters.nome.length > 0;
   
   return (
     <div className="space-y-6">
@@ -272,11 +285,11 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {!isLoading && (
+        {!isLoading && hasSearched && (
           <p>
             {sortedStudents.length > 0 
-              ? `${sortedStudents.length} alunos exibidos.`
-              : hasSearched ? `Nenhum aluno encontrado com os critérios fornecidos.` : ''}
+              ? `${sortedStudents.length} alunos encontrados.`
+              : `Nenhum aluno encontrado com os critérios fornecidos.`}
           </p>
         )}
       </div>
@@ -286,7 +299,7 @@ export default function StudentDataView() {
         isLoading={isLoading}
         onRowClick={handleStudentSelect}
         onReportCardClick={handleOpenReportCard}
-        hasActiveFilters={hasActiveFilters}
+        hasSearched={hasSearched}
         onSort={handleSort}
         sortConfig={sortConfig}
       />
@@ -312,3 +325,4 @@ export default function StudentDataView() {
     
 
     
+
