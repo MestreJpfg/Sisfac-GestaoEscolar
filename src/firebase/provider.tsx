@@ -83,17 +83,14 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     return () => unsubscribe(); // Cleanup
   }, [auth]); // Depends only on the auth instance, which is stable.
 
-  // Memoize the context value
-  // CRITICAL: Do NOT include userAuthState in the dependency array.
-  // The user state is passed down, but the context object itself remains stable.
-  // This prevents consumers of the context from re-rendering just because the user object changed.
-  const contextValue = useMemo((): FirebaseContextState => ({
+  const contextValue = useMemo(() => ({
     areServicesAvailable: true,
     firebaseApp,
     firestore,
     auth,
     ...userAuthState,
   }), [firebaseApp, firestore, auth, userAuthState]);
+
 
   return (
     <FirebaseContext.Provider value={contextValue}>

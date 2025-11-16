@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
 import { useFirestore } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, DocumentData, Query } from 'firebase/firestore';
 import UserTable from './user-table';
 import { ThemeToggle } from './theme-toggle';
 import { UserNav } from './user-nav';
@@ -18,7 +18,12 @@ export default function UserManager() {
   const firestore = useFirestore();
   const router = useRouter();
 
-  const usersQuery = firestore ? query(collection(firestore, 'users'), orderBy('name')) : null;
+  // A query só é definida quando o firestore está disponível para evitar instabilidade.
+  const usersQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'users'), orderBy('name'));
+  }, [firestore]);
+
   const { data: users, isLoading } = useCollection(usersQuery);
 
   return (
