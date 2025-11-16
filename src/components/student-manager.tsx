@@ -22,7 +22,7 @@ import { Button } from './ui/button';
 import { UserNav } from './user-nav';
 import AppFooter from './app-footer';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, Query } from 'firebase/firestore';
 
 export default function StudentManager() {
   const { isUserLoading } = useUser();
@@ -30,7 +30,8 @@ export default function StudentManager() {
   const [currentDate, setCurrentDate] = useState('');
   const [randomQuote, setRandomQuote] = useState<Quote | null>(null);
 
-  const studentsQuery = query(collection(firestore, 'alunos'), orderBy('nome'));
+  // A query só é definida quando o firestore está disponível.
+  const studentsQuery = firestore ? query(collection(firestore, 'alunos'), orderBy('nome')) : null;
   const { data: students, isLoading: isDataLoading } = useCollection(studentsQuery);
 
   useEffect(() => {
