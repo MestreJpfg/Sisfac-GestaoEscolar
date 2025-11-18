@@ -163,6 +163,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                 index + 1,
                 student.nome,
                 student.data_nascimento || '',
+                student.telefones && student.telefones.length > 0 ? student.telefones.join(', ') : '',
                 student.rm || ''
             ]);
   
@@ -174,7 +175,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
             const title = `Lista de Alunos - ${ensino} ${serie} ${classe} - Turno: ${turno}`.trim().replace(/N\/A/g, '').replace(/ +/g, ' ');
   
             doc.autoTable({
-                head: [['Nº', 'Nome do Aluno', 'Data de Nascimento', 'RM']],
+                head: [['Nº', 'Nome do Aluno', 'Data de Nascimento', 'Telefone', 'RM']],
                 body: tableData,
                 startY: 24,
                 didDrawPage: (data) => {
