@@ -8,12 +8,10 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read, write: if isSignedIn() && request.auth.uid == userId;
-      // Permitir a listagem de utilizadores a qualquer pessoa autenticada
       allow list: if isSignedIn();
     }
     
     match /alunos/{alunoId} {
-      // Permitir a qualquer utilizador autenticado ler (get, list) e escrever (create, update, delete) em qualquer documento de aluno.
       allow read, write: if isSignedIn();
     }
   }
