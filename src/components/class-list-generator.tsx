@@ -48,44 +48,28 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
     const getUniqueValues = (key: string, data: any[]) => 
       [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
-    const ensinos = getUniqueValues('ensino', allStudents);
+    let filteredForOptions = allStudents;
 
-    let filteredDataByEnsino = allStudents;
-    if (filters.ensino) {
-        filteredDataByEnsino = allStudents.filter(s => s.ensino === filters.ensino);
-    }
-    const series = getUniqueValues('serie', filteredDataByEnsino);
+    const ensinos = getUniqueValues('ensino', filteredForOptions);
 
-    let filteredDataBySerie = filteredDataByEnsino;
-    if (filters.ensino && filters.serie) {
-        filteredDataBySerie = allStudents.filter(s => s.ensino === filters.ensino && s.serie === filters.serie);
-    } else if (filters.ensino) {
-        filteredDataBySerie = allStudents.filter(s => s.ensino === filters.ensino);
-    }
-    const turnos = getUniqueValues('turno', filteredDataBySerie);
+    if(filters.ensino) filteredForOptions = filteredForOptions.filter(s => s.ensino === filters.ensino);
+    const series = getUniqueValues('serie', filteredForOptions);
 
-    let filteredDataByTurno = filteredDataBySerie;
-    if (filters.ensino && filters.serie && filters.turno) {
-        filteredDataByTurno = allStudents.filter(s => s.ensino === filters.ensino && s.serie === filters.serie && s.turno === filters.turno);
-    } else if (filters.ensino && filters.serie) {
-        filteredDataByTurno = allStudents.filter(s => s.ensino === filters.ensino && s.serie === filters.serie);
-    } else if (filters.ensino) {
-        filteredDataByTurno = allStudents.filter(s => s.ensino === filters.ensino);
-    }
-    const classes = getUniqueValues('classe', filteredDataByTurno);
+    if(filters.serie) filteredForOptions = filteredForOptions.filter(s => s.serie === filters.serie);
+    const turnos = getUniqueValues('turno', filteredForOptions);
 
-    return {
-        ensinos,
-        series,
-        turnos,
-        classes,
-    };
+    if(filters.turno) filteredForOptions = filteredForOptions.filter(s => s.turno === filters.turno);
+    const classes = getUniqueValues('classe', filteredForOptions);
+    
+    return { ensinos, series, turnos, classes };
 }, [allStudents, filters]);
+
 
   const handleFilterChange = (name: string, value: string) => {
     const newValue = value === 'all' ? '' : value;
     setFilters(prev => {
         const newFilters = { ...prev, [name]: newValue };
+        // Reset dependent filters when a parent filter changes
         if (name === 'ensino') {
             newFilters.serie = '';
             newFilters.turno = '';
@@ -126,22 +110,20 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
         const today = new Date();
         const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(today);
   
-        const addHeaderAndFooter = (doc: jsPDF, title: string, pageNumber: number) => {
+        const addHeaderAndFooter = (doc: jsPDF, title: string, pageNumber: number, totalPages: number) => {
             const pageW = doc.internal.pageSize.getWidth();
             const pageH = doc.internal.pageSize.getHeight();
             
-            doc.setFontSize(10).setFont('helvetica', 'bold');
-            doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', pageW / 2, 10, { align: 'center' });
-            doc.setFontSize(8).setFont('helvetica', 'normal');
-            doc.text('INEP: 23070188', pageW / 2, 14, { align: 'center' });
-  
-            doc.setFontSize(11).setFont('helvetica', 'normal');
-            doc.text(title, pageW / 2, 20, { align: 'center' });
+            doc.setFontSize(8).setFont('helvetica', 'bold');
+            doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', pageW / 2, 8, { align: 'center' });
+            
+            doc.setFontSize(9).setFont('helvetica', 'normal');
+            doc.text(title, pageW / 2, 13, { align: 'center' });
   
             const footerText = `Gerado em: ${formattedDate}`;
-            doc.setFontSize(8);
-            doc.text(footerText, pageW / 2, pageH - 8, { align: 'center' });
-            doc.text(`Página ${pageNumber}`, pageW - 10, pageH - 8, { align: 'right' });
+            doc.setFontSize(7);
+            doc.text(footerText, 10, pageH - 5);
+            doc.text(`Página ${pageNumber} de ${totalPages}`, pageW - 10, pageH - 5, { align: 'right' });
         };
   
         const groupedStudents = students.reduce((acc, student) => {
@@ -160,13 +142,17 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
         for (const key of sortedGroupKeys) {
             const group = groupedStudents[key];
             const [ensino, serie, classe, turno] = key.split('|');
-            const tableData = group.map((student, index) => [
-                index + 1,
-                student.nome,
-                student.data_nascimento || '',
-                student.telefones && student.telefones.length > 0 ? student.telefones.join(', ') : (student.telefone || ''),
-                student.rm || ''
-            ]);
+            const tableData = group.map((student, index) => {
+                const studentPhones = student.telefones || (student.telefone ? [student.telefone] : []);
+                const phonesString = Array.isArray(studentPhones) ? studentPhones.join(', ') : '';
+                return [
+                    index + 1,
+                    student.nome,
+                    student.data_nascimento || '',
+                    phonesString,
+                    student.rm || ''
+                ]
+            });
   
             if (!isFirstPageOfDoc) {
                 doc.addPage();
@@ -176,25 +162,25 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
             const title = `Lista de Alunos - ${ensino} ${serie} ${classe} - Turno: ${turno}`.trim().replace(/N\/A/g, '').replace(/ +/g, ' ');
   
             doc.autoTable({
-                head: [['Nº', 'Nome do Aluno', 'Data de Nascimento', 'Telefone', 'RM']],
+                head: [['Nº', 'Nome do Aluno', 'Data de Nasc.', 'Telefone', 'RM']],
                 body: tableData,
-                startY: 24,
+                startY: 16,
                 didDrawPage: (data) => {
-                    addHeaderAndFooter(doc, title, data.pageNumber);
+                    addHeaderAndFooter(doc, title, data.pageNumber, (doc.internal as any).pages.length);
                 },
                 styles: {
                     font: 'helvetica',
-                    fontSize: 8,
-                    cellPadding: 1.5,
+                    fontSize: 7.5,
+                    cellPadding: { top: 0.8, right: 1, bottom: 0.8, left: 1 },
                     valign: 'middle',
                 },
                 headStyles: {
                     fillColor: [230, 230, 230],
                     textColor: [40, 40, 40],
                     fontStyle: 'bold',
-                    fontSize: 9,
+                    fontSize: 8,
                 },
-                margin: { top: 24, bottom: 15, right: 10, left: 10 }
+                margin: { top: 16, bottom: 10, right: 10, left: 10 }
             });
         }
   
@@ -222,22 +208,20 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
         const today = new Date();
         const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(today);
 
-        const addHeaderAndFooter = (doc: jsPDF, title: string, pageNumber: number) => {
+         const addHeaderAndFooter = (doc: jsPDF, title: string, pageNumber: number, totalPages: number) => {
             const pageW = doc.internal.pageSize.getWidth();
             const pageH = doc.internal.pageSize.getHeight();
             
-            doc.setFontSize(10).setFont('helvetica', 'bold');
-            doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', pageW / 2, 10, { align: 'center' });
-            doc.setFontSize(8).setFont('helvetica', 'normal');
-            doc.text('INEP: 23070188', pageW / 2, 14, { align: 'center' });
-  
-            doc.setFontSize(11).setFont('helvetica', 'normal');
-            doc.text(title, pageW / 2, 20, { align: 'center' });
+            doc.setFontSize(8).setFont('helvetica', 'bold');
+            doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', pageW / 2, 8, { align: 'center' });
+            
+            doc.setFontSize(9).setFont('helvetica', 'normal');
+            doc.text(title, pageW / 2, 13, { align: 'center' });
   
             const footerText = `Gerado em: ${formattedDate}`;
-            doc.setFontSize(8);
-            doc.text(footerText, pageW / 2, pageH - 8, { align: 'center' });
-            doc.text(`Página ${pageNumber}`, pageW - 10, pageH - 8, { align: 'right' });
+            doc.setFontSize(7);
+            doc.text(footerText, 10, pageH - 5);
+            doc.text(`Página ${pageNumber} de ${totalPages}`, pageW - 10, pageH - 5, { align: 'right' });
         };
   
         const groupedStudents = students.reduce((acc, student) => {
@@ -256,7 +240,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
         for (const key of sortedGroupKeys) {
             const group = groupedStudents[key];
             const [ensino, serie, classe, turno] = key.split('|');
-            const tableData = group.map((student, index) => {
+            const tableData = group.map((student) => {
                 const studentPhones = student.telefones || (student.telefone ? [student.telefone] : []);
                 const phonesString = Array.isArray(studentPhones) ? studentPhones.join(', ') : '';
                 return [student.nome, phonesString];
@@ -272,23 +256,23 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
             doc.autoTable({
                 head: [['Nome do Aluno', 'Telefone']],
                 body: tableData,
-                startY: 24,
+                startY: 16,
                 didDrawPage: (data) => {
-                    addHeaderAndFooter(doc, title, data.pageNumber);
+                    addHeaderAndFooter(doc, title, data.pageNumber, (doc.internal as any).pages.length);
                 },
                 styles: {
                     font: 'helvetica',
-                    fontSize: 9,
-                    cellPadding: 2,
+                    fontSize: 8,
+                    cellPadding: { top: 1, right: 1.5, bottom: 1, left: 1.5 },
                     valign: 'middle',
                 },
                 headStyles: {
                     fillColor: [230, 230, 230],
                     textColor: [40, 40, 40],
                     fontStyle: 'bold',
-                    fontSize: 10,
+                    fontSize: 9,
                 },
-                margin: { top: 24, bottom: 15, right: 10, left: 10 }
+                margin: { top: 16, bottom: 10, right: 10, left: 10 }
             });
         }
   
@@ -387,7 +371,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                 <span>Criar Listas</span>
             </Button>
         </SheetTrigger>
-        <SheetContent className="flex flex-col">
+        <SheetContent className="w-full max-w-md sm:max-w-md flex flex-col">
             <SheetHeader>
                 <SheetTitle>Gerar Lista de Turma</SheetTitle>
                 <SheetDescription>
@@ -420,7 +404,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                                         {uniqueOptions.ensinos.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
-                                <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)} disabled={!filters.ensino}>
+                                <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)} disabled={!filters.ensino && uniqueOptions.series.length === 0}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Filtrar por Série..." />
                                     </SelectTrigger>
@@ -429,7 +413,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                                         {uniqueOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
-                                <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)} disabled={!filters.serie}>
+                                <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)} disabled={!filters.serie && uniqueOptions.turnos.length === 0}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Filtrar por Turno..." />
                                     </SelectTrigger>
@@ -438,7 +422,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                                         {uniqueOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
-                                <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)} disabled={!filters.turno}>
+                                <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)} disabled={!filters.turno && uniqueOptions.classes.length === 0}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Filtrar por Classe..." />
                                     </SelectTrigger>
@@ -506,3 +490,5 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
     </Sheet>
   );
 }
+
+    
