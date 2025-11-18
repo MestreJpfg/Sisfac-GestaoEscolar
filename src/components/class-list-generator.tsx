@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import jsPDF from "jspdf";
 import 'jspdf-autotable';
 import html2canvas from "html2canvas";
-import { ClipboardList, X, Loader2, Download, Filter, BookCopy } from 'lucide-react';
+import { ClipboardList, X, Loader2, Download, Filter, BookCopy, Phone } from 'lucide-react';
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetTrigger } from './ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -33,6 +33,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
   const [isGeneratingReports, setIsGeneratingReports] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isProcessingContacts, setIsProcessingContacts] = useState(false);
   
   const [filters, setFilters] = useState({
     ensino: '',
@@ -209,6 +210,99 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
         });
     } finally {
         setIsProcessing(false);
+    }
+  };
+
+  const handleDownloadContacts = async () => {
+    if (students.length === 0) return;
+    setIsProcessingContacts(true);
+
+    try {
+        const doc = new jsPDF();
+        const today = new Date();
+        const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(today);
+
+        const addHeaderAndFooter = (doc: jsPDF, title: string, pageNumber: number) => {
+            const pageW = doc.internal.pageSize.getWidth();
+            const pageH = doc.internal.pageSize.getHeight();
+            
+            doc.setFontSize(10).setFont('helvetica', 'bold');
+            doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', pageW / 2, 10, { align: 'center' });
+            doc.setFontSize(8).setFont('helvetica', 'normal');
+            doc.text('INEP: 23070188', pageW / 2, 14, { align: 'center' });
+  
+            doc.setFontSize(11).setFont('helvetica', 'normal');
+            doc.text(title, pageW / 2, 20, { align: 'center' });
+  
+            const footerText = `Gerado em: ${formattedDate}`;
+            doc.setFontSize(8);
+            doc.text(footerText, pageW / 2, pageH - 8, { align: 'center' });
+            doc.text(`Página ${pageNumber}`, pageW - 10, pageH - 8, { align: 'right' });
+        };
+  
+        const groupedStudents = students.reduce((acc, student) => {
+            const key = `${student.ensino || 'N/A'}|${student.serie || 'N/A'}|${student.classe || 'N/A'}|${student.turno || 'N/A'}`;
+            if (!acc[key]) {
+                acc[key] = [];
+            }
+            acc[key].push(student);
+            return acc;
+        }, {} as Record<string, any[]>);
+  
+        const sortedGroupKeys = Object.keys(groupedStudents).sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
+
+        let isFirstPageOfDoc = true;
+
+        for (const key of sortedGroupKeys) {
+            const group = groupedStudents[key];
+            const [ensino, serie, classe, turno] = key.split('|');
+            const tableData = group.map((student, index) => [
+                student.nome,
+                student.telefones && student.telefones.length > 0 ? student.telefones.join(', ') : '',
+            ]);
+  
+            if (!isFirstPageOfDoc) {
+                doc.addPage();
+            }
+            isFirstPageOfDoc = false;
+  
+            const title = `Lista de Contatos - ${ensino} ${serie} ${classe} - Turno: ${turno}`.trim().replace(/N\/A/g, '').replace(/ +/g, ' ');
+  
+            doc.autoTable({
+                head: [['Nome do Aluno', 'Telefone']],
+                body: tableData,
+                startY: 24,
+                didDrawPage: (data) => {
+                    addHeaderAndFooter(doc, title, data.pageNumber);
+                },
+                styles: {
+                    font: 'helvetica',
+                    fontSize: 9,
+                    cellPadding: 2,
+                    valign: 'middle',
+                },
+                headStyles: {
+                    fillColor: [230, 230, 230],
+                    textColor: [40, 40, 40],
+                    fontStyle: 'bold',
+                    fontSize: 10,
+                },
+                margin: { top: 24, bottom: 15, right: 10, left: 10 }
+            });
+        }
+  
+        const fileName = `Lista_de_Contatos_${filters.ensino || 'Geral'}.pdf`.replace(/ /g, '_');
+        doc.save(fileName);
+  
+    } catch (error) {
+        console.error("Error generating contacts PDF:", error);
+        toast({
+            variant: "destructive",
+            title: "Erro ao Gerar PDF",
+            description: "Ocorreu um erro ao criar o ficheiro de contatos PDF.",
+        });
+    } finally {
+        setIsProcessingContacts(false);
     }
   };
 
@@ -397,6 +491,10 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                 <Button onClick={handleDownload} disabled={students.length === 0 || isProcessing} className="w-full">
                     <Download className="mr-2 h-4 w-4" />
                     {isProcessing ? 'A processar...' : 'Download da Lista'}
+                </Button>
+                 <Button onClick={handleDownloadContacts} disabled={students.length === 0 || isProcessingContacts} variant="secondary" className="w-full">
+                    <Phone className="mr-2 h-4 w-4" />
+                    {isProcessingContacts ? 'A processar...' : 'Exportar Contatos (PDF)'}
                 </Button>
                  <Button onClick={handleDownloadAllReports} disabled={students.length === 0 || isGeneratingReports} className="w-full">
                     {isGeneratingReports ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BookCopy className="mr-2 h-4 w-4" />}
