@@ -20,7 +20,7 @@ import StudentReportCard from "./student-report-card";
 import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Download, Loader2, Share2, Pencil, Printer, MapPin, BookCheck } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { firestore } from "@/firebase";
+import { useFirestore } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -77,11 +77,20 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isReportCardOpen, setIsReportCardOpen] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   if (!student) return null;
 
   const handleUpdateStudent = async (updatedData: any) => {
-    if (!firestore || !student?.rm) return;
+    // CRITICAL FIX: Ensure firestore is available before attempting to use it.
+    if (!firestore || !student?.rm) {
+       toast({
+        variant: "destructive",
+        title: "Erro de Base de Dados",
+        description: "A ligação com a base de dados não foi estabelecida. Tente novamente.",
+      });
+      return;
+    }
     
     const docRef = doc(firestore, 'alunos', student.rm);
     
