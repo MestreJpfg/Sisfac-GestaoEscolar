@@ -56,10 +56,11 @@ interface StudentEditDialogProps {
 const cleanData = (data: any) => {
     const cleaned: any = {};
     for (const key in data) {
-        if (data[key] === '') {
+        const value = data[key];
+        if (value === '' || value === undefined) {
             cleaned[key] = null;
         } else {
-            cleaned[key] = data[key];
+            cleaned[key] = value;
         }
     }
     return cleaned;
