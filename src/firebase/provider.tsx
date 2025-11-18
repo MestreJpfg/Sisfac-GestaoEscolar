@@ -83,14 +83,21 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     return () => unsubscribe(); // Cleanup
   }, [auth]); // Depends only on the auth instance, which is stable.
 
-  const contextValue = useMemo(() => ({
+  // Memoize the core services object. This object is stable and will not change.
+  const stableServices = useMemo(() => ({
     areServicesAvailable: true,
     firebaseApp,
     firestore,
     auth,
-    ...userAuthState,
-  }), [firebaseApp, firestore, auth, userAuthState]);
+  }), [firebaseApp, firestore, auth]);
 
+  // Combine the stable services with the dynamic user state for the final context value.
+  // This ensures that components depending only on services (like useFirestore) do not
+  // re-render when the user state changes.
+  const contextValue: FirebaseContextState = {
+    ...stableServices,
+    ...userAuthState,
+  };
 
   return (
     <FirebaseContext.Provider value={contextValue}>
