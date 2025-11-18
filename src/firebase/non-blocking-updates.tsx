@@ -37,17 +37,20 @@ export function commitBatchNonBlocking(batch: WriteBatch, entityPath: string) {
  * Does NOT await the write operation internally.
  */
 export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options?: SetOptions) {
-  const promise = options ? setDoc(docRef, data, options) : setDoc(docRef, data);
-  promise.catch(error => {
+  // The 'merge' option is crucial for updates. If it's present, the operation is effectively an 'update'.
+  // If not, it's a 'create' or 'overwrite'.
+  const operation = (options && 'merge' in options) ? 'update' : 'create';
+
+  setDoc(docRef, data, options || {}).catch(error => {
     errorEmitter.emit(
       'permission-error',
       new FirestorePermissionError({
         path: docRef.path,
-        operation: options && 'merge' in options ? 'update' : 'create',
+        operation: operation,
         requestResourceData: data,
       })
     )
-  })
+  });
   // Execution continues immediately
 }
 
@@ -108,3 +111,4 @@ export function deleteDocumentNonBlocking(docRef: DocumentReference) {
       )
     });
 }
+
