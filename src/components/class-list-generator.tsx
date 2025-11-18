@@ -164,7 +164,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                 index + 1,
                 student.nome,
                 student.data_nascimento || '',
-                student.telefones && student.telefones.length > 0 ? student.telefones.join(', ') : '',
+                student.telefones && student.telefones.length > 0 ? student.telefones.join(', ') : (student.telefone || ''),
                 student.rm || ''
             ]);
   
@@ -256,10 +256,11 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
         for (const key of sortedGroupKeys) {
             const group = groupedStudents[key];
             const [ensino, serie, classe, turno] = key.split('|');
-            const tableData = group.map((student, index) => [
-                student.nome,
-                student.telefones && student.telefones.length > 0 ? student.telefones.join(', ') : '',
-            ]);
+            const tableData = group.map((student, index) => {
+                const studentPhones = student.telefones || (student.telefone ? [student.telefone] : []);
+                const phonesString = Array.isArray(studentPhones) ? studentPhones.join(', ') : '';
+                return [student.nome, phonesString];
+            });
   
             if (!isFirstPageOfDoc) {
                 doc.addPage();
