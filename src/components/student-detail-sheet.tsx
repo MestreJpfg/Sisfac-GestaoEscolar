@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -95,6 +94,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
 
     onUpdate();
     setIsEditDialogOpen(false);
+    onClose(); // Close the detail sheet after saving
   };
 
   const generatePdfBlob = async (): Promise<Blob | null> => {
@@ -412,5 +412,3 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     </>
   );
 }
-
-    

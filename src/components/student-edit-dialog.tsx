@@ -102,7 +102,7 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
         };
         form.reset(defaultVals);
     }
-  }, [student, form]);
+  }, [student, isOpen, form]);
 
   const handleCepChange = async (cep: string) => {
     const cleanedCep = cep?.replace(/\D/g, '') || '';
@@ -145,7 +145,7 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
     
     let enderecoCompleto = '';
     if (endereco_cep || endereco_rua || endereco_numero || endereco_bairro) {
-      enderecoCompleto = `(${endereco_cep || ''} - ${endereco_rua || ''} - ${endereco_numero || ''} - ${endereco_bairro || ''})`;
+      enderecoCompleto = `(${endereco_cep || ''}) - ${endereco_rua || ''} - ${endereco_numero || ''} - ${endereco_bairro || ''}`;
     }
 
     const uppercasedData: any = {};
