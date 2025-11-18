@@ -5,7 +5,7 @@ import { useState } from "react";
 import * as XLSX from "xlsx";
 import { useToast } from "@/hooks/use-toast";
 import { doc, writeBatch } from "firebase/firestore";
-import { firestore } from "@/firebase";
+import { useFirestore } from "@/firebase";
 import { commitBatchNonBlocking } from "@/firebase/non-blocking-updates";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +28,7 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   const normalizeData = (data: any[]): any[] => {
     if (!data || data.length < 2) return [];
@@ -157,6 +158,7 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
         });
         onUploadSuccess();
         setIsOpen(false);
+        setIsLoading(false);
     }, 1500);
   };
 
@@ -177,7 +179,7 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
                 </SheetDescription>
               </SheetHeader>
               <div className="py-4 flex-1">
-                <FileUploader onUploadComplete={handleUploadComplete} setIsLoading={setIsLoading} />
+                <FileUploader onUploadComplete={handleUploadComplete} setIsLoading={setIsLoading} isLoading={isLoading} />
               </div>
             </SheetContent>
         </Sheet>
@@ -200,7 +202,7 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
           </SheetDescription>
         </SheetHeader>
         <div className="py-4 flex-1">
-          <FileUploader onUploadComplete={handleUploadComplete} setIsLoading={setIsLoading} />
+          <FileUploader onUploadComplete={handleUploadComplete} setIsLoading={setIsLoading} isLoading={isLoading} />
         </div>
       </SheetContent>
     </Sheet>

@@ -1,3 +1,4 @@
+
 'use client';
     
 import {
@@ -8,21 +9,41 @@ import {
   CollectionReference,
   DocumentReference,
   SetOptions,
+  WriteBatch,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import {FirestorePermissionError} from '@/firebase/errors';
 
 /**
+ * Commits a Firestore WriteBatch and handles potential permission errors non-blockingly.
+ * @param batch The WriteBatch to commit.
+ * @param entityPath A string representing the primary entity path for error reporting (e.g., 'alunos').
+ */
+export function commitBatchNonBlocking(batch: WriteBatch, entityPath: string) {
+  batch.commit().catch(error => {
+    errorEmitter.emit(
+      'permission-error',
+      new FirestorePermissionError({
+        path: entityPath, // Use a representative path for batch operations
+        operation: 'write', // Batch can contain mixed operations
+      })
+    )
+  });
+}
+
+
+/**
  * Initiates a setDoc operation for a document reference.
  * Does NOT await the write operation internally.
  */
-export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options: SetOptions) {
-  setDoc(docRef, data, options).catch(error => {
+export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options?: SetOptions) {
+  const promise = options ? setDoc(docRef, data, options) : setDoc(docRef, data);
+  promise.catch(error => {
     errorEmitter.emit(
       'permission-error',
       new FirestorePermissionError({
         path: docRef.path,
-        operation: 'write', // or 'create'/'update' based on options
+        operation: options && 'merge' in options ? 'update' : 'create',
         requestResourceData: data,
       })
     )

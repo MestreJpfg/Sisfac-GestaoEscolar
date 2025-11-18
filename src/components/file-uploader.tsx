@@ -12,27 +12,25 @@ import { Button } from "./ui/button";
 interface FileUploaderProps {
   onUploadComplete: (data: any[]) => void;
   setIsLoading: (isLoading: boolean) => void;
+  isLoading: boolean;
 }
 
-export default function FileUploader({ onUploadComplete, setIsLoading }: FileUploaderProps) {
+export default function FileUploader({ onUploadComplete, setIsLoading, isLoading }: FileUploaderProps) {
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
 
   const resetState = () => {
     setFileName(null);
     setFile(null);
-    setIsProcessing(false);
     if(inputRef.current) inputRef.current.value = "";
   };
 
   const processFile = async () => {
     if (!file) return;
 
-    setIsProcessing(true);
     setIsLoading(true);
 
     const reader = new FileReader();
@@ -66,10 +64,11 @@ export default function FileUploader({ onUploadComplete, setIsLoading }: FileUpl
             title: "Ficheiro Vazio",
             description: "O ficheiro selecionado não contém dados.",
           });
+          setIsLoading(false);
         } else {
           toast({
             title: "Ficheiro Processado!",
-            description: `${jsonData.length} registos foram lidos de ${file.name}.`,
+            description: `${jsonData.length} registos lidos. A guardar na base de dados...`,
           });
           onUploadComplete(jsonData);
         }
@@ -81,10 +80,8 @@ export default function FileUploader({ onUploadComplete, setIsLoading }: FileUpl
           title: "Erro de Processamento",
           description: "Ocorreu um erro ao processar seu ficheiro. Verifique o formato e tente novamente.",
         });
-      } finally {
         setIsLoading(false);
-        setIsProcessing(false);
-        // We can decide if we want to reset the state or show the file as processed
+      } finally {
         resetState();
       }
     };
@@ -130,23 +127,23 @@ export default function FileUploader({ onUploadComplete, setIsLoading }: FileUpl
   const handleDrag = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isProcessing || fileName) return;
+    if (isLoading) return;
     if (e.type === "dragenter" || e.type === "dragover") setIsDragging(true);
     else if (e.type === "dragleave") setIsDragging(false);
-  }, [isProcessing, fileName]);
+  }, [isLoading]);
 
   const handleDrop = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isProcessing || fileName) return;
+    if (isLoading) return;
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFileSelect(e.dataTransfer.files[0]);
     }
-  }, [isProcessing, fileName]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
   
   const handleClick = () => {
-    if (isProcessing || fileName) return;
+    if (isLoading) return;
     inputRef.current?.click();
   };
 
@@ -155,7 +152,7 @@ export default function FileUploader({ onUploadComplete, setIsLoading }: FileUpl
       className={cn(
         "border-2 border-dashed transition-all duration-300",
         isDragging ? "border-primary bg-primary/10 shadow-2xl" : "border-border",
-        fileName && !isProcessing ? "border-primary bg-primary/5" : ""
+        fileName && !isLoading ? "border-primary bg-primary/5" : ""
       )}
       onDragEnter={handleDrag}
       onDragOver={handleDrag}
@@ -167,7 +164,7 @@ export default function FileUploader({ onUploadComplete, setIsLoading }: FileUpl
       >
         <div className="flex flex-col items-center justify-center space-y-4 h-64 sm:h-80">
           
-          {isProcessing ? (
+          {isLoading ? (
             <>
               <Loader2 className="w-16 h-16 text-primary animate-spin" />
               <p className="font-semibold text-foreground">A processar o ficheiro...</p>
@@ -203,7 +200,7 @@ export default function FileUploader({ onUploadComplete, setIsLoading }: FileUpl
             accept=".xlsx,.csv,.json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,application/json"
             className="hidden"
             onChange={(e) => handleFileSelect(e.target.files ? e.target.files[0] : null)}
-            disabled={isProcessing || !!fileName}
+            disabled={isLoading}
           />
         </div>
       </CardContent>
