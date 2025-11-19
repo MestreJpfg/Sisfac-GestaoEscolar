@@ -82,7 +82,7 @@ export default function ProfilePage() {
             let newPhotoURL = user.photoURL;
 
             // 1. Upload new photo if one was selected
-            if (photo) {
+            if (photo && storage) {
                 const storageRef = ref(storage, `profile-pictures/${user.uid}`);
                 const snapshot = await uploadBytes(storageRef, photo);
                 newPhotoURL = await getDownloadURL(snapshot.ref);
@@ -113,7 +113,6 @@ export default function ProfilePage() {
             // Clean up
             setPhoto(null);
             setPhotoPreview(null);
-            router.refresh();
 
         } catch (error: any) {
             console.error("Erro ao atualizar perfil:", error);
