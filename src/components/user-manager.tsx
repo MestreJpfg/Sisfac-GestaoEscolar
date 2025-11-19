@@ -36,7 +36,7 @@ export default function UserManager() {
                     Voltar ao Painel
                 </Button>
               <div className="flex flex-col items-center text-center">
-                <Image src="/logo.png" alt="Logo" width={80} height={80} className="rounded-md" priority />
+                <Image src="/logoyuri.png" alt="Logo" width={100} height={100} className="rounded-md" priority />
               </div>
               <div className="flex items-center gap-2">
                 <ThemeToggle />

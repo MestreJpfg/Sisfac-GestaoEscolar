@@ -34,7 +34,7 @@ export default function ReportCardWithDeclaration({ student, boletim }: ReportCa
                 {/* Cabeçalho */}
                 <header className="flex flex-col items-center text-center text-[9px] font-bold mb-2">
                     <div className="flex items-center gap-4 mb-2">
-                       <Image src="/logo.png" alt="Logo da Prefeitura de Fortaleza" width={60} height={60} unoptimized />
+                       <Image src="/logoyuri.png" alt="Logo da Prefeitura de Fortaleza" width={60} height={60} unoptimized />
                        <div className="h-8 border-l border-gray-400"></div>
                        <span className="text-lg font-semibold">EDUCAÇÃO</span>
                     </div>

@@ -22,7 +22,7 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
                 {/* Cabeçalho */}
                 <header className="flex flex-col items-center text-center text-[9px] font-bold">
                     <div className="flex items-center gap-4 mb-4">
-                       <Image src="/logo.png" alt="Logo da Prefeitura de Fortaleza" width={80} height={80} unoptimized />
+                       <Image src="/logoyuri.png" alt="Logo da Prefeitura de Fortaleza" width={80} height={80} unoptimized />
                        <div className="h-10 border-l border-gray-400"></div>
                        <span className="text-xl font-semibold">EDUCAÇÃO</span>
                     </div>

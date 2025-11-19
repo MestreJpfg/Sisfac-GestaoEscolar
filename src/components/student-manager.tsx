@@ -74,7 +74,7 @@ export default function StudentManager() {
             <div className="w-full flex items-start justify-between">
               <div className="w-24"></div>
               <div className="flex flex-col items-center text-center">
-                <Image src="/logo.png" alt="Logo" width={80} height={80} className="rounded-md" priority />
+                <Image src="/logoyuri.png" alt="Logo" width={100} height={100} className="rounded-md" priority />
                 {currentDate && <p className="text-xs text-muted-foreground mt-6">{currentDate}</p>}
                 {randomQuote && (
                   <blockquote className="mt-2 text-xs italic text-muted-foreground max-w-sm relative">
