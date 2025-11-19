@@ -34,6 +34,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
   const [students, setStudents] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isProcessingContacts, setIsProcessingContacts] = useState(false);
+  const [activeAccordion, setActiveAccordion] = useState<string>("item-1");
   
   const [filters, setFilters] = useState({
     ensino: '',
@@ -87,6 +88,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
   const handleGenerateList = async () => {
     setIsGeneratingList(true);
     setStudents([]);
+    setActiveAccordion(""); // Collapse accordion
 
     let studentsData = allStudents;
 
@@ -259,15 +261,15 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                 },
                 styles: {
                     font: 'helvetica',
-                    fontSize: 8,
-                    cellPadding: { top: 1, right: 1.5, bottom: 1, left: 1.5 },
+                    fontSize: 7.5,
+                    cellPadding: { top: 0.8, right: 1, bottom: 0.8, left: 1 },
                     valign: 'middle',
                 },
                 headStyles: {
                     fillColor: [230, 230, 230],
                     textColor: [40, 40, 40],
                     fontStyle: 'bold',
-                    fontSize: 9,
+                    fontSize: 8,
                 },
                 margin: { top: 16, bottom: 10, right: 10, left: 10 }
             });
@@ -356,6 +358,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
   const clearFiltersAndResults = () => {
     setFilters({ ensino: '', serie: '', turno: '', classe: '' });
     setStudents([]);
+    setActiveAccordion("item-1"); // Re-open accordion
   };
 
   const isAnyFilterSelected = filters.ensino || filters.serie || filters.turno || filters.classe;
@@ -376,7 +379,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                 </SheetDescription>
             </SheetHeader>
             
-             <Accordion type="single" collapsible defaultValue="item-1" className="w-full">
+             <Accordion type="single" collapsible value={activeAccordion} onValueChange={setActiveAccordion} className="w-full">
                 <AccordionItem value="item-1">
                     <AccordionTrigger>
                         <div className="flex items-center gap-2">
