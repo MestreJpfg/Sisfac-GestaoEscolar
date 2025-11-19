@@ -89,10 +89,13 @@ export default function ProfilePage() {
             }
 
             // 2. Update user profile in Firebase Auth
-            await updateProfile(user, { 
-                displayName,
-                photoURL: newPhotoURL 
-            });
+            if (auth.currentUser) {
+                await updateProfile(auth.currentUser, { 
+                    displayName,
+                    photoURL: newPhotoURL 
+                });
+            }
+
 
             // 3. Update user document in Firestore
             const userDocToUpdate = doc(firestore, 'users', user.uid);
@@ -110,9 +113,9 @@ export default function ProfilePage() {
                 description: 'As suas informações foram atualizadas com sucesso.',
             });
             
-            // Clean up file input state, but not preview, to prevent re-render loops.
-            // The UI will update naturally from the useUser hook.
+            // Clean up all local file state after successful save
             setPhoto(null);
+            setPhotoPreview(null);
             if (fileInputRef.current) {
                 fileInputRef.current.value = "";
             }
