@@ -20,6 +20,7 @@ import Image from 'next/image';
 
 const signupSchema = z.object({
   name: z.string().min(2, { message: 'O nome deve ter pelo menos 2 caracteres.' }),
+  cargo: z.string().min(2, { message: 'O cargo deve ter pelo menos 2 caracteres.' }),
   email: z.string().email({ message: 'Por favor, insira um email válido.' }),
   password: z.string().min(6, { message: 'A senha deve ter pelo menos 6 caracteres.' }),
 });
@@ -37,6 +38,7 @@ export default function SignupPage() {
     resolver: zodResolver(signupSchema),
     defaultValues: {
       name: '',
+      cargo: '',
       email: '',
       password: '',
     },
@@ -66,7 +68,9 @@ export default function SignupPage() {
         uid: user.uid,
         name: data.name,
         email: data.email,
+        cargo: data.cargo,
         createdAt: new Date().toISOString(),
+        photoURL: user.photoURL,
       });
 
       toast({
@@ -99,7 +103,7 @@ export default function SignupPage() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="name"
@@ -107,7 +111,20 @@ export default function SignupPage() {
                   <FormItem>
                     <FormLabel>Nome</FormLabel>
                     <FormControl>
-                      <Input placeholder="Seu nome" {...field} />
+                      <Input placeholder="Seu nome completo" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="cargo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cargo</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Sua função (ex: Professor, Secretário)" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -133,7 +150,7 @@ export default function SignupPage() {
                   <FormItem>
                     <FormLabel>Senha</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="Crie uma senha" {...field} />
+                      <Input type="password" placeholder="Crie uma senha forte" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

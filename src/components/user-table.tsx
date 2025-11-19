@@ -12,10 +12,20 @@ import { Card, CardContent } from "./ui/card";
 import { User, Search } from "lucide-react";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 interface UserTableProps {
   users: any[];
 }
+
+const getInitials = (name: string | null | undefined) => {
+    if (!name) return 'U';
+    const names = name.split(' ');
+    if (names.length > 1) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+};
 
 export default function UserTable({ users }: UserTableProps) {
   if (users.length === 0) {
@@ -51,6 +61,7 @@ export default function UserTable({ users }: UserTableProps) {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Cargo</TableHead>
                 <TableHead>Data de Criação</TableHead>
                 <TableHead className="text-right">UID</TableHead>
               </TableRow>
@@ -58,10 +69,19 @@ export default function UserTable({ users }: UserTableProps) {
             <TableBody>
               {users.map((user) => (
                 <TableRow key={user.uid}>
-                  <TableCell className="font-medium whitespace-nowrap">{user.name}</TableCell>
-                  <TableCell className="whitespace-nowrap">{user.email}</TableCell>
-                  <TableCell className="whitespace-nowrap">{formatDate(user.createdAt)}</TableCell>
-                  <TableCell className="text-right whitespace-nowrap font-mono text-xs">{user.uid}</TableCell>
+                  <TableCell className="font-medium whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9">
+                            <AvatarImage src={user.photoURL} alt={user.name} />
+                            <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                        </Avatar>
+                        <span>{user.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-muted-foreground">{user.email}</TableCell>
+                   <TableCell className="whitespace-nowrap text-muted-foreground">{user.cargo}</TableCell>
+                  <TableCell className="whitespace-nowrap text-muted-foreground">{formatDate(user.createdAt)}</TableCell>
+                  <TableCell className="text-right whitespace-nowrap font-mono text-xs text-muted-foreground">{user.uid}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
