@@ -110,9 +110,13 @@ export default function ProfilePage() {
                 description: 'As suas informações foram atualizadas com sucesso.',
             });
             
-            // Clean up
+            // Clean up file input state, but not preview, to prevent re-render loops.
+            // The UI will update naturally from the useUser hook.
             setPhoto(null);
-            setPhotoPreview(null);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
+
 
         } catch (error: any) {
             console.error("Erro ao atualizar perfil:", error);
