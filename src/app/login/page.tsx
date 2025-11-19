@@ -69,7 +69,7 @@ export default function LoginPage() {
         </div>
         <Card className="w-full max-w-md">
             <CardHeader className="text-center">
-            <Image src="/logo.png" alt="Logo" width={80} height={80} className="mx-auto mb-4 rounded-md" />
+            <Image src="/logoyuri.png" alt="Logo" width={100} height={100} className="mx-auto mb-4 rounded-md" />
             <CardTitle>Bem-vindo de Volta!</CardTitle>
             <CardDescription>Faça login para aceder à Gestão de Alunos.</CardDescription>
             </CardHeader>
