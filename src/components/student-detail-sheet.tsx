@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -15,9 +16,10 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import StudentDeclaration from "./student-declaration";
+import StudentTransferDeclaration from "./student-transfer-declaration";
 import StudentEditDialog from "./student-edit-dialog";
 import StudentReportCard from "./student-report-card";
-import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Download, Loader2, Share2, Pencil, Printer, MapPin, BookCheck } from "lucide-react";
+import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Download, Loader2, Share2, Pencil, Printer, MapPin, BookCheck, FileOutput } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
@@ -74,6 +76,7 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, lab
 
 export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate }: StudentDetailSheetProps) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingType, setProcessingType] = useState<'declaration' | 'transfer' | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isReportCardOpen, setIsReportCardOpen] = useState(false);
   const { toast } = useToast();
@@ -105,21 +108,22 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     setIsEditDialogOpen(false);
     onClose(); // Close the detail sheet after saving
   };
-
-  const generatePdfBlob = async (): Promise<Blob | null> => {
+  
+  const generatePdfBlob = async (type: 'declaration' | 'transfer'): Promise<Blob | null> => {
     const container = document.createElement('div');
     container.style.position = 'absolute';
     container.style.left = '-9999px';
     container.style.top = '0';
     container.style.width = '210mm';
     
-    const declarationElement = document.createElement('div');
-    container.appendChild(declarationElement);
+    const elementToRender = document.createElement('div');
+    container.appendChild(elementToRender);
     document.body.appendChild(container);
 
-    const reactRoot = await import('react-dom/client').then(m => m.createRoot(declarationElement));
+    const reactRoot = await import('react-dom/client').then(m => m.createRoot(elementToRender));
     await new Promise(resolve => {
-        reactRoot.render(<StudentDeclaration student={student} />);
+        const component = type === 'transfer' ? <StudentTransferDeclaration student={student} /> : <StudentDeclaration student={student} />;
+        reactRoot.render(component);
         setTimeout(resolve, 500); 
     });
 
@@ -140,16 +144,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
         
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
-        const ratio = canvas.width / canvas.height;
-        let imgWidth = pdfWidth;
-        let imgHeight = pdfWidth / ratio;
-        
-        if (imgHeight > pdfHeight) {
-            imgHeight = pdfHeight;
-            imgWidth = imgHeight * ratio;
-        }
-
-        pdf.addImage(imgData, 'JPEG', (pdfWidth - imgWidth) / 2, (pdfHeight - imgHeight) / 2, imgWidth, imgHeight);
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
         return pdf.output('blob');
 
     } catch (error) {
@@ -166,28 +161,36 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     }
   };
 
-  const handleGeneratePdf = async () => {
+
+  const handleGeneratePdf = async (type: 'declaration' | 'transfer') => {
     setIsProcessing(true);
-    const blob = await generatePdfBlob();
+    setProcessingType(type);
+    const blob = await generatePdfBlob(type);
     if (blob) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Declaracao_${student.nome.replace(/\s+/g, '_')}.pdf`;
+      const fileName = type === 'transfer'
+        ? `Declaracao_Transferencia_${student.nome.replace(/\s+/g, '_')}.pdf`
+        : `Declaracao_${student.nome.replace(/\s+/g, '_')}.pdf`;
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
     setIsProcessing(false);
+    setProcessingType(null);
   };
   
   const handleShare = async () => {
     setIsProcessing(true);
-    const blob = await generatePdfBlob();
+    setProcessingType('declaration');
+    const blob = await generatePdfBlob('declaration');
     
     if (!blob) {
       setIsProcessing(false);
+      setProcessingType(null);
       return;
     }
 
@@ -227,6 +230,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     }
     
     setIsProcessing(false);
+    setProcessingType(null);
   };
 
   const parseAddress = (addressString: string) => {
@@ -354,7 +358,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
           </ScrollArea>
           
           <SheetFooter className="mt-auto pt-4 border-t border-border/20">
-            <div className="flex items-center justify-center gap-2">
+             <div className="flex items-center justify-center gap-2">
               <TooltipProvider>
                  <Tooltip>
                     <TooltipTrigger asChild>
@@ -369,17 +373,24 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
                   </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={handleGeneratePdf} disabled={isProcessing}>
-                      {isProcessing ? (
-                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                      ) : (
-                        <Download className="w-4 h-4 text-primary" />
-                      )}
-                      <span className="sr-only">Gerar Declaração em PDF</span>
+                    <Button variant="ghost" size="icon" onClick={() => handleGeneratePdf('declaration')} disabled={isProcessing}>
+                      {isProcessing && processingType === 'declaration' ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Download className="w-4 h-4 text-primary" />}
+                      <span className="sr-only">Gerar Declaração de Matrícula</span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Gerar Declaração em PDF</p>
+                    <p>Gerar Declaração de Matrícula</p>
+                  </TooltipContent>
+                </Tooltip>
+                 <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={() => handleGeneratePdf('transfer')} disabled={isProcessing}>
+                      {isProcessing && processingType === 'transfer' ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <FileOutput className="w-4 h-4 text-primary" />}
+                      <span className="sr-only">Gerar Declaração de Transferência</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Gerar Declaração de Transferência</p>
                   </TooltipContent>
                 </Tooltip>
                 <Tooltip>
@@ -394,7 +405,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Partilhar Declaração</p>
+                    <p>Partilhar Declaração de Matrícula</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
