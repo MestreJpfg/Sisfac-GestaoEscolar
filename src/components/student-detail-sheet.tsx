@@ -27,6 +27,9 @@ import { doc } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import StudentReportCardDialog from "./student-report-card-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
+import ReportCardWithDeclaration from "./report-card-with-declaration";
+import ReportCardDetailed from "./report-card-detailed";
 
 const formatPhoneNumber = (phone: string): string => {
   const cleaned = ('' + phone).replace(/\D/g, '');
@@ -38,6 +41,8 @@ const formatPhoneNumber = (phone: string): string => {
   }
   return phone; // Return original if not a valid length
 };
+
+type PdfType = 'declaration' | 'transfer' | 'declarationWithReport' | 'detailedReport';
 
 interface StudentDetailSheetProps {
   student: any | null;
@@ -75,8 +80,8 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, lab
 };
 
 export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate }: StudentDetailSheetProps) {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [processingType, setProcessingType] = useState<'declaration' | 'transfer' | null>(null);
+  const [isProcessing, setIsProcessing] = useState<PdfType | null>(null);
+  const [isSharing, setIsSharing] = useState<PdfType | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isReportCardOpen, setIsReportCardOpen] = useState(false);
   const { toast } = useToast();
@@ -109,12 +114,29 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     onClose(); // Close the detail sheet after saving
   };
   
-  const generatePdfBlob = async (type: 'declaration' | 'transfer'): Promise<Blob | null> => {
+  const generatePdfBlob = async (type: PdfType): Promise<Blob | null> => {
     const container = document.createElement('div');
     container.style.position = 'absolute';
     container.style.left = '-9999px';
     container.style.top = '0';
-    container.style.width = '210mm';
+    
+    let componentToRender;
+    switch (type) {
+        case 'declaration':
+            componentToRender = <StudentDeclaration student={student} />;
+            break;
+        case 'transfer':
+            componentToRender = <StudentTransferDeclaration student={student} />;
+            break;
+        case 'declarationWithReport':
+            componentToRender = <ReportCardWithDeclaration student={student} boletim={student.boletim || {}} />;
+            break;
+        case 'detailedReport':
+            componentToRender = <ReportCardDetailed student={student} boletim={student.boletim || {}} />;
+            break;
+        default:
+            return null;
+    }
     
     const elementToRender = document.createElement('div');
     container.appendChild(elementToRender);
@@ -122,8 +144,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
 
     const reactRoot = await import('react-dom/client').then(m => m.createRoot(elementToRender));
     await new Promise(resolve => {
-        const component = type === 'transfer' ? <StudentTransferDeclaration student={student} /> : <StudentDeclaration student={student} />;
-        reactRoot.render(component);
+        reactRoot.render(componentToRender);
         setTimeout(resolve, 500); 
     });
 
@@ -162,47 +183,73 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
   };
 
 
-  const handleGeneratePdf = async (type: 'declaration' | 'transfer') => {
-    setIsProcessing(true);
-    setProcessingType(type);
+  const handleGeneratePdf = async (type: PdfType) => {
+    setIsProcessing(type);
     const blob = await generatePdfBlob(type);
     if (blob) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const fileName = type === 'transfer'
-        ? `Declaracao_Transferencia_${student.nome.replace(/\s+/g, '_')}.pdf`
-        : `Declaracao_${student.nome.replace(/\s+/g, '_')}.pdf`;
+      
+      let fileName;
+      switch(type) {
+        case 'declaration': fileName = `Declaracao_${student.nome.replace(/\s+/g, '_')}.pdf`; break;
+        case 'transfer': fileName = `Declaracao_Transferencia_${student.nome.replace(/\s+/g, '_')}.pdf`; break;
+        case 'declarationWithReport': fileName = `Declaracao_com_Boletim_${student.nome.replace(/\s+/g, '_')}.pdf`; break;
+        case 'detailedReport': fileName = `Boletim_Detalhado_${student.nome.replace(/\s+/g, '_')}.pdf`; break;
+        default: fileName = `Documento_${student.nome.replace(/\s+/g, '_')}.pdf`;
+      }
+      
       a.download = fileName;
       document.body.appendChild(a);
-      a.click();
+a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
-    setIsProcessing(false);
-    setProcessingType(null);
+    setIsProcessing(null);
   };
   
-  const handleShare = async () => {
-    setIsProcessing(true);
-    setProcessingType('declaration');
-    const blob = await generatePdfBlob('declaration');
+  const handleShare = async (type: PdfType) => {
+    setIsSharing(type);
+    const blob = await generatePdfBlob(type);
     
     if (!blob) {
-      setIsProcessing(false);
-      setProcessingType(null);
+      setIsSharing(null);
       return;
     }
 
-    const fileName = `Declaracao_${student.nome.replace(/\s+/g, '_')}.pdf`;
+    let fileName;
+    let title;
+    switch(type) {
+      case 'declaration': 
+        fileName = `Declaracao_Matricula_${student.nome.replace(/\s+/g, '_')}.pdf`;
+        title = `Declaração de Matrícula - ${student.nome}`;
+        break;
+      case 'transfer': 
+        fileName = `Declaracao_Transferencia_${student.nome.replace(/\s+/g, '_')}.pdf`;
+        title = `Declaração de Transferência - ${student.nome}`;
+        break;
+      case 'declarationWithReport':
+        fileName = `Declaracao_com_Boletim_${student.nome.replace(/\s+/g, '_')}.pdf`;
+        title = `Declaração com Boletim - ${student.nome}`;
+        break;
+      case 'detailedReport':
+        fileName = `Boletim_Detalhado_${student.nome.replace(/\s+/g, '_')}.pdf`;
+        title = `Boletim Detalhado - ${student.nome}`;
+        break;
+      default:
+        fileName = `Documento_${student.nome.replace(/\s+/g, '_')}.pdf`;
+        title = `Documento - ${student.nome}`;
+    }
+
     const file = new File([blob], fileName, { type: 'application/pdf' });
 
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
         await navigator.share({
           files: [file],
-          title: `Declaração de Matrícula - ${student.nome}`,
-          text: `Segue em anexo a declaração de matrícula para ${student.nome}.`,
+          title: title,
+          text: `Segue em anexo o documento para ${student.nome}.`,
         });
       } catch (error) {
          if ((error as DOMException).name !== 'AbortError') {
@@ -217,7 +264,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     } else {
       toast({
         title: "Partilha não suportada",
-        description: "A iniciar o download do ficheiro.",
+        description: "O seu navegador não suporta a partilha de ficheiros. A iniciar o download.",
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -229,8 +276,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
       URL.revokeObjectURL(url);
     }
     
-    setIsProcessing(false);
-    setProcessingType(null);
+    setIsSharing(null);
   };
 
   const parseAddress = (addressString: string) => {
@@ -362,7 +408,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
               <TooltipProvider>
                  <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={() => setIsEditDialogOpen(true)} disabled={isProcessing}>
+                      <Button variant="ghost" size="icon" onClick={() => setIsEditDialogOpen(true)} disabled={!!isProcessing || !!isSharing}>
                           <Pencil className="w-4 h-4 text-primary" />
                           <span className="sr-only">Editar Aluno</span>
                       </Button>
@@ -373,8 +419,8 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
                   </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={() => handleGeneratePdf('declaration')} disabled={isProcessing}>
-                      {isProcessing && processingType === 'declaration' ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Download className="w-4 h-4 text-primary" />}
+                    <Button variant="ghost" size="icon" onClick={() => handleGeneratePdf('declaration')} disabled={!!isProcessing || !!isSharing}>
+                      {isProcessing === 'declaration' ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Download className="w-4 h-4 text-primary" />}
                       <span className="sr-only">Gerar Declaração de Matrícula</span>
                     </Button>
                   </TooltipTrigger>
@@ -384,8 +430,8 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
                 </Tooltip>
                  <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={() => handleGeneratePdf('transfer')} disabled={isProcessing}>
-                      {isProcessing && processingType === 'transfer' ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <FileOutput className="w-4 h-4 text-primary" />}
+                    <Button variant="ghost" size="icon" onClick={() => handleGeneratePdf('transfer')} disabled={!!isProcessing || !!isSharing}>
+                      {isProcessing === 'transfer' ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <FileOutput className="w-4 h-4 text-primary" />}
                       <span className="sr-only">Gerar Declaração de Transferência</span>
                     </Button>
                   </TooltipTrigger>
@@ -393,21 +439,35 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
                     <p>Gerar Declaração de Transferência</p>
                   </TooltipContent>
                 </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={handleShare} disabled={isProcessing}>
-                      {isProcessing ? (
-                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                      ) : (
-                        <Share2 className="w-4 h-4 text-primary" />
-                      )}
-                      <span className="sr-only">Partilhar Declaração</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Partilhar Declaração de Matrícula</p>
-                  </TooltipContent>
-                </Tooltip>
+                 <DropdownMenu>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" disabled={!!isSharing || !!isProcessing}>
+                                    {isSharing ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Share2 className="w-4 h-4 text-primary" />}
+                                    <span className="sr-only">Partilhar Documento</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Partilhar Documento</p>
+                        </TooltipContent>
+                    </Tooltip>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleShare('declaration')}>
+                            Declaração de Matrícula
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleShare('transfer')}>
+                            Declaração de Transferência
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleShare('declarationWithReport')} disabled={!hasBoletim}>
+                            Declaração com Boletim
+                        </DropdownMenuItem>
+                         <DropdownMenuItem onClick={() => handleShare('detailedReport')} disabled={!hasBoletim}>
+                            Boletim Detalhado
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
               </TooltipProvider>
             </div>
           </SheetFooter>
@@ -432,3 +492,4 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     </>
   );
 }
+
