@@ -8,7 +8,7 @@ import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -58,6 +58,9 @@ export default function SignupPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
+      // Update the user's profile with the name
+      await updateProfile(user, { displayName: data.name });
+
       const userDocRef = doc(firestore, 'users', user.uid);
       setDocumentNonBlocking(userDocRef, {
         uid: user.uid,
@@ -79,7 +82,7 @@ export default function SignupPage() {
         title: 'Erro no Registro',
         description: error.code === 'auth/email-already-in-use' 
             ? 'Este email já está a ser utilizado por outra conta.'
-            : error.message || 'Ocorreu um erro durante o registro.',
+            : 'Ocorreu um erro durante o registro. Verifique a consola para mais detalhes.',
       });
     } finally {
       setIsLoading(false);
@@ -90,7 +93,7 @@ export default function SignupPage() {
     <main className="flex min-h-screen flex-col items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <Image src="/logo.png" alt="Logo" width={80} height={80} className="mx-auto mb-4 rounded-md" />
+          <Image src="/logoyuri.png" alt="Logo" width={100} height={100} className="mx-auto mb-4 rounded-md" />
           <CardTitle>Crie a sua Conta</CardTitle>
           <CardDescription>Registre-se para começar a gerir os alunos.</CardDescription>
         </CardHeader>
