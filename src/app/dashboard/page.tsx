@@ -20,6 +20,12 @@ export default function DashboardPage() {
   const firestore = useFirestore();
   const router = useRouter();
 
+  const userDocRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc(userDocRef);
+
   const studentsQuery = useMemo(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'alunos'));
@@ -31,25 +37,20 @@ export default function DashboardPage() {
   }, [firestore]);
   
   const profilesQuery = useMemo(() => {
-    if (!firestore) return null;
+    // Only query for profiles if the user is a loaded admin
+    if (!firestore || isProfileLoading || userProfile?.profileId !== 'Administrador') return null;
     return query(collection(firestore, 'profiles'));
-  }, [firestore]);
+  }, [firestore, userProfile, isProfileLoading]);
 
   const { data: students, isLoading: isStudentsLoading } = useCollection(studentsQuery);
   const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
   const { data: profiles, isLoading: isProfilesLoading } = useCollection(profilesQuery);
 
-  const userDocRef = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [user, firestore]);
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc(userDocRef);
-
-  const isLoading = isUserLoading || isStudentsLoading || isUsersLoading || isProfileLoading || isProfilesLoading;
+  const isLoading = isUserLoading || isStudentsLoading || isUsersLoading || isProfileLoading;
   const isAdmin = userProfile?.profileId === 'Administrador';
   const welcomeName = user?.displayName?.split(' ')[0] || 'Utilizador';
 
-  if (isLoading) {
+  if (isLoading && !userProfile) { // Show main loader only while profile is not yet available
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -85,7 +86,7 @@ export default function DashboardPage() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                <StatCard
                   title="Alunos"
-                  value={students?.length ?? 0}
+                  value={isStudentsLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (students?.length ?? 0)}
                   icon={Users}
                   description="Total de alunos registados"
                   action={<Button onClick={() => router.push('/dashboard/students')}>Gerir Alunos</Button>}
@@ -94,14 +95,14 @@ export default function DashboardPage() {
                   <>
                     <StatCard
                       title="Utilizadores"
-                      value={users?.length ?? 0}
+                      value={isUsersLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (users?.length ?? 0)}
                       icon={UserCog}
                       description="Total de contas no sistema"
                       action={<Button onClick={() => router.push('/users')}>Gerir Utilizadores</Button>}
                     />
                     <StatCard
                       title="Perfis e Permissões"
-                      value={profiles?.length ?? 0}
+                      value={isProfilesLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (profiles?.length ?? 0)}
                       icon={Shield}
                       description="Perfis de acesso no sistema"
                       action={<Button onClick={() => router.push('/profiles')}>Gerir Perfis</Button>}
