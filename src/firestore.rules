@@ -1,0 +1,70 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Function to get the user's profile data from the 'users' collection
+    function getUserProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Function to check if a user has a specific profile
+    function hasProfile(profileName) {
+      let userProfile = getUserProfile();
+      return userProfile.profileId == profileName;
+    }
+
+    // Admin can do anything
+    function isAdmin() {
+      return hasProfile('Administrador');
+    }
+
+    // Allow signed-in users to create, read, and update their own profile
+    match /users/{userId} {
+      allow create, update: if isSignedIn() && request.auth.uid == userId;
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      // Allow admins to write to any user profile
+      allow write: if isAdmin();
+      // Only Admins or Managers can list users (e.g., to find teachers for a class)
+      allow list: if hasProfile('Administrador') || hasProfile('Gestor');
+    }
+    
+    // Allow admins to manage profiles
+    match /profiles/{profileId} {
+        allow read, write, list: if isAdmin();
+    }
+
+    // General read access for signed-in users for most collections
+    // Write rules will need to be more specific later
+    match /classes/{classId} {
+      allow read: if isSignedIn();
+      allow write: if hasProfile('Administrador') || hasProfile('Gestor');
+      allow list: if isSignedIn();
+    }
+    
+    match /grades/{gradeId} {
+       allow read: if isSignedIn();
+       allow write: if hasProfile('Professor') || hasProfile('Administrador');
+    }
+
+    match /attendance/{attendanceId} {
+       allow read: if isSignedIn();
+       allow write: if hasProfile('Professor') || hasProfile('Administrador');
+    }
+    
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn();
+      allow write: if hasProfile('Administrador') || hasProfile('Gestor');
+    }
+
+    // Fallback for the existing 'alunos' collection, restrict to signed-in users for now.
+    // This should be migrated or removed eventually.
+    match /alunos/{alunoId} {
+      allow read, write, list: if isSignedIn();
+    }
+  }
+}
