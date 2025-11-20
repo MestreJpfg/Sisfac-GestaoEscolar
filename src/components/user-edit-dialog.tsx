@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFirestore } from "@/firebase";
 import { useCollection } from "@/firebase/firestore/use-collection";
-import { collection } from "firebase/firestore";
+import { collection, query, orderBy } from "firebase/firestore";
 
 const userEditSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
@@ -27,11 +27,22 @@ interface UserEditDialogProps {
   onSave: (data: Partial<UserEditFormValues>) => void;
 }
 
+const fallbackProfiles = [
+    { id: "Administrador", name: "Administrador" },
+    { id: "Gestor", name: "Gestor" },
+    { id: "Professor", name: "Professor" },
+    { id: "Funcionario", name: "Funcionário" },
+    { id: "Aluno", name: "Aluno" },
+    { id: "Responsavel", name: "Pais/Responsável" },
+];
+
 export default function UserEditDialog({ isOpen, onClose, user, onSave }: UserEditDialogProps) {
   const firestore = useFirestore();
-  const { data: profiles } = useCollection(
-    firestore ? collection(firestore, 'profiles') : null
+  const { data: profilesFromDB, isLoading: isLoadingProfiles } = useCollection(
+    firestore ? query(collection(firestore, 'profiles'), orderBy('name')) : null
   );
+
+  const profiles = (profilesFromDB && profilesFromDB.length > 0) ? profilesFromDB : fallbackProfiles;
 
   const form = useForm<UserEditFormValues>({
     resolver: zodResolver(userEditSchema),
@@ -42,7 +53,7 @@ export default function UserEditDialog({ isOpen, onClose, user, onSave }: UserEd
   });
 
   useEffect(() => {
-    if (user) {
+    if (user && isOpen) {
       form.reset({
         name: user.name || '',
         profileId: user.profileId || '',
@@ -84,26 +95,19 @@ export default function UserEditDialog({ isOpen, onClose, user, onSave }: UserEd
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Perfil</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione um perfil" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {profiles?.map(profile => (
-                        <SelectItem key={profile.id} value={profile.id}>{profile.name}</SelectItem>
-                      ))}
-                       {/* Fallback caso a coleção de perfis não carregue */}
-                      {!profiles || profiles.length === 0 && (
-                        <>
-                            <SelectItem value="Administrador">Administrador</SelectItem>
-                            <SelectItem value="Gestor">Gestor</SelectItem>
-                            <SelectItem value="Professor">Professor</SelectItem>
-                            <SelectItem value="Funcionario">Funcionário</SelectItem>
-                            <SelectItem value="Aluno">Aluno</SelectItem>
-                            <SelectItem value="Responsavel">Pais/Responsável</SelectItem>
-                        </>
+                      {isLoadingProfiles ? (
+                        <SelectItem value="loading" disabled>A carregar perfis...</SelectItem>
+                      ) : (
+                        profiles?.map(profile => (
+                          <SelectItem key={profile.id} value={profile.id}>{profile.name}</SelectItem>
+                        ))
                       )}
                     </SelectContent>
                   </Select>

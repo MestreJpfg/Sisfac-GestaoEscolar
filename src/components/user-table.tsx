@@ -49,6 +49,7 @@ export default function UserTable({ users, onEdit, isAdmin }: UserTableProps) {
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
     try {
+        // Handle both ISO strings and Firestore Timestamp objects
         const date = new Date(dateString);
         return format(date, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
     } catch {
@@ -56,7 +57,7 @@ export default function UserTable({ users, onEdit, isAdmin }: UserTableProps) {
     }
   };
 
-  const getProfileBadgeVariant = (profileId: string) => {
+  const getProfileBadgeVariant = (profileId: string) : "default" | "secondary" | "destructive" | "outline" => {
     switch (profileId) {
         case 'Administrador':
             return 'destructive';
