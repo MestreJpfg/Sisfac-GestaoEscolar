@@ -9,13 +9,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "./ui/card";
-import { User, Search } from "lucide-react";
+import { User, Search, Edit } from "lucide-react";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
 
 interface UserTableProps {
   users: any[];
+  onEdit: (user: any) => void;
+  isAdmin: boolean;
 }
 
 const getInitials = (name: string | null | undefined) => {
@@ -27,7 +31,7 @@ const getInitials = (name: string | null | undefined) => {
     return name.substring(0, 2).toUpperCase();
 };
 
-export default function UserTable({ users }: UserTableProps) {
+export default function UserTable({ users, onEdit, isAdmin }: UserTableProps) {
   if (users.length === 0) {
     return (
       <Card>
@@ -52,6 +56,19 @@ export default function UserTable({ users }: UserTableProps) {
     }
   };
 
+  const getProfileBadgeVariant = (profileId: string) => {
+    switch (profileId) {
+        case 'Administrador':
+            return 'destructive';
+        case 'Gestor':
+            return 'default';
+        case 'Professor':
+            return 'secondary';
+        default:
+            return 'outline';
+    }
+  }
+
   return (
     <Card>
       <CardContent className="p-0">
@@ -61,9 +78,9 @@ export default function UserTable({ users }: UserTableProps) {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Cargo</TableHead>
+                <TableHead>Perfil</TableHead>
                 <TableHead>Data de Criação</TableHead>
-                <TableHead className="text-right">UID</TableHead>
+                {isAdmin && <TableHead className="text-right">Ações</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -79,9 +96,21 @@ export default function UserTable({ users }: UserTableProps) {
                     </div>
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-muted-foreground">{user.email}</TableCell>
-                   <TableCell className="whitespace-nowrap text-muted-foreground">{user.cargo}</TableCell>
+                   <TableCell className="whitespace-nowrap">
+                    {user.profileId ? (
+                        <Badge variant={getProfileBadgeVariant(user.profileId)}>{user.profileId}</Badge>
+                    ) : (
+                        <span className="text-muted-foreground text-xs">N/A</span>
+                    )}
+                   </TableCell>
                   <TableCell className="whitespace-nowrap text-muted-foreground">{formatDate(user.createdAt)}</TableCell>
-                  <TableCell className="text-right whitespace-nowrap font-mono text-xs text-muted-foreground">{user.uid}</TableCell>
+                  {isAdmin && (
+                    <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => onEdit(user)}>
+                            <Edit className="h-4 w-4" />
+                        </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

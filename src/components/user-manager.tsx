@@ -1,30 +1,67 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, orderBy, DocumentData, Query } from 'firebase/firestore';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import UserTable from './user-table';
 import { ThemeToggle } from './theme-toggle';
 import { UserNav } from './user-nav';
 import AppFooter from './app-footer';
 import { Button } from './ui/button';
 import { useRouter } from 'next/navigation';
+import UserEditDialog from './user-edit-dialog';
+import { useToast } from '@/hooks/use-toast';
+import { useDoc } from '@/firebase/firestore/use-doc';
 
 
 export default function UserManager() {
   const firestore = useFirestore();
   const router = useRouter();
+  const { user: currentUser } = useUser();
+  const { toast } = useToast();
+  
+  const [editingUser, setEditingUser] = useState<any | null>(null);
 
-  // A query só é definida quando o firestore está disponível para evitar instabilidade.
+  const currentUserDocRef = useMemo(() => {
+    if (!currentUser || !firestore) return null;
+    return doc(firestore, 'users', currentUser.uid);
+  }, [currentUser, firestore]);
+  const { data: currentUserProfile } = useDoc(currentUserDocRef);
+  
   const usersQuery = useMemo(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'users'), orderBy('name'));
   }, [firestore]);
 
   const { data: users, isLoading } = useCollection(usersQuery);
+
+  const handleEditUser = (user: any) => {
+    setEditingUser(user);
+  };
+
+  const handleCloseDialog = () => {
+    setEditingUser(null);
+  };
+
+  const handleSaveChanges = (updatedData: any) => {
+    if (!firestore || !editingUser?.uid) return;
+
+    const docRef = doc(firestore, 'users', editingUser.uid);
+    setDocumentNonBlocking(docRef, updatedData, { merge: true });
+
+    toast({
+      title: "Utilizador Atualizado",
+      description: `O perfil de ${updatedData.name} foi atualizado com sucesso.`,
+    });
+    
+    handleCloseDialog();
+  };
+
+  const isAdmin = currentUserProfile?.profileId === 'Administrador';
 
   return (
     <>
@@ -48,7 +85,7 @@ export default function UserManager() {
               Gestão de Utilizadores
             </h1>
             <p className="text-muted-foreground text-sm max-w-lg mt-2">
-              Visualize os utilizadores registados na plataforma.
+              Visualize e gira os utilizadores registados na plataforma.
             </p>
           </header>
 
@@ -59,12 +96,25 @@ export default function UserManager() {
                 <p className="mt-4 text-muted-foreground">A carregar utilizadores...</p>
               </div>
             ) : (
-              <UserTable users={users || []} />
+              <UserTable 
+                users={users || []} 
+                onEdit={handleEditUser}
+                isAdmin={isAdmin}
+              />
             )}
           </div>
         </div>
         <AppFooter />
       </main>
+
+      {editingUser && (
+        <UserEditDialog
+          isOpen={!!editingUser}
+          onClose={handleCloseDialog}
+          user={editingUser}
+          onSave={handleSaveChanges}
+        />
+      )}
     </>
   );
 }
