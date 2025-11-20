@@ -9,8 +9,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "./ui/card";
-import { School, Search, Edit, Trash2 } from "lucide-react";
+import { School, Search, Edit, Trash2, ChevronRight } from "lucide-react";
 import { Button } from "./ui/button";
+import { useRouter } from "next/navigation";
 
 interface ClassTableProps {
   classes: any[];
@@ -20,6 +21,8 @@ interface ClassTableProps {
 }
 
 export default function ClassTable({ classes, onEdit, onDelete, isAuthorized }: ClassTableProps) {
+  const router = useRouter();
+
   if (classes.length === 0) {
     return (
       <Card>
@@ -33,6 +36,10 @@ export default function ClassTable({ classes, onEdit, onDelete, isAuthorized }: 
       </Card>
     );
   }
+  
+  const handleRowClick = (classId: string) => {
+    router.push(`/dashboard/classes/${classId}`);
+  };
 
   return (
     <Card>
@@ -44,12 +51,16 @@ export default function ClassTable({ classes, onEdit, onDelete, isAuthorized }: 
                 <TableHead>Nome da Turma</TableHead>
                 <TableHead>Professor(a) Responsável</TableHead>
                 <TableHead>Nº de Alunos</TableHead>
-                {isAuthorized && <TableHead className="text-right">Ações</TableHead>}
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {classes.map((cls) => (
-                <TableRow key={cls.id}>
+                <TableRow 
+                  key={cls.id} 
+                  onClick={() => handleRowClick(cls.id)}
+                  className="cursor-pointer"
+                >
                   <TableCell className="font-medium whitespace-nowrap">
                     <div className="flex items-center gap-3">
                         <School className="h-5 w-5 text-primary" />
@@ -60,16 +71,19 @@ export default function ClassTable({ classes, onEdit, onDelete, isAuthorized }: 
                    <TableCell className="whitespace-nowrap text-muted-foreground">
                         {cls.studentIds?.length || 0}
                    </TableCell>
-                  {isAuthorized && (
-                    <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => onEdit(cls)}>
-                            <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => onDelete(cls)} className="text-destructive hover:text-destructive">
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
-                    </TableCell>
-                  )}
+                  <TableCell className="text-right">
+                      {isAuthorized && (
+                        <>
+                          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onEdit(cls); }}>
+                              <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onDelete(cls); }} className="text-destructive hover:text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                      <ChevronRight className="h-4 w-4 inline-block text-muted-foreground" />
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
