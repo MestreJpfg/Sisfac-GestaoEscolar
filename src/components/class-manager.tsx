@@ -48,7 +48,7 @@ export default function ClassManager() {
   };
 
   const handleNewClass = () => {
-    setEditingClass({});
+    setEditingClass({}); // Set an empty object to open the dialog
     setIsNew(true);
   };
 
