@@ -65,11 +65,15 @@ export default function LoginPage() {
     const userDoc = await getDoc(userDocRef);
   
     if (!userDoc.exists()) {
+      // Temporary logic to assign Admin profile
+      const adminEmails = ['mestrejp@hotmail.com', 'mestrejpfg@gmail.com'];
+      const profile = adminEmails.includes(user.email || '') ? 'Administrador' : 'Aluno';
+
       setDocumentNonBlocking(userDocRef, {
         uid: user.uid,
         name: user.displayName || user.email,
         email: user.email,
-        profileId: 'Aluno', // Perfil padrão
+        profileId: profile,
         customPermissions: [],
         createdAt: new Date().toISOString(),
         photoURL: user.photoURL,
@@ -113,7 +117,15 @@ export default function LoginPage() {
       await handleAuthSuccess(result.user);
     } catch (error: any) {
       console.error(error);
-      toast({ variant: 'destructive', title: 'Erro no Login com Google', description: 'Não foi possível autenticar com o Google. Tente novamente.' });
+      if ((error as any).code === 'auth/operation-not-allowed') {
+        toast({
+          variant: 'destructive',
+          title: 'Login com Google desativado',
+          description: 'Este método de login precisa ser ativado na consola do Firebase.',
+        });
+      } else {
+        toast({ variant: 'destructive', title: 'Erro no Login com Google', description: 'Não foi possível autenticar com o Google. Tente novamente.' });
+      }
       setIsGoogleLoading(false);
     }
   };
