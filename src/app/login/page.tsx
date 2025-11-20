@@ -71,13 +71,12 @@ export default function LoginPage() {
         uid: user.uid,
         name: user.displayName || user.email,
         email: user.email,
-        profileId: isAdmin ? 'Administrador' : userDoc.exists() ? userDoc.data().profileId : 'Aluno',
+        profileId: isAdmin ? 'Administrador' : (userDoc.exists() ? userDoc.data().profileId : 'Aluno'),
         customPermissions: userDoc.exists() ? userDoc.data().customPermissions : [],
         createdAt: userDoc.exists() ? userDoc.data().createdAt : new Date().toISOString(),
         photoURL: user.photoURL,
     };
   
-    // Always use setDoc with merge to create or update the user data
     setDocumentNonBlocking(userDocRef, userData, { merge: true });
   
     router.push('/dashboard');
@@ -116,7 +115,6 @@ export default function LoginPage() {
       const result = await signInWithPopup(auth, provider);
       await handleAuthSuccess(result.user);
     } catch (error: any) {
-      console.error(error);
       if ((error as any).code === 'auth/operation-not-allowed') {
         toast({
           variant: 'destructive',
