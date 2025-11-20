@@ -4,15 +4,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import jsPDF from "jspdf";
 import 'jspdf-autotable';
-import html2canvas from "html2canvas";
-import { ClipboardList, X, Loader2, Download, Filter, BookCopy, Phone } from 'lucide-react';
+import { ClipboardList, X, Loader2, Download, Filter } from 'lucide-react';
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetTrigger } from './ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import ReportCardGrid from './report-card-grid';
-import { createRoot } from 'react-dom/client';
 
 
 // Extend jsPDF with autoTable method
@@ -29,11 +26,9 @@ interface ClassListGeneratorProps {
 export default function ClassListGenerator({ allStudents }: ClassListGeneratorProps) {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
-  const [isGeneratingList, setIsGeneratingList] = useState(false);
-  const [isGeneratingReports, setIsGeneratingReports] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isProcessingContacts, setIsProcessingContacts] = useState(false);
   const [activeAccordion, setActiveAccordion] = useState<string>("item-1");
   
   const [filters, setFilters] = useState({
@@ -86,7 +81,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
   };
 
   const handleGenerateList = async () => {
-    setIsGeneratingList(true);
+    setIsGenerating(true);
     setStudents([]);
     setActiveAccordion(""); // Collapse accordion
 
@@ -100,12 +95,12 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
     studentsData.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
     setStudents(studentsData);
 
-    setIsGeneratingList(false);
+    setIsGenerating(false);
   };
   
   const handleDownload = async () => {
     if (students.length === 0) return;
-    setIsProcessing(true);
+    setIsDownloading(true);
   
     try {
         const doc = new jsPDF();
@@ -194,166 +189,9 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
             description: "Ocorreu um erro ao criar o ficheiro PDF.",
         });
     } finally {
-        setIsProcessing(false);
+        setIsDownloading(false);
     }
   };
-
-  const handleDownloadContacts = async () => {
-    if (students.length === 0) return;
-    setIsProcessingContacts(true);
-
-    try {
-        const doc = new jsPDF();
-        const today = new Date();
-        const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(today);
-
-         const addHeaderAndFooter = (doc: jsPDF, title: string, pageNumber: number, totalPages: number) => {
-            const pageW = doc.internal.pageSize.getWidth();
-            const pageH = doc.internal.pageSize.getHeight();
-            
-            doc.setFontSize(8).setFont('helvetica', 'bold');
-            doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', pageW / 2, 8, { align: 'center' });
-            
-            doc.setFontSize(9).setFont('helvetica', 'normal');
-            doc.text(title, pageW / 2, 13, { align: 'center' });
-  
-            const footerText = `Gerado em: ${formattedDate}`;
-            doc.setFontSize(7);
-            doc.text(footerText, 10, pageH - 5);
-            doc.text(`Página ${pageNumber} de ${totalPages}`, pageW - 10, pageH - 5, { align: 'right' });
-        };
-  
-        const groupedStudents = students.reduce((acc, student) => {
-            const key = `${student.ensino || 'N/A'}|${student.serie || 'N/A'}|${student.classe || 'N/A'}|${student.turno || 'N/A'}`;
-            if (!acc[key]) {
-                acc[key] = [];
-            }
-            acc[key].push(student);
-            return acc;
-        }, {} as Record<string, any[]>);
-  
-        const sortedGroupKeys = Object.keys(groupedStudents).sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
-
-        let isFirstPageOfDoc = true;
-
-        for (const key of sortedGroupKeys) {
-            const group = groupedStudents[key];
-            const [ensino, serie, classe, turno] = key.split('|');
-            const tableData = group.map((student) => {
-                const studentPhones = student.telefones || (student.telefone ? [student.telefone] : []);
-                const phonesString = Array.isArray(studentPhones) ? studentPhones.join(', ') : '';
-                return [student.nome, phonesString];
-            });
-  
-            if (!isFirstPageOfDoc) {
-                doc.addPage();
-            }
-            isFirstPageOfDoc = false;
-  
-            const title = `Lista de Contatos - ${ensino} ${serie} ${classe} - Turno: ${turno}`.trim().replace(/N\/A/g, '').replace(/ +/g, ' ');
-  
-            doc.autoTable({
-                head: [['Nome do Aluno', 'Telefone']],
-                body: tableData,
-                startY: 16,
-                didDrawPage: (data) => {
-                    addHeaderAndFooter(doc, title, data.pageNumber, (doc.internal as any).pages.length);
-                },
-                styles: {
-                    font: 'helvetica',
-                    fontSize: 7.5,
-                    cellPadding: { top: 0.8, right: 1, bottom: 0.8, left: 1 },
-                    valign: 'middle',
-                },
-                headStyles: {
-                    fillColor: [230, 230, 230],
-                    textColor: [40, 40, 40],
-                    fontStyle: 'bold',
-                    fontSize: 8,
-                },
-                margin: { top: 16, bottom: 10, right: 10, left: 10 }
-            });
-        }
-  
-        const fileName = `Lista_de_Contatos_${filters.ensino || 'Geral'}.pdf`.replace(/ /g, '_');
-        doc.save(fileName);
-  
-    } catch (error) {
-        console.error("Error generating contacts PDF:", error);
-        toast({
-            variant: "destructive",
-            title: "Erro ao Gerar PDF",
-            description: "Ocorreu um erro ao criar o ficheiro de contatos PDF.",
-        });
-    } finally {
-        setIsProcessingContacts(false);
-    }
-  };
-
-  const handleDownloadAllReports = async () => {
-    if (students.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "Nenhum aluno na lista",
-        description: "Gere uma lista de alunos antes de fazer o download dos boletins.",
-      });
-      return;
-    }
-  
-    setIsGeneratingReports(true);
-  
-    try {
-      const pdf = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
-      const studentChunks = [];
-      for (let i = 0; i < students.length; i += 4) {
-        studentChunks.push(students.slice(i, i + 4));
-      }
-  
-      const renderContainer = document.createElement('div');
-      renderContainer.style.position = 'absolute';
-      renderContainer.style.left = '-9999px';
-      document.body.appendChild(renderContainer);
-      const root = createRoot(renderContainer);
-  
-      for (let i = 0; i < studentChunks.length; i++) {
-        const chunk = studentChunks[i];
-  
-        // React 18: Render is async. No callback is needed.
-        await new Promise<void>(resolve => {
-            root.render(<ReportCardGrid students={chunk} />);
-            setTimeout(resolve, 500); // Give it time to render
-        });
-        
-        const canvas = await html2canvas(renderContainer, { scale: 2, useCORS: true });
-        const imgData = canvas.toDataURL('image/jpeg', 0.95);
-        
-        if (i > 0) {
-          pdf.addPage();
-        }
-        
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-      }
-      
-      root.unmount();
-      document.body.removeChild(renderContainer);
-  
-      const fileName = `Boletins_${filters.serie || 'Geral'}_${filters.classe || ''}.pdf`.replace(/ /g, '_');
-      pdf.save(fileName);
-  
-    } catch (error) {
-      console.error("Erro ao gerar os boletins em PDF:", error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao Gerar PDFs",
-        description: "Ocorreu um erro ao criar o ficheiro com os boletins.",
-      });
-    } finally {
-      setIsGeneratingReports(false);
-    }
-  };
-  
 
   const clearFiltersAndResults = () => {
     setFilters({ ensino: '', serie: '', turno: '', classe: '' });
@@ -439,8 +277,8 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
             </Accordion>
             
             <div className="flex items-center gap-2 pt-4">
-                <Button onClick={handleGenerateList} disabled={!isAnyFilterSelected || isGeneratingList || !allStudents} className="flex-1">
-                    {isGeneratingList ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Gerar Lista'}
+                <Button onClick={handleGenerateList} disabled={!isAnyFilterSelected || isGenerating || !allStudents} className="flex-1">
+                    {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Gerar Lista'}
                 </Button>
                 {isAnyFilterSelected && (
                 <Button variant="ghost" size="icon" onClick={clearFiltersAndResults}>
@@ -467,28 +305,18 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                     </div>
                 ) : (
                     <div className="text-center text-sm text-muted-foreground pt-10">
-                        {isGeneratingList ? 'A gerar...' : 'Nenhum aluno encontrado ou nenhum filtro aplicado.'}
+                        {isGenerating ? 'A gerar...' : 'Nenhum aluno encontrado ou nenhum filtro aplicado.'}
                     </div>
                 )}
             </div>
 
-            <SheetFooter className="mt-auto pt-4 border-t flex-col sm:flex-col sm:space-x-0 gap-2">
-                <Button onClick={handleDownload} disabled={students.length === 0 || isProcessing} className="w-full">
-                    <Download className="mr-2 h-4 w-4" />
-                    {isProcessing ? 'A processar...' : 'Download da Lista'}
-                </Button>
-                 <Button onClick={handleDownloadContacts} disabled={students.length === 0 || isProcessingContacts} variant="secondary" className="w-full">
-                    <Phone className="mr-2 h-4 w-4" />
-                    {isProcessingContacts ? 'A processar...' : 'Exportar Contatos (PDF)'}
-                </Button>
-                 <Button onClick={handleDownloadAllReports} disabled={students.length === 0 || isGeneratingReports} className="w-full">
-                    {isGeneratingReports ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BookCopy className="mr-2 h-4 w-4" />}
-                    {isGeneratingReports ? 'A gerar boletins...' : 'Download Boletins'}
+            <SheetFooter className="mt-auto pt-4 border-t">
+                <Button onClick={handleDownload} disabled={students.length === 0 || isDownloading} className="w-full">
+                    {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                    {isDownloading ? 'A gerar PDF...' : 'Download da Lista'}
                 </Button>
             </SheetFooter>
         </SheetContent>
     </Sheet>
   );
 }
-
-    
