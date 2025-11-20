@@ -42,23 +42,16 @@ export default function UserManager() {
   const isLoading = isUserLoading || isProfileLoading || isUsersLoading;
 
   useEffect(() => {
-    if (!isProfileLoading && currentUserProfile) {
-      if (currentUserProfile.profileId !== 'Administrador') {
-        toast({
-            variant: 'destructive',
-            title: 'Acesso Negado',
-            description: 'Não tem permissão para aceder a esta página.'
-        });
-        router.push('/dashboard');
-      }
-    } else if (!isProfileLoading && !currentUserProfile) {
-        // This case handles if the user document somehow doesn't exist yet
-        toast({
-            variant: 'destructive',
-            title: 'Acesso Negado',
-            description: 'Perfil de utilizador não encontrado.'
-        });
-        router.push('/dashboard');
+    // Wait until profile loading is complete
+    if (isProfileLoading) return;
+
+    if (currentUserProfile?.profileId !== 'Administrador') {
+      toast({
+        variant: 'destructive',
+        title: 'Acesso Negado',
+        description: currentUserProfile ? 'Não tem permissão para aceder a esta página.' : 'Perfil de utilizador não encontrado.',
+      });
+      router.push('/dashboard');
     }
   }, [currentUserProfile, isProfileLoading, router, toast]);
 
@@ -84,7 +77,9 @@ export default function UserManager() {
     handleCloseDialog();
   };
   
-  if (isLoading || !currentUserProfile) {
+  // While initial checks are running, show a loader.
+  // This prevents premature redirection.
+  if (isUserLoading || isProfileLoading) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -92,7 +87,9 @@ export default function UserManager() {
     );
   }
 
-  if (currentUserProfile.profileId !== 'Administrador') {
+  // After loading, if the profile is not 'Administrador', the useEffect will have already triggered a redirect.
+  // Rendering null here prevents a flash of content.
+  if (currentUserProfile?.profileId !== 'Administrador') {
     return null;
   }
 
@@ -121,11 +118,17 @@ export default function UserManager() {
 
         <main className="flex-1 py-8">
           <div className="container">
-            <UserTable 
-              users={users || []} 
-              onEdit={handleEditUser} 
-              isAdmin={currentUserProfile.profileId === 'Administrador'}
-            />
+            {isUsersLoading ? (
+               <div className="flex h-64 w-full items-center justify-center">
+                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
+               </div>
+            ) : (
+                <UserTable 
+                  users={users || []} 
+                  onEdit={handleEditUser} 
+                  isAdmin={currentUserProfile.profileId === 'Administrador'}
+                />
+            )}
           </div>
         </main>
         <AppFooter />
