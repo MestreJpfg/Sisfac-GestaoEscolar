@@ -30,9 +30,8 @@ service cloud.firestore {
       allow create, read, update: if isSignedIn() && request.auth.uid == userId;
       // Allow admins to read/write any user profile
       allow read, write: if isAdmin();
-      // Only allow listing users if the query is for professors, for class management.
-      // This is a more secure approach than allowing a general list.
-      allow list: if isSignedIn() && (request.query.where.size() > 0 && request.query.where[0][0] == 'profileId' && request.query.where[0][2] == 'Professor');
+      // Allow authorized roles to list users, especially for finding professors.
+      allow list: if hasProfile('Administrador') || hasProfile('Gestor') || hasProfile('Professor');
     }
     
     // Allow admins to manage profiles
