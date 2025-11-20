@@ -27,14 +27,14 @@ export default function DashboardPage() {
   const { data: userProfile, isLoading: isProfileLoading } = useDoc(userDocRef);
 
   const studentsQuery = useMemo(() => {
-    if (!firestore) return null;
+    if (!user || !firestore) return null;
     return query(collection(firestore, 'alunos'));
-  }, [firestore]);
+  }, [user, firestore]);
 
   const usersQuery = useMemo(() => {
-    if (!firestore) return null;
+    if (!user || !firestore) return null;
     return query(collection(firestore, 'users'));
-  }, [firestore]);
+  }, [user, firestore]);
   
   const profilesQuery = useMemo(() => {
     // Only query for profiles if the user is a loaded admin
