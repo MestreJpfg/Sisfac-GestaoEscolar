@@ -1,115 +1,166 @@
+
 {
   "entities": {
-    "XlsxFile": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "XlsxFile",
+    "User": {
+      "title": "User",
       "type": "object",
-      "description": "Represents an uploaded XLSX file and its associated data.",
+      "description": "Represents a user in the system, with an assigned profile and permissions.",
       "properties": {
-        "id": {
+        "uid": {
           "type": "string",
-          "description": "Unique identifier for the XLSX file entity."
+          "description": "The unique identifier from Firebase Authentication."
         },
-        "fileName": {
+        "name": {
           "type": "string",
-          "description": "The original file name of the uploaded XLSX file."
+          "description": "The user's full name."
         },
-        "uploadDate": {
+        "email": {
           "type": "string",
-          "description": "The date and time when the XLSX file was uploaded.",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "profileId": {
+          "type": "string",
+          "description": "The ID of the profile assigned to this user, linking to the 'profiles' collection."
+        },
+        "customPermissions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Specific individual permissions that override the profile's defaults."
+        },
+        "createdAt": {
+          "type": "string",
           "format": "date-time"
+        },
+        "photoURL": {
+          "type": "string",
+          "format": "uri"
         }
       },
-      "required": [
-        "id",
-        "fileName",
-        "uploadDate"
-      ]
+      "required": ["uid", "name", "email", "profileId"]
     },
-    "ExtractedData": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ExtractedData",
+    "Profile": {
+      "title": "Profile",
       "type": "object",
-      "description": "Represents data extracted from the first column of an XLSX file.",
+      "description": "Defines a user role and its set of default permissions.",
       "properties": {
-        "id": {
+        "id": { "type": "string" },
+        "name": {
           "type": "string",
-          "description": "Unique identifier for the extracted data entry."
+          "description": "The name of the profile (e.g., Administrador, Professor)."
         },
-        "xlsxFileId": {
+        "description": {
           "type": "string",
-          "description": "Reference to the XlsxFile entity. (Relationship: XlsxFile 1:N ExtractedData)"
+          "description": "A brief description of the profile's responsibilities."
         },
-        "columnValue": {
-          "type": "string",
-          "description": "The value extracted from the first column of the XLSX file."
-        },
-        "rowIndex": {
-          "type": "number",
-          "description": "The row index from which the data was extracted."
+        "permissions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "A list of permission keys granted to this profile."
         }
       },
-      "required": [
-        "id",
-        "xlsxFileId",
-        "columnValue",
-        "rowIndex"
-      ]
+      "required": ["id", "name", "permissions"]
+    },
+    "Class": {
+      "title": "Class",
+      "type": "object",
+      "description": "Represents a school class or group.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "studentIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["id", "name", "teacherId"]
+    },
+    "Grade": {
+      "title": "Grade",
+      "type": "object",
+      "description": "Represents a student's grade in a specific subject.",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "classId": { "type": "string" },
+        "subject": { "type": "string" },
+        "grade": { "type": "number" },
+        "term": { "type": "string", "description": "The grading period (e.g., '1st Trimester')." }
+      },
+      "required": ["id", "studentId", "classId", "subject", "grade", "term"]
+    },
+    "Attendance": {
+      "title": "Attendance",
+      "type": "object",
+      "description": "Represents a student's attendance on a specific date.",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "classId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "status": {
+          "type": "string",
+          "enum": ["Presente", "Ausente", "Justificado"]
+        }
+      },
+      "required": ["id", "studentId", "classId", "date", "status"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "type": "object",
+      "description": "Represents a school-wide or class-specific announcement.",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "targetAudience": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Array of profile IDs or class IDs to target."
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "content", "targetAudience", "createdAt"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "google.com"]
   },
   "firestore": {
     "structure": [
       {
-        "path": "/users/{userId}/xlsxFiles/{xlsxFileId}",
-        "definition": {
-          "entityName": "XlsxFile",
-          "schema": {
-            "$ref": "#/backend/entities/XlsxFile"
-          },
-          "description": "Stores XLSX file metadata. Each user has their own collection of XLSX files.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The ID of the user who owns the XLSX file."
-            },
-            {
-              "name": "xlsxFileId",
-              "description": "The ID of the XLSX file."
-            }
-          ]
-        }
+        "path": "/users/{userId}",
+        "definition": { "schema": { "$ref": "#/entities/User" } }
       },
       {
-        "path": "/users/{userId}/xlsxFiles/{xlsxFileId}/extractedData/{extractedDataId}",
-        "definition": {
-          "entityName": "ExtractedData",
-          "schema": {
-            "$ref": "#/backend/entities/ExtractedData"
-          },
-          "description": "Stores extracted data from each XLSX file. Organized as a subcollection under each XLSX file.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The ID of the user who owns the XLSX file and extracted data."
-            },
-            {
-              "name": "xlsxFileId",
-              "description": "The ID of the XLSX file from which the data was extracted."
-            },
-            {
-              "name": "extractedDataId",
-              "description": "The ID of the extracted data entry."
-            }
-          ]
-        }
+        "path": "/profiles/{profileId}",
+        "definition": { "schema": { "$ref": "#/entities/Profile" } }
+      },
+      {
+        "path": "/classes/{classId}",
+        "definition": { "schema": { "$ref": "#/entities/Class" } }
+      },
+      {
+        "path": "/grades/{gradeId}",
+        "definition": { "schema": { "$ref": "#/entities/Grade" } }
+      },
+      {
+        "path": "/attendance/{attendanceId}",
+        "definition": { "schema": { "$ref": "#/entities/Attendance" } }
+      },
+      {
+        "path": "/announcements/{announcementId}",
+        "definition": { "schema": { "$ref": "#/entities/Announcement" } }
+      },
+       {
+        "path": "/alunos/{alunoId}",
+        "definition": { "schema": { "$ref": "#/entities/User" } }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to store XLSX files and the extracted data from their first columns. It follows the principles of Authorization Independence and Structural Segregation. Path-based ownership is used to secure XLSX files, where each user owns their files. The extracted data is stored as subcollections under each XLSX file. The structure supports QAPs by segregating data based on ownership, enabling secure list operations within a user's own files. This approach avoids complex security rules and ensures data integrity."
+    ]
   }
 }
