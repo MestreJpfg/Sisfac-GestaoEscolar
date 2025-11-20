@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from "react";
@@ -51,16 +52,18 @@ export default function ClassEditDialog({ isOpen, onClose, classData, onSave, is
   });
 
   useEffect(() => {
-    if (classData) {
-      form.reset({
-        name: classData.name || '',
-        teacherId: classData.teacherId || '',
-      });
-    } else {
-      form.reset({
-        name: '',
-        teacherId: '',
-      });
+    if (isOpen) {
+        if (classData) {
+          form.reset({
+            name: classData.name || '',
+            teacherId: classData.teacherId || '',
+          });
+        } else {
+          form.reset({
+            name: '',
+            teacherId: '',
+          });
+        }
     }
   }, [classData, isOpen, form]);
 
