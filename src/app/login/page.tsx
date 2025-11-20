@@ -8,7 +8,7 @@ import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, type User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,9 +55,11 @@ export default function LoginPage() {
     },
   });
 
-  const handleAuthSuccess = async (user: any) => {
-    if (!firestore) {
+  const handleAuthSuccess = async (user: User) => {
+    if (!firestore || !user) {
       toast({ variant: 'destructive', title: 'Erro de Conexão', description: 'Serviço de base de dados não encontrado.' });
+      setIsLoading(false);
+      setIsGoogleLoading(false);
       return;
     }
   
@@ -84,6 +86,11 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
+    if (!auth) {
+        toast({ variant: 'destructive', title: 'Erro de Autenticação', description: 'Serviço de autenticação não encontrado.' });
+        setIsLoading(false);
+        return;
+    }
     try {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       await handleAuthSuccess(userCredential.user);
@@ -93,21 +100,23 @@ export default function LoginPage() {
           description = 'Credenciais inválidas. Verifique o seu email e senha.';
       }
       toast({ variant: 'destructive', title: 'Erro no Login', description: description });
-    } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
-    if (!auth) return;
+    if (!auth) {
+        toast({ variant: 'destructive', title: 'Erro de Autenticação', description: 'Serviço de autenticação não encontrado.' });
+        return;
+    }
     setIsGoogleLoading(true);
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
       await handleAuthSuccess(result.user);
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Erro no Login com Google', description: 'Não foi possível autenticar com o Google.' });
-    } finally {
+      console.error(error);
+      toast({ variant: 'destructive', title: 'Erro no Login com Google', description: 'Não foi possível autenticar com o Google. Tente novamente.' });
       setIsGoogleLoading(false);
     }
   };
@@ -136,7 +145,7 @@ export default function LoginPage() {
                         <span className="w-full border-t" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-background px-2 text-muted-foreground">
+                        <span className="bg-card px-2 text-muted-foreground">
                         Ou continue com
                         </span>
                     </div>
@@ -202,3 +211,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    
