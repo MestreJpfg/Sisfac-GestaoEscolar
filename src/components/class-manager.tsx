@@ -147,6 +147,7 @@ export default function ClassManager() {
           onClose={handleCloseDialog}
           classData={isNew ? null : editingClass}
           onSave={handleSaveChanges}
+          isAuthorized={isAuthorized}
         />
       )}
 

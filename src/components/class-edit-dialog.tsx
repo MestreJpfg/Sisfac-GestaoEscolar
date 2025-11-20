@@ -25,18 +25,19 @@ interface ClassEditDialogProps {
   onClose: () => void;
   classData: any | null;
   onSave: (data: ClassFormValues, classId?: string) => void;
+  isAuthorized: boolean;
 }
 
-export default function ClassEditDialog({ isOpen, onClose, classData, onSave }: ClassEditDialogProps) {
+export default function ClassEditDialog({ isOpen, onClose, classData, onSave, isAuthorized }: ClassEditDialogProps) {
   const firestore = useFirestore();
   const teachersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !isAuthorized) return null;
     return query(
         collection(firestore, 'users'), 
         where('profileId', '==', 'Professor'),
         orderBy('name')
     );
-  }, [firestore]);
+  }, [firestore, isAuthorized]);
 
   const { data: teachers, isLoading: isLoadingTeachers } = useCollection(teachersQuery);
   
@@ -111,11 +112,11 @@ export default function ClassEditDialog({ isOpen, onClose, classData, onSave }: 
                   <Select 
                     onValueChange={(value) => field.onChange(value === 'none' ? '' : value)} 
                     value={field.value || 'none'}
-                    disabled={isLoadingTeachers}
+                    disabled={isLoadingTeachers || !isAuthorized}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione um professor (opcional)" />
+                        <SelectValue placeholder={isAuthorized ? "Selecione um professor (opcional)" : "Sem permissão para carregar"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
