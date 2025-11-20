@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { useFirestore, useUser } from '@/firebase';
@@ -21,7 +21,7 @@ import { useDoc } from '@/firebase/firestore/use-doc';
 export default function UserManager() {
   const firestore = useFirestore();
   const router = useRouter();
-  const { user: currentUser, isUserLoading } = useUser();
+  const { user: currentUser } = useUser();
   const { toast } = useToast();
   
   const [editingUser, setEditingUser] = useState<any | null>(null);
@@ -34,28 +34,12 @@ export default function UserManager() {
   
   const usersQuery = useMemo(() => {
     // Only query for users if the current user is a loaded admin
-    if (!firestore || isProfileLoading || !currentUserProfile || currentUserProfile.profileId !== 'Administrador') return null;
+    if (!firestore || isProfileLoading || currentUserProfile?.profileId !== 'Administrador') return null;
     return query(collection(firestore, 'users'), orderBy('name'));
   }, [firestore, currentUserProfile, isProfileLoading]);
 
   const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
-
-  const isLoading = isUserLoading || isProfileLoading;
   const isAuthorized = currentUserProfile?.profileId === 'Administrador';
-
-  useEffect(() => {
-    // This effect runs once after the initial loading is complete.
-    // If, after loading, the user is not an admin, redirect them.
-    if (!isLoading && !isAuthorized) {
-      toast({
-        variant: 'destructive',
-        title: 'Acesso Negado',
-        description: 'Não tem permissão para aceder a esta página.',
-      });
-      router.push('/dashboard');
-    }
-  }, [isLoading, isAuthorized, router, toast]);
-
 
   const handleEditUser = (user: any) => {
     setEditingUser(user);
@@ -79,20 +63,14 @@ export default function UserManager() {
     handleCloseDialog();
   };
   
-  // While initial auth/profile checks are running, show a full-page loader.
-  // This prevents premature redirection or rendering of content.
-  if (isLoading) {
-    return (
-        <div className="flex h-screen w-full items-center justify-center">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
-    );
-  }
-
-  // After loading, if the user is not authorized, the useEffect will have triggered a redirect.
-  // Rendering null here prevents a flash of content before the redirect happens.
-  if (!isAuthorized) {
-    return null;
+  if (!isAuthorized && !isProfileLoading) {
+     toast({
+        variant: 'destructive',
+        title: 'Acesso Negado',
+        description: 'Não tem permissão para aceder a esta página.',
+      });
+      router.push('/dashboard');
+      return null;
   }
 
   return (
@@ -120,7 +98,7 @@ export default function UserManager() {
 
         <main className="flex-1 py-8">
           <div className="container">
-            {isUsersLoading ? (
+            {isUsersLoading || isProfileLoading ? (
                <div className="flex h-64 w-full items-center justify-center">
                     <Loader2 className="h-12 w-12 animate-spin text-primary" />
                </div>
@@ -128,7 +106,7 @@ export default function UserManager() {
                 <UserTable 
                   users={users || []} 
                   onEdit={handleEditUser} 
-                  isAdmin={currentUserProfile.profileId === 'Administrador'}
+                  isAdmin={isAuthorized}
                 />
             )}
           </div>
