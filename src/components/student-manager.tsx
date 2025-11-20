@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Plus, ArrowLeft } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
 import StudentDataView from './student-data-view';
 import { ThemeToggle } from './theme-toggle';
@@ -10,7 +10,6 @@ import ClassListGenerator from './class-list-generator';
 import GradesUploaderSheet from './grades-uploader-sheet';
 import FileUploaderSheet from './file-uploader-sheet';
 import DataExporter from './data-exporter';
-import { quotes, type Quote } from '@/lib/quotes';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,43 +20,20 @@ import { Button } from './ui/button';
 import { UserNav } from './user-nav';
 import AppFooter from './app-footer';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, orderBy, Query } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 
 export default function StudentManager() {
   const { isUserLoading } = useUser();
   const firestore = useFirestore();
-  const [currentDate, setCurrentDate] = useState('');
-  const [randomQuote, setRandomQuote] = useState<Quote | null>(null);
+  const router = useRouter();
 
-  // A query só é definida quando o firestore está disponível.
   const studentsQuery = useMemo(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'alunos'), orderBy('nome'));
   }, [firestore]);
 
   const { data: students, isLoading: isDataLoading } = useCollection(studentsQuery);
-
-  useEffect(() => {
-    const updateDate = () => {
-      const now = new Date();
-      const options: Intl.DateTimeFormatOptions = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      };
-      setCurrentDate(new Intl.DateTimeFormat('pt-BR', options).format(now));
-    };
-
-    updateDate();
-    const intervalId = setInterval(updateDate, 60000); 
-
-    setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
-
-    return () => clearInterval(intervalId);
-  }, []);
 
   const onUploadSuccess = () => {
     // O hook useCollection irá atualizar automaticamente a UI.
@@ -68,53 +44,46 @@ export default function StudentManager() {
 
   return (
     <>
-      <main className="flex min-h-screen flex-col items-center p-4 sm:p-6 md:p-8 non-printable">
-        <div className="w-full max-w-7xl mx-auto flex-1">
-          <header className="mb-8 flex flex-col items-center text-center">
-            <div className="w-full flex items-start justify-between">
-              <div className="w-24"></div>
-              <div className="flex flex-col items-center text-center">
-                <Image src="/logoyuri.png" alt="Logo" width={100} height={100} className="rounded-md" priority />
-                {currentDate && <p className="text-xs text-muted-foreground mt-6">{currentDate}</p>}
-                {randomQuote && (
-                  <blockquote className="mt-2 text-xs italic text-muted-foreground max-w-sm relative">
-                    <p className="px-4">{randomQuote.quote}</p>
-                    <cite className="block text-right mt-1 not-italic">- {randomQuote.author}</cite>
-                  </blockquote>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <ThemeToggle />
-                <UserNav />
-              </div>
+      <div className="flex min-h-screen flex-col">
+         <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
+                <div className="flex items-center gap-4">
+                    <Button variant="outline" size="icon" onClick={() => router.push('/dashboard')}>
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Image src="/logoyuri.png" alt="Logo" width={32} height={32} className="rounded-md" />
+                      <h1 className="text-xl font-bold text-primary hidden sm:block">Gestão de Alunos</h1>
+                    </div>
+                </div>
+                <div className="flex flex-1 items-center justify-end space-x-4">
+                    <nav className="flex items-center space-x-1">
+                        <ThemeToggle />
+                        <UserNav />
+                    </nav>
+                </div>
             </div>
+        </header>
 
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary [text-shadow:0_2px_10px_hsl(var(--primary)/0.4)] font-headline mt-6">
-              Gestão de Alunos 2025
-            </h1>
-            <p className="text-muted-foreground text-sm max-w-lg mt-2">
-              {dataExists ? 'Filtre e visualize os dados dos alunos ou utilize os botões de ação.' : 'Carregue o ficheiro de alunos para iniciar a gestão.'}
-            </p>
-          </header>
-
-          <div className="w-full">
-            {isPageLoading ? (
-              <div className="flex flex-col items-center justify-center h-80 rounded-lg border-2 border-dashed border-border bg-card/50">
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="mt-4 text-muted-foreground">A carregar a base de dados...</p>
-              </div>
-            ) : dataExists ? (
-              <StudentDataView allStudents={students} />
-            ) : (
-              <div className="flex flex-col items-center justify-center h-80 rounded-lg border-2 border-dashed border-border bg-card/50">
-                <p className="text-muted-foreground mb-4">Nenhum dado encontrado. Comece por carregar os dados dos alunos.</p>
-                <FileUploaderSheet onUploadSuccess={onUploadSuccess} isPrimaryAction={true} />
-              </div>
-            )}
-          </div>
-        </div>
+        <main className="flex-1 py-8">
+            <div className="container">
+              {isPageLoading ? (
+                <div className="flex flex-col items-center justify-center h-96 rounded-lg border-2 border-dashed border-border bg-card/50">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                  <p className="mt-4 text-muted-foreground">A carregar a base de dados...</p>
+                </div>
+              ) : dataExists ? (
+                <StudentDataView allStudents={students} />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-96 rounded-lg border-2 border-dashed border-border bg-card/50">
+                  <p className="text-muted-foreground mb-4">Nenhum dado encontrado. Comece por carregar os dados dos alunos.</p>
+                  <FileUploaderSheet onUploadSuccess={onUploadSuccess} isPrimaryAction={true} />
+                </div>
+              )}
+            </div>
+        </main>
         <AppFooter />
-      </main>
+      </div>
 
       {dataExists && !isPageLoading && (
         <div className="fixed bottom-6 right-6 z-50">

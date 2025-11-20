@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import { useFirestore, useUser } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
@@ -42,7 +42,6 @@ export default function UserManager() {
   const isLoading = isUserLoading || isProfileLoading || isUsersLoading;
 
   useEffect(() => {
-    // Apenas toma uma ação quando o carregamento do perfil terminar
     if (!isProfileLoading && currentUserProfile) {
       if (currentUserProfile.profileId !== 'Administrador') {
         toast({
@@ -52,6 +51,14 @@ export default function UserManager() {
         });
         router.push('/dashboard');
       }
+    } else if (!isProfileLoading && !currentUserProfile) {
+        // This case handles if the user document somehow doesn't exist yet
+        toast({
+            variant: 'destructive',
+            title: 'Acesso Negado',
+            description: 'Perfil de utilizador não encontrado.'
+        });
+        router.push('/dashboard');
     }
   }, [currentUserProfile, isProfileLoading, router, toast]);
 
@@ -77,7 +84,6 @@ export default function UserManager() {
     handleCloseDialog();
   };
   
-  // Mostra o ecrã de carregamento enquanto as permissões estão a ser verificadas
   if (isLoading || !currentUserProfile) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
@@ -86,47 +92,44 @@ export default function UserManager() {
     );
   }
 
-  // Se, após o carregamento, não for administrador, não renderiza nada (o useEffect irá redirecionar)
   if (currentUserProfile.profileId !== 'Administrador') {
     return null;
   }
 
   return (
     <>
-      <main className="flex min-h-screen flex-col items-center p-4 sm:p-6 md:p-8">
-        <div className="w-full max-w-7xl mx-auto flex-1">
-          <header className="mb-8 flex flex-col items-center text-center">
-            <div className="w-full flex items-start justify-between">
-                <Button variant="outline" onClick={() => router.push('/dashboard')}>
-                    Voltar ao Painel
-                </Button>
-              <div className="flex flex-col items-center text-center">
-                <Image src="/logoyuri.png" alt="Logo" width={100} height={100} className="rounded-md" priority />
-              </div>
-              <div className="flex items-center gap-2">
-                <ThemeToggle />
-                <UserNav />
-              </div>
+       <div className="flex min-h-screen flex-col">
+         <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
+                <div className="flex items-center gap-4">
+                    <Button variant="outline" size="icon" onClick={() => router.push('/dashboard')}>
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Image src="/logoyuri.png" alt="Logo" width={32} height={32} className="rounded-md" />
+                      <h1 className="text-xl font-bold text-primary hidden sm:block">Gestão de Utilizadores</h1>
+                    </div>
+                </div>
+                <div className="flex flex-1 items-center justify-end space-x-4">
+                    <nav className="flex items-center space-x-1">
+                        <ThemeToggle />
+                        <UserNav />
+                    </nav>
+                </div>
             </div>
+        </header>
 
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary [text-shadow:0_2px_10px_hsl(var(--primary)/0.4)] font-headline mt-6">
-              Gestão de Utilizadores
-            </h1>
-            <p className="text-muted-foreground text-sm max-w-lg mt-2">
-              Visualize e gira os utilizadores registados na plataforma.
-            </p>
-          </header>
-
-          <div className="w-full">
+        <main className="flex-1 py-8">
+          <div className="container">
             <UserTable 
               users={users || []} 
               onEdit={handleEditUser} 
               isAdmin={currentUserProfile.profileId === 'Administrador'}
             />
           </div>
-        </div>
+        </main>
         <AppFooter />
-      </main>
+      </div>
 
       {editingUser && (
         <UserEditDialog
