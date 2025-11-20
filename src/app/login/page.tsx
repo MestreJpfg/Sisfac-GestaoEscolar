@@ -65,7 +65,7 @@ export default function LoginPage() {
     const userDoc = await getDoc(userDocRef);
 
     const adminEmails = ['mestrejp@hotmail.com', 'mestrejpfg@gmail.com'];
-    const isAdmin = adminEmails.includes(user.email || '');
+    const isAdmin = user.email && adminEmails.includes(user.email);
 
     const userData = {
         uid: user.uid,
@@ -212,3 +212,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    
