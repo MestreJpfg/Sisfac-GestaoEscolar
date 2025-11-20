@@ -18,8 +18,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import StudentDeclaration from "./student-declaration";
 import StudentTransferDeclaration from "./student-transfer-declaration";
 import StudentEditDialog from "./student-edit-dialog";
-import StudentReportCard from "./student-report-card";
-import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Download, Loader2, Share2, Pencil, Printer, MapPin, BookCheck, FileOutput } from "lucide-react";
+import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Loader2, Share2, Pencil, Printer, MapPin, BookCheck } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
@@ -92,7 +91,6 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
   if (!student) return null;
 
   const handleUpdateStudent = async (updatedData: any) => {
-    // CRITICAL FIX: Ensure firestore is available before attempting to use it.
     if (!firestore || !student?.rm) {
        toast({
         variant: "destructive",
@@ -113,7 +111,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
 
     onUpdate();
     setIsEditDialogOpen(false);
-    onClose(); // Close the detail sheet after saving
+    onClose(); 
   };
   
   const generatePdfBlob = async (type: PdfType): Promise<Blob | null> => {
@@ -143,9 +141,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
              pdfOptions.orientation = 'l';
              break;
         case 'grid':
-            // For grid, we assume it's always one student for now.
-            // A more complex implementation would pass multiple students.
-             componentToRender = <ReportCardGrid students={[student]} />;
+             componentToRender = <ReportCardGrid students={[student, student, student, student]} />;
              pdfOptions.orientation = 'l';
              break;
         default:
@@ -157,17 +153,15 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     document.body.appendChild(container);
 
     const reactRoot = await import('react-dom/client').then(m => m.createRoot(elementToRender));
-    await new Promise(resolve => {
+    await new Promise<void>(resolve => {
         reactRoot.render(componentToRender);
         setTimeout(resolve, 500); 
     });
 
     try {
-        const canvas = await html2canvas(container, {
+        const canvas = await html2canvas(elementToRender, {
             scale: 2,
             useCORS: true,
-            width: container.scrollWidth,
-            height: container.scrollHeight,
         });
         
         const imgData = canvas.toDataURL('image/jpeg', 0.95);
@@ -286,14 +280,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
         title: "Partilha não suportada",
         description: "O seu navegador não suporta a partilha de ficheiros. A iniciar o download.",
       });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      handleGeneratePdf(type);
     }
     
     setIsSharing(null);
@@ -466,10 +453,10 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
                             Boletim Detalhado
                         </DropdownMenuItem>
                          <DropdownMenuItem onClick={() => handleGeneratePdf('compact')} disabled={!hasBoletim}>
-                            Boletim Compacto (4 por folha)
+                            Boletim Compacto (1 por folha)
                         </DropdownMenuItem>
                          <DropdownMenuItem onClick={() => handleGeneratePdf('grid')} disabled={!hasBoletim}>
-                            Boletim em Grade (Experimental)
+                            Boletim em Grade (4 por folha)
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -502,10 +489,10 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
                             Boletim Detalhado
                         </DropdownMenuItem>
                          <DropdownMenuItem onClick={() => handleShare('compact')} disabled={!hasBoletim}>
-                            Boletim Compacto (4 por folha)
+                            Boletim Compacto (1 por folha)
                         </DropdownMenuItem>
                          <DropdownMenuItem onClick={() => handleShare('grid')} disabled={!hasBoletim}>
-                            Boletim em Grade (Experimental)
+                            Boletim em Grade (4 por folha)
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>

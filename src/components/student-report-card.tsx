@@ -33,12 +33,13 @@ interface StudentReportCardProps {
 
 const formatGrade = (grade: number | null | undefined, isEditing = false) => {
     if (grade === null || grade === undefined) return isEditing ? '' : "-";
-    const formatted = grade.toFixed(1).replace('.', ',');
-    // For editing, we don't want to show .0 for whole numbers
-    if (isEditing && formatted.endsWith(',0')) {
-        return formatted.substring(0, formatted.length - 2);
+    
+    // Always show one decimal place unless it's a whole number in edit mode
+    if (isEditing && grade % 1 === 0) {
+        return String(grade);
     }
-    return formatted;
+    
+    return grade.toFixed(1).replace('.', ',');
 };
 
 const getGradeColor = (grade: number | null | undefined, isPrintMode?: boolean) => {

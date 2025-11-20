@@ -64,7 +64,6 @@ export default function StudentReportCardDialog({
 
   useEffect(() => {
     if (isOpen) {
-      // Deep copy to avoid mutating the original prop
       setEditableBoletim(JSON.parse(JSON.stringify(initialBoletim || {})));
     }
   }, [isOpen, initialBoletim]);
@@ -113,8 +112,6 @@ export default function StudentReportCardDialog({
     });
 
     setIsEditing(false);
-    // Note: The parent component will need to refetch data to see the update immediately,
-    // or we can update the local state in the parent. The current implementation relies on `onUpdate` prop.
   };
 
   const generatePdf = async (type: PdfType) => {
@@ -141,22 +138,22 @@ export default function StudentReportCardDialog({
         case 'compact':
             componentToRender = <ReportCardCompact student={student} boletim={editableBoletim} />;
             fileName = `Boletim_Compacto_${student.nome.replace(/\s+/g, '_')}.pdf`;
-            pdfOptions.orientation = 'l'; // Landscape for compact view
+            pdfOptions.orientation = 'l';
             break;
     }
     
-    const declarationElement = document.createElement('div');
-    container.appendChild(declarationElement);
+    const elementToRender = document.createElement('div');
+    container.appendChild(elementToRender);
     document.body.appendChild(container);
 
-    const reactRoot = await import('react-dom/client').then(m => m.createRoot(declarationElement));
-    await new Promise(resolve => {
+    const reactRoot = await import('react-dom/client').then(m => m.createRoot(elementToRender));
+    await new Promise<void>(resolve => {
         reactRoot.render(componentToRender);
         setTimeout(resolve, 500); 
     });
 
     try {
-        const canvas = await html2canvas(container, { scale: 2, useCORS: true });
+        const canvas = await html2canvas(elementToRender, { scale: 2, useCORS: true });
         const imgData = canvas.toDataURL('image/jpeg', 1.0);
         const pdf = new jsPDF(pdfOptions);
         
@@ -260,7 +257,7 @@ export default function StudentReportCardDialog({
                           Boletim Detalhado
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => generatePdf('compact')}>
-                          Boletim Compacto (4 por folha)
+                          Boletim Compacto (p/ Impressão)
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
