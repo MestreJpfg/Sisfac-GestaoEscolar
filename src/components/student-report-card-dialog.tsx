@@ -19,7 +19,7 @@ import ReportCardWithDeclaration from "./report-card-with-declaration";
 import ReportCardDetailed from "./report-card-detailed";
 import ReportCardCompact from "./report-card-compact";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { firestore } from "@/firebase";
+import { useFirestore } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import {
@@ -57,6 +57,7 @@ export default function StudentReportCardDialog({
   student,
 }: StudentReportCardDialogProps) {
   const { toast } = useToast();
+  const firestore = useFirestore();
   const [isProcessing, setIsProcessing] = useState<PdfType | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editableBoletim, setEditableBoletim] = useState<Boletim>({});
