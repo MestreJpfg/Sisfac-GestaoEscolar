@@ -64,10 +64,12 @@ export default function ClassEditDialog({ isOpen, onClose, classData, onSave }: 
 
   const onSubmit = (data: ClassFormValues) => {
     const teacher = teachers?.find(t => t.id === data.teacherId);
-    const submissionData = {
-        ...data,
-        teacherName: teacher?.name || '',
-    };
+    const submissionData: any = { ...data };
+    if (teacher) {
+        submissionData.teacherName = teacher.name;
+    } else {
+        submissionData.teacherName = "Não definido";
+    }
     onSave(submissionData, classData?.id);
   };
   
@@ -101,13 +103,14 @@ export default function ClassEditDialog({ isOpen, onClose, classData, onSave }: 
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Professor(a) Responsável</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value || ''}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione um professor" />
+                        <SelectValue placeholder="Selecione um professor (opcional)" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value="">Não definido</SelectItem>
                       {isLoadingTeachers ? (
                         <SelectItem value="loading" disabled>A carregar professores...</SelectItem>
                       ) : (
