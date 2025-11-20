@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, doc } from 'firebase/firestore';
-import { Loader2, Users, School, UserCog } from 'lucide-react';
+import { Loader2, Users, School, UserCog, Shield } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -30,8 +30,14 @@ export default function DashboardPage() {
     return query(collection(firestore, 'users'));
   }, [firestore]);
   
+  const profilesQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'profiles'));
+  }, [firestore]);
+
   const { data: students, isLoading: isStudentsLoading } = useCollection(studentsQuery);
   const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
+  const { data: profiles, isLoading: isProfilesLoading } = useCollection(profilesQuery);
 
   const userDocRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -39,7 +45,7 @@ export default function DashboardPage() {
   }, [user, firestore]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc(userDocRef);
 
-  const isLoading = isUserLoading || isStudentsLoading || isUsersLoading || isProfileLoading;
+  const isLoading = isUserLoading || isStudentsLoading || isUsersLoading || isProfileLoading || isProfilesLoading;
   const isAdmin = userProfile?.profileId === 'Administrador';
   const welcomeName = user?.displayName?.split(' ')[0] || 'Utilizador';
 
@@ -76,22 +82,31 @@ export default function DashboardPage() {
               <p className="text-muted-foreground">Aqui está um resumo da sua plataforma.</p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                <StatCard
                   title="Alunos"
                   value={students?.length ?? 0}
                   icon={Users}
                   description="Total de alunos registados"
-                  action={<Button onClick={() => router.push('/students')}>Gerir Alunos</Button>}
+                  action={<Button onClick={() => router.push('/dashboard/students')}>Gerir Alunos</Button>}
                 />
                  {isAdmin && (
-                  <StatCard
-                    title="Utilizadores"
-                    value={users?.length ?? 0}
-                    icon={UserCog}
-                    description="Total de contas no sistema"
-                    action={<Button onClick={() => router.push('/users')}>Gerir Utilizadores</Button>}
-                  />
+                  <>
+                    <StatCard
+                      title="Utilizadores"
+                      value={users?.length ?? 0}
+                      icon={UserCog}
+                      description="Total de contas no sistema"
+                      action={<Button onClick={() => router.push('/users')}>Gerir Utilizadores</Button>}
+                    />
+                    <StatCard
+                      title="Perfis e Permissões"
+                      value={profiles?.length ?? 0}
+                      icon={Shield}
+                      description="Perfis de acesso no sistema"
+                      action={<Button onClick={() => router.push('/profiles')}>Gerir Perfis</Button>}
+                    />
+                  </>
                 )}
             </div>
 
