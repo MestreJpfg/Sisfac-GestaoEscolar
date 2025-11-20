@@ -111,7 +111,7 @@ export default function ClassManager() {
                     </div>
                 </div>
                 <div className="flex flex-1 items-center justify-end space-x-4">
-                    <Button onClick={handleNewClass}>
+                    <Button onClick={handleNewClass} disabled={!isAuthorized}>
                         <Plus className="mr-2 h-4 w-4" /> Nova Turma
                     </Button>
                     <nav className="flex items-center space-x-1">
@@ -133,6 +133,7 @@ export default function ClassManager() {
                   classes={classes || []} 
                   onEdit={handleEditClass} 
                   onDelete={handleDeleteRequest}
+                  isAuthorized={isAuthorized}
                 />
             )}
           </div>
@@ -146,7 +147,6 @@ export default function ClassManager() {
           onClose={handleCloseDialog}
           classData={isNew ? null : editingClass}
           onSave={handleSaveChanges}
-          isAuthorized={isAuthorized}
         />
       )}
 

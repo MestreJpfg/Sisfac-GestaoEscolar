@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -25,19 +25,18 @@ interface ClassEditDialogProps {
   onClose: () => void;
   classData: any | null;
   onSave: (data: ClassFormValues, classId?: string) => void;
-  isAuthorized: boolean;
 }
 
-export default function ClassEditDialog({ isOpen, onClose, classData, onSave, isAuthorized }: ClassEditDialogProps) {
+export default function ClassEditDialog({ isOpen, onClose, classData, onSave }: ClassEditDialogProps) {
   const firestore = useFirestore();
   const teachersQuery = useMemoFirebase(() => {
-    if (!firestore || !isAuthorized) return null; // Wait for authorization
+    if (!firestore) return null;
     return query(
         collection(firestore, 'users'), 
         where('profileId', '==', 'Professor'),
         orderBy('name')
     );
-  }, [firestore, isAuthorized]);
+  }, [firestore]);
 
   const { data: teachers, isLoading: isLoadingTeachers } = useCollection(teachersQuery);
   
@@ -72,7 +71,6 @@ export default function ClassEditDialog({ isOpen, onClose, classData, onSave, is
         submissionData.teacherName = "Não definido";
     }
     
-    // Assegura que teacherId não definido seja enviado como null ou undefined
     if (!submissionData.teacherId) {
         delete submissionData.teacherId;
     }
@@ -113,7 +111,7 @@ export default function ClassEditDialog({ isOpen, onClose, classData, onSave, is
                   <Select 
                     onValueChange={(value) => field.onChange(value === 'none' ? '' : value)} 
                     value={field.value || 'none'}
-                    disabled={!isAuthorized || isLoadingTeachers}
+                    disabled={isLoadingTeachers}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -122,7 +120,7 @@ export default function ClassEditDialog({ isOpen, onClose, classData, onSave, is
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="none">Não definido</SelectItem>
-                      {!isAuthorized || isLoadingTeachers ? (
+                      {isLoadingTeachers ? (
                         <SelectItem value="loading" disabled>A carregar professores...</SelectItem>
                       ) : (
                         teachers?.map(teacher => (

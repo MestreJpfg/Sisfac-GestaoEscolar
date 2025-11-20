@@ -16,9 +16,10 @@ interface ClassTableProps {
   classes: any[];
   onEdit: (classData: any) => void;
   onDelete: (classData: any) => void;
+  isAuthorized: boolean;
 }
 
-export default function ClassTable({ classes, onEdit, onDelete }: ClassTableProps) {
+export default function ClassTable({ classes, onEdit, onDelete, isAuthorized }: ClassTableProps) {
   if (classes.length === 0) {
     return (
       <Card>
@@ -43,7 +44,7 @@ export default function ClassTable({ classes, onEdit, onDelete }: ClassTableProp
                 <TableHead>Nome da Turma</TableHead>
                 <TableHead>Professor(a) Responsável</TableHead>
                 <TableHead>Nº de Alunos</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+                {isAuthorized && <TableHead className="text-right">Ações</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -59,14 +60,16 @@ export default function ClassTable({ classes, onEdit, onDelete }: ClassTableProp
                    <TableCell className="whitespace-nowrap text-muted-foreground">
                         {cls.studentIds?.length || 0}
                    </TableCell>
-                  <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => onEdit(cls)}>
-                          <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => onDelete(cls)} className="text-destructive hover:text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                      </Button>
-                  </TableCell>
+                  {isAuthorized && (
+                    <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => onEdit(cls)}>
+                            <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => onDelete(cls)} className="text-destructive hover:text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
