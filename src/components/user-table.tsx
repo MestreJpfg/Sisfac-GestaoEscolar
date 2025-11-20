@@ -19,7 +19,6 @@ import { Badge } from "./ui/badge";
 interface UserTableProps {
   users: any[];
   onEdit: (user: any) => void;
-  isAdmin: boolean;
 }
 
 const getInitials = (name: string | null | undefined) => {
@@ -31,7 +30,7 @@ const getInitials = (name: string | null | undefined) => {
     return name.substring(0, 2).toUpperCase();
 };
 
-export default function UserTable({ users, onEdit, isAdmin }: UserTableProps) {
+export default function UserTable({ users, onEdit }: UserTableProps) {
   if (users.length === 0) {
     return (
       <Card>
@@ -49,7 +48,6 @@ export default function UserTable({ users, onEdit, isAdmin }: UserTableProps) {
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
     try {
-        // Handle both ISO strings and Firestore Timestamp objects
         const date = new Date(dateString);
         return format(date, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
     } catch {
@@ -81,7 +79,7 @@ export default function UserTable({ users, onEdit, isAdmin }: UserTableProps) {
                 <TableHead>Email</TableHead>
                 <TableHead>Perfil</TableHead>
                 <TableHead>Data de Criação</TableHead>
-                {isAdmin && <TableHead className="text-right">Ações</TableHead>}
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -105,13 +103,11 @@ export default function UserTable({ users, onEdit, isAdmin }: UserTableProps) {
                     )}
                    </TableCell>
                   <TableCell className="whitespace-nowrap text-muted-foreground">{formatDate(user.createdAt)}</TableCell>
-                  {isAdmin && (
-                    <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => onEdit(user)}>
-                            <Edit className="h-4 w-4" />
-                        </Button>
-                    </TableCell>
-                  )}
+                  <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => onEdit(user)}>
+                          <Edit className="h-4 w-4" />
+                      </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
