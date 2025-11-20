@@ -98,7 +98,7 @@ export default function UserManager() {
             ) : (
               <UserTable 
                 users={users || []} 
-                onEdit={handleEditUser}
+                onEdit={handleEditUser} 
                 isAdmin={isAdmin}
               />
             )}
