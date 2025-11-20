@@ -32,9 +32,9 @@ export default function DashboardPage() {
   }, [user, firestore]);
 
   const usersQuery = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
+    if (!firestore || isProfileLoading || !userProfile || userProfile.profileId !== 'Administrador') return null;
     return query(collection(firestore, 'users'));
-  }, [user, firestore]);
+  }, [firestore, userProfile, isProfileLoading]);
   
   const profilesQuery = useMemoFirebase(() => {
     if (!firestore || isProfileLoading || !userProfile || userProfile.profileId !== 'Administrador') return null;

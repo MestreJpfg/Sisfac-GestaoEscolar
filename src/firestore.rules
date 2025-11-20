@@ -29,11 +29,13 @@ service cloud.firestore {
       allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       // Allow admins to write to any user profile
       allow write: if isAdmin();
-      // Allow any signed-in user to perform a query on the users collection.
-      // The query itself in the client-side code should be specific enough 
-      // (e.g., filtering by 'Professor') to only return relevant data.
-      // Individual document reads are still protected by the 'read' rule above.
-      allow list: if isSignedIn();
+      // Allow admins to list all users, or any signed-in user to list only professors.
+      // This is secure because the query itself is specific.
+      allow list: if isSignedIn() && 
+                    (isAdmin() || 
+                    (request.query.where.size() > 0 && 
+                     request.query.where[0][0] == 'profileId' && 
+                     request.query.where[0][2] == 'Professor'));
     }
     
     // Allow admins to manage profiles
@@ -56,7 +58,7 @@ service cloud.firestore {
 
     match /attendance/{attendanceId} {
        allow read: if isSignedIn();
-       allow write: if hasProfile('Professor') || has-profile('Administrador');
+       allow write: if hasProfile('Professor') || hasProfile('Administrador');
     }
     
     match /announcements/{announcementId} {
