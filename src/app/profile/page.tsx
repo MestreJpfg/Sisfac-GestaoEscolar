@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import Image from 'next/image';
 import { useUser, useAuth, useFirestore, useStorage, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { updateProfile } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -35,7 +34,6 @@ export default function ProfilePage() {
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement>(null);
     
-    // Memoize the doc ref to prevent re-renders in useDoc
     const userDocRef = useMemoFirebase(() => {
         if (!user || !firestore) return null;
         return doc(firestore, 'users', user.uid);
@@ -44,7 +42,7 @@ export default function ProfilePage() {
     const { data: userProfile } = useDoc(userDocRef);
 
     const [displayName, setDisplayName] = useState('');
-    const [cargo, setCargo] = useState('');
+    const [profileId, setProfileId] = useState('');
     const [photo, setPhoto] = useState<File | null>(null);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -54,7 +52,7 @@ export default function ProfilePage() {
             setDisplayName(user.displayName || '');
         }
         if (userProfile) {
-            setCargo(userProfile.cargo || '');
+            setProfileId(userProfile.profileId || '');
         }
     }, [user, userProfile]);
     
@@ -81,14 +79,12 @@ export default function ProfilePage() {
         try {
             let newPhotoURL = user.photoURL;
 
-            // 1. Upload new photo if one was selected
             if (photo && storage) {
                 const storageRef = ref(storage, `profile-pictures/${user.uid}`);
                 const snapshot = await uploadBytes(storageRef, photo);
                 newPhotoURL = await getDownloadURL(snapshot.ref);
             }
 
-            // 2. Update user profile in Firebase Auth
             if (auth.currentUser) {
                 await updateProfile(auth.currentUser, { 
                     displayName,
@@ -96,12 +92,9 @@ export default function ProfilePage() {
                 });
             }
 
-
-            // 3. Update user document in Firestore
             const userDocToUpdate = doc(firestore, 'users', user.uid);
-            const userData: { name: string; cargo: string; photoURL?: string } = {
+            const userData: { name: string; photoURL?: string } = {
                 name: displayName,
-                cargo: cargo,
             };
             if (newPhotoURL) {
                  userData.photoURL = newPhotoURL;
@@ -113,13 +106,11 @@ export default function ProfilePage() {
                 description: 'As suas informações foram atualizadas com sucesso.',
             });
             
-            // Clean up all local file state after successful save
             setPhoto(null);
             setPhotoPreview(null);
             if (fileInputRef.current) {
                 fileInputRef.current.value = "";
             }
-
 
         } catch (error: any) {
             console.error("Erro ao atualizar perfil:", error);
@@ -170,7 +161,7 @@ export default function ProfilePage() {
                             <div>
                                 <CardTitle className="text-2xl">{displayName || 'Utilizador sem nome'}</CardTitle>
                                 <CardDescription>{user.email}</CardDescription>
-                                <CardDescription className="font-semibold">{cargo || 'Cargo não definido'}</CardDescription>
+                                <CardDescription className="font-semibold">{profileId || 'Perfil não definido'}</CardDescription>
                             </div>
                         </div>
                     </CardHeader>
@@ -186,11 +177,11 @@ export default function ProfilePage() {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="cargo">Cargo</Label>
+                                    <Label htmlFor="profileId">Perfil</Label>
                                     <Input 
-                                        id="cargo" 
-                                        value={cargo} 
-                                        onChange={(e) => setCargo(e.target.value)}
+                                        id="profileId" 
+                                        value={profileId} 
+                                        disabled
                                     />
                                 </div>
                             </div>

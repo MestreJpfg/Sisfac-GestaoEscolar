@@ -20,7 +20,6 @@ import Image from 'next/image';
 
 const signupSchema = z.object({
   name: z.string().min(2, { message: 'O nome deve ter pelo menos 2 caracteres.' }),
-  cargo: z.string().min(2, { message: 'O cargo deve ter pelo menos 2 caracteres.' }),
   email: z.string().email({ message: 'Por favor, insira um email válido.' }),
   password: z.string().min(6, { message: 'A senha deve ter pelo menos 6 caracteres.' }),
 });
@@ -38,7 +37,6 @@ export default function SignupPage() {
     resolver: zodResolver(signupSchema),
     defaultValues: {
       name: '',
-      cargo: '',
       email: '',
       password: '',
     },
@@ -68,7 +66,8 @@ export default function SignupPage() {
         uid: user.uid,
         name: data.name,
         email: data.email,
-        cargo: data.cargo,
+        profileId: 'Aluno', // Default profile for new users
+        customPermissions: [],
         createdAt: new Date().toISOString(),
         photoURL: user.photoURL,
       });
@@ -99,7 +98,7 @@ export default function SignupPage() {
         <CardHeader className="text-center">
           <Image src="/logoyuri.png" alt="Logo" width={100} height={100} className="mx-auto mb-4 rounded-md" />
           <CardTitle>Crie a sua Conta</CardTitle>
-          <CardDescription>Registre-se para começar a gerir os alunos.</CardDescription>
+          <CardDescription>Registre-se para começar a usar o sistema escolar.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -109,22 +108,9 @@ export default function SignupPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome</FormLabel>
+                    <FormLabel>Nome Completo</FormLabel>
                     <FormControl>
                       <Input placeholder="Seu nome completo" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="cargo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cargo</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Sua função (ex: Professor, Secretário)" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
