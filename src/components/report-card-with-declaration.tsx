@@ -84,3 +84,5 @@ export default function ReportCardWithDeclaration({ student, boletim }: ReportCa
         </div>
     );
 }
+
+    

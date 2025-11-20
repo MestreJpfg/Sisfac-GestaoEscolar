@@ -104,3 +104,5 @@ export default function ReportCardDetailed({ student, boletim }: ReportCardDetai
         </div>
     );
 }
+
+    

@@ -202,7 +202,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
       
       a.download = fileName;
       document.body.appendChild(a);
-a.click();
+      a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
@@ -417,28 +417,37 @@ a.click();
                       <p>Editar Aluno</p>
                     </TooltipContent>
                   </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={() => handleGeneratePdf('declaration')} disabled={!!isProcessing || !!isSharing}>
-                      {isProcessing === 'declaration' ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Download className="w-4 h-4 text-primary" />}
-                      <span className="sr-only">Gerar Declaração de Matrícula</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Gerar Declaração de Matrícula</p>
-                  </TooltipContent>
-                </Tooltip>
-                 <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" onClick={() => handleGeneratePdf('transfer')} disabled={!!isProcessing || !!isSharing}>
-                      {isProcessing === 'transfer' ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <FileOutput className="w-4 h-4 text-primary" />}
-                      <span className="sr-only">Gerar Declaração de Transferência</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Gerar Declaração de Transferência</p>
-                  </TooltipContent>
-                </Tooltip>
+                
+                <DropdownMenu>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                             <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" disabled={!!isProcessing || !!isSharing}>
+                                    {isProcessing ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Printer className="w-4 h-4 text-primary" />}
+                                    <span className="sr-only">Imprimir Documento</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Imprimir Documento</p>
+                        </TooltipContent>
+                    </Tooltip>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleGeneratePdf('declaration')}>
+                            Declaração de Matrícula
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleGeneratePdf('transfer')}>
+                            Declaração de Transferência
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleGeneratePdf('declarationWithReport')} disabled={!hasBoletim}>
+                            Declaração com Boletim
+                        </DropdownMenuItem>
+                         <DropdownMenuItem onClick={() => handleGeneratePdf('detailedReport')} disabled={!hasBoletim}>
+                            Boletim Detalhado
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
                  <DropdownMenu>
                     <Tooltip>
                         <TooltipTrigger asChild>
@@ -492,3 +501,5 @@ a.click();
     </>
   );
 }
+
+    
