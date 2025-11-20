@@ -70,6 +70,12 @@ export default function ClassEditDialog({ isOpen, onClose, classData, onSave }: 
     } else {
         submissionData.teacherName = "Não definido";
     }
+    
+    // Assegura que teacherId não definido seja enviado como null ou undefined
+    if (!submissionData.teacherId) {
+        delete submissionData.teacherId;
+    }
+
     onSave(submissionData, classData?.id);
   };
   
@@ -103,14 +109,17 @@ export default function ClassEditDialog({ isOpen, onClose, classData, onSave }: 
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Professor(a) Responsável</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || ''}>
+                  <Select 
+                    onValueChange={(value) => field.onChange(value === 'none' ? '' : value)} 
+                    value={field.value || 'none'}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione um professor (opcional)" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Não definido</SelectItem>
+                      <SelectItem value="none">Não definido</SelectItem>
                       {isLoadingTeachers ? (
                         <SelectItem value="loading" disabled>A carregar professores...</SelectItem>
                       ) : (
