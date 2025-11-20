@@ -26,19 +26,19 @@ export default function DashboardPage() {
   }, [user, firestore]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc(userDocRef);
 
-  const studentsQuery = useMemo(() => {
+  const studentsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return query(collection(firestore, 'alunos'));
   }, [user, firestore]);
 
-  const usersQuery = useMemo(() => {
+  const usersQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return query(collection(firestore, 'users'));
   }, [user, firestore]);
   
-  const profilesQuery = useMemo(() => {
+  const profilesQuery = useMemoFirebase(() => {
     // Only query for profiles if the user is a loaded admin
-    if (!firestore || isProfileLoading || userProfile?.profileId !== 'Administrador') return null;
+    if (!firestore || isProfileLoading || !userProfile || userProfile.profileId !== 'Administrador') return null;
     return query(collection(firestore, 'profiles'));
   }, [firestore, userProfile, isProfileLoading]);
 
@@ -46,11 +46,11 @@ export default function DashboardPage() {
   const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
   const { data: profiles, isLoading: isProfilesLoading } = useCollection(profilesQuery);
 
-  const isLoading = isUserLoading || isStudentsLoading || isUsersLoading || isProfileLoading;
+  const isLoading = isUserLoading || isProfileLoading;
   const isAdmin = userProfile?.profileId === 'Administrador';
   const welcomeName = user?.displayName?.split(' ')[0] || 'Utilizador';
 
-  if (isLoading && !userProfile) { // Show main loader only while profile is not yet available
+  if (isLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />

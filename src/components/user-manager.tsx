@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { Loader2, ArrowLeft } from 'lucide-react';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -15,43 +15,43 @@ import { Button } from './ui/button';
 import { useRouter } from 'next/navigation';
 import UserEditDialog from './user-edit-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useDoc } from '@/firebase/firestore/use-doc';
 
 
 export default function UserManager() {
   const firestore = useFirestore();
   const router = useRouter();
-  const { user: currentUser } = useUser();
+  const { user: currentUser, isUserLoading } = useUser();
   const { toast } = useToast();
   
   const [editingUser, setEditingUser] = useState<any | null>(null);
 
-  const currentUserDocRef = useMemo(() => {
+  const currentUserDocRef = useMemoFirebase(() => {
     if (!currentUser || !firestore) return null;
     return doc(firestore, 'users', currentUser.uid);
   }, [currentUser, firestore]);
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc(currentUserDocRef);
   
-  const usersQuery = useMemo(() => {
-    if (!firestore || isProfileLoading || currentUserProfile?.profileId !== 'Administrador') return null;
-    return query(collection(firestore, 'users'), orderBy('name'));
-  }, [firestore, currentUserProfile, isProfileLoading]);
-
-  const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
   const isAuthorized = currentUserProfile?.profileId === 'Administrador';
 
-  useEffect(() => {
-    // This effect runs when the loading state changes or authorization status is determined.
-    if (!isProfileLoading && !isAuthorized) {
-      toast({
-        variant: 'destructive',
-        title: 'Acesso Negado',
-        description: 'Não tem permissão para aceder a esta página.',
-      });
-      router.push('/dashboard');
-    }
-  }, [isAuthorized, isProfileLoading, router, toast]);
+  const usersQuery = useMemo(() => {
+    // Only query if authorized.
+    if (!firestore || !isAuthorized) return null;
+    return query(collection(firestore, 'users'), orderBy('name'));
+  }, [firestore, isAuthorized]);
 
+  const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
+
+  useEffect(() => {
+    // Redirect if loading is done and user is not authorized.
+    if (!isUserLoading && !isProfileLoading && !isAuthorized) {
+        toast({
+            variant: 'destructive',
+            title: 'Acesso Negado',
+            description: 'Não tem permissão para aceder a esta página.',
+        });
+        router.push('/dashboard');
+    }
+  }, [isAuthorized, isUserLoading, isProfileLoading, router, toast]);
 
   const handleEditUser = (user: any) => {
     setEditingUser(user);
@@ -75,8 +75,7 @@ export default function UserManager() {
     handleCloseDialog();
   };
   
-  // While loading, show a spinner to prevent premature rendering or redirection.
-  if (isProfileLoading) {
+  if (isUserLoading || isProfileLoading) {
     return (
        <div className="flex h-screen w-full items-center justify-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -84,7 +83,8 @@ export default function UserManager() {
     );
   }
 
-  // If not authorized and loading is complete, this will be null, and the useEffect will handle redirection.
+  // If we reach here and the user is not authorized, the useEffect will handle the redirection.
+  // Render nothing in that case to avoid a flash of content.
   if (!isAuthorized) {
     return null;
   }
