@@ -37,17 +37,23 @@ export default function DashboardPage() {
   }, [user, firestore]);
   
   const profilesQuery = useMemoFirebase(() => {
-    // Only query for profiles if the user is a loaded admin
     if (!firestore || isProfileLoading || !userProfile || userProfile.profileId !== 'Administrador') return null;
     return query(collection(firestore, 'profiles'));
   }, [firestore, userProfile, isProfileLoading]);
 
+  const classesQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'classes'));
+  }, [firestore, user]);
+
   const { data: students, isLoading: isStudentsLoading } = useCollection(studentsQuery);
   const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
   const { data: profiles, isLoading: isProfilesLoading } = useCollection(profilesQuery);
+  const { data: classes, isLoading: isClassesLoading } = useCollection(classesQuery);
 
   const isLoading = isUserLoading || isProfileLoading;
   const isAdmin = userProfile?.profileId === 'Administrador';
+  const isManager = userProfile?.profileId === 'Gestor';
   const welcomeName = user?.displayName?.split(' ')[0] || 'Utilizador';
 
   if (isLoading) {
@@ -91,6 +97,15 @@ export default function DashboardPage() {
                   description="Total de alunos registados"
                   action={<Button onClick={() => router.push('/dashboard/students')}>Gerir Alunos</Button>}
                 />
+                 {(isAdmin || isManager) && (
+                    <StatCard
+                        title="Turmas"
+                        value={isClassesLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (classes?.length ?? 0)}
+                        icon={School}
+                        description="Total de turmas na escola"
+                        action={<Button onClick={() => router.push('/dashboard/classes')}>Gerir Turmas</Button>}
+                    />
+                 )}
                  {isAdmin && (
                   <>
                     <StatCard
