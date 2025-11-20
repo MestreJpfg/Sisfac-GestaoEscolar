@@ -30,7 +30,8 @@ service cloud.firestore {
       allow read, update: if isSignedIn() && request.auth.uid == userId;
       // Allow admins to read/write any user profile
       allow read, write: if isAdmin();
-      allow list: if isAdmin();
+      // Allow any signed-in user to list other users for now
+      allow list: if isSignedIn();
     }
     
     // Allow admins to manage profiles
