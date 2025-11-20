@@ -33,27 +33,29 @@ export default function UserManager() {
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc(currentUserDocRef);
   
   const usersQuery = useMemo(() => {
-    if (!firestore) return null;
+    // Only query for users if the current user is a loaded admin
+    if (!firestore || isProfileLoading || !currentUserProfile || currentUserProfile.profileId !== 'Administrador') return null;
     return query(collection(firestore, 'users'), orderBy('name'));
-  }, [firestore]);
+  }, [firestore, currentUserProfile, isProfileLoading]);
 
   const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
 
-  const isLoading = isUserLoading || isProfileLoading || isUsersLoading;
+  const isLoading = isUserLoading || isProfileLoading;
+  const isAuthorized = currentUserProfile?.profileId === 'Administrador';
 
   useEffect(() => {
-    // Wait until profile loading is complete
-    if (isProfileLoading) return;
-
-    if (currentUserProfile?.profileId !== 'Administrador') {
+    // This effect runs once after the initial loading is complete.
+    // If, after loading, the user is not an admin, redirect them.
+    if (!isLoading && !isAuthorized) {
       toast({
         variant: 'destructive',
         title: 'Acesso Negado',
-        description: currentUserProfile ? 'Não tem permissão para aceder a esta página.' : 'Perfil de utilizador não encontrado.',
+        description: 'Não tem permissão para aceder a esta página.',
       });
       router.push('/dashboard');
     }
-  }, [currentUserProfile, isProfileLoading, router, toast]);
+  }, [isLoading, isAuthorized, router, toast]);
+
 
   const handleEditUser = (user: any) => {
     setEditingUser(user);
@@ -77,9 +79,9 @@ export default function UserManager() {
     handleCloseDialog();
   };
   
-  // While initial checks are running, show a loader.
-  // This prevents premature redirection.
-  if (isUserLoading || isProfileLoading) {
+  // While initial auth/profile checks are running, show a full-page loader.
+  // This prevents premature redirection or rendering of content.
+  if (isLoading) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -87,9 +89,9 @@ export default function UserManager() {
     );
   }
 
-  // After loading, if the profile is not 'Administrador', the useEffect will have already triggered a redirect.
-  // Rendering null here prevents a flash of content.
-  if (currentUserProfile?.profileId !== 'Administrador') {
+  // After loading, if the user is not authorized, the useEffect will have triggered a redirect.
+  // Rendering null here prevents a flash of content before the redirect happens.
+  if (!isAuthorized) {
     return null;
   }
 
