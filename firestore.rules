@@ -25,9 +25,9 @@ service cloud.firestore {
       return hasProfile('Administrador');
     }
 
-    // Allow signed-in users to read their own profile
+    // Allow signed-in users to create, read, and update their own profile
     match /users/{userId} {
-      allow read, update: if isSignedIn() && request.auth.uid == userId;
+      allow create, read, update: if isSignedIn() && request.auth.uid == userId;
       // Allow admins to read/write any user profile
       allow read, write: if isAdmin();
       // Allow any signed-in user to list other users for now
