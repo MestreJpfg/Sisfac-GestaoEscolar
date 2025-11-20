@@ -1,4 +1,3 @@
-
 "use client";
 
 import StudentReportCard from "./student-report-card";
@@ -56,5 +55,3 @@ export default function ReportCardGrid({ students }: ReportCardGridProps) {
         </div>
     );
 }
-
-    

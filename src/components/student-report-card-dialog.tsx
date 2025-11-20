@@ -17,6 +17,7 @@ import { Loader2, Download, Pencil, Save, X, AlertTriangle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast";
 import ReportCardWithDeclaration from "./report-card-with-declaration";
 import ReportCardDetailed from "./report-card-detailed";
+import ReportCardCompact from "./report-card-compact";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { firestore } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -47,7 +48,7 @@ interface StudentReportCardDialogProps {
   student: any;
 }
 
-type PdfType = 'declaration' | 'detailed';
+type PdfType = 'declaration' | 'detailed' | 'compact';
 
 export default function StudentReportCardDialog({
   isOpen,
@@ -135,6 +136,11 @@ export default function StudentReportCardDialog({
         case 'detailed':
             componentToRender = <ReportCardDetailed student={student} boletim={editableBoletim} />;
             fileName = `Boletim_Detalhado_${student.nome.replace(/\s+/g, '_')}.pdf`;
+            break;
+        case 'compact':
+            componentToRender = <ReportCardCompact student={student} boletim={editableBoletim} />;
+            fileName = `Boletim_Compacto_${student.nome.replace(/\s+/g, '_')}.pdf`;
+            pdfOptions.orientation = 'l'; // Landscape for compact view
             break;
     }
     
@@ -251,6 +257,9 @@ export default function StudentReportCardDialog({
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => generatePdf('detailed')}>
                           Boletim Detalhado
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => generatePdf('compact')}>
+                          Boletim Compacto (4 por folha)
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
