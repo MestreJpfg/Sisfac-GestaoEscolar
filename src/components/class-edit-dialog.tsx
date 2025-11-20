@@ -25,18 +25,19 @@ interface ClassEditDialogProps {
   onClose: () => void;
   classData: any | null;
   onSave: (data: ClassFormValues, classId?: string) => void;
+  isAuthorized: boolean;
 }
 
-export default function ClassEditDialog({ isOpen, onClose, classData, onSave }: ClassEditDialogProps) {
+export default function ClassEditDialog({ isOpen, onClose, classData, onSave, isAuthorized }: ClassEditDialogProps) {
   const firestore = useFirestore();
   const teachersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !isAuthorized) return null; // Wait for authorization
     return query(
         collection(firestore, 'users'), 
         where('profileId', '==', 'Professor'),
         orderBy('name')
     );
-  }, [firestore]);
+  }, [firestore, isAuthorized]);
 
   const { data: teachers, isLoading: isLoadingTeachers } = useCollection(teachersQuery);
   
@@ -112,6 +113,7 @@ export default function ClassEditDialog({ isOpen, onClose, classData, onSave }: 
                   <Select 
                     onValueChange={(value) => field.onChange(value === 'none' ? '' : value)} 
                     value={field.value || 'none'}
+                    disabled={!isAuthorized || isLoadingTeachers}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -120,7 +122,7 @@ export default function ClassEditDialog({ isOpen, onClose, classData, onSave }: 
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="none">Não definido</SelectItem>
-                      {isLoadingTeachers ? (
+                      {!isAuthorized || isLoadingTeachers ? (
                         <SelectItem value="loading" disabled>A carregar professores...</SelectItem>
                       ) : (
                         teachers?.map(teacher => (
