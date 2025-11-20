@@ -63,22 +63,22 @@ export default function LoginPage() {
   
     const userDocRef = doc(firestore, 'users', user.uid);
     const userDoc = await getDoc(userDocRef);
-  
-    if (!userDoc.exists()) {
-      // Temporary logic to assign Admin profile
-      const adminEmails = ['mestrejp@hotmail.com', 'mestrejpfg@gmail.com'];
-      const profile = adminEmails.includes(user.email || '') ? 'Administrador' : 'Aluno';
 
-      setDocumentNonBlocking(userDocRef, {
+    const adminEmails = ['mestrejp@hotmail.com', 'mestrejpfg@gmail.com'];
+    const isAdmin = adminEmails.includes(user.email || '');
+
+    const userData = {
         uid: user.uid,
         name: user.displayName || user.email,
         email: user.email,
-        profileId: profile,
-        customPermissions: [],
-        createdAt: new Date().toISOString(),
+        profileId: isAdmin ? 'Administrador' : userDoc.exists() ? userDoc.data().profileId : 'Aluno',
+        customPermissions: userDoc.exists() ? userDoc.data().customPermissions : [],
+        createdAt: userDoc.exists() ? userDoc.data().createdAt : new Date().toISOString(),
         photoURL: user.photoURL,
-      }, { merge: true });
-    }
+    };
+  
+    // Always use setDoc with merge to create or update the user data
+    setDocumentNonBlocking(userDocRef, userData, { merge: true });
   
     router.push('/dashboard');
   };
