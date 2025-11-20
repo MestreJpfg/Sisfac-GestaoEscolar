@@ -34,7 +34,7 @@ export default function UserManager() {
   const isAuthorized = currentUserProfile?.profileId === 'Administrador';
 
   const usersQuery = useMemo(() => {
-    // Only query if authorized.
+    // Only query if authorized and profile is loaded.
     if (!firestore || !isAuthorized) return null;
     return query(collection(firestore, 'users'), orderBy('name'));
   }, [firestore, isAuthorized]);
@@ -75,7 +75,9 @@ export default function UserManager() {
     handleCloseDialog();
   };
   
-  if (isUserLoading || isProfileLoading) {
+  const isLoading = isUserLoading || isProfileLoading;
+
+  if (isLoading) {
     return (
        <div className="flex h-screen w-full items-center justify-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
