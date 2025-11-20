@@ -54,3 +54,5 @@ export default function ReportCardCompact({ student, boletim }: ReportCardCompac
         </div>
     );
 }
+
+    

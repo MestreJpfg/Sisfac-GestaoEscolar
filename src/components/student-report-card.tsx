@@ -140,3 +140,5 @@ export default function StudentReportCard({ boletim, isPrintMode = false, compac
     </Table>
   );
 }
+
+    

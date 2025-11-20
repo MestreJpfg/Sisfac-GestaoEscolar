@@ -56,3 +56,5 @@ export default function ReportCardGrid({ students }: ReportCardGridProps) {
         </div>
     );
 }
+
+    
