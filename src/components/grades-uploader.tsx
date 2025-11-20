@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { UploadCloud, FileCheck2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
-import { firestore } from "@/firebase";
+import { useFirestore } from "@/firebase";
 import { writeBatch, doc, getDoc, collection } from "firebase/firestore";
 import { commitBatchNonBlocking } from "@/firebase/non-blocking-updates";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
@@ -16,6 +16,7 @@ import { Label } from "./ui/label";
 
 export default function GradesUploader() {
   const { toast } = useToast();
+  const firestore = useFirestore();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
