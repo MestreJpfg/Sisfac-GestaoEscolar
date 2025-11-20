@@ -21,7 +21,7 @@ import { useDoc } from '@/firebase/firestore/use-doc';
 export default function UserManager() {
   const firestore = useFirestore();
   const router = useRouter();
-  const { user: currentUser } = useUser();
+  const { user: currentUser, isUserLoading } = useUser();
   const { toast } = useToast();
   
   const [editingUser, setEditingUser] = useState<any | null>(null);
@@ -39,18 +39,21 @@ export default function UserManager() {
 
   const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
 
-  const isAdmin = currentUserProfile?.profileId === 'Administrador';
+  const isLoading = isUserLoading || isProfileLoading || isUsersLoading;
 
   useEffect(() => {
-    if (!isProfileLoading && !isAdmin) {
+    // Apenas toma uma ação quando o carregamento do perfil terminar
+    if (!isProfileLoading && currentUserProfile) {
+      if (currentUserProfile.profileId !== 'Administrador') {
         toast({
             variant: 'destructive',
             title: 'Acesso Negado',
             description: 'Não tem permissão para aceder a esta página.'
         });
         router.push('/dashboard');
+      }
     }
-  }, [isAdmin, isProfileLoading, router, toast]);
+  }, [currentUserProfile, isProfileLoading, router, toast]);
 
   const handleEditUser = (user: any) => {
     setEditingUser(user);
@@ -73,15 +76,19 @@ export default function UserManager() {
     
     handleCloseDialog();
   };
-
-  const isLoading = isUsersLoading || isProfileLoading;
   
-  if (!isAdmin) {
+  // Mostra o ecrã de carregamento enquanto as permissões estão a ser verificadas
+  if (isLoading || !currentUserProfile) {
     return (
         <div className="flex h-screen w-full items-center justify-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
     );
+  }
+
+  // Se, após o carregamento, não for administrador, não renderiza nada (o useEffect irá redirecionar)
+  if (currentUserProfile.profileId !== 'Administrador') {
+    return null;
   }
 
   return (
@@ -111,18 +118,11 @@ export default function UserManager() {
           </header>
 
           <div className="w-full">
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center h-80 rounded-lg border-2 border-dashed border-border bg-card/50">
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="mt-4 text-muted-foreground">A carregar utilizadores...</p>
-              </div>
-            ) : (
-              <UserTable 
-                users={users || []} 
-                onEdit={handleEditUser} 
-                isAdmin={isAdmin}
-              />
-            )}
+            <UserTable 
+              users={users || []} 
+              onEdit={handleEditUser} 
+              isAdmin={currentUserProfile.profileId === 'Administrador'}
+            />
           </div>
         </div>
         <AppFooter />
