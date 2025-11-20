@@ -26,20 +26,23 @@ export default function DashboardPage() {
   }, [user, firestore]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc(userDocRef);
 
+  const isAdmin = userProfile?.profileId === 'Administrador';
+  const isManager = userProfile?.profileId === 'Gestor';
+
   const studentsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return query(collection(firestore, 'alunos'));
   }, [user, firestore]);
 
   const usersQuery = useMemoFirebase(() => {
-    if (!firestore || isProfileLoading || !userProfile || userProfile.profileId !== 'Administrador') return null;
+    if (!firestore || !isAdmin) return null; // Only query if user is an admin
     return query(collection(firestore, 'users'));
-  }, [firestore, userProfile, isProfileLoading]);
+  }, [firestore, isAdmin]);
   
   const profilesQuery = useMemoFirebase(() => {
-    if (!firestore || isProfileLoading || !userProfile || userProfile.profileId !== 'Administrador') return null;
+    if (!firestore || !isAdmin) return null; // Only query if user is an admin
     return query(collection(firestore, 'profiles'));
-  }, [firestore, userProfile, isProfileLoading]);
+  }, [firestore, isAdmin]);
 
   const classesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -52,8 +55,6 @@ export default function DashboardPage() {
   const { data: classes, isLoading: isClassesLoading } = useCollection(classesQuery);
 
   const isLoading = isUserLoading || isProfileLoading;
-  const isAdmin = userProfile?.profileId === 'Administrador';
-  const isManager = userProfile?.profileId === 'Gestor';
   const welcomeName = user?.displayName?.split(' ')[0] || 'Utilizador';
 
   if (isLoading) {

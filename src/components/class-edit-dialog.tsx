@@ -30,8 +30,9 @@ interface ClassEditDialogProps {
 
 export default function ClassEditDialog({ isOpen, onClose, classData, onSave, isAuthorized }: ClassEditDialogProps) {
   const firestore = useFirestore();
+  
   const teachersQuery = useMemoFirebase(() => {
-    if (!firestore || !isAuthorized) return null;
+    if (!firestore || !isAuthorized) return null; // Only query if authorized
     return query(
         collection(firestore, 'users'), 
         where('profileId', '==', 'Professor'),
@@ -72,6 +73,7 @@ export default function ClassEditDialog({ isOpen, onClose, classData, onSave, is
         submissionData.teacherName = "Não definido";
     }
     
+    // Ensure teacherId is not an empty string if "none" is selected.
     if (!submissionData.teacherId) {
         delete submissionData.teacherId;
     }
@@ -112,18 +114,16 @@ export default function ClassEditDialog({ isOpen, onClose, classData, onSave, is
                   <Select 
                     onValueChange={(value) => field.onChange(value === 'none' ? '' : value)} 
                     value={field.value || 'none'}
-                    disabled={isLoadingTeachers || !isAuthorized}
+                    disabled={!isAuthorized}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={isAuthorized ? "Selecione um professor (opcional)" : "Sem permissão para carregar"} />
+                        <SelectValue placeholder={isAuthorized ? (isLoadingTeachers ? "A carregar..." : "Selecione um professor (opcional)") : "Sem permissão para carregar"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="none">Não definido</SelectItem>
-                      {isLoadingTeachers ? (
-                        <SelectItem value="loading" disabled>A carregar professores...</SelectItem>
-                      ) : (
+                      {isAuthorized && !isLoadingTeachers && (
                         teachers?.map(teacher => (
                           <SelectItem key={teacher.id} value={teacher.id}>{teacher.name}</SelectItem>
                         ))
