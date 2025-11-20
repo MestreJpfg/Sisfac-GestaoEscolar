@@ -30,6 +30,8 @@ import StudentReportCardDialog from "./student-report-card-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import ReportCardWithDeclaration from "./report-card-with-declaration";
 import ReportCardDetailed from "./report-card-detailed";
+import ReportCardCompact from "./report-card-compact";
+import ReportCardGrid from "./report-card-grid";
 
 const formatPhoneNumber = (phone: string): string => {
   const cleaned = ('' + phone).replace(/\D/g, '');
@@ -42,7 +44,7 @@ const formatPhoneNumber = (phone: string): string => {
   return phone; // Return original if not a valid length
 };
 
-type PdfType = 'declaration' | 'transfer' | 'declarationWithReport' | 'detailedReport';
+type PdfType = 'declaration' | 'transfer' | 'declarationWithReport' | 'detailedReport' | 'compact' | 'grid';
 
 interface StudentDetailSheetProps {
   student: any | null;
@@ -121,6 +123,8 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     container.style.top = '0';
     
     let componentToRender;
+    let pdfOptions: any = { orientation: 'p', unit: 'mm', format: 'a4' };
+    
     switch (type) {
         case 'declaration':
             componentToRender = <StudentDeclaration student={student} />;
@@ -134,6 +138,16 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
         case 'detailedReport':
             componentToRender = <ReportCardDetailed student={student} boletim={student.boletim || {}} />;
             break;
+        case 'compact':
+             componentToRender = <ReportCardCompact student={student} boletim={student.boletim || {}} />;
+             pdfOptions.orientation = 'l';
+             break;
+        case 'grid':
+            // For grid, we assume it's always one student for now.
+            // A more complex implementation would pass multiple students.
+             componentToRender = <ReportCardGrid students={[student]} />;
+             pdfOptions.orientation = 'l';
+             break;
         default:
             return null;
     }
@@ -157,11 +171,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
         });
         
         const imgData = canvas.toDataURL('image/jpeg', 0.95);
-        const pdf = new jsPDF({
-            orientation: 'p',
-            unit: 'mm',
-            format: 'a4',
-        });
+        const pdf = new jsPDF(pdfOptions);
         
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
@@ -197,6 +207,8 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
         case 'transfer': fileName = `Declaracao_Transferencia_${student.nome.replace(/\s+/g, '_')}.pdf`; break;
         case 'declarationWithReport': fileName = `Declaracao_com_Boletim_${student.nome.replace(/\s+/g, '_')}.pdf`; break;
         case 'detailedReport': fileName = `Boletim_Detalhado_${student.nome.replace(/\s+/g, '_')}.pdf`; break;
+        case 'compact': fileName = `Boletim_Compacto_${student.nome.replace(/\s+/g, '_')}.pdf`; break;
+        case 'grid': fileName = `Boletim_Grade_${student.nome.replace(/\s+/g, '_')}.pdf`; break;
         default: fileName = `Documento_${student.nome.replace(/\s+/g, '_')}.pdf`;
       }
       
@@ -236,6 +248,14 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
       case 'detailedReport':
         fileName = `Boletim_Detalhado_${student.nome.replace(/\s+/g, '_')}.pdf`;
         title = `Boletim Detalhado - ${student.nome}`;
+        break;
+      case 'compact':
+        fileName = `Boletim_Compacto_${student.nome.replace(/\s+/g, '_')}.pdf`;
+        title = `Boletim Compacto - ${student.nome}`;
+        break;
+      case 'grid':
+        fileName = `Boletim_Grade_${student.nome.replace(/\s+/g, '_')}.pdf`;
+        title = `Boletim em Grade - ${student.nome}`;
         break;
       default:
         fileName = `Documento_${student.nome.replace(/\s+/g, '_')}.pdf`;
@@ -445,6 +465,12 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
                          <DropdownMenuItem onClick={() => handleGeneratePdf('detailedReport')} disabled={!hasBoletim}>
                             Boletim Detalhado
                         </DropdownMenuItem>
+                         <DropdownMenuItem onClick={() => handleGeneratePdf('compact')} disabled={!hasBoletim}>
+                            Boletim Compacto (4 por folha)
+                        </DropdownMenuItem>
+                         <DropdownMenuItem onClick={() => handleGeneratePdf('grid')} disabled={!hasBoletim}>
+                            Boletim em Grade (Experimental)
+                        </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
 
@@ -475,6 +501,12 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
                          <DropdownMenuItem onClick={() => handleShare('detailedReport')} disabled={!hasBoletim}>
                             Boletim Detalhado
                         </DropdownMenuItem>
+                         <DropdownMenuItem onClick={() => handleShare('compact')} disabled={!hasBoletim}>
+                            Boletim Compacto (4 por folha)
+                        </DropdownMenuItem>
+                         <DropdownMenuItem onClick={() => handleShare('grid')} disabled={!hasBoletim}>
+                            Boletim em Grade (Experimental)
+                        </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
               </TooltipProvider>
@@ -501,5 +533,3 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     </>
   );
 }
-
-    

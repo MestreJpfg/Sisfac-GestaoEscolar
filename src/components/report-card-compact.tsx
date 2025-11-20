@@ -1,3 +1,4 @@
+
 "use client";
 
 import StudentReportCard from "./student-report-card";

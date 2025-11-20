@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -104,5 +105,3 @@ export default function ReportCardDetailed({ student, boletim }: ReportCardDetai
         </div>
     );
 }
-
-    

@@ -95,5 +95,3 @@ export default function StudentTransferDeclaration({ student }: StudentTransferD
         </div>
     );
 }
-
-    
