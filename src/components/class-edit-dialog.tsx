@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useFirestore } from "@/firebase";
+import { useFirestore, useMemoFirebase } from "@/firebase";
 import { useCollection } from "@/firebase/firestore/use-collection";
 import { collection, query, where, orderBy } from "firebase/firestore";
 
@@ -29,7 +29,7 @@ interface ClassEditDialogProps {
 
 export default function ClassEditDialog({ isOpen, onClose, classData, onSave }: ClassEditDialogProps) {
   const firestore = useFirestore();
-  const teachersQuery = useMemo(() => {
+  const teachersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
         collection(firestore, 'users'), 

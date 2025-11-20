@@ -30,8 +30,9 @@ service cloud.firestore {
       allow create, read, update: if isSignedIn() && request.auth.uid == userId;
       // Allow admins to read/write any user profile
       allow read, write: if isAdmin();
-      // Allow any signed-in user to list other users for now
-      allow list: if isSignedIn();
+      // Only allow listing users if the query is for professors, for class management.
+      // This is a more secure approach than allowing a general list.
+      allow list: if isSignedIn() && (request.query.where.size() > 0 && request.query.where[0][0] == 'profileId' && request.query.where[0][2] == 'Professor');
     }
     
     // Allow admins to manage profiles
@@ -44,6 +45,7 @@ service cloud.firestore {
     match /classes/{classId} {
       allow read: if isSignedIn();
       allow write: if hasProfile('Administrador') || hasProfile('Gestor');
+      allow list: if isSignedIn();
     }
     
     match /grades/{gradeId} {
@@ -64,7 +66,7 @@ service cloud.firestore {
     // Fallback for the existing 'alunos' collection, restrict to signed-in users for now.
     // This should be migrated or removed eventually.
     match /alunos/{alunoId} {
-      allow read, write: if isSignedIn();
+      allow read, write, list: if isSignedIn();
     }
   }
 }
