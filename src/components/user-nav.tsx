@@ -1,8 +1,9 @@
 'use client';
 
-import { useUser, useAuth } from '@/firebase';
+import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
+import { doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,10 +21,20 @@ import Link from 'next/link';
 export function UserNav() {
   const { user } = useUser();
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
 
+  const userDocRef = useMemoFirebase(() => {
+      if (!user || !firestore) return null;
+      return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+
+  const { data: userProfile } = useDoc(userDocRef);
+
   const handleLogout = async () => {
-    await signOut(auth);
+    if (auth) {
+      await signOut(auth);
+    }
     router.push('/login');
   };
 
@@ -39,6 +50,8 @@ export function UserNav() {
     }
     return name.substring(0, 2).toUpperCase();
   };
+  
+  const isAdmin = userProfile?.profileId === 'Administrador';
 
   return (
     <DropdownMenu>
@@ -67,12 +80,14 @@ export function UserNav() {
               <span>Perfil</span>
             </DropdownMenuItem>
           </Link>
-          <Link href="/users" passHref>
-            <DropdownMenuItem>
-              <Users className="mr-2 h-4 w-4" />
-              <span>Gerir Utilizadores</span>
-            </DropdownMenuItem>
-          </Link>
+          {isAdmin && (
+            <Link href="/users" passHref>
+              <DropdownMenuItem>
+                <Users className="mr-2 h-4 w-4" />
+                <span>Gerir Utilizadores</span>
+              </DropdownMenuItem>
+            </Link>
+          )}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>

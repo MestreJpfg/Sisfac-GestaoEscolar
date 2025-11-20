@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { Loader2 } from 'lucide-react';
 import { useFirestore, useUser } from '@/firebase';
@@ -30,14 +30,27 @@ export default function UserManager() {
     if (!currentUser || !firestore) return null;
     return doc(firestore, 'users', currentUser.uid);
   }, [currentUser, firestore]);
-  const { data: currentUserProfile } = useDoc(currentUserDocRef);
+  const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc(currentUserDocRef);
   
   const usersQuery = useMemo(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'users'), orderBy('name'));
   }, [firestore]);
 
-  const { data: users, isLoading } = useCollection(usersQuery);
+  const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
+
+  const isAdmin = currentUserProfile?.profileId === 'Administrador';
+
+  useEffect(() => {
+    if (!isProfileLoading && !isAdmin) {
+        toast({
+            variant: 'destructive',
+            title: 'Acesso Negado',
+            description: 'Não tem permissão para aceder a esta página.'
+        });
+        router.push('/dashboard');
+    }
+  }, [isAdmin, isProfileLoading, router, toast]);
 
   const handleEditUser = (user: any) => {
     setEditingUser(user);
@@ -61,7 +74,15 @@ export default function UserManager() {
     handleCloseDialog();
   };
 
-  const isAdmin = currentUserProfile?.profileId === 'Administrador';
+  const isLoading = isUsersLoading || isProfileLoading;
+  
+  if (!isAdmin) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+    );
+  }
 
   return (
     <>

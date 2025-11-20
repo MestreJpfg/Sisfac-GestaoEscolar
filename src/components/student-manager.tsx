@@ -134,7 +134,7 @@ export default function StudentManager() {
               <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-pointer rounded-full">
                 <GradesUploaderSheet />
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus_bg-transparent cursor-pointer rounded-full">
+              <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-pointer rounded-full">
                 <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
               </DropdownMenuItem>
             </DropdownMenuContent>
