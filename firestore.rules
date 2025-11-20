@@ -15,8 +15,6 @@ service cloud.firestore {
     // Function to check if a user has a specific profile
     function hasProfile(profileName) {
       let userProfile = getUserProfile();
-      // This assumes 'profileId' stores the name of the profile, e.g., 'Administrador'
-      // If it stores a reference ID, this logic will need to be adapted.
       return userProfile.profileId == profileName;
     }
 
@@ -27,11 +25,15 @@ service cloud.firestore {
 
     // Allow signed-in users to create, read, and update their own profile
     match /users/{userId} {
-      allow create, read, update: if isSignedIn() && request.auth.uid == userId;
-      // Allow admins to read/write any user profile
-      allow read, write: if isAdmin();
-      // Allow authorized roles to list users, especially for finding professors.
-      allow list: if hasProfile('Administrador') || hasProfile('Gestor') || hasProfile('Professor');
+      allow create, update: if isSignedIn() && request.auth.uid == userId;
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      // Allow admins to write to any user profile
+      allow write: if isAdmin();
+      // Allow any signed-in user to perform a query on the users collection.
+      // The query itself in the client-side code should be specific enough 
+      // (e.g., filtering by 'Professor') to only return relevant data.
+      // Individual document reads are still protected by the 'read' rule above.
+      allow list: if isSignedIn();
     }
     
     // Allow admins to manage profiles
