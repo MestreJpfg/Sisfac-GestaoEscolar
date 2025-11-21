@@ -33,6 +33,7 @@ export default function UserManager() {
   
   const isAuthorized = useMemo(() => {
     if (isProfileLoading || isProfileDetailsLoading) return undefined;
+    if (currentUserProfile?.profileId === 'Administrador') return true;
     const hasPermission = profileDetails?.permissions?.includes('manage:users') || currentUserProfile?.customPermissions?.includes('manage:users');
     return hasPermission;
   }, [isProfileLoading, isProfileDetailsLoading, currentUserProfile, profileDetails]);

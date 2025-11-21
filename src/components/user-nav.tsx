@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
@@ -29,14 +30,14 @@ export function UserNav() {
       return doc(firestore, 'users', user.uid);
   }, [user, firestore]);
 
-  const { data: userProfile } = useDoc(userDocRef);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc(userDocRef);
 
   const profileDocRef = useMemoFirebase(() => {
     if (!userProfile?.profileId || !firestore) return null;
     return doc(firestore, 'profiles', userProfile.profileId);
   }, [userProfile, firestore]);
 
-  const { data: profileDetails } = useDoc(profileDocRef);
+  const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
 
   const handleLogout = async () => {
     if (auth) {
@@ -44,6 +45,14 @@ export function UserNav() {
     }
     router.push('/login');
   };
+
+  const isAdmin = useMemo(() => userProfile?.profileId === 'Administrador', [userProfile]);
+
+  const canManageUsers = useMemo(() => {
+    if (isProfileLoading || isProfileDetailsLoading) return false;
+    if (isAdmin) return true;
+    return profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
+  }, [isProfileLoading, isProfileDetailsLoading, profileDetails, userProfile, isAdmin]);
 
   if (!user) {
     return null;
@@ -57,8 +66,6 @@ export function UserNav() {
     }
     return name.substring(0, 2).toUpperCase();
   };
-  
-  const canManageUsers = (profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users'));
 
   return (
     <DropdownMenu>

@@ -33,20 +33,25 @@ export default function DashboardPage() {
 
   const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
 
+  const isAdmin = useMemo(() => userProfile?.profileId === 'Administrador', [userProfile]);
+
   const canManageUsers = useMemo(() => {
     if (isProfileLoading || isProfileDetailsLoading) return false;
+    if (isAdmin) return true;
     return profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
-  }, [isProfileLoading, isProfileDetailsLoading, profileDetails, userProfile]);
+  }, [isProfileLoading, isProfileDetailsLoading, profileDetails, userProfile, isAdmin]);
 
   const canManageProfiles = useMemo(() => {
     if (isProfileLoading || isProfileDetailsLoading) return false;
+    if (isAdmin) return true;
     return profileDetails?.permissions?.includes('manage:profiles') || userProfile?.customPermissions?.includes('manage:profiles');
-  }, [isProfileLoading, isProfileDetailsLoading, profileDetails, userProfile]);
+  }, [isProfileLoading, isProfileDetailsLoading, profileDetails, userProfile, isAdmin]);
   
   const canManageClasses = useMemo(() => {
     if (isProfileLoading || isProfileDetailsLoading) return false;
+    if (isAdmin) return true;
     return profileDetails?.permissions?.includes('manage:classes') || userProfile?.customPermissions?.includes('manage:classes');
-  }, [isProfileLoading, isProfileDetailsLoading, profileDetails, userProfile]);
+  }, [isProfileLoading, isProfileDetailsLoading, profileDetails, userProfile, isAdmin]);
 
 
   const studentsQuery = useMemoFirebase(() => {
@@ -55,14 +60,14 @@ export default function DashboardPage() {
   }, [user, firestore]);
 
   const usersQuery = useMemoFirebase(() => {
-    if (!firestore || !canManageUsers) return null; 
+    if (!firestore || !canManageUsers || isProfileLoading) return null; 
     return query(collection(firestore, 'users'));
-  }, [firestore, canManageUsers]);
+  }, [firestore, canManageUsers, isProfileLoading]);
   
   const profilesQuery = useMemoFirebase(() => {
-    if (!firestore || !canManageProfiles) return null;
+    if (!firestore || !canManageProfiles || isProfileLoading) return null;
     return query(collection(firestore, 'profiles'));
-  }, [firestore, canManageProfiles]);
+  }, [firestore, canManageProfiles, isProfileLoading]);
 
   const classesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
