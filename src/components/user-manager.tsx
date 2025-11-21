@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, collection, query, orderBy, getDoc } from 'firebase/firestore';
+import { doc, collection, query, orderBy } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import UserTable from './user-table';
 import { useRouter } from 'next/navigation';
@@ -33,10 +33,21 @@ export default function UserManager() {
   
   const isAuthorized = useMemo(() => {
     if (isProfileLoading || isProfileDetailsLoading) return undefined;
-    if (currentUserProfile?.profileId === 'Administrador') return true;
+    if (!currentUserProfile) return false;
+    
+    // Admin always has access
+    if (currentUserProfile.profileId === 'Administrador') {
+      return true;
+    }
+    // Allow users with 'manage:users' permission or 'Gestor' profile
+    if (currentUserProfile.profileId === 'Gestor') {
+      return true;
+    }
+    
     const hasPermission = profileDetails?.permissions?.includes('manage:users') || currentUserProfile?.customPermissions?.includes('manage:users');
     return hasPermission;
   }, [isProfileLoading, isProfileDetailsLoading, currentUserProfile, profileDetails]);
+
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore || isAuthorized !== true) return null;
