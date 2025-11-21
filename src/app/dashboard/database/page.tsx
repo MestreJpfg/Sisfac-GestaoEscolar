@@ -27,14 +27,14 @@ export default function DatabasePage() {
     }, [user, firestore]);
     const { data: userProfile, isLoading: isProfileLoading } = useDoc(userDocRef);
 
-    const isAdmin = useMemo(() => {
-        if (isUserLoading || isProfileLoading) return false;
-        return userProfile?.profileId === 'Administrador';
-    }, [isUserLoading, isProfileLoading, userProfile]);
-
     const isLoading = isUserLoading || isProfileLoading;
 
-    // This effect handles authorization. If the user is not an admin after loading is complete, redirect them.
+    const isAdmin = useMemo(() => {
+        if (isLoading) return false; // Don't determine admin status until loaded
+        return userProfile?.profileId === 'Administrador';
+    }, [isLoading, userProfile]);
+
+    // This effect handles authorization. It only runs AFTER loading is complete.
     useEffect(() => {
         // Only run check after loading is complete
         if (!isLoading) {
@@ -49,7 +49,8 @@ export default function DatabasePage() {
         }
     }, [isLoading, isAdmin, router, toast]);
 
-    // Show a loader while checking permissions.
+    // While loading, or if not an admin (before redirect effect kicks in), show a loader.
+    // This prevents a flash of content and ensures a smooth loading experience.
     if (isLoading || !isAdmin) {
       return (
         <AuthGuard>
@@ -60,6 +61,7 @@ export default function DatabasePage() {
       );
     }
     
+    // Only render the full page if loading is done AND the user is confirmed to be an admin.
     return (
         <AuthGuard>
             <div className="flex min-h-screen flex-col">
