@@ -21,38 +21,35 @@ export default function UsersPage() {
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    // Directly query the users collection. The authorization logic is now handled
-    // by Firestore Security Rules.
+    // The query will now only run when firestore is available and after AuthGuard has confirmed authentication.
     const usersQuery = useMemo(() => {
         if (!firestore) return null; 
         return query(collection(firestore, 'users'), orderBy('name'));
     }, [firestore]);
 
-    // The useCollection hook will now receive a FirestorePermissionError if the
-    // rules deny the 'list' operation.
     const { data: users, isLoading, error } = useCollection(usersQuery);
 
-    // This effect runs when the 'error' state from useCollection changes.
     useEffect(() => {
+        // This effect now only handles authorization errors returned by the hook,
+        // after AuthGuard has already done its job.
         if (error) {
-            // Firestore rules denied the request. The user is not authorized.
             toast({
                 variant: 'destructive',
                 title: 'Acesso Negado',
                 description: 'Não tem permissão para aceder a esta página.',
             });
-            // Redirect the user back to the dashboard.
             router.replace('/dashboard');
         }
     }, [error, router, toast]);
 
-    // If there is an error, we are about to redirect, so we can show a loader
-    // or nothing to prevent a flash of incorrect content.
-    if (error) {
+    // Show a loader if the user data is still loading or if an error has occurred and we are about to redirect.
+    if (isLoading || error) {
       return (
-        <div className="flex h-screen w-full items-center justify-center">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
+        <AuthGuard>
+          <div className="flex h-screen w-full items-center justify-center">
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          </div>
+        </AuthGuard>
       );
     }
     
@@ -81,15 +78,8 @@ export default function UsersPage() {
 
                 <main className="flex-1 py-8">
                     <div className="container">
-                       {isLoading ? (
-                            <div className="flex h-64 w-full items-center justify-center">
-                                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                            </div>
-                       // If not loading and data is available, show the UserManager.
-                       ) : users ? (
-                            <UserManager initialUsers={users} />
-                       // If not loading and there's no data (and no error), it means the collection is empty.
-                       ) : null}
+                       {/* Since we show a loader above, we can be sure `users` is available here */}
+                       {users && <UserManager initialUsers={users} />}
                     </div>
                 </main>
                 <AppFooter />
