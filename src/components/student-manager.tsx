@@ -1,27 +1,19 @@
+
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import Image from 'next/image';
-import { Loader2, Plus, ArrowLeft } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import { useUser, useFirestore } from '@/firebase';
 import StudentDataView from './student-data-view';
 import { ThemeToggle } from './theme-toggle';
-import ClassListGenerator from './class-list-generator';
-import GradesUploaderSheet from './grades-uploader-sheet';
-import FileUploaderSheet from './file-uploader-sheet';
-import DataExporter from './data-exporter';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Button } from './ui/button';
 import { UserNav } from './user-nav';
 import AppFooter from './app-footer';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import FileUploaderSheet from './file-uploader-sheet';
 
 export default function StudentManager() {
   const { isUserLoading } = useUser();
@@ -84,32 +76,6 @@ export default function StudentManager() {
         </main>
         <AppFooter />
       </div>
-
-      {dataExists && !isPageLoading && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="default" className="rounded-full w-14 h-14 shadow-2xl flex items-center justify-center">
-                <Plus className="h-6 w-6" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="top" className="w-auto p-0 border-none bg-transparent shadow-none mb-2 flex flex-col items-end gap-3">
-              <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-pointer rounded-full">
-                <DataExporter />
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-pointer rounded-full">
-                <ClassListGenerator allStudents={students} />
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-pointer rounded-full">
-                <GradesUploaderSheet />
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0 m-0 focus:bg-transparent cursor-pointer rounded-full">
-                <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      )}
     </>
   );
 }

@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, doc } from 'firebase/firestore';
-import { Loader2, Users, School, UserCog, Shield, AlertTriangle } from 'lucide-react';
+import { Loader2, Users, UserCog, Shield, Database } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -15,7 +15,6 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import AuthGuard from '@/components/auth-guard';
 import AppFooter from '@/components/app-footer';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 export default function DashboardPage() {
@@ -38,17 +37,22 @@ export default function DashboardPage() {
 
   const isPermissionsLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
 
+  const isAdmin = useMemo(() => {
+    if (isPermissionsLoading) return false;
+    return userProfile?.profileId === 'Administrador';
+  }, [isPermissionsLoading, userProfile]);
+
   const canManageUsers = useMemo(() => {
     if (isPermissionsLoading) return false;
-    if (userProfile?.profileId === 'Administrador') return true;
+    if (isAdmin) return true;
     return profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
-  }, [isPermissionsLoading, profileDetails, userProfile]);
+  }, [isPermissionsLoading, profileDetails, userProfile, isAdmin]);
 
   const canManageProfiles = useMemo(() => {
     if (isPermissionsLoading) return false;
-    if (userProfile?.profileId === 'Administrador') return true;
+    if (isAdmin) return true;
     return profileDetails?.permissions?.includes('manage:profiles') || userProfile?.customPermissions?.includes('manage:profiles');
-  }, [isPermissionsLoading, profileDetails, userProfile]);
+  }, [isPermissionsLoading, profileDetails, userProfile, isAdmin]);
   
 
   const studentsQuery = useMemoFirebase(() => {
@@ -127,7 +131,6 @@ export default function DashboardPage() {
                     action={<Button onClick={() => router.push('/dashboard/students')}>Gerir Alunos</Button>}
                     />
                     {canManageUsers && (
-                    <>
                         <StatCard
                         title="Utilizadores"
                         value={isUsersLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (users?.length ?? 0)}
@@ -135,7 +138,6 @@ export default function DashboardPage() {
                         description="Total de contas no sistema"
                         action={<Button onClick={() => router.push('/users')}>Gerir Utilizadores</Button>}
                         />
-                    </>
                     )}
                     {canManageProfiles && (
                         <StatCard
@@ -144,6 +146,15 @@ export default function DashboardPage() {
                         icon={Shield}
                         description="Perfis de acesso no sistema"
                         action={<Button onClick={() => router.push('/profiles')}>Gerir Perfis</Button>}
+                        />
+                    )}
+                    {isAdmin && (
+                        <StatCard
+                        title="Gestão da Base de Dados"
+                        value={"Ferramentas"}
+                        icon={Database}
+                        description="Importar, exportar e gerir dados"
+                        action={<Button onClick={() => router.push('/dashboard/database')}>Aceder</Button>}
                         />
                     )}
                 </div>
