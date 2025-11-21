@@ -36,9 +36,10 @@ service cloud.firestore {
       allow list: if isSignedIn();
     }
     
-    // Allow admins to manage profiles
+    // Allow admins and managers to manage profiles
     match /profiles/{profileId} {
-        allow read, write, list: if isAdmin();
+        allow write: if isAdmin();
+        allow read, list: if hasProfile('Administrador') || hasProfile('Gestor');
     }
 
     // General read access for signed-in users for most collections
