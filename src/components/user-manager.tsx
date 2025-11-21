@@ -49,13 +49,20 @@ export default function UserManager({ initialUsers, allProfiles }: UserManagerPr
   
   const filteredAndSortedUsers = useMemo(() => {
     const searchLower = debouncedSearch.toLowerCase();
-    let filtered = initialUsers.filter(user => {
-      const nameMatch = user.name?.toLowerCase().includes(searchLower);
-      const emailMatch = user.email?.toLowerCase().includes(searchLower);
-      const profileMatch = !filters.profileId || user.profileId === filters.profileId;
-      
-      return (nameMatch || emailMatch) && profileMatch;
-    });
+    
+    let filtered = initialUsers;
+
+    // Apply profile filter first if it exists
+    if (filters.profileId) {
+      filtered = filtered.filter(user => user.profileId === filters.profileId);
+    }
+    
+    // Then apply search filter if it exists
+    if (searchLower) {
+      filtered = filtered.filter(user => 
+        (user.name?.toLowerCase().includes(searchLower) || user.email?.toLowerCase().includes(searchLower))
+      );
+    }
 
     if (sortConfig.key !== null) {
       const profileNameMap = new Map(allProfiles.map(p => [p.id, p.name]));
