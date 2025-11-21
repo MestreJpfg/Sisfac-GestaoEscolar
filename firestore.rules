@@ -10,7 +10,7 @@ service cloud.firestore {
     // Function to get the user's own data from the 'users' collection
     function getUserData() {
       // It's critical to check for auth existence before trying to get data.
-      if (request.auth == null || request.auth.uid == null) {
+      if (!isSignedIn()) {
         return null;
       }
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
@@ -93,8 +93,7 @@ service cloud.firestore {
     }
 
     match /subjects/{subjectId} {
-      allow read, list: if isSignedIn();
-      allow write: if hasPermission('manage:subjects');
+      allow read, write: if hasPermission('manage:subjects');
     }
   }
 }
