@@ -2,11 +2,14 @@
 
 import ClassManager from "@/components/class-manager";
 import AuthGuard from "@/components/auth-guard";
+import ProfileCompletionGuard from "@/components/profile-completion-guard";
 
 export default function ClassesPage() {
   return (
     <AuthGuard>
-      <ClassManager />
+        <ProfileCompletionGuard>
+            <ClassManager />
+        </ProfileCompletionGuard>
     </AuthGuard>
   );
 }

@@ -2,11 +2,14 @@
 
 import ProfileManager from "@/components/profile-manager";
 import AuthGuard from "@/components/auth-guard";
+import ProfileCompletionGuard from "@/components/profile-completion-guard";
 
 export default function ProfilesPage() {
   return (
     <AuthGuard>
-      <ProfileManager />
+        <ProfileCompletionGuard>
+            <ProfileManager />
+        </ProfileCompletionGuard>
     </AuthGuard>
   );
 }

@@ -3,10 +3,11 @@
 
 import { useMemo } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, doc } from 'firebase/firestore';
-import { Loader2, Users, School, UserCog, Shield } from 'lucide-react';
+import { Loader2, Users, School, UserCog, Shield, AlertTriangle } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -14,6 +15,8 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import AuthGuard from '@/components/auth-guard';
 import AppFooter from '@/components/app-footer';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import ProfileCompletionGuard from '@/components/profile-completion-guard';
 
 
 export default function DashboardPage() {
@@ -92,75 +95,90 @@ export default function DashboardPage() {
 
   return (
     <AuthGuard>
-      <div className="flex min-h-screen flex-col">
-        <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
-                <div className="flex items-center gap-2">
-                    <Image src="/logoyuri.png" alt="Logo" width={32} height={32} className="rounded-md" />
-                    <h1 className="text-xl font-bold text-primary hidden sm:block">Gestão Escolar</h1>
+      <ProfileCompletionGuard>
+        <div className="flex min-h-screen flex-col">
+            <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
+                    <div className="flex items-center gap-2">
+                        <Image src="/logoyuri.png" alt="Logo" width={32} height={32} className="rounded-md" />
+                        <h1 className="text-xl font-bold text-primary hidden sm:block">Gestão Escolar</h1>
+                    </div>
+                    <div className="flex flex-1 items-center justify-end space-x-4">
+                        <nav className="flex items-center space-x-1">
+                            <ThemeToggle />
+                            <UserNav />
+                        </nav>
+                    </div>
                 </div>
-                <div className="flex flex-1 items-center justify-end space-x-4">
-                    <nav className="flex items-center space-x-1">
-                        <ThemeToggle />
-                        <UserNav />
-                    </nav>
+            </header>
+
+            <main className="flex-1">
+            <div className="container py-8">
+                {userProfile && !userProfile.profileCompleted && (
+                    <Alert className="mb-8">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertTitle>Complete o seu Perfil</AlertTitle>
+                        <AlertDescription>
+                            Parece que ainda não preencheu todas as suas informações. Por favor, dedique um momento para completar o seu perfil.
+                            <Link href="/profile" className="ml-2">
+                                <Button>Ir para o Perfil</Button>
+                            </Link>
+                        </AlertDescription>
+                    </Alert>
+                )}
+
+                <div className="mb-8">
+                <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Bem-vindo(a), {welcomeName}!</h2>
+                <p className="text-muted-foreground">Aqui está um resumo da sua plataforma.</p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <StatCard
+                    title="Alunos"
+                    value={isStudentsLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (students?.length ?? 0)}
+                    icon={Users}
+                    description="Total de alunos registados"
+                    action={<Button onClick={() => router.push('/dashboard/students')}>Gerir Alunos</Button>}
+                    />
+                    {canManageClasses && (
+                        <StatCard
+                            title="Turmas"
+                            value={isClassesLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (classes?.length ?? 0)}
+                            icon={School}
+                            description="Total de turmas na escola"
+                            action={<Button onClick={() => router.push('/dashboard/classes')}>Gerir Turmas</Button>}
+                        />
+                    )}
+                    {canManageUsers && (
+                    <>
+                        <StatCard
+                        title="Utilizadores"
+                        value={isUsersLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (users?.length ?? 0)}
+                        icon={UserCog}
+                        description="Total de contas no sistema"
+                        action={<Button onClick={() => router.push('/users')}>Gerir Utilizadores</Button>}
+                        />
+                    </>
+                    )}
+                    {canManageProfiles && (
+                        <StatCard
+                        title="Perfis e Permissões"
+                        value={isProfilesLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (profiles?.length ?? 0)}
+                        icon={Shield}
+                        description="Perfis de acesso no sistema"
+                        action={<Button onClick={() => router.push('/profiles')}>Gerir Perfis</Button>}
+                        />
+                    )}
+                </div>
+
+                <div className="mt-8">
+                    {/* Futuro espaço para mais componentes, como anúncios ou calendário */}
                 </div>
             </div>
-        </header>
-
-        <main className="flex-1">
-          <div className="container py-8">
-            <div className="mb-8">
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Bem-vindo(a), {welcomeName}!</h2>
-              <p className="text-muted-foreground">Aqui está um resumo da sua plataforma.</p>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-               <StatCard
-                  title="Alunos"
-                  value={isStudentsLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (students?.length ?? 0)}
-                  icon={Users}
-                  description="Total de alunos registados"
-                  action={<Button onClick={() => router.push('/dashboard/students')}>Gerir Alunos</Button>}
-                />
-                 {canManageClasses && (
-                    <StatCard
-                        title="Turmas"
-                        value={isClassesLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (classes?.length ?? 0)}
-                        icon={School}
-                        description="Total de turmas na escola"
-                        action={<Button onClick={() => router.push('/dashboard/classes')}>Gerir Turmas</Button>}
-                    />
-                 )}
-                 {canManageUsers && (
-                  <>
-                    <StatCard
-                      title="Utilizadores"
-                      value={isUsersLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (users?.length ?? 0)}
-                      icon={UserCog}
-                      description="Total de contas no sistema"
-                      action={<Button onClick={() => router.push('/users')}>Gerir Utilizadores</Button>}
-                    />
-                  </>
-                )}
-                {canManageProfiles && (
-                    <StatCard
-                      title="Perfis e Permissões"
-                      value={isProfilesLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (profiles?.length ?? 0)}
-                      icon={Shield}
-                      description="Perfis de acesso no sistema"
-                      action={<Button onClick={() => router.push('/profiles')}>Gerir Perfis</Button>}
-                    />
-                )}
-            </div>
-
-             <div className="mt-8">
-                {/* Futuro espaço para mais componentes, como anúncios ou calendário */}
-             </div>
-          </div>
-        </main>
-        <AppFooter />
-      </div>
+            </main>
+            <AppFooter />
+        </div>
+      </ProfileCompletionGuard>
     </AuthGuard>
   );
 }
