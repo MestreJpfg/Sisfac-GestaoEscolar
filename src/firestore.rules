@@ -39,7 +39,7 @@ service cloud.firestore {
       }
         
       // Check for the permission in the user's specific custom permissions
-      if (userData.customPermissions != null && userData.customPermissions is list && permission in userData.customPermissions) {
+      if ('customPermissions' in userData && userData.customPermissions is list && permission in userData.customPermissions) {
         return true;
       }
 
@@ -76,7 +76,8 @@ service cloud.firestore {
     match /alunos/{alunoId} {
       // Access to student data is now also protected.
       // Reading/writing requires 'manage:students'. Admins have this by default via hasPermission.
-      allow read, write, list: if hasPermission('manage:students');
+      allow read, write: if hasPermission('manage:students');
+      allow list: if hasPermission('manage:students') || hasPermission('view:students');
     }
   }
 }
