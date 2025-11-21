@@ -40,6 +40,7 @@ export default function DashboardPage() {
   const hasPermission = (permission: string) => {
     if (isPermissionsLoading || !userProfile || !firestore) return false;
     
+    // This logic must stay in sync with the hasPermission function in firestore.rules
     if (userProfile.profileId === 'Administrador' || userProfile.profileId === 'Administrador(a)') {
       return true;
     }
@@ -82,16 +83,19 @@ export default function DashboardPage() {
 
 
   const studentsQuery = useMemoFirebase(() => {
+    // Defer query creation until permissions are confirmed
     if (!firestore || !canViewStudents) return null;
     return query(collection(firestore, 'alunos'));
   }, [firestore, canViewStudents]);
 
   const usersQuery = useMemoFirebase(() => {
+    // Defer query creation until permissions are confirmed
     if (!firestore || !canManageUsers) return null; 
     return query(collection(firestore, 'users'));
   }, [firestore, canManageUsers]);
   
   const profilesQuery = useMemoFirebase(() => {
+    // Defer query creation until permissions are confirmed
     if (!firestore || !canManageProfiles) return null;
     return query(collection(firestore, 'profiles'));
   }, [firestore, canManageProfiles]);
