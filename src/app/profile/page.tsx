@@ -41,8 +41,15 @@ export default function ProfilePage() {
 
     const { data: userProfile } = useDoc(userDocRef);
 
+    const profileDocRef = useMemoFirebase(() => {
+        if (!userProfile?.profileId || !firestore) return null;
+        return doc(firestore, 'profiles', userProfile.profileId);
+    }, [userProfile, firestore]);
+    
+    const { data: profileDetails } = useDoc(profileDocRef);
+
+
     const [displayName, setDisplayName] = useState('');
-    const [profileId, setProfileId] = useState('');
     const [photo, setPhoto] = useState<File | null>(null);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -51,10 +58,7 @@ export default function ProfilePage() {
         if (user) {
             setDisplayName(user.displayName || '');
         }
-        if (userProfile) {
-            setProfileId(userProfile.profileId || '');
-        }
-    }, [user, userProfile]);
+    }, [user]);
     
     const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -127,6 +131,7 @@ export default function ProfilePage() {
     if (!user) return null;
 
     const currentAvatarSrc = photoPreview || user.photoURL;
+    const profileName = profileDetails?.name || userProfile?.profileId || 'Perfil não definido';
 
     return (
         <AuthGuard>
@@ -161,7 +166,7 @@ export default function ProfilePage() {
                             <div>
                                 <CardTitle className="text-2xl">{displayName || 'Utilizador sem nome'}</CardTitle>
                                 <CardDescription>{user.email}</CardDescription>
-                                <CardDescription className="font-semibold">{profileId || 'Perfil não definido'}</CardDescription>
+                                <CardDescription className="font-semibold">{profileName}</CardDescription>
                             </div>
                         </div>
                     </CardHeader>
@@ -180,7 +185,7 @@ export default function ProfilePage() {
                                     <Label htmlFor="profileId">Perfil</Label>
                                     <Input 
                                         id="profileId" 
-                                        value={profileId} 
+                                        value={profileName} 
                                         disabled
                                     />
                                 </div>

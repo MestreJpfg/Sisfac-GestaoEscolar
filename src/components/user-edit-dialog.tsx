@@ -88,23 +88,19 @@ export default function UserEditDialog({ isOpen, onClose, user, onSave }: UserEd
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Perfil</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingProfiles}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione um perfil" />
+                        <SelectValue placeholder={isLoadingProfiles ? "A carregar perfis..." : "Selecione um perfil"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {isLoadingProfiles ? (
-                        <SelectItem value="loading" disabled>A carregar perfis...</SelectItem>
+                      {!isLoadingProfiles && profiles && profiles.length > 0 ? (
+                        profiles.map(profile => (
+                          <SelectItem key={profile.id} value={profile.id}>{profile.name}</SelectItem>
+                        ))
                       ) : (
-                        profiles && profiles.length > 0 ? (
-                            profiles.map(profile => (
-                                <SelectItem key={profile.id} value={profile.id}>{profile.name}</SelectItem>
-                            ))
-                        ) : (
-                            <SelectItem value="no-profiles" disabled>Nenhum perfil encontrado.</SelectItem>
-                        )
+                         !isLoadingProfiles && <SelectItem value="no-profiles" disabled>Nenhum perfil criado</SelectItem>
                       )}
                     </SelectContent>
                   </Select>
