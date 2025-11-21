@@ -38,8 +38,8 @@ export default function DashboardPage() {
   const isPermissionsLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
 
   const isAdmin = useMemo(() => {
-    if (isPermissionsLoading) return false;
-    return userProfile?.profileId === 'Administrador';
+    if (isPermissionsLoading || !userProfile?.profileId) return false;
+    return userProfile.profileId === 'Administrador' || userProfile.profileId === 'Administrador(a)';
   }, [isPermissionsLoading, userProfile]);
 
   const canManageUsers = useMemo(() => {
@@ -57,8 +57,10 @@ export default function DashboardPage() {
 
   const studentsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
+    // Only fetch students if the user has permission to avoid unnecessary reads.
+    if (!isAdmin && !profileDetails?.permissions?.includes('manage:students')) return null;
     return query(collection(firestore, 'alunos'));
-  }, [user, firestore]);
+  }, [user, firestore, isAdmin, profileDetails]);
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore || !canManageUsers) return null; 

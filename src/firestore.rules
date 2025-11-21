@@ -25,20 +25,21 @@ service cloud.firestore {
     // NEW, more robust permission check
     function hasPermission(permission) {
       let userData = getUserData();
-      let userProfile = getUserProfile();
       
-      // The 'Administrador' profile always has all permissions.
-      if (userData.profileId == 'Administrador') {
+      // The 'Administrador' profile always has all permissions. This check is first.
+      if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
         return true;
       }
       
+      let userProfile = getUserProfile();
+      
       // Check for the permission in the profile's permission list
-      if (userProfile != null && 'permissions' in userProfile && userProfile.permissions.hasAny([permission])) {
+      if (userProfile != null && 'permissions' in userProfile && permission in userProfile.permissions) {
         return true;
       }
         
       // Check for the permission in the user's specific custom permissions
-      if (userData.customPermissions != null && userData.customPermissions.hasAny([permission])) {
+      if (userData.customPermissions != null && permission in userData.customPermissions) {
         return true;
       }
 
@@ -48,8 +49,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow create, update: if isSignedIn() && request.auth.uid == userId;
       allow read: if isSignedIn() && (request.auth.uid == userId || hasPermission('manage:users'));
-      allow list: if hasPermission('manage:users');
-      allow write: if hasPermission('manage:users');
+      allow list, write: if hasPermission('manage:users');
     }
     
     match /profiles/{profileId} {
@@ -75,7 +75,7 @@ service cloud.firestore {
 
     match /alunos/{alunoId} {
       // Access to student data is now also protected.
-      // Reading/writing requires either 'manage:students' or being an Admin.
+      // Reading/writing requires 'manage:students'. Admins have this by default via hasPermission.
       allow read, write: if hasPermission('manage:students');
       // Listing all students also requires the same permission.
       allow list: if hasPermission('manage:students');
