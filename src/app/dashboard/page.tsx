@@ -37,21 +37,32 @@ export default function DashboardPage() {
 
   const isPermissionsLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
 
-  const isAdmin = useMemo(() => {
-    if (isPermissionsLoading || !userProfile?.profileId) return false;
-    return userProfile.profileId === 'Administrador' || userProfile.profileId === 'Administrador(a)';
-  }, [isPermissionsLoading, userProfile]);
-
   const hasPermission = (permission: string) => {
-    if (isPermissionsLoading) return false;
-    if (isAdmin) return true;
-    return profileDetails?.permissions?.includes(permission) || userProfile?.customPermissions?.includes(permission);
+    if (isPermissionsLoading || !userProfile || !firestore) return false;
+    
+    // Explicitly check if the user is an admin first
+    if (userProfile.profileId === 'Administrador' || userProfile.profileId === 'Administrador(a)') {
+      return true;
+    }
+    
+    // Then check profile permissions
+    if (profileDetails?.permissions?.includes(permission)) {
+      return true;
+    }
+    
+    // Finally check custom user permissions
+    if (userProfile.customPermissions?.includes(permission)) {
+      return true;
+    }
+
+    return false;
   };
   
-  const canManageUsers = hasPermission('manage:users');
-  const canManageProfiles = hasPermission('manage:profiles');
-  const canManageTeachers = hasPermission('manage:teachers');
-  const canViewStudents = hasPermission('manage:students') || hasPermission('view:students');
+  const canManageUsers = useMemo(() => hasPermission('manage:users'), [isPermissionsLoading, userProfile, profileDetails]);
+  const canManageProfiles = useMemo(() => hasPermission('manage:profiles'), [isPermissionsLoading, userProfile, profileDetails]);
+  const canManageTeachers = useMemo(() => hasPermission('manage:teachers'), [isPermissionsLoading, userProfile, profileDetails]);
+  const canViewStudents = useMemo(() => hasPermission('manage:students') || hasPermission('view:students'), [isPermissionsLoading, userProfile, profileDetails]);
+  const isAdmin = useMemo(() => userProfile?.profileId === 'Administrador' || userProfile?.profileId === 'Administrador(a)', [userProfile]);
 
 
   const studentsQuery = useMemoFirebase(() => {
@@ -143,41 +154,48 @@ export default function DashboardPage() {
                         description="Gerar listas de turmas para impressão"
                         action={<Button onClick={() => router.push('/dashboard/classes')}>Gerir Turmas</Button>}
                         />
-                    {canManageTeachers && (
-                        <StatCard
-                            title="Professores e Disciplinas"
-                            value={"Configurar"}
-                            icon={BookUser}
-                            description="Gerir professores e disciplinas"
-                            action={<Button onClick={() => router.push('/dashboard/teachers')}>Aceder</Button>}
-                        />
-                    )}
-                    {canManageUsers && (
-                        <StatCard
-                        title="Utilizadores"
-                        value={isUsersLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (users?.length ?? 0)}
-                        icon={UserCog}
-                        description="Total de contas no sistema"
-                        action={<Button onClick={() => router.push('/users')}>Gerir Utilizadores</Button>}
-                        />
-                    )}
-                    {canManageProfiles && (
-                        <StatCard
-                        title="Perfis e Permissões"
-                        value={isProfilesLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (profiles?.length ?? 0)}
-                        icon={Shield}
-                        description="Perfis de acesso no sistema"
-                        action={<Button onClick={() => router.push('/profiles')}>Gerir Perfis</Button>}
-                        />
-                    )}
-                    {isAdmin && (
-                        <StatCard
-                        title="Gestão da Base de Dados"
-                        value={"Ferramentas"}
-                        icon={Database}
-                        description="Importar, exportar e gerir dados"
-                        action={<Button onClick={() => router.push('/dashboard/database')}>Aceder</Button>}
-                        />
+                    
+                    {isPermissionsLoading ? (
+                        <StatCard title="..." value={<Loader2 className="h-5 w-5 animate-spin"/>} icon={Users} />
+                    ) : (
+                        <>
+                            {canManageTeachers && (
+                                <StatCard
+                                    title="Professores e Disciplinas"
+                                    value={"Configurar"}
+                                    icon={BookUser}
+                                    description="Gerir professores e disciplinas"
+                                    action={<Button onClick={() => router.push('/dashboard/teachers')}>Aceder</Button>}
+                                />
+                            )}
+                            {canManageUsers && (
+                                <StatCard
+                                title="Utilizadores"
+                                value={isUsersLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (users?.length ?? 0)}
+                                icon={UserCog}
+                                description="Total de contas no sistema"
+                                action={<Button onClick={() => router.push('/users')}>Gerir Utilizadores</Button>}
+                                />
+                            )}
+                            {canManageProfiles && (
+                                <StatCard
+                                title="Perfis e Permissões"
+                                value={isProfilesLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (profiles?.length ?? 0)}
+                                icon={Shield}
+                                description="Perfis de acesso no sistema"
+                                action={<Button onClick={() => router.push('/profiles')}>Gerir Perfis</Button>}
+                                />
+                            )}
+                            {isAdmin && (
+                                <StatCard
+                                title="Gestão da Base de Dados"
+                                value={"Ferramentas"}
+                                icon={Database}
+                                description="Importar, exportar e gerir dados"
+                                action={<Button onClick={() => router.push('/dashboard/database')}>Aceder</Button>}
+                                />
+                            )}
+                        </>
                     )}
                 </div>
 
