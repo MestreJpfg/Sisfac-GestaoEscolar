@@ -33,22 +33,27 @@ export default function DashboardPage() {
 
   const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
 
-  const isAdmin = useMemo(() => userProfile?.profileId === 'Administrador', [userProfile]);
+  const isLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
+  
+  const isAdmin = useMemo(() => {
+      if (isLoading) return undefined;
+      return userProfile?.profileId === 'Administrador';
+  }, [isLoading, userProfile]);
 
   const canManageUsers = useMemo(() => {
-    if (isProfileLoading || isProfileDetailsLoading) return false;
+    if (isLoading) return undefined;
     return isAdmin || profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
-  }, [isProfileLoading, isProfileDetailsLoading, profileDetails, userProfile, isAdmin]);
+  }, [isLoading, profileDetails, userProfile, isAdmin]);
 
   const canManageProfiles = useMemo(() => {
-    if (isProfileLoading || isProfileDetailsLoading) return false;
+    if (isLoading) return undefined;
     return isAdmin || profileDetails?.permissions?.includes('manage:profiles') || userProfile?.customPermissions?.includes('manage:profiles');
-  }, [isProfileLoading, isProfileDetailsLoading, profileDetails, userProfile, isAdmin]);
+  }, [isLoading, profileDetails, userProfile, isAdmin]);
   
   const canManageClasses = useMemo(() => {
-    if (isProfileLoading || isProfileDetailsLoading) return false;
+    if (isLoading) return undefined;
     return isAdmin || profileDetails?.permissions?.includes('manage:classes') || userProfile?.customPermissions?.includes('manage:classes');
-  }, [isProfileLoading, isProfileDetailsLoading, profileDetails, userProfile, isAdmin]);
+  }, [isLoading, profileDetails, userProfile, isAdmin]);
 
 
   const studentsQuery = useMemoFirebase(() => {
@@ -76,7 +81,6 @@ export default function DashboardPage() {
   const { data: profiles, isLoading: isProfilesLoading } = useCollection(profilesQuery);
   const { data: classes, isLoading: isClassesLoading } = useCollection(classesQuery);
 
-  const isLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
   const welcomeName = user?.displayName?.split(' ')[0] || 'Utilizador';
 
   if (isLoading) {

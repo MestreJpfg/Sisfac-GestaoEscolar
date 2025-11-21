@@ -31,8 +31,10 @@ export default function UserManager() {
 
   const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
   
+  const isAuthorizationLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
+
   const isAuthorized = useMemo(() => {
-    if (isProfileLoading || isProfileDetailsLoading) return undefined; 
+    if (isAuthorizationLoading) return undefined;
     if (!currentUserProfile) return false;
     
     if (currentUserProfile.profileId === 'Administrador') {
@@ -41,15 +43,8 @@ export default function UserManager() {
     
     const hasPermission = profileDetails?.permissions?.includes('manage:users') || currentUserProfile?.customPermissions?.includes('manage:users');
     return hasPermission;
-  }, [isProfileLoading, isProfileDetailsLoading, currentUserProfile, profileDetails]);
+  }, [isAuthorizationLoading, currentUserProfile, profileDetails]);
 
-
-  const usersQuery = useMemoFirebase(() => {
-    if (isAuthorized !== true) return null;
-    return query(collection(firestore, 'users'), orderBy('name'));
-  }, [firestore, isAuthorized]);
-
-  const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
 
   useEffect(() => {
     if (isAuthorized === false) {
@@ -61,6 +56,13 @@ export default function UserManager() {
         router.replace('/dashboard');
     }
   }, [isAuthorized, router, toast]);
+
+  const usersQuery = useMemoFirebase(() => {
+    if (isAuthorized !== true) return null;
+    return query(collection(firestore, 'users'), orderBy('name'));
+  }, [firestore, isAuthorized]);
+
+  const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
 
   const handleEditUser = (user: any) => {
     setEditingUser(user);
@@ -84,7 +86,7 @@ export default function UserManager() {
     handleCloseDialog();
   };
 
-  const isLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading || isAuthorized === undefined || (isAuthorized && isUsersLoading);
+  const isLoading = isAuthorizationLoading || isAuthorized === undefined || (isAuthorized && isUsersLoading);
 
   if (isLoading) {
     return (

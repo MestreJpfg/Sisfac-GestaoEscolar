@@ -46,12 +46,17 @@ export function UserNav() {
     router.push('/login');
   };
 
-  const isAdmin = useMemo(() => userProfile?.profileId === 'Administrador', [userProfile]);
+  const isLoading = isProfileLoading || isProfileDetailsLoading;
+
+  const isAdmin = useMemo(() => {
+      if (isLoading) return undefined;
+      return userProfile?.profileId === 'Administrador';
+  }, [isLoading, userProfile]);
 
   const canManageUsers = useMemo(() => {
-    if (isProfileLoading || isProfileDetailsLoading) return false;
+    if (isLoading) return undefined;
     return isAdmin || profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
-  }, [isProfileLoading, isProfileDetailsLoading, profileDetails, userProfile, isAdmin]);
+  }, [isLoading, profileDetails, userProfile, isAdmin]);
 
   if (!user) {
     return null;
