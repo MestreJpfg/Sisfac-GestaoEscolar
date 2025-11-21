@@ -22,7 +22,7 @@ export default function UsersPage() {
     const router = useRouter();
     const firestore = useFirestore();
     const { toast } = useToast();
-    const { user } = useUser();
+    const { user, isUserLoading: isAuthLoading } = useUser();
 
     // 1. Get current user's profile
     const userDocRef = useMemoFirebase(() => {
@@ -42,7 +42,10 @@ export default function UsersPage() {
     const canManageUsers = useMemo(() => {
         if (isProfileLoading || isProfileDetailsLoading) return false;
         if (userProfile?.profileId === 'Administrador') return true;
-        return profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
+        // Ensure permissions arrays exist before checking
+        const profilePermissions = profileDetails?.permissions || [];
+        const userPermissions = userProfile?.customPermissions || [];
+        return profilePermissions.includes('manage:users') || userPermissions.includes('manage:users');
     }, [isProfileLoading, isProfileDetailsLoading, userProfile, profileDetails]);
 
 
@@ -61,31 +64,27 @@ export default function UsersPage() {
     const { data: profiles, isLoading: isLoadingProfiles, error: profilesError } = useCollection(profilesQuery);
 
     const error = usersError || profilesError;
-    const isLoading = isProfileLoading || isProfileDetailsLoading || isLoadingUsers || isLoadingProfiles;
+    const isLoading = isAuthLoading || isProfileLoading || isProfileDetailsLoading || isLoadingUsers || isLoadingProfiles;
+    const hasFinishedFirstLoad = !isAuthLoading && !isProfileLoading && !isProfileDetailsLoading;
 
-    // Redirect if there's a permission error
+    // Redirect if there's a permission error or if auth has loaded and user is not permitted
     useEffect(() => {
         if (error) {
             toast({
                 variant: 'destructive',
                 title: 'Acesso Negado',
-                description: 'Não tem permissão para aceder a esta página.',
+                description: 'Ocorreu um erro de permissão ao carregar os dados.',
             });
             router.replace('/dashboard');
-        }
-    }, [error, router, toast]);
-    
-    // Redirect if permission check finishes and user is not allowed
-    useEffect(() => {
-        if (!isProfileLoading && !isProfileDetailsLoading && !canManageUsers) {
-             toast({
+        } else if (hasFinishedFirstLoad && !canManageUsers) {
+            toast({
                 variant: 'destructive',
                 title: 'Acesso Negado',
                 description: 'Não tem permissão para gerir utilizadores.',
             });
             router.replace('/dashboard');
         }
-    }, [isProfileLoading, isProfileDetailsLoading, canManageUsers, router, toast]);
+    }, [error, hasFinishedFirstLoad, canManageUsers, router, toast]);
 
     if (isLoading || !canManageUsers) {
       return (

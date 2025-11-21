@@ -9,14 +9,12 @@ service cloud.firestore {
 
     // Function to get the user's own data from the 'users' collection
     function getUserData() {
-      // CORRECT: Use a full path with the database variable
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
     // Function to get the complete profile data based on the user's profileId
     function getUserProfile() {
       let userData = getUserData();
-      // CORRECT: Use a full path with the database variable
       return get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
     }
     
@@ -26,11 +24,21 @@ service cloud.firestore {
       let userProfile = getUserProfile();
       
       // The 'Administrador' profile always has all permissions.
-      return userData.profileId == 'Administrador'
-        // Check for the permission in the profile's permission list
-        || permission in userProfile.permissions
-        // Check for the permission in the user's specific custom permissions
-        || (userData.customPermissions != null && permission in userData.customPermissions);
+      if (userData.profileId == 'Administrador') {
+        return true;
+      }
+      
+      // Check for the permission in the profile's permission list
+      if (permission in userProfile.permissions) {
+        return true;
+      }
+        
+      // Check for the permission in the user's specific custom permissions
+      if (userData.customPermissions != null && permission in userData.customPermissions) {
+        return true;
+      }
+
+      return false;
     }
 
     match /users/{userId} {
