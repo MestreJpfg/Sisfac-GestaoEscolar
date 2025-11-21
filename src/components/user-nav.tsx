@@ -48,11 +48,12 @@ export function UserNav() {
   };
 
   const isPermissionsLoading = isProfileLoading || isProfileDetailsLoading;
+  const isAdmin = useMemo(() => !isPermissionsLoading && userProfile?.profileId === 'Administrador', [isPermissionsLoading, userProfile]);
 
   const canManageUsers = useMemo(() => {
     if (isPermissionsLoading) return false;
-    return profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
-  }, [isPermissionsLoading, profileDetails, userProfile]);
+    return isAdmin || profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
+  }, [isPermissionsLoading, profileDetails, userProfile, isAdmin]);
 
   if (!user) {
     return null;

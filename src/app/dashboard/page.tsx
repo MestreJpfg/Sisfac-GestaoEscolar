@@ -35,21 +35,22 @@ export default function DashboardPage() {
   const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
 
   const isPermissionsLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
+  const isAdmin = useMemo(() => !isPermissionsLoading && userProfile?.profileId === 'Administrador', [isPermissionsLoading, userProfile]);
   
   const canManageUsers = useMemo(() => {
     if (isPermissionsLoading) return false;
-    return profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
-  }, [isPermissionsLoading, profileDetails, userProfile]);
+    return isAdmin || profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
+  }, [isPermissionsLoading, profileDetails, userProfile, isAdmin]);
 
   const canManageProfiles = useMemo(() => {
     if (isPermissionsLoading) return false;
-    return profileDetails?.permissions?.includes('manage:profiles') || userProfile?.customPermissions?.includes('manage:profiles');
-  }, [isPermissionsLoading, profileDetails, userProfile]);
+    return isAdmin || profileDetails?.permissions?.includes('manage:profiles') || userProfile?.customPermissions?.includes('manage:profiles');
+  }, [isPermissionsLoading, profileDetails, userProfile, isAdmin]);
   
   const canManageClasses = useMemo(() => {
     if (isPermissionsLoading) return false;
-    return profileDetails?.permissions?.includes('manage:classes') || userProfile?.customPermissions?.includes('manage:classes');
-  }, [isPermissionsLoading, profileDetails, userProfile]);
+    return isAdmin || profileDetails?.permissions?.includes('manage:classes') || userProfile?.customPermissions?.includes('manage:classes');
+  }, [isPermissionsLoading, profileDetails, userProfile, isAdmin]);
 
 
   const studentsQuery = useMemoFirebase(() => {
