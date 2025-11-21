@@ -78,11 +78,11 @@ export default function StudentTable({ students, isLoading, onRowClick, onReport
             <TableHeader>
               <TableRow>
                 <SortableHeader sortKey="nome">Nome</SortableHeader>
-                <SortableHeader sortKey="serie" className="text-center">Série</SortableHeader>
-                <SortableHeader sortKey="classe" className="text-center">Classe</SortableHeader>
-                <SortableHeader sortKey="turno" className="text-center">Turno</SortableHeader>
+                <SortableHeader sortKey="serie" className="hidden sm:table-cell text-center">Série</SortableHeader>
+                <SortableHeader sortKey="classe" className="hidden md:table-cell text-center">Classe</SortableHeader>
+                <SortableHeader sortKey="turno" className="hidden lg:table-cell text-center">Turno</SortableHeader>
                 <TableHead className="text-center">Boletim</TableHead>
-                <SortableHeader sortKey="rm" className="text-center">RM</SortableHeader>
+                <SortableHeader sortKey="rm" className="hidden lg:table-cell text-center">RM</SortableHeader>
                 <SortableHeader sortKey="nee" className="text-center">NEE</SortableHeader>
               </TableRow>
             </TableHeader>
@@ -92,9 +92,9 @@ export default function StudentTable({ students, isLoading, onRowClick, onReport
                 return (
                   <TableRow key={student.id} onClick={() => onRowClick(student)} className="cursor-pointer hover:bg-muted/50">
                     <TableCell className="font-medium text-left whitespace-nowrap">{student.nome || <span className="text-muted-foreground italic">Sem nome</span>}</TableCell>
-                    <TableCell className="text-center whitespace-nowrap">{student.serie}</TableCell>
-                    <TableCell className="text-center whitespace-nowrap">{student.classe}</TableCell>
-                    <TableCell className="text-center whitespace-nowrap">{student.turno}</TableCell>
+                    <TableCell className="text-center whitespace-nowrap hidden sm:table-cell">{student.serie}</TableCell>
+                    <TableCell className="text-center whitespace-nowrap hidden md:table-cell">{student.classe}</TableCell>
+                    <TableCell className="text-center whitespace-nowrap hidden lg:table-cell">{student.turno}</TableCell>
                     <TableCell className="text-center">
                        <Button 
                           variant="ghost" 
@@ -106,7 +106,7 @@ export default function StudentTable({ students, isLoading, onRowClick, onReport
                           <BookCheck className="h-4 w-4" />
                        </Button>
                     </TableCell>
-                    <TableCell className="text-center whitespace-nowrap">{student.rm}</TableCell>
+                    <TableCell className="text-center whitespace-nowrap hidden lg:table-cell">{student.rm}</TableCell>
                     <TableCell className="text-center whitespace-nowrap">
                       {student.nee ? <Badge variant="destructive">SIM</Badge> : <Badge variant="secondary">NÃO</Badge>}
                     </TableCell>

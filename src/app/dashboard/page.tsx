@@ -35,22 +35,24 @@ export default function DashboardPage() {
   const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
 
   const isPermissionsLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
-  const isAdmin = useMemo(() => !isPermissionsLoading && userProfile?.profileId === 'Administrador', [isPermissionsLoading, userProfile]);
-  
+
   const canManageUsers = useMemo(() => {
     if (isPermissionsLoading) return false;
-    return isAdmin || profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
-  }, [isPermissionsLoading, profileDetails, userProfile, isAdmin]);
+    if (userProfile?.profileId === 'Administrador') return true;
+    return profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
+  }, [isPermissionsLoading, profileDetails, userProfile]);
 
   const canManageProfiles = useMemo(() => {
     if (isPermissionsLoading) return false;
-    return isAdmin || profileDetails?.permissions?.includes('manage:profiles') || userProfile?.customPermissions?.includes('manage:profiles');
-  }, [isPermissionsLoading, profileDetails, userProfile, isAdmin]);
+    if (userProfile?.profileId === 'Administrador') return true;
+    return profileDetails?.permissions?.includes('manage:profiles') || userProfile?.customPermissions?.includes('manage:profiles');
+  }, [isPermissionsLoading, profileDetails, userProfile]);
   
   const canManageClasses = useMemo(() => {
     if (isPermissionsLoading) return false;
-    return isAdmin || profileDetails?.permissions?.includes('manage:classes') || userProfile?.customPermissions?.includes('manage:classes');
-  }, [isPermissionsLoading, profileDetails, userProfile, isAdmin]);
+    if (userProfile?.profileId === 'Administrador') return true;
+    return profileDetails?.permissions?.includes('manage:classes') || userProfile?.customPermissions?.includes('manage:classes');
+  }, [isPermissionsLoading, profileDetails, userProfile]);
 
 
   const studentsQuery = useMemoFirebase(() => {
@@ -109,7 +111,7 @@ export default function DashboardPage() {
         <main className="flex-1">
           <div className="container py-8">
             <div className="mb-8">
-              <h2 className="text-3xl font-bold tracking-tight">Bem-vindo(a) de volta, {welcomeName}!</h2>
+              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Bem-vindo(a), {welcomeName}!</h2>
               <p className="text-muted-foreground">Aqui está um resumo da sua plataforma.</p>
             </div>
 

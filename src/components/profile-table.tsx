@@ -42,7 +42,7 @@ export default function ProfileTable({ profiles, onEdit, onDelete }: ProfileTabl
             <TableHeader>
               <TableRow>
                 <TableHead>Nome do Perfil</TableHead>
-                <TableHead>Descrição</TableHead>
+                <TableHead className="hidden md:table-cell">Descrição</TableHead>
                 <TableHead>Permissões</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -56,9 +56,9 @@ export default function ProfileTable({ profiles, onEdit, onDelete }: ProfileTabl
                         <span>{profile.name}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-muted-foreground">{profile.description}</TableCell>
+                  <TableCell className="whitespace-nowrap text-muted-foreground hidden md:table-cell">{profile.description}</TableCell>
                    <TableCell className="whitespace-nowrap">
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-1 max-w-xs">
                             {profile.permissions?.map((perm: string) => (
                                 <Badge key={perm} variant="secondary">{perm.split(':')[1]}</Badge>
                             )) || <span className="text-xs text-muted-foreground">Nenhuma</span>}

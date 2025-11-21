@@ -94,7 +94,7 @@ export default function SignupPage() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md mx-auto">
         <CardHeader className="text-center">
           <Image src="/logoyuri.png" alt="Logo" width={100} height={100} className="mx-auto mb-4 rounded-md" />
           <CardTitle>Crie a sua Conta</CardTitle>

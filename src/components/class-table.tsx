@@ -49,8 +49,8 @@ export default function ClassTable({ classes, onEdit, onDelete, isAuthorized }: 
             <TableHeader>
               <TableRow>
                 <TableHead>Nome da Turma</TableHead>
-                <TableHead>Professor(a) Responsável</TableHead>
-                <TableHead>Nº de Alunos</TableHead>
+                <TableHead className="hidden md:table-cell">Professor(a) Responsável</TableHead>
+                <TableHead className="hidden sm:table-cell text-center">Nº de Alunos</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -67,8 +67,8 @@ export default function ClassTable({ classes, onEdit, onDelete, isAuthorized }: 
                         <span>{cls.name}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-muted-foreground">{cls.teacherName || "Não definido"}</TableCell>
-                   <TableCell className="whitespace-nowrap text-muted-foreground">
+                  <TableCell className="whitespace-nowrap text-muted-foreground hidden md:table-cell">{cls.teacherName || "Não definido"}</TableCell>
+                   <TableCell className="whitespace-nowrap text-muted-foreground hidden sm:table-cell text-center">
                         {cls.studentIds?.length || 0}
                    </TableCell>
                   <TableCell className="text-right">
