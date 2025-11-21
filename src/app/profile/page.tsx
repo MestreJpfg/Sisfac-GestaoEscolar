@@ -5,10 +5,10 @@ import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useUser, useAuth, useFirestore, useStorage, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useAuth, useFirestore, useStorage, useDoc, useMemoFirebase } from '@/firebase';
 import { updateProfile } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { doc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import AuthGuard from '@/components/auth-guard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -358,3 +358,5 @@ export default function ProfilePage() {
         </AuthGuard>
     );
 }
+
+    
