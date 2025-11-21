@@ -4,8 +4,8 @@
 import { useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useFirestore, useUser } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import UserManager from "@/components/user-manager";
 import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -18,43 +18,75 @@ import { useCollection } from '@/firebase/firestore/use-collection';
 
 export default function UsersPage() {
     const router = useRouter();
+    const { user, isUserLoading } = useUser();
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    // The useCollection hook now respects security rules correctly.
-    // We attempt to fetch the data directly.
-    const usersQuery = useMemo(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, 'users'), orderBy('name'));
-    }, [firestore]);
+    // 1. Get the current user's profile
+    const userDocRef = useMemoFirebase(() => {
+        if (!user || !firestore) return null;
+        return doc(firestore, 'users', user.uid);
+    }, [user, firestore]);
+    const { data: userProfile, isLoading: isProfileLoading } = useDoc(userDocRef);
     
-    const profilesQuery = useMemo(() => {
-        if (!firestore) return null;
+    // 2. Get the details of that user's role/profile
+    const profileDocRef = useMemoFirebase(() => {
+        if (!userProfile?.profileId || !firestore) return null;
+        return doc(firestore, 'profiles', userProfile.profileId);
+      }, [userProfile, firestore]);
+    const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
+
+    const isPermissionsLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
+
+    // 3. Determine if the user has permission, only after all data is loaded
+    const canManageUsers = useMemo(() => {
+        if (isPermissionsLoading) return false;
+        if (userProfile?.profileId === 'Administrador' || userProfile?.profileId === 'Administrador(a)') return true;
+        return profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
+    }, [isPermissionsLoading, profileDetails, userProfile]);
+
+    const hasFinishedFirstLoad = !isPermissionsLoading;
+
+    // 4. Only create queries if user has permission.
+    const usersQuery = useMemoFirebase(() => {
+        // Wait for permission check and ensure user can manage users
+        if (!hasFinishedFirstLoad || !canManageUsers || !firestore) return null;
+        return query(collection(firestore, 'users'), orderBy('name'));
+    }, [hasFinishedFirstLoad, canManageUsers, firestore]);
+    
+    const profilesQuery = useMemoFirebase(() => {
+        if (!hasFinishedFirstLoad || !canManageUsers || !firestore) return null;
         return query(collection(firestore, 'profiles'), orderBy('name'));
-    }, [firestore]);
+    }, [hasFinishedFirstLoad, canManageUsers, firestore]);
 
     const { data: users, isLoading: isLoadingUsers, error: usersError } = useCollection(usersQuery);
     const { data: profiles, isLoading: isLoadingProfiles, error: profilesError } = useCollection(profilesQuery);
 
-    const isLoading = isLoadingUsers || isLoadingProfiles;
+    const isLoading = isPermissionsLoading || isLoadingUsers || isLoadingProfiles;
     const error = usersError || profilesError;
     
-    // This effect now ONLY runs if an error is explicitly caught by the hook.
-    // This prevents premature redirection.
+    // 5. This effect runs only after loading is complete or if an error is caught.
     useEffect(() => {
-        if (error) {
-            console.error("Firestore Permission Error:", error.message);
+        if (hasFinishedFirstLoad && !canManageUsers) {
             toast({
                 variant: 'destructive',
                 title: 'Acesso Negado',
                 description: 'Não tem permissão para visualizar esta página.',
             });
             router.replace('/dashboard');
+        } else if (error) {
+            console.error("Firestore Permission Error:", error.message);
+            toast({
+                variant: 'destructive',
+                title: 'Erro de Permissão',
+                description: 'Não foi possível carregar os dados necessários. Verifique as suas permissões.',
+            });
+            router.replace('/dashboard');
         }
-    }, [error, router, toast]);
+    }, [hasFinishedFirstLoad, canManageUsers, error, router, toast]);
 
-    // Show a loader while data is loading or if an error has occurred and we are about to redirect.
-    if (isLoading || error) {
+    // Show a loader while checking permissions or loading data.
+    if (isLoading || !hasFinishedFirstLoad || (hasFinishedFirstLoad && !canManageUsers)) {
       return (
         <AuthGuard>
             <div className="flex h-screen w-full items-center justify-center">
@@ -64,6 +96,7 @@ export default function UsersPage() {
       );
     }
     
+    // 6. Render the page only when all checks have passed and data is available.
     return (
         <AuthGuard>
             <div className="flex min-h-screen flex-col">
@@ -89,7 +122,6 @@ export default function UsersPage() {
 
                 <main className="flex-1 py-8">
                     <div className="container">
-                        {/* Render only when data is ready and there was no error */}
                         {users && profiles && <UserManager initialUsers={users} allProfiles={profiles} />}
                     </div>
                 </main>
