@@ -51,7 +51,8 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.auth.uid == userId;
       allow read: if isSignedIn() && (request.auth.uid == userId || hasPermission('manage:users') || hasPermission('manage:teachers'));
       allow update: if isSignedIn() && (request.auth.uid == userId || hasPermission('manage:teachers'));
-      allow list, write: if hasPermission('manage:users');
+      allow list: if hasPermission('manage:users') || hasPermission('manage:teachers');
+      allow write: if hasPermission('manage:users');
     }
     
     match /profiles/{profileId} {
