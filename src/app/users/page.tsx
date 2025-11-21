@@ -21,17 +21,25 @@ export default function UsersPage() {
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    // The query will now only run when firestore is available and after AuthGuard has confirmed authentication.
+    // Query for users
     const usersQuery = useMemo(() => {
         if (!firestore) return null; 
         return query(collection(firestore, 'users'), orderBy('name'));
     }, [firestore]);
+    
+    // Query for profiles to map IDs to names
+    const profilesQuery = useMemo(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'profiles'), orderBy('name'));
+    }, [firestore]);
 
-    const { data: users, isLoading, error } = useCollection(usersQuery);
+    const { data: users, isLoading: isLoadingUsers, error: usersError } = useCollection(usersQuery);
+    const { data: profiles, isLoading: isLoadingProfiles, error: profilesError } = useCollection(profilesQuery);
+
+    const error = usersError || profilesError;
+    const isLoading = isLoadingUsers || isLoadingProfiles;
 
     useEffect(() => {
-        // This effect now only handles authorization errors returned by the hook,
-        // after AuthGuard has already done its job.
         if (error) {
             toast({
                 variant: 'destructive',
@@ -42,7 +50,6 @@ export default function UsersPage() {
         }
     }, [error, router, toast]);
 
-    // Show a loader if the user data is still loading or if an error has occurred and we are about to redirect.
     if (isLoading || error) {
       return (
         <AuthGuard>
@@ -78,8 +85,7 @@ export default function UsersPage() {
 
                 <main className="flex-1 py-8">
                     <div className="container">
-                       {/* Since we show a loader above, we can be sure `users` is available here */}
-                       {users && <UserManager initialUsers={users} />}
+                       {users && profiles && <UserManager initialUsers={users} allProfiles={profiles} />}
                     </div>
                 </main>
                 <AppFooter />

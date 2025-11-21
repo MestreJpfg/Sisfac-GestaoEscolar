@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -8,10 +9,12 @@ import UserTable from './user-table';
 import UserEditDialog from './user-edit-dialog';
 import { useToast } from '@/hooks/use-toast';
 
-// This component is now simplified. It receives the initial list of users
-// and is only responsible for displaying them and handling edit interactions.
-// The authorization and data fetching are handled by the parent page.
-export default function UserManager({ initialUsers }: { initialUsers: any[] }) {
+interface UserManagerProps {
+  initialUsers: any[];
+  allProfiles: any[];
+}
+
+export default function UserManager({ initialUsers, allProfiles }: UserManagerProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   
@@ -42,7 +45,8 @@ export default function UserManager({ initialUsers }: { initialUsers: any[] }) {
   return (
     <>
       <UserTable 
-        users={initialUsers} 
+        users={initialUsers}
+        profiles={allProfiles}
         onEdit={handleEditUser} 
       />
 

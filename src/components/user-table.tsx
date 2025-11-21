@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -18,6 +19,7 @@ import { Badge } from "./ui/badge";
 
 interface UserTableProps {
   users: any[];
+  profiles: any[];
   onEdit: (user: any) => void;
 }
 
@@ -30,7 +32,7 @@ const getInitials = (name: string | null | undefined) => {
     return name.substring(0, 2).toUpperCase();
 };
 
-export default function UserTable({ users, onEdit }: UserTableProps) {
+export default function UserTable({ users, profiles, onEdit }: UserTableProps) {
   if (users.length === 0) {
     return (
       <Card>
@@ -55,8 +57,8 @@ export default function UserTable({ users, onEdit }: UserTableProps) {
     }
   };
 
-  const getProfileBadgeVariant = (profileId: string) : "default" | "secondary" | "destructive" | "outline" => {
-    switch (profileId) {
+  const getProfileBadgeVariant = (profileName: string | undefined) : "default" | "secondary" | "destructive" | "outline" => {
+    switch (profileName) {
         case 'Administrador':
             return 'destructive';
         case 'Gestor':
@@ -68,6 +70,11 @@ export default function UserTable({ users, onEdit }: UserTableProps) {
     }
   }
 
+  const findProfileName = (profileId: string) => {
+    const profile = profiles.find(p => p.id === profileId);
+    return profile ? profile.name : profileId;
+  };
+
   return (
     <Card>
       <CardContent className="p-0">
@@ -76,40 +83,43 @@ export default function UserTable({ users, onEdit }: UserTableProps) {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>Email</TableHead>
+                <TableHead className="hidden md:table-cell">Email</TableHead>
                 <TableHead>Perfil</TableHead>
-                <TableHead>Data de Criação</TableHead>
+                <TableHead className="hidden lg:table-cell">Data de Criação</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.uid}>
-                  <TableCell className="font-medium whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                        <Avatar className="h-9 w-9">
-                            <AvatarImage src={user.photoURL} alt={user.name} />
-                            <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                        </Avatar>
-                        <span>{user.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap text-muted-foreground">{user.email}</TableCell>
-                   <TableCell className="whitespace-nowrap">
-                    {user.profileId ? (
-                        <Badge variant={getProfileBadgeVariant(user.profileId)}>{user.profileId}</Badge>
-                    ) : (
-                        <span className="text-muted-foreground text-xs">N/A</span>
-                    )}
-                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-muted-foreground">{formatDate(user.createdAt)}</TableCell>
-                  <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => onEdit(user)}>
-                          <Edit className="h-4 w-4" />
-                      </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {users.map((user) => {
+                const profileName = findProfileName(user.profileId);
+                return (
+                    <TableRow key={user.uid}>
+                    <TableCell className="font-medium whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9">
+                                <AvatarImage src={user.photoURL} alt={user.name} />
+                                <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                            </Avatar>
+                            <span>{user.name}</span>
+                        </div>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-muted-foreground hidden md:table-cell">{user.email}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                        {profileName ? (
+                            <Badge variant={getProfileBadgeVariant(profileName)}>{profileName}</Badge>
+                        ) : (
+                            <span className="text-muted-foreground text-xs">N/A</span>
+                        )}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-muted-foreground hidden lg:table-cell">{formatDate(user.createdAt)}</TableCell>
+                    <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => onEdit(user)}>
+                            <Edit className="h-4 w-4" />
+                        </Button>
+                    </TableCell>
+                    </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
