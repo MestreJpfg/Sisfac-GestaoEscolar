@@ -4,7 +4,7 @@
 import { useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useFirestore, useMemoFirebase } from '@/firebase';
+import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import UserManager from "@/components/user-manager";
 import AuthGuard from "@/components/auth-guard";
@@ -15,19 +15,43 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection } from '@/firebase/firestore/use-collection';
+import { doc } from 'firebase/firestore';
+
 
 export default function UsersPage() {
     const router = useRouter();
     const firestore = useFirestore();
     const { toast } = useToast();
+    const { user } = useUser();
 
-    // Query for users
+    // 1. Get current user's profile
+    const userDocRef = useMemoFirebase(() => {
+        if (!user || !firestore) return null;
+        return doc(firestore, 'users', user.uid);
+    }, [user, firestore]);
+    const { data: userProfile, isLoading: isProfileLoading } = useDoc(userDocRef);
+
+    // 2. Get the details of that profile (for permissions)
+    const profileDocRef = useMemoFirebase(() => {
+        if (!userProfile?.profileId || !firestore) return null;
+        return doc(firestore, 'profiles', userProfile.profileId);
+    }, [userProfile, firestore]);
+    const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
+
+    // 3. Determine if the user has permission
+    const canManageUsers = useMemo(() => {
+        if (isProfileLoading || isProfileDetailsLoading) return false;
+        if (userProfile?.profileId === 'Administrador') return true;
+        return profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
+    }, [isProfileLoading, isProfileDetailsLoading, userProfile, profileDetails]);
+
+
+    // 4. Only create the query if the user has permission
     const usersQuery = useMemoFirebase(() => {
-        if (!firestore) return null; 
+        if (!firestore || !canManageUsers) return null; 
         return query(collection(firestore, 'users'), orderBy('name'));
-    }, [firestore]);
+    }, [firestore, canManageUsers]);
     
-    // Query for profiles to map IDs to names
     const profilesQuery = useMemoFirebase(() => {
         if (!firestore) return null;
         return query(collection(firestore, 'profiles'), orderBy('name'));
@@ -37,8 +61,9 @@ export default function UsersPage() {
     const { data: profiles, isLoading: isLoadingProfiles, error: profilesError } = useCollection(profilesQuery);
 
     const error = usersError || profilesError;
-    const isLoading = isLoadingUsers || isLoadingProfiles;
+    const isLoading = isProfileLoading || isProfileDetailsLoading || isLoadingUsers || isLoadingProfiles;
 
+    // Redirect if there's a permission error
     useEffect(() => {
         if (error) {
             toast({
@@ -49,8 +74,20 @@ export default function UsersPage() {
             router.replace('/dashboard');
         }
     }, [error, router, toast]);
+    
+    // Redirect if permission check finishes and user is not allowed
+    useEffect(() => {
+        if (!isProfileLoading && !isProfileDetailsLoading && !canManageUsers) {
+             toast({
+                variant: 'destructive',
+                title: 'Acesso Negado',
+                description: 'Não tem permissão para gerir utilizadores.',
+            });
+            router.replace('/dashboard');
+        }
+    }, [isProfileLoading, isProfileDetailsLoading, canManageUsers, router, toast]);
 
-    if (isLoading || error) {
+    if (isLoading || !canManageUsers) {
       return (
         <AuthGuard>
             <div className="flex h-screen w-full items-center justify-center">
