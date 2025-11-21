@@ -32,13 +32,14 @@ export default function ClassEditDialog({ isOpen, onClose, classData, onSave, is
   const firestore = useFirestore();
   
   const teachersQuery = useMemoFirebase(() => {
-    if (!firestore || !isAuthorized) return null;
+    // We can always query teachers now, as any authenticated user can create/edit classes
+    if (!firestore) return null;
     return query(
         collection(firestore, 'users'), 
         where('profileId', '==', 'Professor'),
         orderBy('name')
     );
-  }, [firestore, isAuthorized]);
+  }, [firestore]);
 
   const { data: teachers, isLoading: isLoadingTeachers } = useCollection(teachersQuery);
   
@@ -115,16 +116,16 @@ export default function ClassEditDialog({ isOpen, onClose, classData, onSave, is
                   <Select 
                     onValueChange={(value) => field.onChange(value === 'none' ? '' : value)} 
                     value={field.value || 'none'}
-                    disabled={!isAuthorized || isLoadingTeachers}
+                    disabled={isLoadingTeachers}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={!isAuthorized ? "Sem permissão" : (isLoadingTeachers ? "A carregar..." : "Selecione um professor (opcional)")} />
+                        <SelectValue placeholder={isLoadingTeachers ? "A carregar..." : "Selecione um professor (opcional)"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="none">Não definido</SelectItem>
-                      {isAuthorized && !isLoadingTeachers && (
+                      {!isLoadingTeachers && (
                         teachers?.map(teacher => (
                           <SelectItem key={teacher.id} value={teacher.id}>{teacher.name}</SelectItem>
                         ))
@@ -137,7 +138,7 @@ export default function ClassEditDialog({ isOpen, onClose, classData, onSave, is
             />
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-              <Button type="submit" disabled={!isAuthorized}>Salvar Turma</Button>
+              <Button type="submit">Salvar Turma</Button>
             </DialogFooter>
           </form>
         </Form>
