@@ -40,7 +40,7 @@ export default function UsersPage() {
 
     // 3. Determine if the user has permission
     const canManageUsers = useMemo(() => {
-        if (isProfileLoading || isProfileDetailsLoading) return false; // Don't grant permission while loading
+        if (isAuthLoading || isProfileLoading || isProfileDetailsLoading) return false; // Don't grant permission while loading
         if (userProfile?.profileId === 'Administrador') return true;
         
         // Ensure permissions arrays exist before checking
@@ -48,7 +48,7 @@ export default function UsersPage() {
         const userPermissions = userProfile?.customPermissions || [];
         
         return profilePermissions.includes('manage:users') || userPermissions.includes('manage:users');
-    }, [isProfileLoading, isProfileDetailsLoading, userProfile, profileDetails]);
+    }, [isAuthLoading, isProfileLoading, isProfileDetailsLoading, userProfile, profileDetails]);
 
 
     // 4. Only create the query if the user has permission
@@ -68,30 +68,34 @@ export default function UsersPage() {
 
     const error = usersError || profilesError;
     const isLoading = isAuthLoading || isProfileLoading || isProfileDetailsLoading || isLoadingUsers || isLoadingProfiles;
+    
+    // This new state ensures we only check permissions after the initial auth/profile load.
     const hasFinishedFirstLoad = !isAuthLoading && !isProfileLoading && !isProfileDetailsLoading;
 
     // Redirect if there's a permission error or if auth has loaded and user is not permitted
     useEffect(() => {
-        if (error) {
-            toast({
-                variant: 'destructive',
-                title: 'Acesso Negado',
-                description: 'Ocorreu um erro de permissão ao carregar os dados.',
-            });
-            router.replace('/dashboard');
-        } else if (hasFinishedFirstLoad && !canManageUsers) {
-            toast({
-                variant: 'destructive',
-                title: 'Acesso Negado',
-                description: 'Não tem permissão para gerir utilizadores.',
-            });
-            router.replace('/dashboard');
+        if (hasFinishedFirstLoad) {
+            if (error) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Acesso Negado',
+                    description: 'Ocorreu um erro de permissão ao carregar os dados.',
+                });
+                router.replace('/dashboard');
+            } else if (!canManageUsers) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Acesso Negado',
+                    description: 'Não tem permissão para gerir utilizadores.',
+                });
+                router.replace('/dashboard');
+            }
         }
     }, [error, hasFinishedFirstLoad, canManageUsers, router, toast]);
 
     // Show a loader while permissions are being checked and data is loading.
     // Also, don't render children if permission is not yet granted.
-    if (isLoading || !canManageUsers) {
+    if (isLoading || !hasFinishedFirstLoad || !canManageUsers) {
       return (
         <AuthGuard>
             <div className="flex h-screen w-full items-center justify-center">
@@ -126,7 +130,7 @@ export default function UsersPage() {
 
                 <main className="flex-1 py-8">
                     <div className="container">
-                    {/* Render only when data is ready */}
+                    {/* Render only when data is ready and authorized */}
                     {users && profiles && <UserManager initialUsers={users} allProfiles={profiles} />}
                     </div>
                 </main>
