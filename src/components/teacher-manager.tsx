@@ -4,7 +4,7 @@
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Loader2, ArrowLeft, Plus } from 'lucide-react';
-import { useFirestore, type UserHookResult } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, orderBy, where } from 'firebase/firestore';
 import { ThemeToggle } from './theme-toggle';
@@ -148,19 +148,19 @@ const SubjectList = ({ subjects }: { subjects: any[] }) => {
     )
 }
 
-export default function TeacherManager({ user }: { user: UserHookResult['user'] }) {
+export default function TeacherManager() {
   const firestore = useFirestore();
   const router = useRouter();
 
   const teachersQuery = useMemo(() => {
-    if (!firestore || !user) return null;
+    if (!firestore) return null;
     return query(collection(firestore, 'users'), where('profileId', 'in', ['Professor', 'Professor(a)']), orderBy('name'));
-  }, [firestore, user]);
+  }, [firestore]);
 
   const subjectsQuery = useMemo(() => {
-    if (!firestore || !user) return null;
+    if (!firestore) return null;
     return query(collection(firestore, 'subjects'), orderBy('name'));
-  }, [firestore, user]);
+  }, [firestore]);
 
   const { data: teachers, isLoading: isLoadingTeachers } = useCollection(teachersQuery);
   const { data: subjects, isLoading: isLoadingSubjects } = useCollection(subjectsQuery);
