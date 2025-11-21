@@ -46,8 +46,7 @@ service cloud.firestore {
 
     match /classes/{classId} {
       allow read, list: if isSignedIn();
-      // Allow any signed in user to create/edit/delete classes
-      allow write: if isSignedIn();
+      allow write: if hasPermission('manage:classes');
     }
     
     match /grades/{gradeId} {

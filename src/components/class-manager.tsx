@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Loader2, ArrowLeft, Plus } from 'lucide-react';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -21,6 +21,7 @@ export default function ClassManager() {
   const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useUser();
   
   const [isNew, setIsNew] = useState(false);
   const [editingClass, setEditingClass] = useState<any | null>(null);
@@ -31,10 +32,26 @@ export default function ClassManager() {
     return query(collection(firestore, 'classes'), orderBy('name'));
   }, [firestore]);
 
+  const userDocRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc(userDocRef);
+
+  const profileDocRef = useMemoFirebase(() => {
+    if (!userProfile?.profileId || !firestore) return null;
+    return doc(firestore, 'profiles', userProfile.profileId);
+  }, [userProfile, firestore]);
+  const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
+
   const { data: classes, isLoading: isClassesLoading } = useCollection(classesQuery);
-  
-  // Any authenticated user is authorized to manage classes
-  const isAuthorized = true;
+
+  const isAuthorized = useMemo(() => {
+    if (isProfileLoading || isProfileDetailsLoading) return false;
+    if (userProfile?.profileId === 'Administrador') return true;
+    return profileDetails?.permissions?.includes('manage:classes') || userProfile?.customPermissions?.includes('manage:classes');
+  }, [isProfileLoading, isProfileDetailsLoading, userProfile, profileDetails]);
+
 
   const handleEditClass = (cls: any) => {
     setEditingClass(cls);
@@ -92,6 +109,7 @@ export default function ClassManager() {
 
   const isDialogOpen = !!editingClass;
   const dialogClassData = isNew ? null : editingClass;
+  const isLoading = isClassesLoading || isProfileLoading || isProfileDetailsLoading;
 
   return (
     <>
@@ -124,7 +142,7 @@ export default function ClassManager() {
 
         <main className="flex-1 py-8">
           <div className="container">
-            {isClassesLoading ? (
+            {isLoading ? (
                  <div className="flex h-64 w-full items-center justify-center">
                     <Loader2 className="h-12 w-12 animate-spin text-primary" />
                  </div>
