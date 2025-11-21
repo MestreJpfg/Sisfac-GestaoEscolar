@@ -5,7 +5,7 @@ import { useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import UserManager from "@/components/user-manager";
 import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -15,7 +15,6 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { doc } from 'firebase/firestore';
 
 
 export default function UsersPage() {
