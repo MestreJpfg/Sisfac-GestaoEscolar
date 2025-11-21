@@ -37,9 +37,12 @@ export default function UsersPage() {
     }, [userProfile, firestore]);
     const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
 
-    // 3. Determine if the user has permission
+    // This state ensures we only check permissions after the initial auth/profile load.
+    const hasFinishedFirstLoad = !isAuthLoading && !isProfileLoading && !isProfileDetailsLoading;
+
+    // 3. Determine if the user has permission, only after everything has loaded
     const canManageUsers = useMemo(() => {
-        if (isAuthLoading || isProfileLoading || isProfileDetailsLoading) return false; // Don't grant permission while loading
+        if (!hasFinishedFirstLoad) return undefined; // Return undefined while loading
         if (userProfile?.profileId === 'Administrador') return true;
         
         // Ensure permissions arrays exist before checking
@@ -47,7 +50,7 @@ export default function UsersPage() {
         const userPermissions = userProfile?.customPermissions || [];
         
         return profilePermissions.includes('manage:users') || userPermissions.includes('manage:users');
-    }, [isAuthLoading, isProfileLoading, isProfileDetailsLoading, userProfile, profileDetails]);
+    }, [hasFinishedFirstLoad, userProfile, profileDetails]);
 
 
     // 4. Only create the query if the user has permission
@@ -68,38 +71,46 @@ export default function UsersPage() {
     const error = usersError || profilesError;
     const isLoading = isAuthLoading || isProfileLoading || isProfileDetailsLoading || isLoadingUsers || isLoadingProfiles;
     
-    // This new state ensures we only check permissions after the initial auth/profile load.
-    const hasFinishedFirstLoad = !isAuthLoading && !isProfileLoading && !isProfileDetailsLoading;
-
     // Redirect if there's a permission error or if auth has loaded and user is not permitted
     useEffect(() => {
-        if (hasFinishedFirstLoad) {
-            if (error) {
-                toast({
-                    variant: 'destructive',
-                    title: 'Acesso Negado',
-                    description: 'Ocorreu um erro de permissão ao carregar os dados.',
-                });
-                router.replace('/dashboard');
-            } else if (!canManageUsers) {
-                toast({
-                    variant: 'destructive',
-                    title: 'Acesso Negado',
-                    description: 'Não tem permissão para gerir utilizadores.',
-                });
-                router.replace('/dashboard');
-            }
+        // Only run the effect if we have a definitive permission status (true or false)
+        if (canManageUsers === false) {
+            toast({
+                variant: 'destructive',
+                title: 'Acesso Negado',
+                description: 'Não tem permissão para gerir utilizadores.',
+            });
+            router.replace('/dashboard');
+        } else if (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Acesso Negado',
+                description: 'Ocorreu um erro de permissão ao carregar os dados.',
+            });
+            router.replace('/dashboard');
         }
-    }, [error, hasFinishedFirstLoad, canManageUsers, router, toast]);
+    }, [canManageUsers, error, router, toast]);
 
-    // Show a loader while permissions are being checked and data is loading.
-    // Also, don't render children if permission is not yet granted.
-    if (isLoading || !hasFinishedFirstLoad || !canManageUsers) {
+    // Show a loader while we determine permission status or load data.
+    // If canManageUsers is undefined, it means we're still loading permission data.
+    if (canManageUsers === undefined || (canManageUsers && isLoading)) {
       return (
         <AuthGuard>
             <div className="flex h-screen w-full items-center justify-center">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
             </div>
+        </AuthGuard>
+      );
+    }
+
+    // After loading, if permission is definitively false, this component will trigger the redirect
+    // but we show a loader to avoid a flash of content.
+    if (!canManageUsers) {
+      return (
+        <AuthGuard>
+          <div className="flex h-screen w-full items-center justify-center">
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          </div>
         </AuthGuard>
       );
     }
