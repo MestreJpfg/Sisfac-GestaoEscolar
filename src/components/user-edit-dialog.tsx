@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useFirestore } from "@/firebase";
+import { useFirestore, useMemoFirebase } from "@/firebase";
 import { useCollection } from "@/firebase/firestore/use-collection";
 import { collection, query, orderBy } from "firebase/firestore";
 
@@ -27,22 +27,15 @@ interface UserEditDialogProps {
   onSave: (data: Partial<UserEditFormValues>) => void;
 }
 
-const fallbackProfiles = [
-    { id: "Administrador", name: "Administrador" },
-    { id: "Gestor", name: "Gestor" },
-    { id: "Professor", name: "Professor" },
-    { id: "Funcionario", name: "Funcionário" },
-    { id: "Aluno", name: "Aluno" },
-    { id: "Responsavel", name: "Pais/Responsável" },
-];
-
 export default function UserEditDialog({ isOpen, onClose, user, onSave }: UserEditDialogProps) {
   const firestore = useFirestore();
-  const { data: profilesFromDB, isLoading: isLoadingProfiles } = useCollection(
-    firestore ? query(collection(firestore, 'profiles'), orderBy('name')) : null
-  );
+  
+  const profilesQuery = useMemoFirebase(() => {
+      if (!firestore) return null;
+      return query(collection(firestore, 'profiles'), orderBy('name'))
+  }, [firestore]);
 
-  const profiles = (profilesFromDB && profilesFromDB.length > 0) ? profilesFromDB : fallbackProfiles;
+  const { data: profiles, isLoading: isLoadingProfiles } = useCollection(profilesQuery);
 
   const form = useForm<UserEditFormValues>({
     resolver: zodResolver(userEditSchema),
@@ -105,9 +98,13 @@ export default function UserEditDialog({ isOpen, onClose, user, onSave }: UserEd
                       {isLoadingProfiles ? (
                         <SelectItem value="loading" disabled>A carregar perfis...</SelectItem>
                       ) : (
-                        profiles?.map(profile => (
-                          <SelectItem key={profile.id} value={profile.id}>{profile.name}</SelectItem>
-                        ))
+                        profiles && profiles.length > 0 ? (
+                            profiles.map(profile => (
+                                <SelectItem key={profile.id} value={profile.id}>{profile.name}</SelectItem>
+                            ))
+                        ) : (
+                            <SelectItem value="no-profiles" disabled>Nenhum perfil encontrado.</SelectItem>
+                        )
                       )}
                     </SelectContent>
                   </Select>
