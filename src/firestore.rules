@@ -15,7 +15,8 @@ service cloud.firestore {
     // Function to get the complete profile data based on the user's profileId
     function getUserProfile() {
       let userData = getUserData();
-       if (!('profileId' in userData)) {
+      // Crucially, check if profileId exists before trying to get the profile document.
+      if (!('profileId' in userData) || userData.profileId == null) {
         return null;
       }
       return get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
@@ -57,11 +58,6 @@ service cloud.firestore {
         allow read, list: if isSignedIn();
     }
 
-    match /classes/{classId} {
-      allow read, list: if isSignedIn();
-      allow write: if hasPermission('manage:classes');
-    }
-    
     match /grades/{gradeId} {
        allow read: if isSignedIn();
        allow write: if hasPermission('manage:grades');
@@ -78,7 +74,11 @@ service cloud.firestore {
     }
 
     match /alunos/{alunoId} {
-      allow read, write, list: if isSignedIn();
+      // Access to student data is now also protected.
+      // Reading/writing requires either 'manage:students' or being an Admin.
+      allow read, write: if hasPermission('manage:students');
+      // Listing all students also requires the same permission.
+      allow list: if hasPermission('manage:students');
     }
   }
 }

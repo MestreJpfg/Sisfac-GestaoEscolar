@@ -25,19 +25,23 @@ export default function DatabasePage() {
         if (!user || !firestore) return null;
         return doc(firestore, 'users', user.uid);
     }, [user, firestore]);
-    const { data: userProfile, isLoading: isProfileLoading } = useDoc(userDocRef);
 
-    const isLoading = isUserLoading || isProfileLoading;
+    // useDoc hook now correctly handles its own loading state.
+    const { data: userProfile, isLoading: isProfileLoading, error: profileError } = useDoc(userDocRef);
 
+    const hasFinishedFirstLoad = !isUserLoading && !isProfileLoading;
+    
+    // Determine admin status only after all data is loaded.
     const isAdmin = useMemo(() => {
-        if (isLoading) return false; // Don't determine admin status until loaded
+        if (!hasFinishedFirstLoad) return false; 
         return userProfile?.profileId === 'Administrador';
-    }, [isLoading, userProfile]);
+    }, [hasFinishedFirstLoad, userProfile]);
 
     // This effect handles authorization. It only runs AFTER loading is complete.
     useEffect(() => {
-        // Only run check after loading is complete
-        if (!isLoading) {
+        if (hasFinishedFirstLoad) {
+            // If after loading, the user is NOT an admin, redirect them.
+            // This also handles the case where the user document might not exist (isAdmin would be false).
             if (!isAdmin) {
                 toast({
                     variant: 'destructive',
@@ -47,11 +51,20 @@ export default function DatabasePage() {
                 router.replace('/dashboard');
             }
         }
-    }, [isLoading, isAdmin, router, toast]);
+        // This effect also handles potential direct errors from Firestore rules (e.g., cannot read own user doc)
+        if (profileError) {
+             toast({
+                variant: 'destructive',
+                title: 'Erro de Permissão',
+                description: 'Não foi possível verificar as suas credenciais de acesso.',
+            });
+            router.replace('/dashboard');
+        }
 
-    // While loading, or if not an admin (before redirect effect kicks in), show a loader.
-    // This prevents a flash of content and ensures a smooth loading experience.
-    if (isLoading || !isAdmin) {
+    }, [hasFinishedFirstLoad, isAdmin, profileError, router, toast]);
+
+    // While loading, or if not an admin (before the redirect effect kicks in), show a loader.
+    if (!hasFinishedFirstLoad || !isAdmin) {
       return (
         <AuthGuard>
             <div className="flex h-screen w-full items-center justify-center">
