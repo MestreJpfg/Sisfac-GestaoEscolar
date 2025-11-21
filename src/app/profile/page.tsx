@@ -149,9 +149,20 @@ export default function ProfilePage() {
             }
 
             const userDocToUpdate = doc(firestore, 'users', user.uid);
+            
+            let dateOfBirthString = null;
+            if (data.dateOfBirth) {
+                // Adjust for timezone offset before formatting
+                const date = data.dateOfBirth;
+                const userTimezoneOffset = date.getTimezoneOffset() * 60000;
+                const adjustedDate = new Date(date.getTime() + userTimezoneOffset);
+                dateOfBirthString = format(adjustedDate, 'yyyy-MM-dd');
+            }
+
+
             const userData: any = {
                 name: data.name,
-                dateOfBirth: data.dateOfBirth ? data.dateOfBirth.toISOString().split('T')[0] : null,
+                dateOfBirth: dateOfBirthString,
                 phoneNumber: data.phoneNumber ? data.phoneNumber.replace(/\D/g, '') : null,
                 position: data.position,
                 bio: data.bio,
@@ -386,5 +397,7 @@ export default function ProfilePage() {
         </AuthGuard>
     );
 }
+
+    
 
     
