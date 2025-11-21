@@ -136,6 +136,16 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "title", "content", "targetAudience", "createdAt"]
+    },
+    "Subject": {
+        "title": "Subject",
+        "type": "object",
+        "description": "Represents a school subject.",
+        "properties": {
+            "id": { "type": "string" },
+            "name": { "type": "string", "description": "The name of the subject (e.g., Matemática)." }
+        },
+        "required": ["id", "name"]
     }
   },
   "auth": {
@@ -166,6 +176,10 @@
        {
         "path": "/alunos/{alunoId}",
         "definition": { "schema": { "$ref": "#/entities/User" } }
+      },
+      {
+        "path": "/subjects/{subjectId}",
+        "definition": { "schema": { "$ref": "#/entities/Subject" } }
       }
     ]
   }

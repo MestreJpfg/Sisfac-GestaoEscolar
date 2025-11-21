@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, doc } from 'firebase/firestore';
-import { Loader2, Users, UserCog, Shield, Database, ClipboardList, BookUser } from 'lucide-react';
+import { Loader2, Users, UserCog, Shield, Database, ClipboardList, BookCopy } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -68,6 +68,11 @@ export default function DashboardPage() {
   const canViewStudents = useMemo(() => {
      if (isPermissionsLoading) return false;
     return hasPermission('manage:students') || hasPermission('view:students');
+  }, [isPermissionsLoading, userProfile, profileDetails]);
+
+  const canManageSubjects = useMemo(() => {
+    if (isPermissionsLoading) return false;
+    return hasPermission('manage:subjects');
   }, [isPermissionsLoading, userProfile, profileDetails]);
 
   const isAdmin = useMemo(() => {
@@ -186,6 +191,15 @@ export default function DashboardPage() {
                                 icon={Shield}
                                 description="Perfis de acesso no sistema"
                                 action={<Button onClick={() => router.push('/profiles')}>Gerir Perfis</Button>}
+                                />
+                            )}
+                             {canManageSubjects && (
+                                <StatCard
+                                title="Disciplinas"
+                                value={"Configurar"}
+                                icon={BookCopy}
+                                description="Gerir as disciplinas do currículo"
+                                action={<Button onClick={() => router.push('/dashboard/subjects')}>Gerir Disciplinas</Button>}
                                 />
                             )}
                             {isAdmin && (
