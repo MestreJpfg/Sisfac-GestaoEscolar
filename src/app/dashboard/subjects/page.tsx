@@ -2,9 +2,12 @@
 'use client';
 
 import SubjectManager from "@/components/subject-manager";
+import AuthGuard from "@/components/auth-guard";
 
 export default function SubjectsPage() {
   return (
-    <SubjectManager />
+    <AuthGuard>
+      <SubjectManager />
+    </AuthGuard>
   );
 }
