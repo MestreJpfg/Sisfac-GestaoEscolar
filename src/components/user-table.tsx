@@ -9,17 +9,25 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent } from "./ui/card";
-import { User, Search, Edit } from "lucide-react";
+import { User, Search, Edit, ArrowUpDown } from "lucide-react";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
+import { cn } from "@/lib/utils";
+
+export interface SortConfig {
+  key: string;
+  direction: 'ascending' | 'descending';
+}
 
 interface UserTableProps {
   users: any[];
   profiles: any[];
   onEdit: (user: any) => void;
+  onSort: (key: string) => void;
+  sortConfig: SortConfig;
 }
 
 const getInitials = (name: string | null | undefined) => {
@@ -31,7 +39,26 @@ const getInitials = (name: string | null | undefined) => {
     return name.substring(0, 2).toUpperCase();
 };
 
-export default function UserTable({ users, profiles, onEdit }: UserTableProps) {
+export default function UserTable({ users, profiles, onEdit, onSort, sortConfig }: UserTableProps) {
+  
+  const SortableHeader = ({ sortKey, children, className }: { sortKey: string, children: React.ReactNode, className?: string }) => {
+    const isSorted = sortConfig.key === sortKey;
+    
+    return (
+        <TableHead className={cn("text-left", className)}>
+            <Button variant="ghost" onClick={() => onSort(sortKey)} className="px-2 py-1 h-auto -ml-2">
+                {children}
+                <ArrowUpDown 
+                    className={cn(
+                        "ml-2 h-4 w-4 text-muted-foreground/50",
+                        isSorted && "text-foreground"
+                    )} 
+                />
+            </Button>
+        </TableHead>
+    );
+  }
+  
   if (users.length === 0) {
     return (
       <Card>
@@ -82,10 +109,10 @@ export default function UserTable({ users, profiles, onEdit }: UserTableProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead className="hidden md:table-cell">Email</TableHead>
-                <TableHead>Perfil</TableHead>
-                <TableHead className="hidden lg:table-cell">Data de Criação</TableHead>
+                <SortableHeader sortKey="name">Nome</SortableHeader>
+                <SortableHeader sortKey="email" className="hidden md:table-cell">Email</SortableHeader>
+                <SortableHeader sortKey="profileId">Perfil</SortableHeader>
+                <SortableHeader sortKey="createdAt" className="hidden lg:table-cell">Data de Criação</SortableHeader>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>

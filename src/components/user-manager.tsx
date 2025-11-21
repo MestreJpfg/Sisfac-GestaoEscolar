@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Button } from './ui/button';
 import { X } from 'lucide-react';
 import { useDebounce } from '@/hooks/use-debounce';
+import type { SortConfig } from './user-table';
 
 interface UserManagerProps {
   initialUsers: any[];
@@ -28,6 +29,7 @@ export default function UserManager({ initialUsers, allProfiles }: UserManagerPr
     search: '',
     profileId: '',
   });
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name', direction: 'ascending' });
   const debouncedSearch = useDebounce(filters.search, 300);
 
   const handleFilterChange = (name: string, value: string) => {
@@ -37,17 +39,51 @@ export default function UserManager({ initialUsers, allProfiles }: UserManagerPr
   const clearFilters = () => {
     setFilters({ search: '', profileId: '' });
   };
+
+  const handleSort = (key: string) => {
+    setSortConfig(prevConfig => ({
+        key,
+        direction: prevConfig.key === key && prevConfig.direction === 'ascending' ? 'descending' : 'ascending'
+    }));
+  };
   
-  const filteredUsers = useMemo(() => {
+  const filteredAndSortedUsers = useMemo(() => {
     const searchLower = debouncedSearch.toLowerCase();
-    return initialUsers.filter(user => {
+    let filtered = initialUsers.filter(user => {
       const nameMatch = user.name?.toLowerCase().includes(searchLower);
       const emailMatch = user.email?.toLowerCase().includes(searchLower);
       const profileMatch = !filters.profileId || user.profileId === filters.profileId;
       
       return (nameMatch || emailMatch) && profileMatch;
     });
-  }, [initialUsers, debouncedSearch, filters.profileId]);
+
+    if (sortConfig.key !== null) {
+      const profileNameMap = new Map(allProfiles.map(p => [p.id, p.name]));
+
+      filtered.sort((a, b) => {
+        let aValue: any;
+        let bValue: any;
+
+        if (sortConfig.key === 'profileId') {
+            aValue = profileNameMap.get(a.profileId) || a.profileId;
+            bValue = profileNameMap.get(b.profileId) || b.profileId;
+        } else {
+            aValue = a[sortConfig.key] || '';
+            bValue = b[sortConfig.key] || '';
+        }
+        
+        if (aValue < bValue) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+
+    return filtered;
+  }, [initialUsers, debouncedSearch, filters.profileId, sortConfig, allProfiles]);
 
   const hasActiveFilters = filters.search || filters.profileId;
 
@@ -105,9 +141,11 @@ export default function UserManager({ initialUsers, allProfiles }: UserManagerPr
       </Card>
       
       <UserTable 
-        users={filteredUsers}
+        users={filteredAndSortedUsers}
         profiles={allProfiles}
         onEdit={handleEditUser} 
+        onSort={handleSort}
+        sortConfig={sortConfig}
       />
 
       {editingUser && (
