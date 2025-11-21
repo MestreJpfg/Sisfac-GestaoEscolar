@@ -152,10 +152,13 @@ export default function ProfilePage() {
             
             let dateOfBirthString = null;
             if (data.dateOfBirth) {
-                // Correctly format the date to YYYY-MM-DD string, ignoring timezone issues.
-                dateOfBirthString = format(data.dateOfBirth, 'yyyy-MM-dd');
+                // THE FIX: Manually construct the YYYY-MM-DD string to avoid timezone issues.
+                const date = data.dateOfBirth;
+                const year = date.getFullYear();
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const day = date.getDate().toString().padStart(2, '0');
+                dateOfBirthString = `${year}-${month}-${day}`;
             }
-
 
             const userData: any = {
                 name: data.name,
@@ -394,11 +397,3 @@ export default function ProfilePage() {
         </AuthGuard>
     );
 }
-
-    
-
-    
-
-
-
-    
