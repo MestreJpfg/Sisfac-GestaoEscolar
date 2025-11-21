@@ -40,22 +40,25 @@ export default function UsersPage() {
 
     // 3. Determine if the user has permission
     const canManageUsers = useMemo(() => {
-        if (isProfileLoading || isProfileDetailsLoading) return false;
+        if (isProfileLoading || isProfileDetailsLoading) return false; // Don't grant permission while loading
         if (userProfile?.profileId === 'Administrador') return true;
+        
         // Ensure permissions arrays exist before checking
         const profilePermissions = profileDetails?.permissions || [];
         const userPermissions = userProfile?.customPermissions || [];
+        
         return profilePermissions.includes('manage:users') || userPermissions.includes('manage:users');
     }, [isProfileLoading, isProfileDetailsLoading, userProfile, profileDetails]);
 
 
     // 4. Only create the query if the user has permission
     const usersQuery = useMemoFirebase(() => {
-        if (!firestore || !canManageUsers) return null; 
+        if (!firestore || !canManageUsers) return null; // Important: Query is null if no permission
         return query(collection(firestore, 'users'), orderBy('name'));
     }, [firestore, canManageUsers]);
     
     const profilesQuery = useMemoFirebase(() => {
+        // This query is safe as all authenticated users can read profiles
         if (!firestore) return null;
         return query(collection(firestore, 'profiles'), orderBy('name'));
     }, [firestore]);
@@ -86,6 +89,8 @@ export default function UsersPage() {
         }
     }, [error, hasFinishedFirstLoad, canManageUsers, router, toast]);
 
+    // Show a loader while permissions are being checked and data is loading.
+    // Also, don't render children if permission is not yet granted.
     if (isLoading || !canManageUsers) {
       return (
         <AuthGuard>
@@ -121,6 +126,7 @@ export default function UsersPage() {
 
                 <main className="flex-1 py-8">
                     <div className="container">
+                    {/* Render only when data is ready */}
                     {users && profiles && <UserManager initialUsers={users} allProfiles={profiles} />}
                     </div>
                 </main>

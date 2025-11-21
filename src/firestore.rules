@@ -33,12 +33,12 @@ service cloud.firestore {
       }
       
       // Check for the permission in the profile's permission list
-      if (userProfile != null && 'permissions' in userProfile && permission in userProfile.permissions) {
+      if (userProfile != null && 'permissions' in userProfile && userProfile.permissions.hasAny([permission])) {
         return true;
       }
         
       // Check for the permission in the user's specific custom permissions
-      if (userData.customPermissions != null && permission in userData.customPermissions) {
+      if (userData.customPermissions != null && userData.customPermissions.hasAny([permission])) {
         return true;
       }
 
