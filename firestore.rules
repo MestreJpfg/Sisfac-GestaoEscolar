@@ -47,8 +47,10 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow create, update: if isSignedIn() && request.auth.uid == userId;
-      allow read: if isSignedIn() && (request.auth.uid == userId || hasPermission('manage:users'));
+      // Teachers' data can be updated by those with 'manage:teachers' permission.
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow read: if isSignedIn() && (request.auth.uid == userId || hasPermission('manage:users') || hasPermission('manage:teachers'));
+      allow update: if isSignedIn() && (request.auth.uid == userId || hasPermission('manage:teachers'));
       allow list, write: if hasPermission('manage:users');
     }
     
@@ -77,6 +79,11 @@ service cloud.firestore {
       // Access to student data is now also protected.
       // Reading/writing requires 'manage:students'. Admins have this by default via hasPermission.
       allow read, write, list: if hasPermission('manage:students');
+    }
+
+    match /subjects/{subjectId} {
+      allow read, list: if isSignedIn();
+      allow write: if hasPermission('manage:teachers');
     }
   }
 }

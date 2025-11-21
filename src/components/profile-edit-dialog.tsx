@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from "react";
@@ -33,6 +34,7 @@ const allPermissions = [
     { id: 'manage:database', label: 'Gerir Base de Dados' },
     { id: 'manage:students', label: 'Gerir Alunos' },
     { id: 'view:students', label: 'Visualizar Alunos' },
+    { id: 'manage:teachers', label: 'Gerir Professores e Disciplinas' },
     { id: 'manage:users', label: 'Gerir Utilizadores' },
     { id: 'manage:profiles', label: 'Gerir Perfis' },
     { id: 'manage:grades', label: 'Gerir Notas' },

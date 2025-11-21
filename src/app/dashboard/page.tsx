@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, doc } from 'firebase/firestore';
-import { Loader2, Users, UserCog, Shield, Database, ClipboardList } from 'lucide-react';
+import { Loader2, Users, UserCog, Shield, Database, ClipboardList, BookUser } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -42,25 +42,22 @@ export default function DashboardPage() {
     return userProfile.profileId === 'Administrador' || userProfile.profileId === 'Administrador(a)';
   }, [isPermissionsLoading, userProfile]);
 
-  const canManageUsers = useMemo(() => {
+  const hasPermission = (permission: string) => {
     if (isPermissionsLoading) return false;
     if (isAdmin) return true;
-    return profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
-  }, [isPermissionsLoading, profileDetails, userProfile, isAdmin]);
-
-  const canManageProfiles = useMemo(() => {
-    if (isPermissionsLoading) return false;
-    if (isAdmin) return true;
-    return profileDetails?.permissions?.includes('manage:profiles') || userProfile?.customPermissions?.includes('manage:profiles');
-  }, [isPermissionsLoading, profileDetails, userProfile, isAdmin]);
+    return profileDetails?.permissions?.includes(permission) || userProfile?.customPermissions?.includes(permission);
+  };
   
+  const canManageUsers = hasPermission('manage:users');
+  const canManageProfiles = hasPermission('manage:profiles');
+  const canManageTeachers = hasPermission('manage:teachers');
+  const canViewStudents = hasPermission('manage:students') || hasPermission('view:students');
+
 
   const studentsQuery = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
-    // Only fetch students if the user has permission to avoid unnecessary reads.
-    if (!isAdmin && !profileDetails?.permissions?.includes('manage:students')) return null;
+    if (!firestore || !canViewStudents) return null;
     return query(collection(firestore, 'alunos'));
-  }, [user, firestore, isAdmin, profileDetails]);
+  }, [firestore, canViewStudents]);
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore || !canManageUsers) return null; 
@@ -146,6 +143,15 @@ export default function DashboardPage() {
                         description="Gerar listas de turmas para impressão"
                         action={<Button onClick={() => router.push('/dashboard/classes')}>Gerir Turmas</Button>}
                         />
+                    {canManageTeachers && (
+                        <StatCard
+                            title="Professores e Disciplinas"
+                            value={"Configurar"}
+                            icon={BookUser}
+                            description="Gerir professores e disciplinas"
+                            action={<Button onClick={() => router.push('/dashboard/teachers')}>Aceder</Button>}
+                        />
+                    )}
                     {canManageUsers && (
                         <StatCard
                         title="Utilizadores"
