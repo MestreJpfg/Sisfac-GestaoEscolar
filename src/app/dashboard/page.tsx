@@ -64,11 +64,6 @@ export default function DashboardPage() {
     if (isPermissionsLoading) return false;
     return hasPermission('manage:profiles');
   }, [isPermissionsLoading, userProfile, profileDetails]);
-  
-  const canManageTeachers = useMemo(() => {
-    if (isPermissionsLoading) return false;
-    return hasPermission('manage:teachers');
-  }, [isPermissionsLoading, userProfile, profileDetails]);
 
   const canViewStudents = useMemo(() => {
      if (isPermissionsLoading) return false;
@@ -175,15 +170,6 @@ export default function DashboardPage() {
                         <StatCard title="..." value={<Loader2 className="h-5 w-5 animate-spin"/>} icon={Users} />
                     ) : (
                         <>
-                            {canManageTeachers && (
-                                <StatCard
-                                    title="Professores e Disciplinas"
-                                    value={"Configurar"}
-                                    icon={BookUser}
-                                    description="Gerir professores e disciplinas"
-                                    action={<Button onClick={() => router.push('/dashboard/teachers')}>Aceder</Button>}
-                                />
-                            )}
                             {canManageUsers && (
                                 <StatCard
                                 title="Utilizadores"

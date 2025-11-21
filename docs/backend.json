@@ -58,34 +58,6 @@
         "profileCompleted": {
             "type": "boolean",
             "description": "Flag indicating if the user has completed their initial profile setup."
-        },
-        "disciplinas": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "List of subjects the teacher teaches."
-        },
-        "turmasLecionadas": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "List of class IDs the teacher is assigned to."
-        },
-        "turnoTrabalho": {
-          "type": "string",
-          "enum": ["Manhã", "Tarde", "Noite", "Integral"],
-          "description": "The work shift of the teacher."
-        },
-        "cargaHoraria": {
-          "type": "number",
-          "description": "Weekly workload in hours."
-        },
-        "vinculo": {
-          "type": "string",
-          "description": "Employment relationship (e.g., 'Efetivo', 'Temporário')."
-        },
-        "diaPlanejamento": {
-          "type": "string",
-          "enum": ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira"],
-          "description": "The teacher's designated planning day."
         }
       },
       "required": ["uid", "name", "email", "profileId"]
@@ -164,16 +136,6 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "title", "content", "targetAudience", "createdAt"]
-    },
-    "Subject": {
-      "title": "Subject",
-      "type": "object",
-      "description": "Represents a school subject.",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string", "description": "The name of the subject (e.g., 'Matemática')." }
-      },
-      "required": ["id", "name"]
     }
   },
   "auth": {
@@ -204,10 +166,6 @@
        {
         "path": "/alunos/{alunoId}",
         "definition": { "schema": { "$ref": "#/entities/User" } }
-      },
-      {
-        "path": "/subjects/{subjectId}",
-        "definition": { "schema": { "$ref": "#/entities/Subject" } }
       }
     ]
   }
