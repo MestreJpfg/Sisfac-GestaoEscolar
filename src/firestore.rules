@@ -7,31 +7,36 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Function to get the user's own data from the 'users' collection
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
+    // Function to get the complete profile data based on the user's profileId
     function getUserProfile() {
       let userData = getUserData();
-      if (!('profileId' in userData)) {
+       if (!('profileId' in userData)) {
         return null;
       }
-      // Use a direct path string, not template literals inside functions
-      return get(path('/databases/' + database + '/documents/profiles/' + userData.profileId)).data;
+      return get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
     }
     
+    // NEW, more robust permission check
     function hasPermission(permission) {
       let userData = getUserData();
       let userProfile = getUserProfile();
       
+      // The 'Administrador' profile always has all permissions.
       if (userData.profileId == 'Administrador') {
         return true;
       }
       
+      // Check for the permission in the profile's permission list
       if (userProfile != null && 'permissions' in userProfile && userProfile.permissions.hasAny([permission])) {
         return true;
       }
         
+      // Check for the permission in the user's specific custom permissions
       if (userData.customPermissions != null && userData.customPermissions.hasAny([permission])) {
         return true;
       }
@@ -42,13 +47,13 @@ service cloud.firestore {
     match /users/{userId} {
       allow create, update: if isSignedIn() && request.auth.uid == userId;
       allow read: if isSignedIn() && (request.auth.uid == userId || hasPermission('manage:users'));
-      // Allow listing teachers if user can manage classes, otherwise require manage:users
-      allow list: if (hasPermission('manage:classes') && resource.data.profileId == 'Professor') || hasPermission('manage:users');
+      allow list: if hasPermission('manage:users');
       allow write: if hasPermission('manage:users');
     }
     
     match /profiles/{profileId} {
         allow write: if hasPermission('manage:profiles');
+        // Any authenticated user can read profiles to allow UI selects/dropdowns to be populated.
         allow read, list: if isSignedIn();
     }
 
