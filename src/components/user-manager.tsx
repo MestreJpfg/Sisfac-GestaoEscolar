@@ -46,6 +46,7 @@ export default function UserManager() {
 
 
   const usersQuery = useMemoFirebase(() => {
+    // Only create the query if authorization is definitively true.
     if (!firestore || isAuthorized !== true) return null;
     return query(collection(firestore, 'users'), orderBy('name'));
   }, [firestore, isAuthorized]);
