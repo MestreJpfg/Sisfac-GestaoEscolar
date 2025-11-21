@@ -42,10 +42,9 @@ export default function UsersPage() {
 
         if (!currentUserProfile) return false;
         
-        const isAdmin = currentUserProfile.profileId === 'Administrador';
         const hasExplicitPermission = profileDetails?.permissions?.includes('manage:users') || currentUserProfile?.customPermissions?.includes('manage:users');
         
-        return isAdmin || hasExplicitPermission;
+        return hasExplicitPermission;
     }, [isUserLoading, isProfileLoading, isProfileDetailsLoading, currentUserProfile, profileDetails]);
 
 

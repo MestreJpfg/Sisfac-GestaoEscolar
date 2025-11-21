@@ -36,25 +36,20 @@ export default function DashboardPage() {
 
   const isPermissionsLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
   
-  const isAdmin = useMemo(() => {
-      if (isPermissionsLoading) return null;
-      return userProfile?.profileId === 'Administrador';
-  }, [isPermissionsLoading, userProfile]);
-
   const canManageUsers = useMemo(() => {
-    if (isPermissionsLoading) return null;
-    return isAdmin || profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
-  }, [isPermissionsLoading, profileDetails, userProfile, isAdmin]);
+    if (isPermissionsLoading) return false;
+    return profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
+  }, [isPermissionsLoading, profileDetails, userProfile]);
 
   const canManageProfiles = useMemo(() => {
-    if (isPermissionsLoading) return null;
-    return isAdmin || profileDetails?.permissions?.includes('manage:profiles') || userProfile?.customPermissions?.includes('manage:profiles');
-  }, [isPermissionsLoading, profileDetails, userProfile, isAdmin]);
+    if (isPermissionsLoading) return false;
+    return profileDetails?.permissions?.includes('manage:profiles') || userProfile?.customPermissions?.includes('manage:profiles');
+  }, [isPermissionsLoading, profileDetails, userProfile]);
   
   const canManageClasses = useMemo(() => {
-    if (isPermissionsLoading) return null;
-    return isAdmin || profileDetails?.permissions?.includes('manage:classes') || userProfile?.customPermissions?.includes('manage:classes');
-  }, [isPermissionsLoading, profileDetails, userProfile, isAdmin]);
+    if (isPermissionsLoading) return false;
+    return profileDetails?.permissions?.includes('manage:classes') || userProfile?.customPermissions?.includes('manage:classes');
+  }, [isPermissionsLoading, profileDetails, userProfile]);
 
 
   const studentsQuery = useMemoFirebase(() => {
@@ -84,7 +79,7 @@ export default function DashboardPage() {
 
   const welcomeName = user?.displayName?.split(' ')[0] || 'Utilizador';
 
-  if (isPermissionsLoading) {
+  if (isUserLoading || isProfileLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />

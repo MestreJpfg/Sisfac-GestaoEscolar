@@ -49,15 +49,10 @@ export function UserNav() {
 
   const isPermissionsLoading = isProfileLoading || isProfileDetailsLoading;
 
-  const isAdmin = useMemo(() => {
-      if (isPermissionsLoading) return null;
-      return userProfile?.profileId === 'Administrador';
-  }, [isPermissionsLoading, userProfile]);
-
   const canManageUsers = useMemo(() => {
-    if (isPermissionsLoading) return null;
-    return isAdmin || profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
-  }, [isPermissionsLoading, profileDetails, userProfile, isAdmin]);
+    if (isPermissionsLoading) return false;
+    return profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
+  }, [isPermissionsLoading, profileDetails, userProfile]);
 
   if (!user) {
     return null;
