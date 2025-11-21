@@ -27,14 +27,14 @@ export default function UsersPage() {
         if (!user || !firestore) return null;
         return doc(firestore, 'users', user.uid);
     }, [user, firestore]);
-    const { data: userProfile, isLoading: isProfileLoading } = useDoc(userDocRef);
+    const { data: userProfile, isLoading: isProfileLoading, error: profileError } = useDoc(userDocRef);
     
     // 2. Get the details of that user's role/profile
     const profileDocRef = useMemoFirebase(() => {
         if (!userProfile?.profileId || !firestore) return null;
         return doc(firestore, 'profiles', userProfile.profileId);
       }, [userProfile, firestore]);
-    const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
+    const { data: profileDetails, isLoading: isProfileDetailsLoading, error: profileDetailsError } = useDoc(profileDocRef);
 
     const isPermissionsLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
 
@@ -48,11 +48,12 @@ export default function UsersPage() {
         const customPermissions = userProfile?.customPermissions || [];
 
         return profilePermissions.includes('manage:users') || customPermissions.includes('manage:users');
-    }, [isPermissionsLoading, profileDetails, userProfile]);
+    }, [isPermissionsLoading, userProfile, profileDetails]);
 
 
     // 4. This effect runs only after loading is complete to check for permissions
     useEffect(() => {
+        const anyError = profileError || profileDetailsError;
         // If loading is done and we determined the user can't manage users, redirect.
         if (!isPermissionsLoading && !canManageUsers) {
             toast({
@@ -61,8 +62,17 @@ export default function UsersPage() {
                 description: 'Não tem permissão para visualizar esta página.',
             });
             router.replace('/dashboard');
-        } 
-    }, [isPermissionsLoading, canManageUsers, router, toast]);
+        }
+        // Also redirect if there was an error fetching permissions
+        if (anyError) {
+             toast({
+                variant: 'destructive',
+                title: 'Erro de Permissão',
+                description: `Não foi possível carregar os dados de permissão: ${anyError.message}`,
+            });
+            router.replace('/dashboard');
+        }
+    }, [isPermissionsLoading, canManageUsers, profileError, profileDetailsError, router, toast]);
 
     // Show a loader while checking permissions.
     // Also show loader if we've determined they don't have access, to prevent screen flicker before redirect.
@@ -76,7 +86,7 @@ export default function UsersPage() {
       );
     }
     
-    // 5. Render the page only when all checks have passed.
+    // 5. Render the page content only when all checks have passed.
     // This component will only render if canManageUsers is true.
     return <UsersPageContent />;
 }
@@ -88,6 +98,8 @@ function UsersPageContent() {
     const firestore = useFirestore();
     const { toast } = useToast();
 
+    // These queries are now safe to run because this component only renders
+    // after the parent component confirms the user has `manage:users` permission.
     const usersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
         return query(collection(firestore, 'users'), orderBy('name'));
@@ -156,4 +168,3 @@ function UsersPageContent() {
         </AuthGuard>
     );
 }
-

@@ -15,26 +15,31 @@ service cloud.firestore {
     // Function to get the complete profile data based on the user's profileId
     function getUserProfile() {
       let userData = getUserData();
+      // Crucially, check if profileId exists before trying to get the profile document.
+      if (!('profileId' in userData) || userData.profileId == null) {
+        return null;
+      }
       return get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
     }
     
     // NEW, more robust permission check
     function hasPermission(permission) {
       let userData = getUserData();
-      let userProfile = getUserProfile();
       
-      // The 'Administrador' profile always has all permissions.
-      if (userData.profileId == 'Administrador') {
+      // The 'Administrador' profile always has all permissions. This check is first.
+      if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
         return true;
       }
       
+      let userProfile = getUserProfile();
+      
       // Check for the permission in the profile's permission list
-      if (permission in userProfile.permissions) {
+      if (userProfile != null && 'permissions' in userProfile && userProfile.permissions is list && permission in userProfile.permissions) {
         return true;
       }
         
       // Check for the permission in the user's specific custom permissions
-      if (userData.customPermissions != null && permission in userData.customPermissions) {
+      if (userData.customPermissions != null && userData.customPermissions is list && permission in userData.customPermissions) {
         return true;
       }
 
@@ -44,8 +49,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow create, update: if isSignedIn() && request.auth.uid == userId;
       allow read: if isSignedIn() && (request.auth.uid == userId || hasPermission('manage:users'));
-      allow write: if hasPermission('manage:users');
-      allow list: if hasPermission('manage:users');
+      allow list, write: if hasPermission('manage:users');
     }
     
     match /profiles/{profileId} {
@@ -70,7 +74,9 @@ service cloud.firestore {
     }
 
     match /alunos/{alunoId} {
-      allow read, write, list: if isSignedIn();
+      // Access to student data is now also protected.
+      // Reading/writing requires 'manage:students'. Admins have this by default via hasPermission.
+      allow read, write, list: if hasPermission('manage:students');
     }
   }
 }
