@@ -26,22 +26,22 @@ export default function DatabasePage() {
         return doc(firestore, 'users', user.uid);
     }, [user, firestore]);
 
-    // useDoc hook now correctly handles its own loading state.
     const { data: userProfile, isLoading: isProfileLoading, error: profileError } = useDoc(userDocRef);
 
     const hasFinishedFirstLoad = !isUserLoading && !isProfileLoading;
     
     // Determine admin status only after all data is loaded.
+    // Check for both "Administrador" and "Administrador(a)" for robustness.
     const isAdmin = useMemo(() => {
-        if (!hasFinishedFirstLoad) return false; 
-        return userProfile?.profileId === 'Administrador';
+        if (!hasFinishedFirstLoad || !userProfile?.profileId) return false; 
+        const profileId = userProfile.profileId;
+        return profileId === 'Administrador' || profileId === 'Administrador(a)';
     }, [hasFinishedFirstLoad, userProfile]);
 
     // This effect handles authorization. It only runs AFTER loading is complete.
     useEffect(() => {
         if (hasFinishedFirstLoad) {
             // If after loading, the user is NOT an admin, redirect them.
-            // This also handles the case where the user document might not exist (isAdmin would be false).
             if (!isAdmin) {
                 toast({
                     variant: 'destructive',
@@ -51,7 +51,7 @@ export default function DatabasePage() {
                 router.replace('/dashboard');
             }
         }
-        // This effect also handles potential direct errors from Firestore rules (e.g., cannot read own user doc)
+        // This effect also handles potential direct errors from Firestore rules.
         if (profileError) {
              toast({
                 variant: 'destructive',
