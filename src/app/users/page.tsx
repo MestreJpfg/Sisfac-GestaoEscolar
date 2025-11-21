@@ -4,7 +4,7 @@
 import { useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, orderBy } from 'firebase/firestore';
 import UserManager from "@/components/user-manager";
 import AuthGuard from "@/components/auth-guard";
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
 import { useToast } from '@/hooks/use-toast';
+import { useCollection } from '@/firebase/firestore/use-collection';
 
 export default function UsersPage() {
     const router = useRouter();
@@ -34,11 +35,13 @@ export default function UsersPage() {
         return doc(firestore, 'profiles', currentUserProfile.profileId);
     }, [currentUserProfile, firestore]);
     const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
+    
+    // Determine if we are still loading any of the required data for authorization
+    const isAuthorizing = isUserLoading || isProfileLoading || isProfileDetailsLoading;
 
-    // 3. Determine authorization state: true, false, or null (loading)
+    // Determine authorization ONLY when not loading
     const isAuthorized = useMemo(() => {
-        const isLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
-        if (isLoading) return null; // Important: null signifies loading state
+        if (isAuthorizing) return false; // Default to not authorized while loading
 
         if (!currentUserProfile) return false;
         
@@ -46,19 +49,21 @@ export default function UsersPage() {
         const hasExplicitPermission = profileDetails?.permissions?.includes('manage:users') || currentUserProfile?.customPermissions?.includes('manage:users');
         
         return isAdmin || hasExplicitPermission;
-    }, [isUserLoading, isProfileLoading, isProfileDetailsLoading, currentUserProfile, profileDetails]);
+    }, [isAuthorizing, currentUserProfile, profileDetails]);
 
 
     // 4. Fetch users ONLY if authorized
     const usersQuery = useMemoFirebase(() => {
-        if (isAuthorized !== true) return null; // Don't even create the query unless authorized
+        // Only create the query if authorization is already confirmed.
+        // This avoids fetching data that will be thrown away.
+        if (!isAuthorized || !firestore) return null; 
         return query(collection(firestore, 'users'), orderBy('name'));
     }, [firestore, isAuthorized]);
     const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
     
-    // 5. Redirect ONLY when authorization is definitively false
+    // 5. Redirect ONLY when authorization check is complete and result is definitively false
     useEffect(() => {
-        if (isAuthorized === false) {
+        if (!isAuthorizing && !isAuthorized) {
             toast({
                 variant: 'destructive',
                 title: 'Acesso Negado',
@@ -66,11 +71,19 @@ export default function UsersPage() {
             });
             router.replace('/dashboard');
         }
-    }, [isAuthorized, router, toast]);
+    }, [isAuthorizing, isAuthorized, router, toast]);
 
-    // Show a loading screen while checking permissions or fetching users
-    const isLoading = isAuthorized === null || (isAuthorized === true && isUsersLoading);
+    const isLoadingPage = isAuthorizing || (isAuthorized && isUsersLoading);
 
+    // Render nothing or a loader if we are in a state where redirection is about to happen
+    if (!isAuthorizing && !isAuthorized) {
+      return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+      );
+    }
+    
     return (
         <AuthGuard>
             <div className="flex min-h-screen flex-col">
@@ -96,11 +109,11 @@ export default function UsersPage() {
 
                 <main className="flex-1 py-8">
                     <div className="container">
-                       {isLoading ? (
+                       {isLoadingPage ? (
                             <div className="flex h-64 w-full items-center justify-center">
                                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
                             </div>
-                       ) : isAuthorized === true && users ? (
+                       ) : users ? (
                             <UserManager initialUsers={users} />
                        ) : null}
                     </div>
