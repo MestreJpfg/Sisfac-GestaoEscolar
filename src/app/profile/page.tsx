@@ -152,11 +152,8 @@ export default function ProfilePage() {
             
             let dateOfBirthString = null;
             if (data.dateOfBirth) {
-                const date = data.dateOfBirth;
-                // definitive timezone fix
-                const userTimezoneOffset = date.getTimezoneOffset() * 60000;
-                const adjustedDate = new Date(date.getTime() + userTimezoneOffset);
-                dateOfBirthString = adjustedDate.toISOString().split('T')[0];
+                // Correctly format the date to YYYY-MM-DD string, ignoring timezone issues.
+                dateOfBirthString = format(data.dateOfBirth, 'yyyy-MM-dd');
             }
 
 
@@ -402,3 +399,6 @@ export default function ProfilePage() {
 
     
 
+
+
+    
