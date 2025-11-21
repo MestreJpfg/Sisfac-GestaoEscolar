@@ -39,6 +39,18 @@ const getInitials = (name: string | null | undefined) => {
     return name.substring(0, 2).toUpperCase();
 };
 
+// Função para determinar se a cor de fundo é clara ou escura
+const isColorLight = (hexColor: string) => {
+    if (!hexColor) return false;
+    const color = hexColor.charAt(0) === '#' ? hexColor.substring(1, 7) : hexColor;
+    const r = parseInt(color.substring(0, 2), 16);
+    const g = parseInt(color.substring(2, 4), 16);
+    const b = parseInt(color.substring(4, 6), 16);
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    return brightness > 155;
+};
+
+
 export default function UserTable({ users, profiles, onEdit, onSort, sortConfig }: UserTableProps) {
   
   const SortableHeader = ({ sortKey, children, className }: { sortKey: string, children: React.ReactNode, className?: string }) => {
@@ -106,6 +118,8 @@ export default function UserTable({ users, profiles, onEdit, onSort, sortConfig 
                 const profile = findProfile(user.profileId);
                 const profileName = profile ? profile.name : user.profileId;
                 const profileColor = profile ? profile.color : '#808080';
+                const textColor = isColorLight(profileColor) ? 'text-black' : 'text-white';
+
 
                 return (
                     <TableRow key={user.uid}>
@@ -122,8 +136,8 @@ export default function UserTable({ users, profiles, onEdit, onSort, sortConfig 
                     <TableCell className="whitespace-nowrap">
                         {profileName ? (
                              <Badge 
-                                className="text-white"
-                                style={{ backgroundColor: profileColor }}
+                                className={cn(textColor)}
+                                style={{ backgroundColor: profileColor, border: `1px solid ${profileColor}` }}
                             >
                                 {profileName}
                             </Badge>

@@ -12,12 +12,24 @@ import { Card, CardContent } from "./ui/card";
 import { Shield, Search, Edit, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Badge, type BadgeProps } from "./ui/badge";
+import { cn } from "@/lib/utils";
+
 
 interface ProfileTableProps {
   profiles: any[];
   onEdit: (profile: any) => void;
   onDelete: (profile: any) => void;
 }
+
+const isColorLight = (hexColor: string) => {
+    if (!hexColor) return false;
+    const color = hexColor.charAt(0) === '#' ? hexColor.substring(1, 7) : hexColor;
+    const r = parseInt(color.substring(0, 2), 16);
+    const g = parseInt(color.substring(2, 4), 16);
+    const b = parseInt(color.substring(4, 6), 16);
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    return brightness > 155;
+};
 
 
 export default function ProfileTable({ profiles, onEdit, onDelete }: ProfileTableProps) {
@@ -49,35 +61,41 @@ export default function ProfileTable({ profiles, onEdit, onDelete }: ProfileTabl
               </TableRow>
             </TableHeader>
             <TableBody>
-              {profiles.map((profile) => (
-                <TableRow key={profile.id}>
-                  <TableCell className="font-medium whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                        <span 
-                            className="w-2.5 h-2.5 p-0 rounded-full"
-                            style={{ backgroundColor: profile.color || '#808080' }}
-                        ></span>
-                        <span>{profile.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap text-muted-foreground hidden md:table-cell">{profile.description}</TableCell>
-                   <TableCell className="whitespace-nowrap">
-                        <div className="flex flex-wrap gap-1 max-w-xs">
-                            {profile.permissions?.map((perm: string) => (
-                                <Badge key={perm} variant="secondary">{perm.split(':')[1]}</Badge>
-                            )) || <span className="text-xs text-muted-foreground">Nenhuma</span>}
+              {profiles.map((profile) => {
+                const profileColor = profile.color || '#808080';
+                const textColor = isColorLight(profileColor) ? 'text-black' : 'text-white';
+                
+                return (
+                    <TableRow key={profile.id}>
+                    <TableCell className="font-medium whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                            <Badge 
+                                className={cn("w-auto", textColor)}
+                                style={{ backgroundColor: profileColor, border: `1px solid ${profileColor}` }}
+                            >
+                                {profile.name}
+                            </Badge>
                         </div>
-                   </TableCell>
-                  <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => onEdit(profile)}>
-                          <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => onDelete(profile)} className="text-destructive hover:text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                      </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-muted-foreground hidden md:table-cell">{profile.description}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                            <div className="flex flex-wrap gap-1 max-w-xs">
+                                {profile.permissions?.map((perm: string) => (
+                                    <Badge key={perm} variant="secondary">{perm.split(':')[1]}</Badge>
+                                )) || <span className="text-xs text-muted-foreground">Nenhuma</span>}
+                            </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => onEdit(profile)}>
+                            <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => onDelete(profile)} className="text-destructive hover:text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </TableCell>
+                    </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         </div>
