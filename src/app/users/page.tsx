@@ -20,8 +20,9 @@ export default function UsersPage() {
     const router = useRouter();
     const firestore = useFirestore();
 
-    // As consultas são agora seguras para serem executadas here,
-    // pois as regras do Firestore são a verdadeira barreira de segurança.
+    // As consultas são agora seguras para serem executadas aqui,
+    // pois as regras do Firestore são a verdadeira barreira de segurança, e a dashboard
+    // já filtrou quem pode aceder a esta página.
     const usersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
         return query(collection(firestore, 'users'), orderBy('name'));

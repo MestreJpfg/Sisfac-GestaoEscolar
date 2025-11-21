@@ -40,17 +40,14 @@ export default function DashboardPage() {
   const hasPermission = (permission: string) => {
     if (isPermissionsLoading || !userProfile || !firestore) return false;
     
-    // Explicitly check if the user is an admin first
     if (userProfile.profileId === 'Administrador' || userProfile.profileId === 'Administrador(a)') {
       return true;
     }
     
-    // Then check profile permissions
     if (profileDetails?.permissions?.includes(permission)) {
       return true;
     }
     
-    // Finally check custom user permissions
     if (userProfile.customPermissions?.includes(permission)) {
       return true;
     }
@@ -58,11 +55,30 @@ export default function DashboardPage() {
     return false;
   };
   
-  const canManageUsers = useMemo(() => hasPermission('manage:users'), [isPermissionsLoading, userProfile, profileDetails]);
-  const canManageProfiles = useMemo(() => hasPermission('manage:profiles'), [isPermissionsLoading, userProfile, profileDetails]);
-  const canManageTeachers = useMemo(() => hasPermission('manage:teachers'), [isPermissionsLoading, userProfile, profileDetails]);
-  const canViewStudents = useMemo(() => hasPermission('manage:students') || hasPermission('view:students'), [isPermissionsLoading, userProfile, profileDetails]);
-  const isAdmin = useMemo(() => userProfile?.profileId === 'Administrador' || userProfile?.profileId === 'Administrador(a)', [userProfile]);
+  const canManageUsers = useMemo(() => {
+    if (isPermissionsLoading) return false;
+    return hasPermission('manage:users');
+  }, [isPermissionsLoading, userProfile, profileDetails]);
+  
+  const canManageProfiles = useMemo(() => {
+    if (isPermissionsLoading) return false;
+    return hasPermission('manage:profiles');
+  }, [isPermissionsLoading, userProfile, profileDetails]);
+  
+  const canManageTeachers = useMemo(() => {
+    if (isPermissionsLoading) return false;
+    return hasPermission('manage:teachers');
+  }, [isPermissionsLoading, userProfile, profileDetails]);
+
+  const canViewStudents = useMemo(() => {
+     if (isPermissionsLoading) return false;
+    return hasPermission('manage:students') || hasPermission('view:students');
+  }, [isPermissionsLoading, userProfile, profileDetails]);
+
+  const isAdmin = useMemo(() => {
+    if (isPermissionsLoading) return false;
+    return userProfile?.profileId === 'Administrador' || userProfile?.profileId === 'Administrador(a)';
+  }, [isPermissionsLoading, userProfile]);
 
 
   const studentsQuery = useMemoFirebase(() => {
