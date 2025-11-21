@@ -50,12 +50,6 @@ export default function DashboardPage() {
     return profileDetails?.permissions?.includes('manage:profiles') || userProfile?.customPermissions?.includes('manage:profiles');
   }, [isPermissionsLoading, profileDetails, userProfile]);
   
-  const canManageClasses = useMemo(() => {
-    if (isPermissionsLoading) return false;
-    if (userProfile?.profileId === 'Administrador') return true;
-    return profileDetails?.permissions?.includes('manage:classes') || userProfile?.customPermissions?.includes('manage:classes');
-  }, [isPermissionsLoading, profileDetails, userProfile]);
-
 
   const studentsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -72,15 +66,11 @@ export default function DashboardPage() {
     return query(collection(firestore, 'profiles'));
   }, [firestore, canManageProfiles]);
 
-  const classesQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return query(collection(firestore, 'classes'));
-  }, [firestore, user]);
 
   const { data: students, isLoading: isStudentsLoading } = useCollection(studentsQuery);
   const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
   const { data: profiles, isLoading: isProfilesLoading } = useCollection(profilesQuery);
-  const { data: classes, isLoading: isClassesLoading } = useCollection(classesQuery);
+
 
   const welcomeName = user?.displayName?.split(' ')[0] || 'Utilizador';
 
@@ -136,15 +126,6 @@ export default function DashboardPage() {
                     description="Total de alunos registados"
                     action={<Button onClick={() => router.push('/dashboard/students')}>Gerir Alunos</Button>}
                     />
-                    {canManageClasses && (
-                        <StatCard
-                            title="Turmas"
-                            value={isClassesLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (classes?.length ?? 0)}
-                            icon={School}
-                            description="Total de turmas na escola"
-                            action={<Button onClick={() => router.push('/dashboard/classes')}>Gerir Turmas</Button>}
-                        />
-                    )}
                     {canManageUsers && (
                     <>
                         <StatCard

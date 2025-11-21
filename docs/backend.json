@@ -85,21 +85,6 @@
       },
       "required": ["id", "name", "permissions"]
     },
-    "Class": {
-      "title": "Class",
-      "type": "object",
-      "description": "Represents a school class or group.",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "teacherId": { "type": "string" },
-        "studentIds": {
-          "type": "array",
-          "items": { "type": "string" }
-        }
-      },
-      "required": ["id", "name", "teacherId"]
-    },
     "Grade": {
       "title": "Grade",
       "type": "object",
@@ -160,10 +145,6 @@
       {
         "path": "/profiles/{profileId}",
         "definition": { "schema": { "$ref": "#/entities/Profile" } }
-      },
-      {
-        "path": "/classes/{classId}",
-        "definition": { "schema": { "$ref": "#/entities/Class" } }
       },
       {
         "path": "/grades/{gradeId}",

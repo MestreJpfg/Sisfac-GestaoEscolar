@@ -54,11 +54,6 @@ service cloud.firestore {
         allow read, list: if isSignedIn();
     }
 
-    match /classes/{classId} {
-      allow read, list: if isSignedIn();
-      allow write: if hasPermission('manage:classes');
-    }
-    
     match /grades/{gradeId} {
        allow read: if isSignedIn();
        allow write: if hasPermission('manage:grades');
