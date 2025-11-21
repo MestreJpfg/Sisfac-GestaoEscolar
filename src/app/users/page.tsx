@@ -1,14 +1,9 @@
 'use client';
 
-import { useMemo, useEffect, useState } from 'react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import UserManager from "@/components/user-manager";
 import AuthGuard from "@/components/auth-guard";
-import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
-import Image from 'next/image';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { UserNav } from '@/components/user-nav';
 import { Button } from '@/components/ui/button';
@@ -17,51 +12,7 @@ import AppFooter from '@/components/app-footer';
 
 
 export default function UsersPage() {
-    const firestore = useFirestore();
     const router = useRouter();
-    const { toast } = useToast();
-    const { user: currentUser, isUserLoading } = useUser();
-
-    // 1. Get the current user's profile
-    const currentUserDocRef = useMemoFirebase(() => {
-        if (!currentUser || !firestore) return null;
-        return doc(firestore, 'users', currentUser.uid);
-    }, [currentUser, firestore]);
-    const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc(currentUserDocRef);
-
-    const isAuthorized = currentUserProfile?.profileId === 'Administrador';
-
-    // 2. Only query for all users if authorized
-    const usersQuery = useMemo(() => {
-        if (!firestore || !isAuthorized) return null;
-        return query(collection(firestore, 'users'), orderBy('name'));
-    }, [firestore, isAuthorized]);
-
-    const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
-
-    // 3. Redirect if not authorized after loading is complete
-    useEffect(() => {
-        const doneLoading = !isUserLoading && !isProfileLoading;
-        if (doneLoading && !isAuthorized) {
-            toast({
-                variant: 'destructive',
-                title: 'Acesso Negado',
-                description: 'Não tem permissão para aceder a esta página.',
-            });
-            router.replace('/dashboard');
-        }
-    }, [isAuthorized, isUserLoading, isProfileLoading, router, toast]);
-
-    const isLoading = isUserLoading || isProfileLoading || (isAuthorized && isUsersLoading);
-
-    // Render a loading state or nothing while checking permissions
-    if (isLoading || !isAuthorized) {
-        return (
-            <div className="flex h-screen w-full items-center justify-center">
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            </div>
-        );
-    }
     
     return (
         <AuthGuard>
@@ -88,7 +39,7 @@ export default function UsersPage() {
 
                 <main className="flex-1 py-8">
                     <div className="container">
-                        <UserManager users={users || []} />
+                        <UserManager />
                     </div>
                 </main>
                 <AppFooter />
