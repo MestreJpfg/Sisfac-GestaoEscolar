@@ -7,65 +7,63 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Function to get the user's profile data from the 'users' collection
-    function getUserProfile() {
+    // Function to get the user's own data from the 'users' collection
+    function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Function to check if a user has a specific profile
-    function hasProfile(profileName) {
-      let userProfile = getUserProfile();
-      return userProfile.profileId == profileName;
-    }
-
-    // Admin can do anything
-    function isAdmin() {
-      return hasProfile('Administrador');
-    }
-
-    // Allow signed-in users to create, read, and update their own profile
-    match /users/{userId} {
-      allow create, update: if isSignedIn() && request.auth.uid == userId;
-      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      // Allow admins to write to any user profile
-      allow write: if isAdmin();
-      // Allow Admins and Managers to list users.
-      allow list: if hasProfile('Administrador') || hasProfile('Gestor');
+    // Function to get the complete profile data based on the user's profileId
+    function getUserProfile() {
+      let userData = getUserData();
+      return get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
     }
     
-    // Allow admins and managers to manage profiles
+    // NEW, more robust permission check
+    function hasPermission(permission) {
+      let userData = getUserData();
+      let userProfile = getUserProfile();
+      
+      // The 'Administrador' profile always has all permissions.
+      return userData.profileId == 'Administrador'
+        // Check for the permission in the profile's permission list
+        || permission in userProfile.permissions
+        // Check for the permission in the user's specific custom permissions
+        || (userData.customPermissions != null && permission in userData.customPermissions);
+    }
+
+    match /users/{userId} {
+      allow create, update: if isSignedIn() && request.auth.uid == userId;
+      allow read: if isSignedIn() && (request.auth.uid == userId || hasPermission('manage:users'));
+      allow write: if hasPermission('manage:users');
+      allow list: if hasPermission('manage:users');
+    }
+    
     match /profiles/{profileId} {
-        allow write: if isAdmin();
-        // Allow any signed in user to read/list profiles so the UI can populate dropdowns.
-        // Profile names are not sensitive data.
+        allow write: if hasPermission('manage:profiles');
+        // Any authenticated user can read profiles to allow UI selects/dropdowns to be populated.
         allow read, list: if isSignedIn();
     }
 
-    // General read access for signed-in users for most collections
-    // Write rules will need to be more specific later
     match /classes/{classId} {
-      allow read: if isSignedIn();
-      allow write: if hasProfile('Administrador') || hasProfile('Gestor');
-      allow list: if isSignedIn();
+      allow read, list: if isSignedIn();
+      allow write: if hasPermission('manage:classes');
     }
     
     match /grades/{gradeId} {
        allow read: if isSignedIn();
-       allow write: if hasProfile('Professor') || hasProfile('Administrador');
+       allow write: if hasPermission('manage:grades');
     }
 
     match /attendance/{attendanceId} {
        allow read: if isSignedIn();
-       allow write: if hasProfile('Professor') || hasProfile('Administrador');
+       allow write: if hasPermission('manage:attendance');
     }
     
     match /announcements/{announcementId} {
       allow read: if isSignedIn();
-      allow write: if hasProfile('Administrador') || hasProfile('Gestor');
+      allow write: if hasPermission('manage:announcements');
     }
 
-    // Fallback for the existing 'alunos' collection, restrict to signed-in users for now.
-    // This should be migrated or removed eventually.
     match /alunos/{alunoId} {
       allow read, write, list: if isSignedIn();
     }

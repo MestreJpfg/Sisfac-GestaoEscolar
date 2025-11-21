@@ -1,11 +1,11 @@
 
 'use client';
 
-import { useMemo, useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, orderBy } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
 import UserManager from "@/components/user-manager";
 import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -18,65 +18,37 @@ import { useCollection } from '@/firebase/firestore/use-collection';
 
 export default function UsersPage() {
     const router = useRouter();
-    const { user: currentUser, isUserLoading } = useUser();
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    // 1. Get current user's profile
-    const currentUserDocRef = useMemoFirebase(() => {
-        if (!currentUser || !firestore) return null;
-        return doc(firestore, 'users', currentUser.uid);
-    }, [currentUser, firestore]);
-    const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc(currentUserDocRef);
-
-    // 2. Get the details of that profile (for permissions)
-    const profileDocRef = useMemoFirebase(() => {
-        if (!currentUserProfile?.profileId || !firestore) return null;
-        return doc(firestore, 'profiles', currentUserProfile.profileId);
-    }, [currentUserProfile, firestore]);
-    const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
-    
-    // Determine if we are still loading any of the required data for authorization
-    const isAuthorizing = isUserLoading || isProfileLoading || isProfileDetailsLoading;
-
-    // Determine authorization ONLY when not loading
-    const isAuthorized = useMemo(() => {
-        if (isAuthorizing) return false; // Default to not authorized while loading
-
-        if (!currentUserProfile) return false;
-        
-        const isAdmin = currentUserProfile.profileId === 'Administrador';
-        const hasExplicitPermission = profileDetails?.permissions?.includes('manage:users') || currentUserProfile?.customPermissions?.includes('manage:users');
-        
-        return isAdmin || hasExplicitPermission;
-    }, [isAuthorizing, currentUserProfile, profileDetails]);
-
-
-    // 4. Fetch users ONLY if authorized
-    const usersQuery = useMemoFirebase(() => {
-        // Only create the query if authorization is already confirmed.
-        // This avoids fetching data that will be thrown away.
-        if (!isAuthorized || !firestore) return null; 
+    // Directly query the users collection. The authorization logic is now handled
+    // by Firestore Security Rules.
+    const usersQuery = useMemo(() => {
+        if (!firestore) return null; 
         return query(collection(firestore, 'users'), orderBy('name'));
-    }, [firestore, isAuthorized]);
-    const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
-    
-    // 5. Redirect ONLY when authorization check is complete and result is definitively false
+    }, [firestore]);
+
+    // The useCollection hook will now receive a FirestorePermissionError if the
+    // rules deny the 'list' operation.
+    const { data: users, isLoading, error } = useCollection(usersQuery);
+
+    // This effect runs when the 'error' state from useCollection changes.
     useEffect(() => {
-        if (!isAuthorizing && !isAuthorized) {
+        if (error) {
+            // Firestore rules denied the request. The user is not authorized.
             toast({
                 variant: 'destructive',
                 title: 'Acesso Negado',
                 description: 'Não tem permissão para aceder a esta página.',
             });
+            // Redirect the user back to the dashboard.
             router.replace('/dashboard');
         }
-    }, [isAuthorizing, isAuthorized, router, toast]);
+    }, [error, router, toast]);
 
-    const isLoadingPage = isAuthorizing || (isAuthorized && isUsersLoading);
-
-    // Render nothing or a loader if we are in a state where redirection is about to happen
-    if (!isAuthorizing && !isAuthorized) {
+    // If there is an error, we are about to redirect, so we can show a loader
+    // or nothing to prevent a flash of incorrect content.
+    if (error) {
       return (
         <div className="flex h-screen w-full items-center justify-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -109,12 +81,14 @@ export default function UsersPage() {
 
                 <main className="flex-1 py-8">
                     <div className="container">
-                       {isLoadingPage ? (
+                       {isLoading ? (
                             <div className="flex h-64 w-full items-center justify-center">
                                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
                             </div>
+                       // If not loading and data is available, show the UserManager.
                        ) : users ? (
                             <UserManager initialUsers={users} />
+                       // If not loading and there's no data (and no error), it means the collection is empty.
                        ) : null}
                     </div>
                 </main>
