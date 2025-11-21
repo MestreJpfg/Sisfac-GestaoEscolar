@@ -132,6 +132,13 @@ export default function DashboardPage() {
                     description="Total de alunos registados"
                     action={<Button onClick={() => router.push('/dashboard/students')}>Gerir Alunos</Button>}
                     />
+                    <StatCard
+                        title="O meu Perfil"
+                        value={user?.displayName ?? ''}
+                        icon={UserCog}
+                        description="Gerir as suas informações e preferências"
+                        action={<Button onClick={() => router.push('/profile')}>Aceder ao Perfil</Button>}
+                    />
                     {canManageUsers && (
                         <StatCard
                         title="Utilizadores"
