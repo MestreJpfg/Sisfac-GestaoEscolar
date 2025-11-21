@@ -32,7 +32,7 @@ export default function UserManager() {
   const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
   
   const isAuthorized = useMemo(() => {
-    if (isProfileLoading || isProfileDetailsLoading) return undefined;
+    if (isProfileLoading || isProfileDetailsLoading) return undefined; // Return undefined during loading states
     if (!currentUserProfile) return false;
     
     // Admin always has access

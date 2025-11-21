@@ -29,13 +29,16 @@ service cloud.firestore {
       allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       // Allow admins to write to any user profile
       allow write: if isAdmin();
-      // Allow Admins and Managers to list users (e.g., to find professors)
+      // Allow Admins and Managers to list users.
       allow list: if hasProfile('Administrador') || hasProfile('Gestor');
     }
     
-    // Allow admins to manage profiles
+    // Allow admins and managers to manage profiles
     match /profiles/{profileId} {
-        allow read, write, list: if isAdmin();
+        allow write: if isAdmin();
+        // Allow any signed in user to read/list profiles so the UI can populate dropdowns.
+        // Profile names are not sensitive data.
+        allow read, list: if isSignedIn();
     }
 
     // General read access for signed-in users for most collections
