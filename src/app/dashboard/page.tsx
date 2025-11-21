@@ -71,11 +71,6 @@ export default function DashboardPage() {
     return hasPermission('manage:students') || hasPermission('view:students');
   }, [isPermissionsLoading, userProfile, profileDetails]);
 
-  const canManageSubjects = useMemo(() => {
-    if (isPermissionsLoading) return false;
-    return hasPermission('manage:subjects');
-  }, [isPermissionsLoading, userProfile, profileDetails]);
-
   const isAdmin = useMemo(() => {
     if (isPermissionsLoading) return false;
     return userProfile?.profileId === 'Administrador' || userProfile?.profileId === 'Administrador(a)';
@@ -195,15 +190,6 @@ export default function DashboardPage() {
                                 icon={Shield}
                                 description="Perfis de acesso no sistema"
                                 action={<Button onClick={() => router.push('/profiles')}>Gerir Perfis</Button>}
-                                />
-                            )}
-                             {canManageSubjects && (
-                                <StatCard
-                                title="Disciplinas"
-                                value={"Configurar"}
-                                icon={BookCopy}
-                                description="Gerir as disciplinas do currículo"
-                                action={<Button onClick={() => router.push('/dashboard/subjects')}>Gerir Disciplinas</Button>}
                                 />
                             )}
                             {isAdmin && (

@@ -34,7 +34,6 @@ const allPermissions = [
     { id: 'manage:database', label: 'Gerir Base de Dados' },
     { id: 'manage:students', label: 'Gerir Alunos' },
     { id: 'view:students', label: 'Visualizar Alunos' },
-    { id: 'manage:subjects', label: 'Gerir Disciplinas' },
     { id: 'manage:users', label: 'Gerir Utilizadores' },
     { id: 'manage:profiles', label: 'Gerir Perfis' },
     { id: 'manage:grades', label: 'Gerir Notas' },
