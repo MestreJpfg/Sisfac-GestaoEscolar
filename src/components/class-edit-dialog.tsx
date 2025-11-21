@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -33,7 +33,6 @@ export default function ClassEditDialog({ isOpen, onClose, classData, onSave, is
   const firestore = useFirestore();
   
   const teachersQuery = useMemoFirebase(() => {
-    // Só cria a consulta se o utilizador for autorizado.
     if (!firestore || !isAuthorized) return null;
     return query(
         collection(firestore, 'users'), 
@@ -77,7 +76,6 @@ export default function ClassEditDialog({ isOpen, onClose, classData, onSave, is
         submissionData.teacherName = "Não definido";
     }
     
-    // Ensure teacherId is not an empty string if "none" is selected.
     if (!submissionData.teacherId) {
         delete submissionData.teacherId;
     }

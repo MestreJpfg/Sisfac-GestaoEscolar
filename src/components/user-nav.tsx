@@ -3,7 +3,7 @@
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
-import { doc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +31,13 @@ export function UserNav() {
 
   const { data: userProfile } = useDoc(userDocRef);
 
+  const profileDocRef = useMemoFirebase(() => {
+    if (!userProfile?.profileId || !firestore) return null;
+    return doc(firestore, 'profiles', userProfile.profileId);
+  }, [userProfile, firestore]);
+
+  const { data: profileDetails } = useDoc(profileDocRef);
+
   const handleLogout = async () => {
     if (auth) {
       await signOut(auth);
@@ -51,7 +58,7 @@ export function UserNav() {
     return name.substring(0, 2).toUpperCase();
   };
   
-  const isAdmin = userProfile?.profileId === 'Administrador';
+  const canManageUsers = (profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users'));
 
   return (
     <DropdownMenu>
@@ -80,7 +87,7 @@ export function UserNav() {
               <span>Perfil</span>
             </DropdownMenuItem>
           </Link>
-          {isAdmin && (
+          {canManageUsers && (
             <Link href="/users" passHref>
               <DropdownMenuItem>
                 <Users className="mr-2 h-4 w-4" />

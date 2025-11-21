@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, collection, query, orderBy } from 'firebase/firestore';
+import { doc, collection, query, orderBy, getDoc } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import UserTable from './user-table';
 import { useRouter } from 'next/navigation';
@@ -23,14 +23,21 @@ export default function UserManager() {
     return doc(firestore, 'users', currentUser.uid);
   }, [currentUser, firestore]);
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc(currentUserDocRef);
+  
+  const profileDocRef = useMemoFirebase(() => {
+    if (!currentUserProfile?.profileId || !firestore) return null;
+    return doc(firestore, 'profiles', currentUserProfile.profileId);
+  }, [currentUserProfile, firestore]);
 
+  const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
+  
   const isAuthorized = useMemo(() => {
-    if (isProfileLoading) return undefined; // Return undefined while loading
-    return currentUserProfile?.profileId === 'Administrador';
-  }, [isProfileLoading, currentUserProfile]);
+    if (isProfileLoading || isProfileDetailsLoading) return undefined;
+    const hasPermission = profileDetails?.permissions?.includes('manage:users') || currentUserProfile?.customPermissions?.includes('manage:users');
+    return hasPermission;
+  }, [isProfileLoading, isProfileDetailsLoading, currentUserProfile, profileDetails]);
 
   const usersQuery = useMemoFirebase(() => {
-    // Only fetch users if authorized. Don't query while authorization status is unknown.
     if (!firestore || isAuthorized !== true) return null;
     return query(collection(firestore, 'users'), orderBy('name'));
   }, [firestore, isAuthorized]);
@@ -38,7 +45,6 @@ export default function UserManager() {
   const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
 
   useEffect(() => {
-    // Wait until authorization status is determined (not undefined)
     if (isAuthorized === false) {
         toast({
             variant: 'destructive',
@@ -57,7 +63,7 @@ export default function UserManager() {
     setEditingUser(null);
   };
 
-  const handleSaveChanges = (updatedData: any) => {
+  const handleSaveChanges = async (updatedData: any) => {
     if (!firestore || !editingUser?.uid) return;
 
     const docRef = doc(firestore, 'users', editingUser.uid);
@@ -71,8 +77,7 @@ export default function UserManager() {
     handleCloseDialog();
   };
 
-  // Show loader while user/profile is loading or authorization is not yet determined
-  const isLoading = isUserLoading || isProfileLoading || isAuthorized === undefined || (isAuthorized && isUsersLoading);
+  const isLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading || isAuthorized === undefined || (isAuthorized && isUsersLoading);
 
   if (isLoading) {
     return (
@@ -82,8 +87,6 @@ export default function UserManager() {
     );
   }
 
-  // If authorized, render the table. If not authorized, this component will be unmounted by redirect,
-  // or will show nothing until the redirect happens.
   return (
     <>
       {isAuthorized && users && (

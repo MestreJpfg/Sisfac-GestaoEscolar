@@ -26,8 +26,28 @@ export default function DashboardPage() {
   }, [user, firestore]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc(userDocRef);
 
-  const isAdmin = userProfile?.profileId === 'Administrador';
-  const isManager = userProfile?.profileId === 'Gestor';
+  const profileDocRef = useMemoFirebase(() => {
+    if (!userProfile?.profileId || !firestore) return null;
+    return doc(firestore, 'profiles', userProfile.profileId);
+  }, [userProfile, firestore]);
+
+  const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
+
+  const canManageUsers = useMemo(() => {
+    if (isProfileLoading || isProfileDetailsLoading) return false;
+    return profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
+  }, [isProfileLoading, isProfileDetailsLoading, profileDetails, userProfile]);
+
+  const canManageProfiles = useMemo(() => {
+    if (isProfileLoading || isProfileDetailsLoading) return false;
+    return profileDetails?.permissions?.includes('manage:profiles') || userProfile?.customPermissions?.includes('manage:profiles');
+  }, [isProfileLoading, isProfileDetailsLoading, profileDetails, userProfile]);
+  
+  const canManageClasses = useMemo(() => {
+    if (isProfileLoading || isProfileDetailsLoading) return false;
+    return profileDetails?.permissions?.includes('manage:classes') || userProfile?.customPermissions?.includes('manage:classes');
+  }, [isProfileLoading, isProfileDetailsLoading, profileDetails, userProfile]);
+
 
   const studentsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -35,16 +55,14 @@ export default function DashboardPage() {
   }, [user, firestore]);
 
   const usersQuery = useMemoFirebase(() => {
-    // A consulta SÓ é criada se o perfil estiver carregado e for admin.
-    if (!firestore || isProfileLoading || !isAdmin) return null; 
+    if (!firestore || !canManageUsers) return null; 
     return query(collection(firestore, 'users'));
-  }, [firestore, isProfileLoading, isAdmin]);
+  }, [firestore, canManageUsers]);
   
   const profilesQuery = useMemoFirebase(() => {
-    // A consulta SÓ é criada se o perfil estiver carregado e for admin.
-    if (!firestore || isProfileLoading || !isAdmin) return null;
+    if (!firestore || !canManageProfiles) return null;
     return query(collection(firestore, 'profiles'));
-  }, [firestore, isProfileLoading, isAdmin]);
+  }, [firestore, canManageProfiles]);
 
   const classesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -56,7 +74,7 @@ export default function DashboardPage() {
   const { data: profiles, isLoading: isProfilesLoading } = useCollection(profilesQuery);
   const { data: classes, isLoading: isClassesLoading } = useCollection(classesQuery);
 
-  const isLoading = isUserLoading || isProfileLoading;
+  const isLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
   const welcomeName = user?.displayName?.split(' ')[0] || 'Utilizador';
 
   if (isLoading) {
@@ -100,7 +118,7 @@ export default function DashboardPage() {
                   description="Total de alunos registados"
                   action={<Button onClick={() => router.push('/dashboard/students')}>Gerir Alunos</Button>}
                 />
-                 {(isAdmin || isManager) && (
+                 {canManageClasses && (
                     <StatCard
                         title="Turmas"
                         value={isClassesLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (classes?.length ?? 0)}
@@ -109,7 +127,7 @@ export default function DashboardPage() {
                         action={<Button onClick={() => router.push('/dashboard/classes')}>Gerir Turmas</Button>}
                     />
                  )}
-                 {isAdmin && (
+                 {canManageUsers && (
                   <>
                     <StatCard
                       title="Utilizadores"
@@ -118,6 +136,9 @@ export default function DashboardPage() {
                       description="Total de contas no sistema"
                       action={<Button onClick={() => router.push('/users')}>Gerir Utilizadores</Button>}
                     />
+                  </>
+                )}
+                {canManageProfiles && (
                     <StatCard
                       title="Perfis e Permissões"
                       value={isProfilesLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (profiles?.length ?? 0)}
@@ -125,7 +146,6 @@ export default function DashboardPage() {
                       description="Perfis de acesso no sistema"
                       action={<Button onClick={() => router.push('/profiles')}>Gerir Perfis</Button>}
                     />
-                  </>
                 )}
             </div>
 

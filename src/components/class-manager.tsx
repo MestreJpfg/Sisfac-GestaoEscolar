@@ -33,6 +33,13 @@ export default function ClassManager() {
   }, [user, firestore]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc(userDocRef);
 
+  const profileDocRef = useMemoFirebase(() => {
+    if (!userProfile?.profileId || !firestore) return null;
+    return doc(firestore, 'profiles', userProfile.profileId);
+  }, [userProfile, firestore]);
+
+  const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
+
   const classesQuery = useMemo(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'classes'), orderBy('name'));
@@ -40,11 +47,10 @@ export default function ClassManager() {
 
   const { data: classes, isLoading: isClassesLoading } = useCollection(classesQuery);
 
-  // A autorização só é definida após o carregamento do perfil
   const isAuthorized = useMemo(() => {
-    if (isProfileLoading) return false;
-    return userProfile?.profileId === 'Administrador' || userProfile?.profileId === 'Gestor';
-  }, [isProfileLoading, userProfile]);
+    if (isProfileLoading || isProfileDetailsLoading) return false;
+    return profileDetails?.permissions?.includes('manage:classes') || userProfile?.customPermissions?.includes('manage:classes');
+  }, [isProfileLoading, isProfileDetailsLoading, userProfile, profileDetails]);
 
   const handleEditClass = (cls: any) => {
     setEditingClass(cls);
@@ -52,7 +58,7 @@ export default function ClassManager() {
   };
 
   const handleNewClass = () => {
-    setEditingClass({}); // Objeto vazio para indicar criação, mas o diálogo usará null
+    setEditingClass({}); 
     setIsNew(true);
   };
 
@@ -118,9 +124,11 @@ export default function ClassManager() {
                     </div>
                 </div>
                 <div className="flex flex-1 items-center justify-end space-x-4">
-                    <Button onClick={handleNewClass} disabled={isProfileLoading || !isAuthorized}>
-                        <Plus className="mr-2 h-4 w-4" /> Nova Turma
-                    </Button>
+                    {isAuthorized && (
+                        <Button onClick={handleNewClass}>
+                            <Plus className="mr-2 h-4 w-4" /> Nova Turma
+                        </Button>
+                    )}
                     <nav className="flex items-center space-x-1">
                         <ThemeToggle />
                         <UserNav />
@@ -131,7 +139,7 @@ export default function ClassManager() {
 
         <main className="flex-1 py-8">
           <div className="container">
-            {isClassesLoading || isProfileLoading ? (
+            {isClassesLoading || isProfileLoading || isProfileDetailsLoading ? (
                  <div className="flex h-64 w-full items-center justify-center">
                     <Loader2 className="h-12 w-12 animate-spin text-primary" />
                  </div>
