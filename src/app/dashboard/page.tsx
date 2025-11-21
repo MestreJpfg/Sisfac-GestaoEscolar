@@ -33,27 +33,27 @@ export default function DashboardPage() {
 
   const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
 
-  const isLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
+  const isPermissionsLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
   
   const isAdmin = useMemo(() => {
-      if (isLoading) return undefined;
+      if (isPermissionsLoading) return null;
       return userProfile?.profileId === 'Administrador';
-  }, [isLoading, userProfile]);
+  }, [isPermissionsLoading, userProfile]);
 
   const canManageUsers = useMemo(() => {
-    if (isLoading) return undefined;
+    if (isPermissionsLoading) return null;
     return isAdmin || profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
-  }, [isLoading, profileDetails, userProfile, isAdmin]);
+  }, [isPermissionsLoading, profileDetails, userProfile, isAdmin]);
 
   const canManageProfiles = useMemo(() => {
-    if (isLoading) return undefined;
+    if (isPermissionsLoading) return null;
     return isAdmin || profileDetails?.permissions?.includes('manage:profiles') || userProfile?.customPermissions?.includes('manage:profiles');
-  }, [isLoading, profileDetails, userProfile, isAdmin]);
+  }, [isPermissionsLoading, profileDetails, userProfile, isAdmin]);
   
   const canManageClasses = useMemo(() => {
-    if (isLoading) return undefined;
+    if (isPermissionsLoading) return null;
     return isAdmin || profileDetails?.permissions?.includes('manage:classes') || userProfile?.customPermissions?.includes('manage:classes');
-  }, [isLoading, profileDetails, userProfile, isAdmin]);
+  }, [isPermissionsLoading, profileDetails, userProfile, isAdmin]);
 
 
   const studentsQuery = useMemoFirebase(() => {
@@ -83,7 +83,7 @@ export default function DashboardPage() {
 
   const welcomeName = user?.displayName?.split(' ')[0] || 'Utilizador';
 
-  if (isLoading) {
+  if (isPermissionsLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />

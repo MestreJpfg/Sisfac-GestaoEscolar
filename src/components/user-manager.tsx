@@ -34,7 +34,7 @@ export default function UserManager() {
   const isAuthorizationLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
 
   const isAuthorized = useMemo(() => {
-    if (isAuthorizationLoading) return undefined;
+    if (isAuthorizationLoading) return null; // Return null while loading
     if (!currentUserProfile) return false;
     
     if (currentUserProfile.profileId === 'Administrador') {
@@ -47,7 +47,7 @@ export default function UserManager() {
 
 
   useEffect(() => {
-    if (isAuthorized === false) {
+    if (isAuthorized === false) { // Only redirect if authorization is resolved to false
         toast({
             variant: 'destructive',
             title: 'Acesso Negado',
@@ -86,7 +86,7 @@ export default function UserManager() {
     handleCloseDialog();
   };
 
-  const isLoading = isAuthorizationLoading || isAuthorized === undefined || (isAuthorized && isUsersLoading);
+  const isLoading = isAuthorizationLoading || isAuthorized === null || (isAuthorized && isUsersLoading);
 
   if (isLoading) {
     return (
