@@ -88,12 +88,14 @@ service cloud.firestore {
     }
 
     match /alunos/{alunoId} {
-      allow read, write: if hasPermission('manage:students');
+      allow read: if hasPermission('manage:students') || hasPermission('view:students');
+      allow write: if hasPermission('manage:students');
       allow list: if hasPermission('manage:students') || hasPermission('view:students');
     }
 
     match /subjects/{subjectId} {
-      allow read, write: if hasPermission('manage:subjects');
+      allow read: if isSignedIn();
+      allow write: if hasPermission('manage:subjects');
     }
   }
 }
