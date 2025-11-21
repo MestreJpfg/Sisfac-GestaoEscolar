@@ -1,68 +1,21 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { useFirestore, useUser, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, collection, query, orderBy } from 'firebase/firestore';
+import { useState } from 'react';
+import { useFirestore } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import UserTable from './user-table';
-import { useRouter } from 'next/navigation';
 import UserEditDialog from './user-edit-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
 
-export default function UserManager() {
+// This component is now simplified. It receives the initial list of users
+// and is only responsible for displaying them and handling edit interactions.
+// The authorization and data fetching are handled by the parent page.
+export default function UserManager({ initialUsers }: { initialUsers: any[] }) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const router = useRouter();
-  const { user: currentUser, isUserLoading } = useUser();
   
   const [editingUser, setEditingUser] = useState<any | null>(null);
-
-  const currentUserDocRef = useMemoFirebase(() => {
-    if (!currentUser || !firestore) return null;
-    return doc(firestore, 'users', currentUser.uid);
-  }, [currentUser, firestore]);
-  const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc(currentUserDocRef);
-  
-  const profileDocRef = useMemoFirebase(() => {
-    if (!currentUserProfile?.profileId || !firestore) return null;
-    return doc(firestore, 'profiles', currentUserProfile.profileId);
-  }, [currentUserProfile, firestore]);
-
-  const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
-  
-  const isAuthorizationLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
-
-  const isAuthorized = useMemo(() => {
-    if (isAuthorizationLoading) return null; // Return null while loading
-    if (!currentUserProfile) return false;
-    
-    if (currentUserProfile.profileId === 'Administrador') {
-      return true;
-    }
-    
-    const hasPermission = profileDetails?.permissions?.includes('manage:users') || currentUserProfile?.customPermissions?.includes('manage:users');
-    return hasPermission;
-  }, [isAuthorizationLoading, currentUserProfile, profileDetails]);
-
-
-  useEffect(() => {
-    if (isAuthorized === false) { // Only redirect if authorization is resolved to false
-        toast({
-            variant: 'destructive',
-            title: 'Acesso Negado',
-            description: 'Não tem permissão para aceder a esta página.',
-        });
-        router.replace('/dashboard');
-    }
-  }, [isAuthorized, router, toast]);
-
-  const usersQuery = useMemoFirebase(() => {
-    if (isAuthorized !== true) return null;
-    return query(collection(firestore, 'users'), orderBy('name'));
-  }, [firestore, isAuthorized]);
-
-  const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
 
   const handleEditUser = (user: any) => {
     setEditingUser(user);
@@ -86,24 +39,12 @@ export default function UserManager() {
     handleCloseDialog();
   };
 
-  const isLoading = isAuthorizationLoading || isAuthorized === null || (isAuthorized && isUsersLoading);
-
-  if (isLoading) {
-    return (
-        <div className="flex h-64 w-full items-center justify-center">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
-    );
-  }
-
   return (
     <>
-      {isAuthorized && users && (
-        <UserTable 
-          users={users} 
-          onEdit={handleEditUser} 
-        />
-      )}
+      <UserTable 
+        users={initialUsers} 
+        onEdit={handleEditUser} 
+      />
 
       {editingUser && (
         <UserEditDialog
