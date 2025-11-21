@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useMemo } from "react";
@@ -116,11 +115,11 @@ export default function ClassEditDialog({ isOpen, onClose, classData, onSave, is
                   <Select 
                     onValueChange={(value) => field.onChange(value === 'none' ? '' : value)} 
                     value={field.value || 'none'}
-                    disabled={!isAuthorized}
+                    disabled={!isAuthorized || isLoadingTeachers}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={isAuthorized ? (isLoadingTeachers ? "A carregar..." : "Selecione um professor (opcional)") : "Sem permissão para carregar"} />
+                        <SelectValue placeholder={!isAuthorized ? "Sem permissão" : (isLoadingTeachers ? "A carregar..." : "Selecione um professor (opcional)")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -138,7 +137,7 @@ export default function ClassEditDialog({ isOpen, onClose, classData, onSave, is
             />
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-              <Button type="submit">Salvar Turma</Button>
+              <Button type="submit" disabled={!isAuthorized}>Salvar Turma</Button>
             </DialogFooter>
           </form>
         </Form>
