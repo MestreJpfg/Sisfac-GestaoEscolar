@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, doc } from 'firebase/firestore';
-import { Loader2, Users, UserCog, Shield, Database, ClipboardList, BookCopy } from 'lucide-react';
+import { Loader2, Users, UserCog, Shield, Database, ClipboardList, BookCopy, Archive } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -174,6 +174,15 @@ export default function DashboardPage() {
                         <StatCard title="..." value={<Loader2 className="h-5 w-5 animate-spin"/>} icon={Users} />
                     ) : (
                         <>
+                            {isAdmin && (
+                                <StatCard
+                                title="Cadastros"
+                                value={"Em breve"}
+                                icon={Archive}
+                                description="Gerir cadastros gerais do sistema"
+                                action={<Button onClick={() => router.push('/dashboard/cadastros')}>Aceder</Button>}
+                                />
+                            )}
                             {canManageUsers && (
                                 <StatCard
                                 title="Utilizadores"
