@@ -24,18 +24,22 @@ export default function UserManager() {
   }, [currentUser, firestore]);
   const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc(currentUserDocRef);
 
-  const isAuthorized = currentUserProfile?.profileId === 'Administrador';
+  const isAuthorized = useMemo(() => {
+    if (isProfileLoading) return undefined; // Return undefined while loading
+    return currentUserProfile?.profileId === 'Administrador';
+  }, [isProfileLoading, currentUserProfile]);
 
   const usersQuery = useMemoFirebase(() => {
-    if (!firestore || !isAuthorized) return null;
+    // Only fetch users if authorized. Don't query while authorization status is unknown.
+    if (!firestore || isAuthorized !== true) return null;
     return query(collection(firestore, 'users'), orderBy('name'));
   }, [firestore, isAuthorized]);
 
   const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
 
   useEffect(() => {
-    const doneLoading = !isUserLoading && !isProfileLoading;
-    if (doneLoading && !isAuthorized) {
+    // Wait until authorization status is determined (not undefined)
+    if (isAuthorized === false) {
         toast({
             variant: 'destructive',
             title: 'Acesso Negado',
@@ -43,7 +47,7 @@ export default function UserManager() {
         });
         router.replace('/dashboard');
     }
-  }, [isAuthorized, isUserLoading, isProfileLoading, router, toast]);
+  }, [isAuthorized, router, toast]);
 
   const handleEditUser = (user: any) => {
     setEditingUser(user);
@@ -67,9 +71,10 @@ export default function UserManager() {
     handleCloseDialog();
   };
 
-  const isLoading = isUserLoading || isProfileLoading || (isAuthorized && isUsersLoading);
+  // Show loader while user/profile is loading or authorization is not yet determined
+  const isLoading = isUserLoading || isProfileLoading || isAuthorized === undefined || (isAuthorized && isUsersLoading);
 
-  if (isLoading || !isAuthorized) {
+  if (isLoading) {
     return (
         <div className="flex h-64 w-full items-center justify-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -77,12 +82,16 @@ export default function UserManager() {
     );
   }
 
+  // If authorized, render the table. If not authorized, this component will be unmounted by redirect,
+  // or will show nothing until the redirect happens.
   return (
     <>
-      <UserTable 
-        users={users || []} 
-        onEdit={handleEditUser} 
-      />
+      {isAuthorized && users && (
+        <UserTable 
+          users={users} 
+          onEdit={handleEditUser} 
+        />
+      )}
 
       {editingUser && (
         <UserEditDialog

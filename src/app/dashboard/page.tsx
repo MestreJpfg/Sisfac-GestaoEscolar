@@ -35,14 +35,16 @@ export default function DashboardPage() {
   }, [user, firestore]);
 
   const usersQuery = useMemoFirebase(() => {
-    if (!firestore || !isAdmin) return null; // Only query if user is an admin
+    // Only query if user profile is loaded and user is an admin
+    if (!firestore || isProfileLoading || !isAdmin) return null; 
     return query(collection(firestore, 'users'));
-  }, [firestore, isAdmin]);
+  }, [firestore, isProfileLoading, isAdmin]);
   
   const profilesQuery = useMemoFirebase(() => {
-    if (!firestore || !isAdmin) return null; // Only query if user is an admin
+    // Only query if user profile is loaded and user is an admin
+    if (!firestore || isProfileLoading || !isAdmin) return null;
     return query(collection(firestore, 'profiles'));
-  }, [firestore, isAdmin]);
+  }, [firestore, isProfileLoading, isAdmin]);
 
   const classesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
