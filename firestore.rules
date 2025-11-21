@@ -9,12 +9,14 @@ service cloud.firestore {
 
     // Function to get the user's own data from the 'users' collection
     function getUserData() {
+      // CORRECT: Use a full path with the database variable
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
     // Function to get the complete profile data based on the user's profileId
     function getUserProfile() {
       let userData = getUserData();
+      // CORRECT: Use a full path with the database variable
       return get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
     }
     
