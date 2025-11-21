@@ -153,7 +153,7 @@ export default function ProfilePage() {
             let dateOfBirthString = null;
             if (data.dateOfBirth) {
                 const date = data.dateOfBirth;
-                // Adjust for timezone offset before formatting to ensure the correct day is saved
+                // definitive timezone fix
                 const userTimezoneOffset = date.getTimezoneOffset() * 60000;
                 const adjustedDate = new Date(date.getTime() + userTimezoneOffset);
                 dateOfBirthString = adjustedDate.toISOString().split('T')[0];
@@ -401,3 +401,4 @@ export default function ProfilePage() {
     
 
     
+
