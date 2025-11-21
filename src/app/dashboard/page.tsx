@@ -35,13 +35,13 @@ export default function DashboardPage() {
   }, [user, firestore]);
 
   const usersQuery = useMemoFirebase(() => {
-    // Only query if user profile is loaded and user is an admin
+    // A consulta SÓ é criada se o perfil estiver carregado e for admin.
     if (!firestore || isProfileLoading || !isAdmin) return null; 
     return query(collection(firestore, 'users'));
   }, [firestore, isProfileLoading, isAdmin]);
   
   const profilesQuery = useMemoFirebase(() => {
-    // Only query if user profile is loaded and user is an admin
+    // A consulta SÓ é criada se o perfil estiver carregado e for admin.
     if (!firestore || isProfileLoading || !isAdmin) return null;
     return query(collection(firestore, 'profiles'));
   }, [firestore, isProfileLoading, isAdmin]);

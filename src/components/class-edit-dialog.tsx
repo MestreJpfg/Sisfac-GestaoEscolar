@@ -33,7 +33,8 @@ export default function ClassEditDialog({ isOpen, onClose, classData, onSave, is
   const firestore = useFirestore();
   
   const teachersQuery = useMemoFirebase(() => {
-    if (!firestore || !isAuthorized) return null; // Only query if authorized
+    // Só cria a consulta se o utilizador for autorizado.
+    if (!firestore || !isAuthorized) return null;
     return query(
         collection(firestore, 'users'), 
         where('profileId', '==', 'Professor'),

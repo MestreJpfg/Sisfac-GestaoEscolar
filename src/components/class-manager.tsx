@@ -23,8 +23,8 @@ export default function ClassManager() {
   const router = useRouter();
   const { toast } = useToast();
   
-  const [editingClass, setEditingClass] = useState<any | null>(null);
   const [isNew, setIsNew] = useState(false);
+  const [editingClass, setEditingClass] = useState<any | null>(null);
   const [deletingClass, setDeletingClass] = useState<any | null>(null);
 
   const userDocRef = useMemoFirebase(() => {
@@ -40,7 +40,11 @@ export default function ClassManager() {
 
   const { data: classes, isLoading: isClassesLoading } = useCollection(classesQuery);
 
-  const isAuthorized = userProfile?.profileId === 'Administrador' || userProfile?.profileId === 'Gestor';
+  // A autorização só é definida após o carregamento do perfil
+  const isAuthorized = useMemo(() => {
+    if (isProfileLoading) return false;
+    return userProfile?.profileId === 'Administrador' || userProfile?.profileId === 'Gestor';
+  }, [isProfileLoading, userProfile]);
 
   const handleEditClass = (cls: any) => {
     setEditingClass(cls);
@@ -48,7 +52,7 @@ export default function ClassManager() {
   };
 
   const handleNewClass = () => {
-    setEditingClass({}); // Set an empty object to open the dialog
+    setEditingClass({}); // Objeto vazio para indicar criação, mas o diálogo usará null
     setIsNew(true);
   };
 
@@ -96,6 +100,9 @@ export default function ClassManager() {
     handleCloseDialog();
   };
 
+  const isDialogOpen = !!editingClass;
+  const dialogClassData = isNew ? null : editingClass;
+
   return (
     <>
        <div className="flex min-h-screen flex-col">
@@ -111,7 +118,7 @@ export default function ClassManager() {
                     </div>
                 </div>
                 <div className="flex flex-1 items-center justify-end space-x-4">
-                    <Button onClick={handleNewClass} disabled={!isAuthorized}>
+                    <Button onClick={handleNewClass} disabled={isProfileLoading || !isAuthorized}>
                         <Plus className="mr-2 h-4 w-4" /> Nova Turma
                     </Button>
                     <nav className="flex items-center space-x-1">
@@ -141,11 +148,11 @@ export default function ClassManager() {
         <AppFooter />
       </div>
 
-      {editingClass && (
+      {isDialogOpen && (
         <ClassEditDialog
-          isOpen={!!editingClass}
+          isOpen={isDialogOpen}
           onClose={handleCloseDialog}
-          classData={isNew ? null : editingClass}
+          classData={dialogClassData}
           onSave={handleSaveChanges}
           isAuthorized={isAuthorized}
         />
