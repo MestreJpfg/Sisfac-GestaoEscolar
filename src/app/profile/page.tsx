@@ -338,18 +338,15 @@ export default function ProfilePage() {
                         </div>
 
                         <div className="flex justify-end gap-2">
-                             {!userProfile?.profileCompleted && (
-                                <Button variant="ghost" type="button" onClick={() => router.push('/dashboard')}>
-                                    Voltar mais tarde
-                                </Button>
-                             )}
-                             {userProfile?.profileCompleted && (
+                             {userProfile?.profileCompleted ? (
                                 <Button variant="outline" type="button" onClick={() => router.push('/dashboard')}>
-                                    <ArrowLeft className="mr-2 h-4 w-4"/> Voltar
+                                    <ArrowLeft className="mr-2 h-4 w-4"/> Voltar para a Dashboard
                                 </Button>
+                             ) : (
+                                <p className="text-sm text-muted-foreground mr-auto">Por favor, complete o seu perfil para continuar.</p>
                              )}
                             <Button type="submit" disabled={isSaving}>
-                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Salvar Alterações'}
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Salvar Alterações e Ir para a Dashboard'}
                             </Button>
                         </div>
                     </form>
@@ -358,5 +355,3 @@ export default function ProfilePage() {
         </AuthGuard>
     );
 }
-
-    

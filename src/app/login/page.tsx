@@ -87,7 +87,9 @@ export default function LoginPage() {
             profileCompleted: false, // New users must complete their profile
         };
     
-        setDocumentNonBlocking(userDocRef, newUserData, { merge: true });
+        // This is a non-blocking write, but for login flow, we might want to ensure it completes.
+        // However, the redirect to /profile is the most important part.
+        await setDoc(userDocRef, newUserData, { merge: true });
         router.push('/profile'); // Redirect new users to complete their profile
     }
   };

@@ -16,7 +16,6 @@ import { useRouter } from 'next/navigation';
 import AuthGuard from '@/components/auth-guard';
 import AppFooter from '@/components/app-footer';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import ProfileCompletionGuard from '@/components/profile-completion-guard';
 
 
 export default function DashboardPage() {
@@ -92,10 +91,20 @@ export default function DashboardPage() {
       </div>
     );
   }
+  
+  const shouldCompleteProfile = userProfile && !userProfile.profileCompleted;
+  
+  if (shouldCompleteProfile) {
+    router.replace('/profile');
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+    );
+  }
 
   return (
     <AuthGuard>
-      <ProfileCompletionGuard>
         <div className="flex min-h-screen flex-col">
             <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
@@ -114,19 +123,6 @@ export default function DashboardPage() {
 
             <main className="flex-1">
             <div className="container py-8">
-                {userProfile && !userProfile.profileCompleted && (
-                    <Alert className="mb-8">
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertTitle>Complete o seu Perfil</AlertTitle>
-                        <AlertDescription>
-                            Parece que ainda não preencheu todas as suas informações. Por favor, dedique um momento para completar o seu perfil.
-                            <Link href="/profile" className="ml-2">
-                                <Button>Ir para o Perfil</Button>
-                            </Link>
-                        </AlertDescription>
-                    </Alert>
-                )}
-
                 <div className="mb-8">
                 <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Bem-vindo(a), {welcomeName}!</h2>
                 <p className="text-muted-foreground">Aqui está um resumo da sua plataforma.</p>
@@ -178,7 +174,6 @@ export default function DashboardPage() {
             </main>
             <AppFooter />
         </div>
-      </ProfileCompletionGuard>
     </AuthGuard>
   );
 }

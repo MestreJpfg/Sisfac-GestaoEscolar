@@ -7,7 +7,6 @@ import { useEffect } from 'react';
 import { doc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 
-// Pages that do not require a completed profile
 const UNPROTECTED_PATHS = ['/profile', '/login', '/signup'];
 
 export default function ProfileCompletionGuard({ children }: { children: React.ReactNode }) {
@@ -29,29 +28,27 @@ export default function ProfileCompletionGuard({ children }: { children: React.R
         return;
     }
 
+    // This is the key change: only redirect if the current page is PROTECTED
+    // and the profile is incomplete.
     const isPageProtected = !UNPROTECTED_PATHS.includes(pathname);
     
-    // If we have a user, but their profile is not complete, AND they are trying to access a protected page
     if (user && !userProfile?.profileCompleted && isPageProtected) {
+        // Redirect to /profile only if they are trying to access a protected page
         router.replace('/profile');
     }
+    
   }, [user, userProfile, isUserLoading, isUserProfileLoading, router, pathname]);
 
   // Combine loading states
   const isLoading = isUserLoading || isUserProfileLoading;
-  
-  // Show a spinner during the initial load of user or profile data.
-  if (isLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
 
-  // If the page is protected and the profile is incomplete, a redirect is in progress.
-  // Show a loader to prevent flashing content.
-  if (user && !userProfile?.profileCompleted && !UNPROTECTED_PATHS.includes(pathname)) {
+  // The guard's main responsibility is to REDIRECT, not to block rendering with a loader
+  // if the destination is a protected page and we're just waiting for the profile to load.
+  // The AuthGuard already shows a loader.
+  // We only show a loader here if a redirect is imminent.
+  const isRedirecting = !isLoading && user && !userProfile?.profileCompleted && !UNPROTECTED_PATHS.includes(pathname);
+  
+  if (isRedirecting) {
      return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -59,6 +56,7 @@ export default function ProfileCompletionGuard({ children }: { children: React.R
     );
   }
 
-  // If all checks pass, render the children.
+  // In all other cases (loading, or profile is complete, or on an unprotected page),
+  // just render the children and let the AuthGuard handle its own loading spinner.
   return <>{children}</>;
 }

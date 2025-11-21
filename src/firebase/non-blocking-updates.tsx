@@ -39,7 +39,7 @@ export function commitBatchNonBlocking(batch: WriteBatch, entityPath: string) {
 export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options?: SetOptions) {
   // The 'merge' option is crucial for updates. If it's present, the operation is effectively an 'update'.
   // If not, it's a 'create' or 'overwrite'.
-  const operation = (options && 'merge' in options) ? 'update' : 'create';
+  const operation = (options && 'merge' in options && options.merge) ? 'update' : 'create';
 
   setDoc(docRef, data, options || {}).catch(error => {
     errorEmitter.emit(
@@ -111,4 +111,3 @@ export function deleteDocumentNonBlocking(docRef: DocumentReference) {
       )
     });
 }
-

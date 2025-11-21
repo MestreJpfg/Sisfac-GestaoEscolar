@@ -62,7 +62,9 @@ export default function SignupPage() {
       await updateProfile(user, { displayName: data.name });
 
       const userDocRef = doc(firestore, 'users', user.uid);
-      setDocumentNonBlocking(userDocRef, {
+      
+      // Use await to ensure this operation completes before moving on.
+      await setDoc(userDocRef, {
         uid: user.uid,
         name: data.name,
         email: data.email,
