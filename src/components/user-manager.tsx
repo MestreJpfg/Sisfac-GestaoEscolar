@@ -39,10 +39,6 @@ export default function UserManager() {
     if (currentUserProfile.profileId === 'Administrador') {
       return true;
     }
-    // Allow users with 'manage:users' permission or 'Gestor' profile
-    if (currentUserProfile.profileId === 'Gestor') {
-      return true;
-    }
     
     const hasPermission = profileDetails?.permissions?.includes('manage:users') || currentUserProfile?.customPermissions?.includes('manage:users');
     return hasPermission;
@@ -57,6 +53,7 @@ export default function UserManager() {
   const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
 
   useEffect(() => {
+    // Only redirect if authorization is fully resolved and user is not authorized
     if (isAuthorized === false) {
         toast({
             variant: 'destructive',

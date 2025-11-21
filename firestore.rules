@@ -36,7 +36,9 @@ service cloud.firestore {
     // Allow admins and managers to manage profiles
     match /profiles/{profileId} {
         allow write: if isAdmin();
-        allow read, list: if hasProfile('Administrador') || hasProfile('Gestor');
+        // Allow any signed in user to read/list profiles so the UI can populate dropdowns.
+        // Profile names are not sensitive data.
+        allow read, list: if isSignedIn();
     }
 
     // General read access for signed-in users for most collections
