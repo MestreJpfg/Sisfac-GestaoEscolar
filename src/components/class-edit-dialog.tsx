@@ -31,6 +31,7 @@ interface ClassEditDialogProps {
 export default function ClassEditDialog({ isOpen, onClose, classData, onSave, isAuthorized }: ClassEditDialogProps) {
   const firestore = useFirestore();
   
+  // This query will only run if isAuthorized is true
   const teachersQuery = useMemoFirebase(() => {
     if (!firestore || !isAuthorized) return null;
     return query(

@@ -27,31 +27,37 @@ export default function ClassManager() {
   const [editingClass, setEditingClass] = useState<any | null>(null);
   const [deletingClass, setDeletingClass] = useState<any | null>(null);
 
-  const classesQuery = useMemo(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'classes'), orderBy('name'));
-  }, [firestore]);
-
+  // Step 1: Get current user's profile to check permissions
   const userDocRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return doc(firestore, 'users', user.uid);
   }, [user, firestore]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc(userDocRef);
 
+  // Step 2: Get the profile details for permission list
   const profileDocRef = useMemoFirebase(() => {
     if (!userProfile?.profileId || !firestore) return null;
     return doc(firestore, 'profiles', userProfile.profileId);
   }, [userProfile, firestore]);
   const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
 
-  const { data: classes, isLoading: isClassesLoading } = useCollection(classesQuery);
-
+  // Step 3: Memoize the authorization check
   const isAuthorized = useMemo(() => {
     if (isProfileLoading || isProfileDetailsLoading) return false;
     if (userProfile?.profileId === 'Administrador') return true;
-    return profileDetails?.permissions?.includes('manage:classes') || userProfile?.customPermissions?.includes('manage:classes');
+    
+    const profilePermissions = profileDetails?.permissions || [];
+    const userPermissions = userProfile?.customPermissions || [];
+
+    return profilePermissions.includes('manage:classes') || userPermissions.includes('manage:classes');
   }, [isProfileLoading, isProfileDetailsLoading, userProfile, profileDetails]);
 
+  // Step 4: Fetch classes (this is safe for all users)
+  const classesQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'classes'), orderBy('name'));
+  }, [firestore]);
+  const { data: classes, isLoading: isClassesLoading } = useCollection(classesQuery);
 
   const handleEditClass = (cls: any) => {
     setEditingClass(cls);
