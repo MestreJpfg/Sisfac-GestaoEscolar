@@ -46,6 +46,23 @@ const getInitials = (name: string | null | undefined) => {
     return name.substring(0, 2).toUpperCase();
 };
 
+const formatPhoneNumber = (value: string) => {
+    if (!value) return value;
+    const phoneNumber = value.replace(/\D/g, '');
+    const phoneNumberLength = phoneNumber.length;
+
+    if (phoneNumberLength <= 2) {
+        return `(${phoneNumber}`;
+    }
+
+    if (phoneNumberLength <= 11) {
+        return `(${phoneNumber.slice(0, 2)}) ${phoneNumber.slice(2)}`;
+    }
+
+    return `(${phoneNumber.slice(0, 2)}) ${phoneNumber.slice(2, 11)}`;
+};
+
+
 export default function ProfilePage() {
     const { user } = useUser();
     const auth = useAuth();
@@ -135,7 +152,7 @@ export default function ProfilePage() {
             const userData: any = {
                 name: data.name,
                 dateOfBirth: data.dateOfBirth ? data.dateOfBirth.toISOString().split('T')[0] : null,
-                phoneNumber: data.phoneNumber,
+                phoneNumber: data.phoneNumber ? data.phoneNumber.replace(/\D/g, '') : null,
                 position: data.position,
                 bio: data.bio,
                 profileCompleted: true, // Mark as completed
@@ -330,7 +347,18 @@ export default function ProfilePage() {
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel>Nº de Telemóvel</FormLabel>
-                                                    <FormControl><Input {...field} value={field.value ?? ''} placeholder="(00) 90000-0000" /></FormControl>
+                                                    <FormControl>
+                                                        <Input
+                                                            {...field}
+                                                            onChange={(e) => {
+                                                                const formatted = formatPhoneNumber(e.target.value);
+                                                                field.onChange(formatted);
+                                                            }}
+                                                            value={field.value ?? ''}
+                                                            placeholder="(XX) XXXXXXXXX"
+                                                            maxLength={15}
+                                                        />
+                                                    </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
@@ -358,3 +386,5 @@ export default function ProfilePage() {
         </AuthGuard>
     );
 }
+
+    
