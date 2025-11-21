@@ -70,13 +70,14 @@ export default function SignupPage() {
         customPermissions: [],
         createdAt: new Date().toISOString(),
         photoURL: user.photoURL,
+        profileCompleted: false, // New users must complete their profile
       });
 
       toast({
         title: 'Conta criada com sucesso!',
-        description: 'A redirecionar para o painel de controlo.',
+        description: 'A redirecionar para completar o seu perfil.',
       });
-      router.push('/dashboard');
+      router.push('/profile'); // Redirect to profile page to complete setup
 
     } catch (error: any) {
       console.error('Erro no registro:', error);

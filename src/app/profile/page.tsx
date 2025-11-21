@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useUser, useAuth, useFirestore, useStorage, setDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
@@ -16,11 +16,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Camera, ArrowLeft, Building, Briefcase, Info, Phone } from 'lucide-react';
+import { Loader2, Camera, ArrowLeft, Briefcase, Info, Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from 'lucide-react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -143,13 +143,15 @@ export default function ProfilePage() {
             if (newPhotoURL) {
                  userData.photoURL = newPhotoURL;
             }
-            setDocumentNonBlocking(userDocToUpdate, userData, { merge: true });
+            // Use await here to ensure data is set before redirecting
+            await setDoc(userDocToUpdate, userData, { merge: true });
 
             toast({
                 title: 'Perfil Atualizado!',
                 description: 'As suas informações foram salvas com sucesso.',
             });
             
+            // Explicitly push to dashboard after saving.
             router.push('/dashboard');
 
         } catch (error: any) {
@@ -255,14 +257,14 @@ export default function ProfilePage() {
                                                         ) : (
                                                             <span>Escolha uma data</span>
                                                         )}
-                                                        <Calendar className="ml-auto h-4 w-4 opacity-50" />
+                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                                         </Button>
                                                     </FormControl>
                                                     </PopoverTrigger>
                                                     <PopoverContent className="w-auto p-0" align="start">
                                                     <CalendarComponent
                                                         mode="single"
-                                                        selected={field.value}
+                                                        selected={field.value ?? undefined}
                                                         onSelect={field.onChange}
                                                         disabled={(date) =>
                                                           date > new Date() || date < new Date("1930-01-01")

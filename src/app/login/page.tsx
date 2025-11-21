@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, type User, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -64,22 +64,32 @@ export default function LoginPage() {
     const userDocRef = doc(firestore, 'users', user.uid);
     const userDoc = await getDoc(userDocRef);
 
-    const adminEmails = ['mestrejp@hotmail.com', 'mestrejpfg@gmail.com'];
-    const isAdmin = user.email && adminEmails.includes(user.email);
+    if (userDoc.exists()) {
+        const userData = userDoc.data();
+        // User exists, check if profile is completed
+        if (userData?.profileCompleted) {
+            router.push('/dashboard');
+        } else {
+            router.push('/profile'); // Redirect to complete profile
+        }
+    } else {
+        // New user, create their document
+        const adminEmails = ['mestrejp@hotmail.com', 'mestrejpfg@gmail.com'];
+        const isAdmin = user.email && adminEmails.includes(user.email);
 
-    const userData = {
-        uid: user.uid,
-        name: user.displayName || user.email,
-        email: user.email,
-        profileId: isAdmin ? 'Administrador' : (userDoc.exists() ? userDoc.data().profileId : 'Aluno'),
-        customPermissions: userDoc.exists() ? userDoc.data().customPermissions : [],
-        createdAt: userDoc.exists() ? userDoc.data().createdAt : new Date().toISOString(),
-        photoURL: user.photoURL,
-    };
-  
-    setDocumentNonBlocking(userDocRef, userData, { merge: true });
-  
-    router.push('/dashboard');
+        const newUserData = {
+            uid: user.uid,
+            name: user.displayName || user.email?.split('@')[0] || 'Novo Utilizador',
+            email: user.email,
+            profileId: isAdmin ? 'Administrador' : 'Aluno',
+            createdAt: new Date().toISOString(),
+            photoURL: user.photoURL,
+            profileCompleted: false, // New users must complete their profile
+        };
+    
+        setDocumentNonBlocking(userDocRef, newUserData, { merge: true });
+        router.push('/profile'); // Redirect new users to complete their profile
+    }
   };
   
 
