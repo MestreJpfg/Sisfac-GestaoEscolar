@@ -62,6 +62,7 @@ export default function UserTable({ users, profiles, onEdit }: UserTableProps) {
         case 'Administrador':
             return 'destructive';
         case 'Gestor':
+        case 'Funcionário(a)':
             return 'default';
         case 'Professor':
             return 'secondary';
