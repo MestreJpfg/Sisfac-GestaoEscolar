@@ -69,7 +69,7 @@ export default function UsersPage() {
     const { data: profiles, isLoading: isLoadingProfiles, error: profilesError } = useCollection(profilesQuery);
 
     const error = usersError || profilesError;
-    const isLoading = isAuthLoading || isProfileLoading || isProfileDetailsLoading || isLoadingUsers || isLoadingProfiles;
+    const isLoading = isLoadingUsers || isLoadingProfiles;
     
     // Redirect if there's a permission error or if auth has loaded and user is not permitted
     useEffect(() => {
@@ -82,6 +82,7 @@ export default function UsersPage() {
             });
             router.replace('/dashboard');
         } else if (error) {
+            // This will catch the Firestore permission error from the hook
             toast({
                 variant: 'destructive',
                 title: 'Acesso Negado',
