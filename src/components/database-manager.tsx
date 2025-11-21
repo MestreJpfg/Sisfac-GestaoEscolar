@@ -9,11 +9,10 @@ import { useToast } from '@/hooks/use-toast';
 import FileUploaderSheet from './file-uploader-sheet';
 import GradesUploaderSheet from './grades-uploader-sheet';
 import DataExporter from './data-exporter';
-import ClassListGenerator from './class-list-generator';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
-import { Loader2, Upload, NotebookText, HardDriveDownload, ClipboardList, Trash2 } from 'lucide-react';
+import { Loader2, Upload, NotebookText, HardDriveDownload, Trash2 } from 'lucide-react';
 
 export default function DatabaseManager() {
     const firestore = useFirestore();
@@ -21,14 +20,6 @@ export default function DatabaseManager() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
     
-    // We need the student data for the ClassListGenerator
-    const studentsQuery = useMemo(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, 'alunos'), orderBy('nome'));
-    }, [firestore]);
-
-    const { data: students, isLoading: isDataLoading } = useCollection(studentsQuery);
-
     const onUploadSuccess = () => {
         // The useCollection hook will automatically update the UI.
         // We can add a toast message here if desired.
@@ -116,20 +107,6 @@ export default function DatabaseManager() {
                 </CardHeader>
                 <CardFooter>
                     <DataExporter />
-                </CardFooter>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle className='flex items-center gap-2'><ClipboardList /> Gerar Listas de Turma</CardTitle>
-                    <CardDescription>Criar listas de alunos em formato PDF, filtradas por turma, para impressão.</CardDescription>
-                </CardHeader>
-                <CardFooter>
-                    {isDataLoading ? (
-                        <Button disabled><Loader2 className="mr-2 h-4 w-4 animate-spin" /> A carregar...</Button>
-                    ) : (
-                        <ClassListGenerator allStudents={students || []} />
-                    )}
                 </CardFooter>
             </Card>
 

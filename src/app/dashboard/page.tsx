@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, doc } from 'firebase/firestore';
-import { Loader2, Users, UserCog, Shield, Database } from 'lucide-react';
+import { Loader2, Users, UserCog, Shield, Database, ClipboardList } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -139,6 +139,13 @@ export default function DashboardPage() {
                         description="Gerir as suas informações e preferências"
                         action={<Button onClick={() => router.push('/profile')}>Aceder ao Perfil</Button>}
                     />
+                     <StatCard
+                        title="Turmas"
+                        value={"Gerar Listas"}
+                        icon={ClipboardList}
+                        description="Gerar listas de turmas para impressão"
+                        action={<Button onClick={() => router.push('/dashboard/classes')}>Gerir Turmas</Button>}
+                        />
                     {canManageUsers && (
                         <StatCard
                         title="Utilizadores"
