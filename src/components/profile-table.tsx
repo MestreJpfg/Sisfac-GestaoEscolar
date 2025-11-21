@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -11,13 +12,30 @@ import {
 import { Card, CardContent } from "./ui/card";
 import { Shield, Search, Edit, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
+import { Badge, type BadgeProps } from "./ui/badge";
 
 interface ProfileTableProps {
   profiles: any[];
   onEdit: (profile: any) => void;
   onDelete: (profile: any) => void;
 }
+
+const getProfileBadgeVariant = (profileName: string | undefined): BadgeProps['variant'] => {
+    if (!profileName) return 'outline';
+    const lowerProfileName = profileName.toLowerCase();
+
+    if (lowerProfileName.includes('administrador')) {
+        return 'destructive';
+    }
+    if (lowerProfileName.includes('professor')) {
+        return 'secondary';
+    }
+     if (lowerProfileName.includes('aluno')) {
+        return 'default';
+    }
+    return 'outline';
+}
+
 
 export default function ProfileTable({ profiles, onEdit, onDelete }: ProfileTableProps) {
   if (profiles.length === 0) {
@@ -52,7 +70,7 @@ export default function ProfileTable({ profiles, onEdit, onDelete }: ProfileTabl
                 <TableRow key={profile.id}>
                   <TableCell className="font-medium whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                        <Shield className="h-5 w-5 text-primary" />
+                        <Badge variant={getProfileBadgeVariant(profile.name)} className="w-2 h-2 p-0 rounded-full"></Badge>
                         <span>{profile.name}</span>
                     </div>
                   </TableCell>

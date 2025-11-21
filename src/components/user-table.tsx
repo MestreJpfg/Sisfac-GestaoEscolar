@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -14,7 +15,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
+import { Badge, type BadgeProps } from "./ui/badge";
 import { cn } from "@/lib/utils";
 
 export interface SortConfig {
@@ -38,6 +39,23 @@ const getInitials = (name: string | null | undefined) => {
     }
     return name.substring(0, 2).toUpperCase();
 };
+
+const getProfileBadgeVariant = (profileName: string | undefined): BadgeProps['variant'] => {
+    if (!profileName) return 'outline';
+    const lowerProfileName = profileName.toLowerCase();
+
+    if (lowerProfileName.includes('administrador')) {
+        return 'destructive';
+    }
+    if (lowerProfileName.includes('professor')) {
+        return 'secondary';
+    }
+     if (lowerProfileName.includes('aluno')) {
+        return 'default';
+    }
+    return 'outline';
+}
+
 
 export default function UserTable({ users, profiles, onEdit, onSort, sortConfig }: UserTableProps) {
   
@@ -82,20 +100,6 @@ export default function UserTable({ users, profiles, onEdit, onSort, sortConfig 
         return dateString;
     }
   };
-
-  const getProfileBadgeVariant = (profileName: string | undefined) : "default" | "secondary" | "destructive" | "outline" => {
-    switch (profileName) {
-        case 'Administrador':
-            return 'destructive';
-        case 'Gestor':
-        case 'Funcionário(a)':
-            return 'default';
-        case 'Professor':
-            return 'secondary';
-        default:
-            return 'outline';
-    }
-  }
 
   const findProfileName = (profileId: string) => {
     const profile = profiles.find(p => p.id === profileId);
