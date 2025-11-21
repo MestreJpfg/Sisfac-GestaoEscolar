@@ -9,14 +9,17 @@ service cloud.firestore {
 
     // Function to get the user's own data from the 'users' collection
     function getUserData() {
+      // It's critical to check for auth existence before trying to get data.
+      if (request.auth == null || request.auth.uid == null) {
+        return null;
+      }
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
     // Function to get the complete profile data based on the user's profileId
     function getUserProfile() {
       let userData = getUserData();
-      // Crucially, check if profileId exists before trying to get the profile document.
-      if (!('profileId' in userData) || userData.profileId == null) {
+      if (userData == null || !('profileId' in userData) || userData.profileId == null) {
         return null;
       }
       return get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
@@ -24,7 +27,18 @@ service cloud.firestore {
     
     // NEW, more robust permission check
     function hasPermission(permission) {
+      // Most important check: is the user even signed in?
+      // This prevents race conditions where rules are evaluated before auth state is ready.
+      if (!isSignedIn()) {
+        return false;
+      }
+
       let userData = getUserData();
+      
+      // If there's no user data document, they can't have permissions.
+      if (userData == null) {
+        return false;
+      }
       
       // The 'Administrador' profile always has all permissions. This check is first.
       if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
@@ -39,7 +53,7 @@ service cloud.firestore {
       }
         
       // Check for the permission in the user's specific custom permissions
-      if (userData.customPermissions != null && userData.customPermissions is list && permission in userData.customPermissions) {
+      if ('customPermissions' in userData && userData.customPermissions is list && permission in userData.customPermissions) {
         return true;
       }
 
