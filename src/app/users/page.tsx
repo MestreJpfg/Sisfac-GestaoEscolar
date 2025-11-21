@@ -37,15 +37,19 @@ export default function UsersPage() {
     const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
 
     const isPermissionsLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
+    const hasFinishedFirstLoad = !isPermissionsLoading;
 
     // 3. Determine if the user has permission, only after all data is loaded
     const canManageUsers = useMemo(() => {
-        if (isPermissionsLoading) return false;
+        if (!hasFinishedFirstLoad) return false; // Don't decide until loading is complete
         if (userProfile?.profileId === 'Administrador' || userProfile?.profileId === 'Administrador(a)') return true;
-        return profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
-    }, [isPermissionsLoading, profileDetails, userProfile]);
+        
+        const profilePermissions = profileDetails?.permissions || [];
+        const customPermissions = userProfile?.customPermissions || [];
 
-    const hasFinishedFirstLoad = !isPermissionsLoading;
+        return profilePermissions.includes('manage:users') || customPermissions.includes('manage:users');
+    }, [hasFinishedFirstLoad, profileDetails, userProfile]);
+
 
     // 4. Only create queries if user has permission.
     const usersQuery = useMemoFirebase(() => {
@@ -67,6 +71,7 @@ export default function UsersPage() {
     
     // 5. This effect runs only after loading is complete or if an error is caught.
     useEffect(() => {
+        // If loading is done and we determined the user can't manage users, redirect.
         if (hasFinishedFirstLoad && !canManageUsers) {
             toast({
                 variant: 'destructive',
@@ -74,7 +79,9 @@ export default function UsersPage() {
                 description: 'Não tem permissão para visualizar esta página.',
             });
             router.replace('/dashboard');
-        } else if (error) {
+        } 
+        // If there was an error fetching data (likely a rules issue if canManageUsers was true), redirect.
+        else if (error) {
             console.error("Firestore Permission Error:", error.message);
             toast({
                 variant: 'destructive',
@@ -86,7 +93,8 @@ export default function UsersPage() {
     }, [hasFinishedFirstLoad, canManageUsers, error, router, toast]);
 
     // Show a loader while checking permissions or loading data.
-    if (isLoading || !hasFinishedFirstLoad || (hasFinishedFirstLoad && !canManageUsers)) {
+    // Also show loader if we've determined they don't have access, to prevent screen flicker before redirect.
+    if (isLoading || (hasFinishedFirstLoad && !canManageUsers)) {
       return (
         <AuthGuard>
             <div className="flex h-screen w-full items-center justify-center">

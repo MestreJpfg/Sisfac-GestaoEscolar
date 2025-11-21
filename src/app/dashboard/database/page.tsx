@@ -21,27 +21,30 @@ export default function DatabasePage() {
     const firestore = useFirestore();
     const { toast } = useToast();
 
+    // Memoize the user document reference
     const userDocRef = useMemoFirebase(() => {
         if (!user || !firestore) return null;
         return doc(firestore, 'users', user.uid);
     }, [user, firestore]);
 
+    // Get the user's profile data
     const { data: userProfile, isLoading: isProfileLoading, error: profileError } = useDoc(userDocRef);
 
+    // Determine if initial data loading is complete
     const hasFinishedFirstLoad = !isUserLoading && !isProfileLoading;
     
-    // Determine admin status only after all data is loaded.
-    // Check for both "Administrador" and "Administrador(a)" for robustness.
+    // Determine admin status only after all data is loaded to avoid race conditions
     const isAdmin = useMemo(() => {
         if (!hasFinishedFirstLoad || !userProfile?.profileId) return false; 
         const profileId = userProfile.profileId;
+        // Check for both variations of the admin profile name
         return profileId === 'Administrador' || profileId === 'Administrador(a)';
     }, [hasFinishedFirstLoad, userProfile]);
 
-    // This effect handles authorization. It only runs AFTER loading is complete.
+    // This effect handles authorization and errors *after* loading is complete
     useEffect(() => {
         if (hasFinishedFirstLoad) {
-            // If after loading, the user is NOT an admin, redirect them.
+            // If loading is finished and the user is NOT an admin, redirect them
             if (!isAdmin) {
                 toast({
                     variant: 'destructive',
@@ -51,7 +54,7 @@ export default function DatabasePage() {
                 router.replace('/dashboard');
             }
         }
-        // This effect also handles potential direct errors from Firestore rules.
+        // Handle direct permission errors from Firestore (e.g., rules deny reading own user doc)
         if (profileError) {
              toast({
                 variant: 'destructive',
@@ -63,8 +66,8 @@ export default function DatabasePage() {
 
     }, [hasFinishedFirstLoad, isAdmin, profileError, router, toast]);
 
-    // While loading, or if not an admin (before the redirect effect kicks in), show a loader.
-    if (!hasFinishedFirstLoad || !isAdmin) {
+    // Show a loader while permissions are being verified or if the user is not an admin (avoids flicker before redirect)
+    if (!hasFinishedFirstLoad || (hasFinishedFirstLoad && !isAdmin)) {
       return (
         <AuthGuard>
             <div className="flex h-screen w-full items-center justify-center">
@@ -74,7 +77,7 @@ export default function DatabasePage() {
       );
     }
     
-    // Only render the full page if loading is done AND the user is confirmed to be an admin.
+    // Only render the full page if loading is done AND the user is confirmed to be an admin
     return (
         <AuthGuard>
             <div className="flex min-h-screen flex-col">

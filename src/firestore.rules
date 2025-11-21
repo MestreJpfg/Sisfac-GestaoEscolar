@@ -34,12 +34,12 @@ service cloud.firestore {
       let userProfile = getUserProfile();
       
       // Check for the permission in the profile's permission list
-      if (userProfile != null && 'permissions' in userProfile && permission in userProfile.permissions) {
+      if (userProfile != null && 'permissions' in userProfile && userProfile.permissions is list && permission in userProfile.permissions) {
         return true;
       }
         
       // Check for the permission in the user's specific custom permissions
-      if (userData.customPermissions != null && permission in userData.customPermissions) {
+      if (userData.customPermissions != null && userData.customPermissions is list && permission in userData.customPermissions) {
         return true;
       }
 
@@ -76,9 +76,7 @@ service cloud.firestore {
     match /alunos/{alunoId} {
       // Access to student data is now also protected.
       // Reading/writing requires 'manage:students'. Admins have this by default via hasPermission.
-      allow read, write: if hasPermission('manage:students');
-      // Listing all students also requires the same permission.
-      allow list: if hasPermission('manage:students');
+      allow read, write, list: if hasPermission('manage:students');
     }
   }
 }
