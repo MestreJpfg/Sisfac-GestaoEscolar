@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -50,8 +50,7 @@ export function UserNav() {
 
   const canManageUsers = useMemo(() => {
     if (isProfileLoading || isProfileDetailsLoading) return false;
-    if (isAdmin) return true;
-    return profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
+    return isAdmin || profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
   }, [isProfileLoading, isProfileDetailsLoading, profileDetails, userProfile, isAdmin]);
 
   if (!user) {

@@ -32,10 +32,9 @@ export default function UserManager() {
   const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
   
   const isAuthorized = useMemo(() => {
-    if (isProfileLoading || isProfileDetailsLoading) return undefined; // Return undefined during loading states
+    if (isProfileLoading || isProfileDetailsLoading) return undefined; 
     if (!currentUserProfile) return false;
     
-    // Admin always has access
     if (currentUserProfile.profileId === 'Administrador') {
       return true;
     }
@@ -46,15 +45,13 @@ export default function UserManager() {
 
 
   const usersQuery = useMemoFirebase(() => {
-    // Only create the query if authorization is definitively true.
-    if (!firestore || isAuthorized !== true) return null;
+    if (isAuthorized !== true) return null;
     return query(collection(firestore, 'users'), orderBy('name'));
   }, [firestore, isAuthorized]);
 
   const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
 
   useEffect(() => {
-    // Only redirect if authorization is fully resolved and user is not authorized
     if (isAuthorized === false) {
         toast({
             variant: 'destructive',
