@@ -150,23 +150,15 @@ export default function ProfilePage() {
 
             const userDocToUpdate = doc(firestore, 'users', user.uid);
             
-            let dateOfBirthString = null;
-            if (data.dateOfBirth) {
-                // THE DEFINITIVE FIX: Compensate for the timezone offset before converting to string.
-                const date = data.dateOfBirth;
-                const userTimezoneOffset = date.getTimezoneOffset() * 60000;
-                const correctedDate = new Date(date.getTime() + userTimezoneOffset);
-                dateOfBirthString = correctedDate.toISOString().split('T')[0];
-            }
-
             const userData: any = {
                 name: data.name,
-                dateOfBirth: dateOfBirthString,
+                dateOfBirth: data.dateOfBirth ? format(data.dateOfBirth, 'yyyy-MM-dd') : null,
                 phoneNumber: data.phoneNumber ? data.phoneNumber.replace(/\D/g, '') : null,
                 position: data.position,
                 bio: data.bio,
                 profileCompleted: true, // Mark as completed
             };
+
             if (newPhotoURL) {
                  userData.photoURL = newPhotoURL;
             }
@@ -397,4 +389,5 @@ export default function ProfilePage() {
     );
 }
 
+    
     
