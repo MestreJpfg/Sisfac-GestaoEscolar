@@ -17,6 +17,7 @@ const profileSchema = z.object({
   name: z.string().min(1, "O nome do perfil é obrigatório."),
   description: z.string().optional(),
   permissions: z.array(z.string()).default([]),
+  color: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -48,6 +49,7 @@ export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: 
       name: '',
       description: '',
       permissions: [],
+      color: '#808080', // Cor padrão (cinza)
     },
   });
 
@@ -57,12 +59,14 @@ export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: 
         name: profile.name || '',
         description: profile.description || '',
         permissions: profile.permissions || [],
+        color: profile.color || '#808080',
       });
     } else {
       form.reset({
         name: '',
         description: '',
         permissions: [],
+        color: '#808080',
       });
     }
   }, [profile, isOpen, form]);
@@ -92,6 +96,27 @@ export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: 
                         <FormLabel>Nome do Perfil</FormLabel>
                         <FormControl>
                           <Input {...field} placeholder="Ex: Professor Chefe" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <FormField
+                    control={form.control}
+                    name="color"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cor do Perfil</FormLabel>
+                        <FormControl>
+                            <div className="flex items-center gap-2">
+                                <Input type="color" {...field} className="p-1 h-10 w-14 cursor-pointer" />
+                                <Input 
+                                    value={field.value} 
+                                    onChange={field.onChange} 
+                                    placeholder="#RRGGBB"
+                                    className="flex-1"
+                                />
+                            </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>

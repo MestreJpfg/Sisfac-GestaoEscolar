@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -39,23 +38,6 @@ const getInitials = (name: string | null | undefined) => {
     }
     return name.substring(0, 2).toUpperCase();
 };
-
-const getProfileBadgeVariant = (profileName: string | undefined): BadgeProps['variant'] => {
-    if (!profileName) return 'outline';
-    const lowerProfileName = profileName.toLowerCase();
-
-    if (lowerProfileName.includes('administrador')) {
-        return 'destructive';
-    }
-    if (lowerProfileName.includes('professor')) {
-        return 'secondary';
-    }
-     if (lowerProfileName.includes('aluno')) {
-        return 'default';
-    }
-    return 'outline';
-}
-
 
 export default function UserTable({ users, profiles, onEdit, onSort, sortConfig }: UserTableProps) {
   
@@ -101,9 +83,8 @@ export default function UserTable({ users, profiles, onEdit, onSort, sortConfig 
     }
   };
 
-  const findProfileName = (profileId: string) => {
-    const profile = profiles.find(p => p.id === profileId);
-    return profile ? profile.name : profileId;
+  const findProfile = (profileId: string) => {
+    return profiles.find(p => p.id === profileId);
   };
 
   return (
@@ -122,7 +103,10 @@ export default function UserTable({ users, profiles, onEdit, onSort, sortConfig 
             </TableHeader>
             <TableBody>
               {users.map((user) => {
-                const profileName = findProfileName(user.profileId);
+                const profile = findProfile(user.profileId);
+                const profileName = profile ? profile.name : user.profileId;
+                const profileColor = profile ? profile.color : '#808080';
+
                 return (
                     <TableRow key={user.uid}>
                     <TableCell className="font-medium whitespace-nowrap">
@@ -137,7 +121,12 @@ export default function UserTable({ users, profiles, onEdit, onSort, sortConfig 
                     <TableCell className="whitespace-nowrap text-muted-foreground hidden md:table-cell">{user.email}</TableCell>
                     <TableCell className="whitespace-nowrap">
                         {profileName ? (
-                            <Badge variant={getProfileBadgeVariant(profileName)}>{profileName}</Badge>
+                             <Badge 
+                                className="text-white"
+                                style={{ backgroundColor: profileColor }}
+                            >
+                                {profileName}
+                            </Badge>
                         ) : (
                             <span className="text-muted-foreground text-xs">N/A</span>
                         )}

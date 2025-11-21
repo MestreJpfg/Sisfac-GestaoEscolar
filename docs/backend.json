@@ -75,6 +75,10 @@
           "type": "string",
           "description": "A brief description of the profile's responsibilities."
         },
+        "color": {
+            "type": "string",
+            "description": "A hex color code to associate with the profile for UI elements."
+        },
         "permissions": {
           "type": "array",
           "items": {
