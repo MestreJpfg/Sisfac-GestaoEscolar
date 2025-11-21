@@ -47,19 +47,32 @@ const getInitials = (name: string | null | undefined) => {
 };
 
 const formatPhoneNumber = (value: string) => {
-    if (!value) return value;
-    const phoneNumber = value.replace(/\D/g, '');
-    const phoneNumberLength = phoneNumber.length;
+    if (!value) return "";
+    
+    value = value.replace(/\D/g, '');
+    value = value.substring(0, 11); // Limita a 11 dígitos (DDD + 9 dígitos)
+    let formattedValue = '';
 
-    if (phoneNumberLength <= 2) {
-        return `(${phoneNumber}`;
+    if (value.length > 0) {
+        formattedValue = `(${value.substring(0, 2)}`;
+    }
+    if (value.length > 2) {
+        formattedValue = `(${value.substring(0, 2)}) ${value.substring(2, 7)}`;
+    }
+    if (value.length > 7) {
+        formattedValue = `(${value.substring(0, 2)}) ${value.substring(2, 7)}-${value.substring(7)}`;
     }
 
-    if (phoneNumberLength <= 11) {
-        return `(${phoneNumber.slice(0, 2)}) ${phoneNumber.slice(2)}`;
+    // Para números de 8 dígitos sem o nono dígito inicial
+    if (value.length === 10) {
+         formattedValue = `(${value.substring(0, 2)}) ${value.substring(2, 6)}-${value.substring(6, 10)}`;
+    }
+    if (value.length === 11) {
+         formattedValue = `(${value.substring(0, 2)}) ${value.substring(2, 7)}-${value.substring(7, 11)}`;
     }
 
-    return `(${phoneNumber.slice(0, 2)}) ${phoneNumber.slice(2, 11)}`;
+
+    return formattedValue;
 };
 
 
@@ -106,7 +119,7 @@ export default function ProfilePage() {
             form.reset({
                 name: userProfile.name || user?.displayName || '',
                 dateOfBirth: userProfile.dateOfBirth ? new Date(userProfile.dateOfBirth) : null,
-                phoneNumber: userProfile.phoneNumber || '',
+                phoneNumber: userProfile.phoneNumber ? formatPhoneNumber(userProfile.phoneNumber) : '',
                 position: userProfile.position || '',
                 bio: userProfile.bio || '',
             });
@@ -366,7 +379,6 @@ export default function ProfilePage() {
                                                             }}
                                                             value={field.value ?? ''}
                                                             placeholder="(XX) XXXXXXXXX"
-                                                            maxLength={15}
                                                         />
                                                     </FormControl>
                                                     <FormMessage />
@@ -396,7 +408,3 @@ export default function ProfilePage() {
         </AuthGuard>
     );
 }
-
-    
-    
-    
