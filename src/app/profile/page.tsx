@@ -150,9 +150,17 @@ export default function ProfilePage() {
 
             const userDocToUpdate = doc(firestore, 'users', user.uid);
             
+            let formattedDate = null;
+            if (data.dateOfBirth) {
+                const date = new Date(data.dateOfBirth);
+                // Adiciona um dia à data, como solicitado pelo utilizador para contornar o bug de fuso horário
+                date.setDate(date.getDate() + 1);
+                formattedDate = format(date, 'yyyy-MM-dd');
+            }
+
             const userData: any = {
                 name: data.name,
-                dateOfBirth: data.dateOfBirth ? format(data.dateOfBirth, 'yyyy-MM-dd') : null,
+                dateOfBirth: formattedDate,
                 phoneNumber: data.phoneNumber ? data.phoneNumber.replace(/\D/g, '') : null,
                 position: data.position,
                 bio: data.bio,
@@ -389,5 +397,6 @@ export default function ProfilePage() {
     );
 }
 
+    
     
     
