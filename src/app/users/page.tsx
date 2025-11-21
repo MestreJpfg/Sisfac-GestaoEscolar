@@ -37,42 +37,24 @@ export default function UsersPage() {
     const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
 
     const isPermissionsLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
-    const hasFinishedFirstLoad = !isPermissionsLoading;
 
     // 3. Determine if the user has permission, only after all data is loaded
     const canManageUsers = useMemo(() => {
-        if (!hasFinishedFirstLoad) return false; // Don't decide until loading is complete
-        if (userProfile?.profileId === 'Administrador' || userProfile?.profileId === 'Administrador(a)') return true;
+        if (isPermissionsLoading) return false; // Don't decide until loading is complete
+        const profileId = userProfile?.profileId;
+        if (profileId === 'Administrador' || profileId === 'Administrador(a)') return true;
         
         const profilePermissions = profileDetails?.permissions || [];
         const customPermissions = userProfile?.customPermissions || [];
 
         return profilePermissions.includes('manage:users') || customPermissions.includes('manage:users');
-    }, [hasFinishedFirstLoad, profileDetails, userProfile]);
+    }, [isPermissionsLoading, profileDetails, userProfile]);
 
 
-    // 4. Only create queries if user has permission.
-    const usersQuery = useMemoFirebase(() => {
-        // Wait for permission check and ensure user can manage users
-        if (!hasFinishedFirstLoad || !canManageUsers || !firestore) return null;
-        return query(collection(firestore, 'users'), orderBy('name'));
-    }, [hasFinishedFirstLoad, canManageUsers, firestore]);
-    
-    const profilesQuery = useMemoFirebase(() => {
-        if (!hasFinishedFirstLoad || !canManageUsers || !firestore) return null;
-        return query(collection(firestore, 'profiles'), orderBy('name'));
-    }, [hasFinishedFirstLoad, canManageUsers, firestore]);
-
-    const { data: users, isLoading: isLoadingUsers, error: usersError } = useCollection(usersQuery);
-    const { data: profiles, isLoading: isLoadingProfiles, error: profilesError } = useCollection(profilesQuery);
-
-    const isLoading = isPermissionsLoading || isLoadingUsers || isLoadingProfiles;
-    const error = usersError || profilesError;
-    
-    // 5. This effect runs only after loading is complete or if an error is caught.
+    // 4. This effect runs only after loading is complete to check for permissions
     useEffect(() => {
         // If loading is done and we determined the user can't manage users, redirect.
-        if (hasFinishedFirstLoad && !canManageUsers) {
+        if (!isPermissionsLoading && !canManageUsers) {
             toast({
                 variant: 'destructive',
                 title: 'Acesso Negado',
@@ -80,21 +62,11 @@ export default function UsersPage() {
             });
             router.replace('/dashboard');
         } 
-        // If there was an error fetching data (likely a rules issue if canManageUsers was true), redirect.
-        else if (error) {
-            console.error("Firestore Permission Error:", error.message);
-            toast({
-                variant: 'destructive',
-                title: 'Erro de Permissão',
-                description: 'Não foi possível carregar os dados necessários. Verifique as suas permissões.',
-            });
-            router.replace('/dashboard');
-        }
-    }, [hasFinishedFirstLoad, canManageUsers, error, router, toast]);
+    }, [isPermissionsLoading, canManageUsers, router, toast]);
 
-    // Show a loader while checking permissions or loading data.
+    // Show a loader while checking permissions.
     // Also show loader if we've determined they don't have access, to prevent screen flicker before redirect.
-    if (isLoading || (hasFinishedFirstLoad && !canManageUsers)) {
+    if (isPermissionsLoading || (!isPermissionsLoading && !canManageUsers)) {
       return (
         <AuthGuard>
             <div className="flex h-screen w-full items-center justify-center">
@@ -104,9 +76,49 @@ export default function UsersPage() {
       );
     }
     
-    // 6. Render the page only when all checks have passed and data is available.
+    // 5. Render the page only when all checks have passed.
+    // This component will only render if canManageUsers is true.
+    return <UsersPageContent />;
+}
+
+
+// Separate component that only renders (and thus queries) when permissions are confirmed.
+function UsersPageContent() {
+    const router = useRouter();
+    const firestore = useFirestore();
+    const { toast } = useToast();
+
+    const usersQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'users'), orderBy('name'));
+    }, [firestore]);
+    
+    const profilesQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'profiles'), orderBy('name'));
+    }, [firestore]);
+
+    const { data: users, isLoading: isLoadingUsers, error: usersError } = useCollection(usersQuery);
+    const { data: profiles, isLoading: isLoadingProfiles, error: profilesError } = useCollection(profilesQuery);
+
+    // Handle potential data fetching errors after permission is granted
+     useEffect(() => {
+        const error = usersError || profilesError;
+        if (error) {
+            console.error("Firestore Permission Error:", error.message);
+            toast({
+                variant: 'destructive',
+                title: 'Erro de Permissão',
+                description: 'Não foi possível carregar os dados necessários. Verifique as suas permissões.',
+            });
+            router.replace('/dashboard');
+        }
+    }, [usersError, profilesError, router, toast]);
+
+    const isLoading = isLoadingUsers || isLoadingProfiles;
+
     return (
-        <AuthGuard>
+         <AuthGuard>
             <div className="flex min-h-screen flex-col">
                 <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                     <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
@@ -130,7 +142,13 @@ export default function UsersPage() {
 
                 <main className="flex-1 py-8">
                     <div className="container">
-                        {users && profiles && <UserManager initialUsers={users} allProfiles={profiles} />}
+                        {isLoading ? (
+                            <div className="flex h-64 items-center justify-center">
+                                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                            </div>
+                        ) : (
+                           users && profiles && <UserManager initialUsers={users} allProfiles={profiles} />
+                        )}
                     </div>
                 </main>
                 <AppFooter />
@@ -138,3 +156,4 @@ export default function UsersPage() {
         </AuthGuard>
     );
 }
+
