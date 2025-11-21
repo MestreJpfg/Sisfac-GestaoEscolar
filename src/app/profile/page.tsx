@@ -264,6 +264,9 @@ export default function ProfilePage() {
                                                     <PopoverContent className="w-auto p-0" align="start">
                                                     <CalendarComponent
                                                         mode="single"
+                                                        captionLayout="dropdown-buttons"
+                                                        fromYear={1930}
+                                                        toYear={new Date().getFullYear()}
                                                         selected={field.value ?? undefined}
                                                         onSelect={field.onChange}
                                                         disabled={(date) =>
