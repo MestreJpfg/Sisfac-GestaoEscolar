@@ -152,12 +152,11 @@ export default function ProfilePage() {
             
             let dateOfBirthString = null;
             if (data.dateOfBirth) {
-                // THE FIX: Manually construct the YYYY-MM-DD string to avoid timezone issues.
+                // THE DEFINITIVE FIX: Compensate for the timezone offset before converting to string.
                 const date = data.dateOfBirth;
-                const year = date.getFullYear();
-                const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                const day = date.getDate().toString().padStart(2, '0');
-                dateOfBirthString = `${year}-${month}-${day}`;
+                const userTimezoneOffset = date.getTimezoneOffset() * 60000;
+                const correctedDate = new Date(date.getTime() + userTimezoneOffset);
+                dateOfBirthString = correctedDate.toISOString().split('T')[0];
             }
 
             const userData: any = {
@@ -397,3 +396,5 @@ export default function ProfilePage() {
         </AuthGuard>
     );
 }
+
+    
