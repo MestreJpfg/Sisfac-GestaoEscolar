@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { collection } from "firebase/firestore";
-import { useFirestore, addDocumentNonBlocking } from "@/firebase";
+import { collection, doc } from "firebase/firestore";
+import { useFirestore, setDocumentNonBlocking } from "@/firebase";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -77,8 +77,11 @@ export default function GenericUploader({ collectionName, title, description, on
     
     // Usar um loop para adicionar documentos um por um com a função não bloqueante
     normalizedData.forEach(item => {
-        addDocumentNonBlocking(collectionRef, {
+        // Gera um novo ID no cliente e usa setDoc, alinhando com a regra de 'write'
+        const newDocRef = doc(collectionRef);
+        setDocumentNonBlocking(newDocRef, {
             ...item,
+            id: newDocRef.id, // Armazena o ID gerado dentro do documento
             createdAt: new Date().toISOString()
         });
     });
