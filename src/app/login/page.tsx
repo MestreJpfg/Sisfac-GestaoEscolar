@@ -8,7 +8,7 @@ import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth, useFirestore } from '@/firebase';
-import { signInWithEmailAndPassword, type User, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { signInWithEmailAndPassword, type User, GoogleAuthProvider, signInWithPopup, fetchSignInMethodsForEmail } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -101,11 +101,23 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       await handleAuthSuccess(userCredential.user);
     } catch (error: any) {
+      let title = 'Erro no Login';
       let description = 'Ocorreu um erro ao tentar fazer login. Tente novamente.';
+      
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
           description = 'Credenciais inválidas. Verifique o seu email e senha.';
+          
+          try {
+            const methods = await fetchSignInMethodsForEmail(auth, data.email);
+            if (methods.includes('google.com')) {
+                title = "Conta Google Detectada";
+                description = "Este email está associado a um login com Google. Por favor, utilize o botão 'Entrar com Google'.";
+            }
+          } catch (fetchError) {
+             // O email provavelmente não existe, mantenha a mensagem de erro genérica
+          }
       }
-      toast({ variant: 'destructive', title: 'Erro no Login', description: description });
+      toast({ variant: 'destructive', title, description });
       setIsLoading(false);
     }
   };
@@ -127,6 +139,12 @@ export default function LoginPage() {
           variant: 'destructive',
           title: 'Login com Google desativado',
           description: 'Este método de login precisa ser ativado na consola do Firebase.',
+        });
+      } else if ((error as any).code === 'auth/account-exists-with-different-credential') {
+         toast({
+          variant: 'destructive',
+          title: 'Conta já existe',
+          description: 'Já existe uma conta com este email, mas com um método de login diferente. Tente entrar com email e senha.',
         });
       } else {
         toast({ variant: 'destructive', title: 'Erro no Login com Google', description: 'Não foi possível autenticar com o Google. Tente novamente.' });
