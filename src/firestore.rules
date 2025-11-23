@@ -84,7 +84,7 @@ service cloud.firestore {
     
     match /announcements/{announcementId} {
       allow read: if isSignedIn();
-      write: if hasPermission('manage:announcements');
+      allow write: if hasPermission('manage:announcements');
     }
 
     match /alunos/{alunoId} {
@@ -95,12 +95,14 @@ service cloud.firestore {
 
     match /funcionarios/{funcionarioId} {
       allow read: if hasPermission('manage:cadastros');
-      allow write: if getUserData().profileId == 'Administrador' || getUserData().profileId == 'Administrador(a)';
+      allow create: if hasPermission('manage:cadastros');
+      allow update, delete: if hasPermission('manage:cadastros');
     }
 
     match /disciplinas/{disciplinaId} {
       allow read: if hasPermission('manage:cadastros');
-      allow write: if getUserData().profileId == 'Administrador' || getUserData().profileId == 'Administrador(a)';
+      allow create: if hasPermission('manage:cadastros');
+      allow update, delete: if hasPermission('manage:cadastros');
     }
   }
 }
