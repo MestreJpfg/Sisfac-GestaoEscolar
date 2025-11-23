@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, type User, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { doc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -18,7 +18,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import Image from 'next/image';
 import AppFooter from '@/components/app-footer';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Por favor, insira um email válido.' }),
@@ -66,14 +65,12 @@ export default function LoginPage() {
 
     if (userDoc.exists()) {
         const userData = userDoc.data();
-        // User exists, check if profile is completed
         if (userData?.profileCompleted) {
             router.push('/dashboard');
         } else {
-            router.push('/profile'); // Redirect to complete profile
+            router.push('/profile'); 
         }
     } else {
-        // New user, create their document
         const adminEmails = ['mestrejp@hotmail.com', 'mestrejpfg@gmail.com'];
         const isAdmin = user.email && adminEmails.includes(user.email);
 
@@ -84,13 +81,11 @@ export default function LoginPage() {
             profileId: isAdmin ? 'Administrador' : 'Aluno',
             createdAt: new Date().toISOString(),
             photoURL: user.photoURL,
-            profileCompleted: false, // New users must complete their profile
+            profileCompleted: false, 
         };
     
-        // This is a non-blocking write, but for login flow, we might want to ensure it completes.
-        // However, the redirect to /profile is the most important part.
         await setDoc(userDocRef, newUserData, { merge: true });
-        router.push('/profile'); // Redirect new users to complete their profile
+        router.push('/profile');
     }
   };
   
