@@ -83,7 +83,6 @@ export default function SignupPage() {
       router.push('/profile'); // Redirect to profile page to complete setup
 
     } catch (error: any) {
-      console.error('Erro no registro:', error);
        toast({
         variant: 'destructive',
         title: 'Erro no Registro',
