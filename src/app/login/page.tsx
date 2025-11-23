@@ -108,13 +108,15 @@ export default function LoginPage() {
           description = 'Credenciais inválidas. Verifique o seu email e senha.';
           
           try {
+            // Check if the user's email is associated with a Google account
             const methods = await fetchSignInMethodsForEmail(auth, data.email);
             if (methods.includes('google.com')) {
                 title = "Conta Google Detectada";
                 description = "Este email está associado a um login com Google. Por favor, utilize o botão 'Entrar com Google'.";
             }
           } catch (fetchError) {
-             // O email provavelmente não existe, mantenha a mensagem de erro genérica
+             // This can happen if the email doesn't exist at all.
+             // Keep the generic "invalid credentials" message in this case.
           }
       }
       toast({ variant: 'destructive', title, description });
@@ -237,3 +239,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    
