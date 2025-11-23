@@ -90,6 +90,32 @@
       },
       "required": ["id", "name", "permissions"]
     },
+    "Funcionario": {
+      "title": "Funcionario",
+      "type": "object",
+      "description": "Representa um funcionário.",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "cargo": { "type": "string" },
+        "turno": { "type": "string" },
+        "cargaHoraria": { "type": "string" },
+        "vinculo": { "type": "string" }
+      },
+      "required": ["id", "nome"]
+    },
+    "Disciplina": {
+      "title": "Disciplina",
+      "type": "object",
+      "description": "Representa uma disciplina escolar.",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "diaPlanejamento": { "type": "string" },
+        "horaAula": { "type": "string" }
+      },
+      "required": ["id", "nome"]
+    },
     "Grade": {
       "title": "Grade",
       "type": "object",
@@ -169,13 +195,12 @@
       },
       {
         "path": "/funcionarios/{funcionarioId}",
-        "definition": { "schema": { "$ref": "#/entities/User" } }
+        "definition": { "schema": { "$ref": "#/entities/Funcionario" } }
       },
       {
         "path": "/disciplinas/{disciplinaId}",
-        "definition": { "schema": { "$ref": "#/entities/User" } }
+        "definition": { "schema": { "$ref": "#/entities/Disciplina" } }
       }
     ]
   }
 }
-    
