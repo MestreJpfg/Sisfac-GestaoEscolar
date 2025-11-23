@@ -7,8 +7,11 @@ import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
 import { UserNav } from '@/components/user-nav';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Construction } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import EmployeeForm from '@/components/employee-form';
+import SubjectForm from '@/components/subject-form';
 
 export default function CadastrosPage() {
     const router = useRouter();
@@ -37,10 +40,19 @@ export default function CadastrosPage() {
                 </header>
 
                 <main className="flex-1 py-8">
-                    <div className="container flex flex-col items-center justify-center text-center h-[50vh]">
-                       <Construction className="h-16 w-16 text-primary mb-4" />
-                       <h2 className="text-2xl font-bold">Página em Construção</h2>
-                       <p className="text-muted-foreground mt-2">Esta funcionalidade estará disponível em breve.</p>
+                    <div className="container max-w-4xl">
+                        <Tabs defaultValue="funcionarios" className="w-full">
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="funcionarios">Funcionários</TabsTrigger>
+                                <TabsTrigger value="disciplinas">Disciplinas</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="funcionarios">
+                                <EmployeeForm />
+                            </TabsContent>
+                            <TabsContent value="disciplinas">
+                                <SubjectForm />
+                            </TabsContent>
+                        </Tabs>
                     </div>
                 </main>
                 <AppFooter />

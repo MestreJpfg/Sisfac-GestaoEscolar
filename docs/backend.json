@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "User": {
@@ -136,6 +135,34 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "title", "content", "targetAudience", "createdAt"]
+    },
+    "Funcionario": {
+      "title": "Funcionário",
+      "type": "object",
+      "description": "Representa um funcionário da escola.",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "cargo": { "type": "string" },
+        "turno": { "type": "string" },
+        "cargaHoraria": { "type": "string" },
+        "vinculo": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "nome", "cargo"]
+    },
+    "Disciplina": {
+      "title": "Disciplina",
+      "type": "object",
+      "description": "Representa uma disciplina escolar.",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "diaPlanejamento": { "type": "string" },
+        "horaAula": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "nome"]
     }
   },
   "auth": {
@@ -166,6 +193,14 @@
        {
         "path": "/alunos/{alunoId}",
         "definition": { "schema": { "$ref": "#/entities/User" } }
+      },
+      {
+        "path": "/funcionarios/{funcionarioId}",
+        "definition": { "schema": { "$ref": "#/entities/Funcionario" } }
+      },
+      {
+        "path": "/disciplinas/{disciplinaId}",
+        "definition": { "schema": { "$ref": "#/entities/Disciplina" } }
       }
     ]
   }

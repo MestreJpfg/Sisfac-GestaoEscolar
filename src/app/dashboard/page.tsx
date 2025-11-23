@@ -71,6 +71,11 @@ export default function DashboardPage() {
     return hasPermission('manage:students') || hasPermission('view:students');
   }, [isPermissionsLoading, userProfile, profileDetails]);
 
+  const canManageCadastros = useMemo(() => {
+    if (isPermissionsLoading) return false;
+    return hasPermission('manage:cadastros');
+  }, [isPermissionsLoading, userProfile, profileDetails]);
+
   const isAdmin = useMemo(() => {
     if (isPermissionsLoading) return false;
     return userProfile?.profileId === 'Administrador' || userProfile?.profileId === 'Administrador(a)';
@@ -174,10 +179,10 @@ export default function DashboardPage() {
                         <StatCard title="..." value={<Loader2 className="h-5 w-5 animate-spin"/>} icon={Users} />
                     ) : (
                         <>
-                            {isAdmin && (
+                            {canManageCadastros && (
                                 <StatCard
                                 title="Cadastros"
-                                value={"Em breve"}
+                                value={"Gerais"}
                                 icon={Archive}
                                 description="Gerir cadastros gerais do sistema"
                                 action={<Button onClick={() => router.push('/dashboard/cadastros')}>Aceder</Button>}
