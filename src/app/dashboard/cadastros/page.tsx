@@ -9,12 +9,22 @@ import { UserNav } from '@/components/user-nav';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import EmployeeForm from '@/components/employee-form';
-import SubjectForm from '@/components/subject-form';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import GenericUploader from '@/components/generic-uploader';
+import { useToast } from '@/hooks/use-toast';
+
 
 export default function CadastrosPage() {
     const router = useRouter();
+    const { toast } = useToast();
+
+    const handleUploadSuccess = () => {
+        toast({
+            title: "Sucesso!",
+            description: "Os seus dados foram enviados para processamento em segundo plano.",
+        });
+        // A UI não precisa de ser atualizada imediatamente, pois os dados são processados no backend.
+    };
 
     return (
         <AuthGuard>
@@ -27,7 +37,7 @@ export default function CadastrosPage() {
                             </Button>
                             <div className="flex items-center gap-2">
                                 <Image src="/logoyuri.png" alt="Logo" width={32} height={32} className="rounded-md" />
-                                <h1 className="text-xl font-bold text-primary hidden sm:block">Cadastros</h1>
+                                <h1 className="text-xl font-bold text-primary hidden sm:block">Cadastros via Planilha</h1>
                             </div>
                         </div>
                         <div className="flex flex-1 items-center justify-end space-x-4">
@@ -41,18 +51,42 @@ export default function CadastrosPage() {
 
                 <main className="flex-1 py-8">
                     <div className="container max-w-4xl">
-                        <Tabs defaultValue="funcionarios" className="w-full">
-                            <TabsList className="grid w-full grid-cols-2">
-                                <TabsTrigger value="funcionarios">Funcionários</TabsTrigger>
-                                <TabsTrigger value="disciplinas">Disciplinas</TabsTrigger>
-                            </TabsList>
-                            <TabsContent value="funcionarios">
-                                <EmployeeForm />
-                            </TabsContent>
-                            <TabsContent value="disciplinas">
-                                <SubjectForm />
-                            </TabsContent>
-                        </Tabs>
+                       <div className="grid gap-8 md:grid-cols-2">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Cadastro de Funcionários</CardTitle>
+                                    <CardDescription>
+                                        Faça o upload de uma planilha (XLSX, CSV) com os dados dos funcionários.
+                                        As colunas devem ser: <strong>nome, cargo, turno, cargaHoraria, vinculo</strong>.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <GenericUploader 
+                                        collectionName="funcionarios"
+                                        title="Carregar Funcionários"
+                                        description="Selecione o ficheiro para carregar os dados dos funcionários."
+                                        onUploadSuccess={handleUploadSuccess}
+                                    />
+                                </CardContent>
+                            </Card>
+                             <Card>
+                                <CardHeader>
+                                    <CardTitle>Cadastro de Disciplinas</CardTitle>
+                                    <CardDescription>
+                                        Faça o upload de uma planilha (XLSX, CSV) com os dados das disciplinas.
+                                        As colunas devem ser: <strong>nome, diaPlanejamento, horaAula</strong>.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                     <GenericUploader 
+                                        collectionName="disciplinas"
+                                        title="Carregar Disciplinas"
+                                        description="Selecione o ficheiro para carregar os dados das disciplinas."
+                                        onUploadSuccess={handleUploadSuccess}
+                                    />
+                                </CardContent>
+                            </Card>
+                       </div>
                     </div>
                 </main>
                 <AppFooter />
