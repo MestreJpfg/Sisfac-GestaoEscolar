@@ -94,7 +94,7 @@ service cloud.firestore {
     }
 
     match /funcionarios/{funcionarioId} {
-      allow read, write, list: if isSignedIn();
+      allow read, list, write: if isSignedIn();
     }
 
     match /disciplinas/{disciplinaId} {
