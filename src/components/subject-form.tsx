@@ -4,8 +4,8 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useFirestore } from '@/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,24 +42,18 @@ export default function SubjectForm() {
       toast({ variant: 'destructive', title: 'Erro de Conexão' });
       return;
     }
-    try {
-      await addDoc(collection(firestore, 'disciplinas'), {
-        ...data,
-        createdAt: new Date().toISOString(),
-      });
-      toast({
-        title: 'Sucesso!',
-        description: `A disciplina ${data.nome} foi cadastrada.`,
-      });
-      form.reset();
-    } catch (error) {
-      console.error(error);
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao cadastrar',
-        description: 'Não foi possível cadastrar a disciplina. Tente novamente.',
-      });
-    }
+
+    addDocumentNonBlocking(collection(firestore, 'disciplinas'), {
+      ...data,
+      createdAt: new Date().toISOString(),
+    });
+
+    toast({
+      title: 'Cadastro Enviado!',
+      description: `O cadastro da disciplina ${data.nome} está a ser processado.`,
+    });
+    
+    form.reset();
   };
 
   return (
