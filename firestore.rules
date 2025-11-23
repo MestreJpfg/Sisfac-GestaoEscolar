@@ -67,7 +67,7 @@ service cloud.firestore {
     }
     
     match /profiles/{profileId} {
-        allow write: if hasPermission('manage:profiles');
+        allow write: if hasPermission('manage:cadastros');
         // Any authenticated user can read profiles to allow UI selects/dropdowns to be populated.
         allow read, list: if isSignedIn();
     }

@@ -83,7 +83,17 @@
         "permissions": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+                "manage:database",
+                "manage:students",
+                "view:students",
+                "manage:users",
+                "manage:grades",
+                "manage:attendance",
+                "manage:announcements",
+                "manage:cadastros"
+            ]
           },
           "description": "A list of permission keys granted to this profile."
         }
