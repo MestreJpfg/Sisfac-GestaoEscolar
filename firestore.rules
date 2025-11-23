@@ -94,13 +94,11 @@ service cloud.firestore {
     }
 
     match /funcionarios/{funcionarioId} {
-      allow create: if isSignedIn();
-      allow read, update, delete: if isSignedIn();
+      allow create, read, update, delete: if isSignedIn();
     }
 
     match /disciplinas/{disciplinaId} {
-      allow create: if isSignedIn();
-      allow read, update, delete: if isSignedIn();
+      allow create, read, update, delete: if isSignedIn();
     }
   }
 }
