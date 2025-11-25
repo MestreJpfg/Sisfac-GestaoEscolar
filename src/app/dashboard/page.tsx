@@ -63,7 +63,7 @@ export default function DashboardPage() {
   
   const canManageProfiles = useMemo(() => {
     if (isPermissionsLoading) return false;
-    return hasPermission('manage:profiles');
+    return hasPermission('manage:cadastros');
   }, [isPermissionsLoading, userProfile, profileDetails]);
 
   const canViewStudents = useMemo(() => {
