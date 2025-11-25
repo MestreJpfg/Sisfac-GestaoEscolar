@@ -90,3 +90,9 @@
     );
   }
 }
+
+@layer components {
+  .container {
+    @apply w-full;
+  }
+}

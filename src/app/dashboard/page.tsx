@@ -145,8 +145,8 @@ export default function DashboardPage() {
                 </div>
             </header>
 
-            <main className="flex-1">
-            <div className="container py-8">
+            <main className="flex-1 container px-4 sm:px-6 lg:px-8">
+            <div className="py-8">
                 <div className="mb-8">
                 <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Bem-vindo(a), {welcomeName}!</h2>
                 <p className="text-muted-foreground">Aqui está um resumo da sua plataforma.</p>
