@@ -96,7 +96,14 @@ export default function ProfileManager() {
     const id = doc(collection(firestore, 'disciplinas')).id;
     const docRef = doc(firestore, 'disciplinas', id);
     
-    setDocumentNonBlocking(docRef, { ...data, id }, { merge: true });
+    // Corrected data structure
+    setDocumentNonBlocking(docRef, {
+        id: id,
+        nome: data.nome,
+        diaPlanejamento: data.diaPlanejamento,
+        horaAula: data.horaAula,
+        createdAt: new Date().toISOString(),
+    }, { merge: true });
 
     toast({
         title: "Disciplina Criada",

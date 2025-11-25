@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ScrollArea } from "./ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 
 const disciplineSchema = z.object({
@@ -90,7 +89,7 @@ export default function DisciplineEditDialog({ isOpen, onClose, onSave }: Discip
                   <FormItem>
                     <FormLabel>Hora/Aula (minutos)</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} placeholder="Ex: 50" />
+                      <Input type="text" {...field} placeholder="Ex: 50" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
