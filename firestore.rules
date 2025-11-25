@@ -40,7 +40,7 @@ service cloud.firestore {
         return false;
       }
       
-      // The 'Administrador' profile always has all permissions. This check is first.
+      // The 'Administrador' or 'Administrador(a)' profile always has all permissions. This check is first.
       if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
         return true;
       }
