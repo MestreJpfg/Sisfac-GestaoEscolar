@@ -71,9 +71,17 @@ export default function ReportCardWithDeclaration({ student, boletim }: ReportCa
                         Fortaleza, {formattedDate}.
                     </p>
                     <div className="flex justify-center items-end mb-2">
-                        <div className="text-center text-[8px] leading-tight">
-                            <p className="font-bold">GESTÃO ESCOLAR</p>
-                            <p>Maria Aparecida da S. Numes - Secretária Escolar</p>
+                        <div className="relative text-center w-[250px]">
+                            <div className="absolute inset-x-0 top-0 flex justify-center items-center">
+                                <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" width={200} height={100} unoptimized className="opacity-80" />
+                            </div>
+                            <div className="h-12"></div>
+                            <p className="text-xs font-semibold">GESTÃO ESCOLAR</p>
+                        </div>
+                        <div className="text-center text-[8px] leading-tight ml-4">
+                            <p>Maria Aparecida da S. Numes</p>
+                            <p className="font-bold">Secretária Escolar</p>
+                            <p>Registro Nº 37899/65128092 CM</p>
                         </div>
                     </div>
                      <div className="flex w-full mt-2">
@@ -85,5 +93,3 @@ export default function ReportCardWithDeclaration({ student, boletim }: ReportCa
         </div>
     );
 }
-
-    

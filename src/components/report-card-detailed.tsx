@@ -99,7 +99,7 @@ export default function ReportCardDetailed({ student, boletim }: ReportCardDetai
                     <div className="text-center mt-8">
                         <p>Gerado em: {formattedDate}</p>
                     </div>
-                    <div className="pt-8 flex justify-center items-end">
+                     <div className="pt-8 flex justify-center items-end">
                         <div className="relative text-center w-[250px]">
                             <div className="absolute inset-x-0 top-0 flex justify-center items-center">
                                 <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" width={200} height={100} unoptimized className="opacity-80" />
@@ -118,5 +118,3 @@ export default function ReportCardDetailed({ student, boletim }: ReportCardDetai
         </div>
     );
 }
-
-    
