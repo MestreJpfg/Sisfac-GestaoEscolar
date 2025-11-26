@@ -64,7 +64,7 @@ export default function ReportCardDetailed({ student, boletim }: ReportCardDetai
                        <div className="h-10 border-l border-gray-400"></div>
                        <span className="text-xl font-semibold">EDUCAÇÃO</span>
                     </div>
-                    <p className="text-sm font-bold">ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES - EI / EF</p>
+                    <p className="text-sm font-bold">ESCOLA MUNICIPAL PROFESSora FERNANDA MARIA DE ALENCAR COLARES - EI / EF</p>
                     <p className="text-xs">AVENIDA PROFESSOR JOSE ARTHUR DE CARVALHO, Nº 1540, LAGOA REDONDA | INEP: 23070188</p>
                 </header>
                 
@@ -98,10 +98,10 @@ export default function ReportCardDetailed({ student, boletim }: ReportCardDetai
                     )}
                     <p className="text-xs my-4">Gerado em: {formattedDate}</p>
                     <div className="w-full max-w-xs mx-auto text-center">
-                        <div className="relative h-16 w-full -mt-8">
+                        <div className="relative h-16 w-full -mt-6">
                             <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized className="opacity-80" />
                         </div>
-                        <div className="border-t-2 border-black w-full pt-1 -mt-4">
+                        <div className="border-t-2 border-black w-full pt-1 -mt-5">
                             <p className="text-xs font-semibold">GESTÃO ESCOLAR</p>
                             <p className="text-[9px] leading-tight">Maria Aparecida da S. Numes - Secretária Escolar</p>
                             <p className="text-[9px] leading-tight">Registro Nº 37899/65128092 CM</p>

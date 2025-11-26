@@ -42,7 +42,7 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
                     <div className="absolute inset-0 flex items-center justify-center -z-10 opacity-15">
                         <Image src="/selo.png" alt="Selo da Escola" width={400} height={400} unoptimized />
                     </div>
-                    <div className="space-y-6">
+                    <div className="space-y-6 pt-4">
                         <p className="indent-12">
                             Declaramos, para os devidos fins, que <strong className="font-bold">{student.nome || 'N/A'}</strong>, 
                             filho(a) de {student.filiacao_1 || 'N/A'} e {student.filiacao_2 || 'N/A'},
@@ -72,10 +72,10 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
                 {/* Rodapé */}
                 <footer className="flex flex-col items-center justify-center text-center pt-2">
                     <div className="w-full max-w-xs mx-auto text-center">
-                         <div className="relative h-16 w-full -mt-8">
+                        <div className="relative h-16 w-full -mt-6">
                             <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized className="opacity-80" />
                         </div>
-                        <div className="border-t-2 border-black w-full pt-1 -mt-4">
+                        <div className="border-t-2 border-black w-full pt-1 -mt-5">
                             <p className="text-xs font-semibold">GESTÃO ESCOLAR</p>
                             <p className="text-[9px] leading-tight">Maria Aparecida da S. Numes - Secretária Escolar</p>
                             <p className="text-[9px] leading-tight">Registro Nº 37899/65128092 CM</p>
