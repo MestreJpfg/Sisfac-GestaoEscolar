@@ -58,7 +58,7 @@ export default function ReportCardDetailed({ student, boletim }: ReportCardDetai
         <div className="bg-white text-black font-sans p-8" style={{ width: '210mm', height: '297mm', fontFamily: 'Arial, sans-serif' }}>
             <div className="flex flex-col h-full">
                 {/* Cabeçalho */}
-                <header className="flex flex-col items-center text-center text-xs font-bold mb-6">
+                <header className="flex flex-col items-center text-center text-xs font-bold mb-4">
                      <div className="flex items-center gap-4 mb-2">
                        <Image src="/logoyuri.png" alt="Logo da Prefeitura de Fortaleza" width={70} height={70} unoptimized />
                        <div className="h-10 border-l border-gray-400"></div>
@@ -69,12 +69,12 @@ export default function ReportCardDetailed({ student, boletim }: ReportCardDetai
                 </header>
                 
                 {/* Título */}
-                <div className="text-center my-4">
+                <div className="text-center my-2">
                     <h1 className="text-2xl font-bold tracking-wider uppercase">Boletim Escolar {today.getFullYear()}</h1>
                 </div>
 
                 {/* Informações do Aluno */}
-                <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm mb-6 border-y py-4">
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm mb-4 border-y py-2">
                     <DetailItem label="Aluno(a)" value={student.nome} />
                     <DetailItem label="RM" value={student.rm} />
                     <DetailItem label="Nascimento" value={student.data_nascimento} />
@@ -89,41 +89,38 @@ export default function ReportCardDetailed({ student, boletim }: ReportCardDetai
                 </div>
 
                 {/* Rodapé */}
-                <footer className="mt-auto pt-4 text-xs">
-                   {subjectsInRecovery.length > 0 && (
-                        <div className="border-t pt-2 mt-4 text-center">
+                 <footer className="flex flex-col items-center justify-center text-center mt-auto">
+                    {subjectsInRecovery.length > 0 && (
+                        <div className="border-t pt-2 mt-4 text-center text-xs">
                             <p className="font-bold">Observações:</p>
                             <p>O aluno encontra-se em recuperação na(s) seguinte(s) disciplina(s): {subjectsInRecovery.join(', ')}.</p>
                         </div>
                     )}
-                    <div className="text-center my-4">
-                        <p>Gerado em: {formattedDate}</p>
+                    <p className="text-xs my-2">Gerado em: {formattedDate}</p>
+                    <div className="w-full max-w-xs mx-auto">
+                         <div className="relative h-20">
+                            <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized className="opacity-80" />
+                        </div>
+                        <div className="border-t-2 border-black w-full pt-1">
+                            <p className="text-xs font-semibold">GESTÃO ESCOLAR</p>
+                            <p className="text-[9px] leading-tight">Maria Aparecida da S. Numes - Secretária Escolar</p>
+                             <p className="text-[9px] leading-tight">Registro Nº 37899/65128092 CM</p>
+                        </div>
                     </div>
-                     <div className="flex justify-between items-end mb-4" style={{ height: '70px' }}>
-                        <div className="relative text-center w-[250px]">
-                            <div className="absolute inset-x-0 -top-8 flex justify-center items-center">
-                                <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" width={200} height={100} unoptimized className="opacity-80" />
+                    <div className="w-full mt-4">
+                        <div className="flex w-full mb-2">
+                            <div className="h-1.5 w-full" style={{backgroundColor: '#00857F'}}></div>
+                            <div className="h-1.5 w-1/4" style={{backgroundColor: '#F38A00'}}></div>
+                        </div>
+                        <div className="flex items-start text-[8px] font-bold">
+                            <div className="pr-4 border-r border-gray-400 leading-tight">
+                                <p>EDUCAÇÃO</p>
                             </div>
-                            <p className="text-xs font-semibold pt-8 border-t-2 border-black">GESTÃO ESCOLAR</p>
-                        </div>
-                        <div className="text-center text-[9px] leading-tight">
-                            <p className="font-bold">Maria Aparecida da S. Numes</p>
-                            <p className="font-bold">Secretária Escolar</p>
-                            <p>Registro Nº 37899/65128092 CM</p>
-                        </div>
-                    </div>
-                     <div className="flex w-full mb-2">
-                        <div className="h-1.5 w-full" style={{backgroundColor: '#00857F'}}></div>
-                        <div className="h-1.5 w-1/4" style={{backgroundColor: '#F38A00'}}></div>
-                    </div>
-                    <div className="flex items-start text-[8px] font-bold">
-                        <div className="pr-4 border-r border-gray-400 leading-tight">
-                             <p>EDUCAÇÃO</p>
-                        </div>
-                        <div className="pl-4 leading-tight">
-                             <p>ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES</p>
-                             <p className="font-normal">AV. RECREIO, 1540 - CEP 60831-600 - LAGOA REDONDA</p>
-                             <p className="font-normal">INEP 23070188</p>
+                            <div className="pl-4 text-left leading-tight">
+                                <p>ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES</p>
+                                <p className="font-normal">AV. RECREIO, 1540 - CEP 60831-600 - LAGOA REDONDA</p>
+                                <p className="font-normal">INEP 23070188</p>
+                            </div>
                         </div>
                     </div>
                 </footer>

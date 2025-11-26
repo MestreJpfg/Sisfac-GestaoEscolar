@@ -34,7 +34,7 @@ export default function StudentTransferDeclaration({ student }: StudentTransferD
                 </header>
                 
                 {/* Título da Declaração */}
-                <div className="text-center my-12">
+                <div className="text-center my-10">
                     <h1 className="text-2xl font-bold tracking-wider uppercase">DECLARAÇÃO DE TRANSFERÊNCIA</h1>
                 </div>
 
@@ -61,32 +61,31 @@ export default function StudentTransferDeclaration({ student }: StudentTransferD
                 </main>
 
                 {/* Rodapé */}
-                <footer className="mt-auto pt-8">
-                     <div className="flex justify-between items-end mb-4" style={{ height: '70px' }}>
-                        <div className="relative text-center w-[250px]">
-                            <div className="absolute inset-x-0 -top-8 flex justify-center items-center">
-                                <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" width={200} height={100} unoptimized className="opacity-80" />
+                 <footer className="flex flex-col items-center justify-center text-center mt-auto pt-6">
+                    <div className="w-full max-w-xs mx-auto">
+                         <div className="relative h-20">
+                            <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized className="opacity-80" />
+                        </div>
+                        <div className="border-t-2 border-black w-full pt-1">
+                            <p className="text-xs font-semibold">GESTÃO ESCOLAR</p>
+                            <p className="text-[9px] leading-tight">Maria Aparecida da S. Numes - Secretária Escolar</p>
+                             <p className="text-[9px] leading-tight">Registro Nº 37899/65128092 CM</p>
+                        </div>
+                    </div>
+                    <div className="w-full mt-6">
+                        <div className="flex w-full mb-2">
+                            <div className="h-1.5 w-full" style={{backgroundColor: '#00857F'}}></div>
+                            <div className="h-1.5 w-1/4" style={{backgroundColor: '#F38A00'}}></div>
+                        </div>
+                        <div className="flex items-start text-[8px] font-bold">
+                            <div className="pr-4 border-r border-gray-400 leading-tight">
+                                <p>EDUCAÇÃO</p>
                             </div>
-                            <p className="text-xs font-semibold pt-8 border-t-2 border-black">GESTÃO ESCOLAR</p>
-                        </div>
-                        <div className="text-center text-[9px] leading-tight">
-                            <p className="font-bold">Maria Aparecida da S. Numes</p>
-                            <p className="font-bold">Secretária Escolar</p>
-                            <p>Registro Nº 37899/65128092 CM</p>
-                        </div>
-                    </div>
-                     <div className="flex w-full mb-2">
-                        <div className="h-1.5 w-full" style={{backgroundColor: '#00857F'}}></div>
-                        <div className="h-1.5 w-1/4" style={{backgroundColor: '#F38A00'}}></div>
-                    </div>
-                    <div className="flex items-start text-[8px] font-bold">
-                        <div className="pr-4 border-r border-gray-400 leading-tight">
-                             <p>EDUCAÇÃO</p>
-                        </div>
-                        <div className="pl-4 leading-tight">
-                             <p>ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES</p>
-                             <p className="font-normal">AV. RECREIO, 1540 - CEP 60831-600 - LAGOA REDONDA</p>
-                             <p className="font-normal">INEP 23070188</p>
+                            <div className="pl-4 text-left leading-tight">
+                                <p>ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES</p>
+                                <p className="font-normal">AV. RECREIO, 1540 - CEP 60831-600 - LAGOA REDONDA</p>
+                                <p className="font-normal">INEP 23070188</p>
+                            </div>
                         </div>
                     </div>
                 </footer>
