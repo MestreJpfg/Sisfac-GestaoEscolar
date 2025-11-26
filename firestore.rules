@@ -99,7 +99,7 @@ service cloud.firestore {
 
     match /disciplinas/{disciplinaId} {
       // Correct rule to allow creation, read, and list for authorized users.
-      allow read, list, create, write: if hasPermission('manage:cadastros');
+      allow read, list, create, update, delete: if hasPermission('manage:cadastros');
     }
   }
 }
