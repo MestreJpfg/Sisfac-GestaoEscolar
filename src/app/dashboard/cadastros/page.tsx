@@ -36,6 +36,10 @@ export default function CadastrosPage() {
         const id = doc(collection(firestore, 'disciplinas')).id;
         const docRef = doc(firestore, 'disciplinas', id);
         
+        // CORRIGIDO: Garante que o objeto enviado corresponde exatamente ao schema.
+        // 1. Usa os nomes de campo corretos (nome, diaPlanejamento, horaAula).
+        // 2. Converte horaAula para string ou define como null.
+        // 3. Remove campos incorretos como 'diaplanejamento' (lowercase).
         setDocumentNonBlocking(docRef, {
             id: id,
             nome: data.nome,
