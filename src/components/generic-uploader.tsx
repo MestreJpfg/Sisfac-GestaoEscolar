@@ -32,10 +32,17 @@ export default function GenericUploader({ collectionName, title, description, on
   const normalizeData = (data: any[]): any[] => {
     if (!data || data.length < 2) return [];
 
-    const headers: string[] = data[0].map((header: any) => 
-        String(header).trim().toLowerCase()
-        .replace(/\s+/g, '') // remove spaces
-    );
+    const headers: string[] = data[0].map((header: any) => {
+        let h = String(header).trim().toLowerCase().replace(/\s+/g, ''); // remove spaces
+        
+        // Specific renaming for 'disciplinas' collection
+        if (collectionName === 'disciplinas') {
+            if (h === 'diadeplanejamento') return 'diaPlanejamento';
+            if (h === 'horaaula') return 'horaAula';
+        }
+        
+        return h;
+    });
     
     return data.slice(1).map(row => {
       const item: any = {};
@@ -46,7 +53,7 @@ export default function GenericUploader({ collectionName, title, description, on
         }
       });
       return item;
-    }).filter(item => Object.keys(item).length > 0);
+    }).filter(item => Object.keys(item).length > 0 && item.nome); // Ensure item has a name
   };
 
   const handleUploadComplete = async (data: any[]) => {
@@ -67,7 +74,7 @@ export default function GenericUploader({ collectionName, title, description, on
       toast({
         variant: "destructive",
         title: "Dados Inválidos",
-        description: "O ficheiro não contém dados válidos ou está mal formatado.",
+        description: "O ficheiro não contém dados válidos, está mal formatado, ou falta a coluna 'nome'.",
       });
       setIsLoading(false);
       return;
@@ -75,18 +82,21 @@ export default function GenericUploader({ collectionName, title, description, on
   
     const collectionRef = collection(firestore, collectionName);
     
-    // Usar um loop para adicionar documentos um por um com a função não bloqueante
     normalizedData.forEach(item => {
-        // Gera um novo ID no cliente e usa setDoc, alinhando com a regra de 'write'
         const newDocRef = doc(collectionRef);
-        setDocumentNonBlocking(newDocRef, {
+        const docData = {
             ...item,
-            id: newDocRef.id, // Armazena o ID gerado dentro do documento
+            id: newDocRef.id,
             createdAt: new Date().toISOString()
-        });
+        };
+        // Ensure all fields expected by the schema are at least present, even if null
+        if (collectionName === 'disciplinas') {
+            docData.diaPlanejamento = item.diaPlanejamento || null;
+            docData.horaAula = item.horaAula || null;
+        }
+        setDocumentNonBlocking(newDocRef, docData);
     });
 
-    // Como as escritas são não-bloqueantes, damos um feedback otimista imediato.
     toast({
         title: "Carregamento em progresso!",
         description: `${normalizedData.length} registos de ${collectionName} estão a ser processados.`,

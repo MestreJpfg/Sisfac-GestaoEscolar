@@ -29,7 +29,6 @@ export default function CadastrosPage() {
             title: "Sucesso!",
             description: "Os seus dados foram enviados para processamento em segundo plano.",
         });
-        // A UI não precisa de ser atualizada imediatamente, pois os dados são processados no backend.
     };
 
     const handleSaveDiscipline = (data: any) => {
@@ -41,8 +40,8 @@ export default function CadastrosPage() {
         setDocumentNonBlocking(docRef, {
             id: id,
             nome: data.nome,
-            diaPlanejamento: data.diaPlanejamento,
-            horaAula: data.horaAula,
+            diaPlanejamento: data.diaPlanejamento || null,
+            horaAula: data.horaAula || null,
             createdAt: new Date().toISOString(),
         });
     
