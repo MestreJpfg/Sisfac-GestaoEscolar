@@ -37,7 +37,7 @@ export default function CadastrosPage() {
         const id = doc(collection(firestore, 'disciplinas')).id;
         const docRef = doc(firestore, 'disciplinas', id);
         
-        // CORRIGIDO: Removido `{ merge: true }`. A operação correta é um 'create', não um 'update'.
+        // CORRIGIDO: Mapeamento de campos para os nomes corretos (nome, diaPlanejamento, horaAula).
         setDocumentNonBlocking(docRef, {
             id: id,
             nome: data.nome,
