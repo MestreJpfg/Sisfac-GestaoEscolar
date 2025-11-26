@@ -70,12 +70,12 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
 
 
                 {/* Rodapé */}
-                <footer className="flex flex-col items-center justify-center text-center pt-2">
+                <footer className="flex flex-col items-center justify-center text-center pt-2 mt-auto">
                     <div className="w-full max-w-xs mx-auto text-center">
-                        <div className="relative h-16 w-full -mt-6">
+                        <div className="relative h-16 w-full -mt-5">
                             <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized className="opacity-80" />
                         </div>
-                        <div className="border-t-2 border-black w-full pt-1 -mt-5">
+                        <div className="border-t-2 border-black w-full pt-1">
                             <p className="text-xs font-semibold">GESTÃO ESCOLAR</p>
                             <p className="text-[9px] leading-tight">Maria Aparecida da S. Numes - Secretária Escolar</p>
                             <p className="text-[9px] leading-tight">Registro Nº 37899/65128092 CM</p>
