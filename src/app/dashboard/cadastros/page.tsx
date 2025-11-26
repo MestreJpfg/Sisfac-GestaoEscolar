@@ -31,7 +31,7 @@ export default function CadastrosPage() {
         });
     };
 
-    const handleSaveDiscipline = (data: any) => {
+    const handleSaveDiscipline = (data: { nome: string, diaPlanejamento?: string, horaAula?: string }) => {
         if (!firestore) return;
         const id = doc(collection(firestore, 'disciplinas')).id;
         const docRef = doc(firestore, 'disciplinas', id);
