@@ -96,9 +96,22 @@ export default function ReportCardDetailed({ student, boletim }: ReportCardDetai
                             <p>O aluno encontra-se em recuperação na(s) seguinte(s) disciplina(s): {subjectsInRecovery.join(', ')}.</p>
                         </div>
                     )}
-                    <div className="text-center mt-4">
+                    <div className="text-center mt-8">
                         <p>Gerado em: {formattedDate}</p>
-                        <p className="font-bold mt-2">GESTÃO ESCOLAR</p>
+                    </div>
+                    <div className="pt-8 flex justify-center items-end">
+                        <div className="relative text-center w-[250px]">
+                            <div className="absolute inset-x-0 top-0 flex justify-center items-center">
+                                <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" width={200} height={100} unoptimized className="opacity-80" />
+                            </div>
+                            <div className="h-12"></div>
+                            <p className="text-xs font-semibold">GESTÃO ESCOLAR</p>
+                        </div>
+                        <div className="text-center text-[8px] leading-tight ml-4">
+                            <p>Maria Aparecida da S. Numes</p>
+                            <p className="font-bold">Secretária Escolar</p>
+                            <p>Registro Nº 37899/65128092 CM</p>
+                        </div>
                     </div>
                 </footer>
             </div>
