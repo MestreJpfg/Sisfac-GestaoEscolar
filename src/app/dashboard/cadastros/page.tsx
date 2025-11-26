@@ -36,7 +36,6 @@ export default function CadastrosPage() {
         const id = doc(collection(firestore, 'disciplinas')).id;
         const docRef = doc(firestore, 'disciplinas', id);
         
-        // CORRIGIDO: Garante que os nomes dos campos estão corretos e que horaAula é uma string.
         setDocumentNonBlocking(docRef, {
             id: id,
             nome: data.nome,

@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 const disciplineSchema = z.object({
   nome: z.string().min(1, "O nome da disciplina é obrigatório."),
   diaPlanejamento: z.string().optional(),
-  horaAula: z.string().optional(), // Garantir que é tratado como string
+  horaAula: z.string().optional(),
 });
 
 type DisciplineFormValues = z.infer<typeof disciplineSchema>;
