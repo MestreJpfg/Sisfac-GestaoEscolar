@@ -69,7 +69,7 @@ export default function ReportCardDetailed({ student, boletim }: ReportCardDetai
                 </header>
                 
                 {/* Título */}
-                <div className="text-center my-2">
+                <div className="text-center my-4">
                     <h1 className="text-2xl font-bold tracking-wider uppercase">Boletim Escolar {today.getFullYear()}</h1>
                 </div>
 
@@ -89,22 +89,22 @@ export default function ReportCardDetailed({ student, boletim }: ReportCardDetai
                 </div>
 
                 {/* Rodapé */}
-                 <footer className="flex flex-col items-center justify-center text-center mt-auto">
+                 <footer className="flex flex-col items-center justify-center text-center pt-2">
                     {subjectsInRecovery.length > 0 && (
-                        <div className="border-t pt-2 mt-4 text-center text-xs">
+                        <div className="border-t pt-2 mt-4 text-center text-xs w-full">
                             <p className="font-bold">Observações:</p>
                             <p>O aluno encontra-se em recuperação na(s) seguinte(s) disciplina(s): {subjectsInRecovery.join(', ')}.</p>
                         </div>
                     )}
-                    <p className="text-xs my-2">Gerado em: {formattedDate}</p>
-                    <div className="w-full max-w-xs mx-auto">
-                         <div className="relative h-20">
-                            <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized className="opacity-80" />
+                    <p className="text-xs my-4">Gerado em: {formattedDate}</p>
+                    <div className="w-full max-w-xs mx-auto text-center">
+                        <div className="relative h-16 w-full">
+                           <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized className="opacity-80" />
                         </div>
                         <div className="border-t-2 border-black w-full pt-1">
                             <p className="text-xs font-semibold">GESTÃO ESCOLAR</p>
                             <p className="text-[9px] leading-tight">Maria Aparecida da S. Numes - Secretária Escolar</p>
-                             <p className="text-[9px] leading-tight">Registro Nº 37899/65128092 CM</p>
+                            <p className="text-[9px] leading-tight">Registro Nº 37899/65128092 CM</p>
                         </div>
                     </div>
                     <div className="w-full mt-4">

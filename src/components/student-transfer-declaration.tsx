@@ -61,15 +61,15 @@ export default function StudentTransferDeclaration({ student }: StudentTransferD
                 </main>
 
                 {/* Rodapé */}
-                 <footer className="flex flex-col items-center justify-center text-center mt-auto pt-6">
-                    <div className="w-full max-w-xs mx-auto">
-                         <div className="relative h-20">
-                            <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized className="opacity-80" />
+                <footer className="flex flex-col items-center justify-center text-center pt-6">
+                    <div className="w-full max-w-xs mx-auto text-center">
+                        <div className="relative h-16 w-full">
+                           <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized className="opacity-80" />
                         </div>
                         <div className="border-t-2 border-black w-full pt-1">
                             <p className="text-xs font-semibold">GESTÃO ESCOLAR</p>
                             <p className="text-[9px] leading-tight">Maria Aparecida da S. Numes - Secretária Escolar</p>
-                             <p className="text-[9px] leading-tight">Registro Nº 37899/65128092 CM</p>
+                            <p className="text-[9px] leading-tight">Registro Nº 37899/65128092 CM</p>
                         </div>
                     </div>
                     <div className="w-full mt-6">
