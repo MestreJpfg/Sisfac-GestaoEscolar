@@ -36,12 +36,12 @@ export default function CadastrosPage() {
         const id = doc(collection(firestore, 'disciplinas')).id;
         const docRef = doc(firestore, 'disciplinas', id);
         
-        // CORRIGIDO: Mapeamento de campos para os nomes corretos (nome, diaPlanejamento, horaAula).
+        // CORRIGIDO: Garante que os nomes dos campos estão corretos e que horaAula é uma string.
         setDocumentNonBlocking(docRef, {
             id: id,
             nome: data.nome,
             diaPlanejamento: data.diaPlanejamento || null,
-            horaAula: data.horaAula || null,
+            horaAula: data.horaAula ? String(data.horaAula) : null,
             createdAt: new Date().toISOString(),
         });
     
