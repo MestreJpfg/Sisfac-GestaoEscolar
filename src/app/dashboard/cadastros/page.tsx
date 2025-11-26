@@ -37,6 +37,7 @@ export default function CadastrosPage() {
         const id = doc(collection(firestore, 'disciplinas')).id;
         const docRef = doc(firestore, 'disciplinas', id);
         
+        // CORRIGIDO: Mapear os dados do formulário para os nomes de campo corretos.
         setDocumentNonBlocking(docRef, {
             id: id,
             nome: data.nome,
