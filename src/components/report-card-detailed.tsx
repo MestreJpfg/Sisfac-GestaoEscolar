@@ -55,10 +55,10 @@ export default function ReportCardDetailed({ student, boletim }: ReportCardDetai
       .map(item => item.disciplina);
 
     return (
-        <div className="bg-white text-black font-sans p-6" style={{ width: '210mm', height: '297mm', fontFamily: 'Arial, sans-serif' }}>
+        <div className="bg-white text-black font-sans p-8" style={{ width: '210mm', height: '297mm', fontFamily: 'Arial, sans-serif' }}>
             <div className="flex flex-col h-full">
                 {/* Cabeçalho */}
-                <header className="flex flex-col items-center text-center text-xs font-bold mb-4">
+                <header className="flex flex-col items-center text-center text-xs font-bold mb-6">
                      <div className="flex items-center gap-4 mb-2">
                        <Image src="/logoyuri.png" alt="Logo da Prefeitura de Fortaleza" width={70} height={70} unoptimized />
                        <div className="h-10 border-l border-gray-400"></div>
@@ -69,12 +69,12 @@ export default function ReportCardDetailed({ student, boletim }: ReportCardDetai
                 </header>
                 
                 {/* Título */}
-                <div className="text-center my-4">
+                <div className="text-center my-6">
                     <h1 className="text-2xl font-bold tracking-wider uppercase">Boletim Escolar {today.getFullYear()}</h1>
                 </div>
 
                 {/* Informações do Aluno */}
-                <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm mb-6 border-y py-3">
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm mb-6 border-y py-4">
                     <DetailItem label="Aluno(a)" value={student.nome} />
                     <DetailItem label="RM" value={student.rm} />
                     <DetailItem label="Nascimento" value={student.data_nascimento} />

@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -18,7 +19,7 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
 
     return (
         <div id={`declaration-${student.rm}`} className="bg-white text-black font-sans" style={{ width: '210mm', height: '297mm', fontFamily: 'Arial, sans-serif' }}>
-            <div className="flex flex-col h-full p-6 pt-12">
+            <div className="flex flex-col h-full p-8">
                 {/* Cabeçalho */}
                 <header className="flex flex-col items-center text-center text-[9px] font-bold">
                     <div className="flex items-center gap-4 mb-4">
@@ -83,7 +84,7 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
 
 
                 {/* Rodapé */}
-                <footer className="mt-auto pt-4">
+                <footer className="mt-auto pt-8">
                      <div className="flex w-full">
                         <div className="h-2 w-full" style={{backgroundColor: '#00857F'}}></div>
                         <div className="h-2 w-1/4" style={{backgroundColor: '#F38A00'}}></div>

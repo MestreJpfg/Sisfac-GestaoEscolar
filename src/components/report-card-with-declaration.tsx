@@ -30,10 +30,10 @@ export default function ReportCardWithDeclaration({ student, boletim }: ReportCa
     }).format(today);
 
     return (
-        <div className="bg-white text-black font-sans p-4" style={{ width: '210mm', height: '297mm', fontFamily: 'Arial, sans-serif' }}>
+        <div className="bg-white text-black font-sans p-8" style={{ width: '210mm', height: '297mm', fontFamily: 'Arial, sans-serif' }}>
             <div className="flex flex-col h-full">
                 {/* Cabeçalho */}
-                <header className="flex flex-col items-center text-center text-[9px] font-bold mb-2">
+                <header className="flex flex-col items-center text-center text-[9px] font-bold mb-4">
                     <div className="flex items-center gap-4 mb-2">
                        <Image src="/logoyuri.png" alt="Logo da Prefeitura de Fortaleza" width={60} height={60} unoptimized />
                        <div className="h-8 border-l border-gray-400"></div>
@@ -44,13 +44,13 @@ export default function ReportCardWithDeclaration({ student, boletim }: ReportCa
                 </header>
                 
                 {/* Título da Declaração */}
-                <div className="text-center my-2">
+                <div className="text-center my-4">
                     <h1 className="text-xl font-bold tracking-wider uppercase">DECLARAÇÃO COM BOLETIM</h1>
                 </div>
 
                 {/* Corpo da Declaração */}
                 <main className="text-sm leading-relaxed text-justify mb-4">
-                    <p className="mb-2 indent-8">
+                    <p className="mb-4 indent-8">
                         Declaramos, para os devidos fins, que <strong className="font-bold">{student.nome || 'N/A'}</strong>, 
                         filho(a) de {student.filiacao_1 || 'N/A'} e {student.filiacao_2 || 'N/A'},
                         está regularmente matriculado(a) nesta instituição de ensino no ano letivo de {today.getFullYear()},
@@ -66,7 +66,7 @@ export default function ReportCardWithDeclaration({ student, boletim }: ReportCa
                 </div>
 
                 {/* Rodapé */}
-                <footer className="mt-auto pt-2">
+                <footer className="mt-auto pt-4">
                     <p className="text-center text-[9px] mb-4">
                         Fortaleza, {formattedDate}.
                     </p>
