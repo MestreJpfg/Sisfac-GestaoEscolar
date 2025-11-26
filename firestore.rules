@@ -98,7 +98,7 @@ service cloud.firestore {
     }
 
     match /disciplinas/{disciplinaId} {
-      allow read, list, create, update, delete: if hasPermission('manage:cadastros');
+      allow read, write, list: if hasPermission('manage:cadastros');
     }
   }
 }
