@@ -69,7 +69,7 @@ export default function ReportCardDetailed({ student, boletim }: ReportCardDetai
                 </header>
                 
                 {/* Título */}
-                <div className="text-center my-6">
+                <div className="text-center my-4">
                     <h1 className="text-2xl font-bold tracking-wider uppercase">Boletim Escolar {today.getFullYear()}</h1>
                 </div>
 
@@ -91,26 +91,39 @@ export default function ReportCardDetailed({ student, boletim }: ReportCardDetai
                 {/* Rodapé */}
                 <footer className="mt-auto pt-4 text-xs">
                    {subjectsInRecovery.length > 0 && (
-                        <div className="border-t pt-2 mt-4">
+                        <div className="border-t pt-2 mt-4 text-center">
                             <p className="font-bold">Observações:</p>
                             <p>O aluno encontra-se em recuperação na(s) seguinte(s) disciplina(s): {subjectsInRecovery.join(', ')}.</p>
                         </div>
                     )}
-                    <div className="text-center mt-8">
+                    <div className="text-center my-4">
                         <p>Gerado em: {formattedDate}</p>
                     </div>
-                     <div className="pt-8 flex justify-center items-end">
+                     <div className="flex justify-between items-end mb-4" style={{ height: '70px' }}>
                         <div className="relative text-center w-[250px]">
-                            <div className="absolute inset-x-0 top-0 flex justify-center items-center">
+                            <div className="absolute inset-x-0 -top-8 flex justify-center items-center">
                                 <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" width={200} height={100} unoptimized className="opacity-80" />
                             </div>
-                            <div className="h-12"></div>
-                            <p className="text-xs font-semibold">GESTÃO ESCOLAR</p>
+                            <p className="text-xs font-semibold pt-8 border-t-2 border-black">GESTÃO ESCOLAR</p>
                         </div>
-                        <div className="text-center text-[8px] leading-tight ml-4">
-                            <p>Maria Aparecida da S. Numes</p>
+                        <div className="text-center text-[9px] leading-tight">
+                            <p className="font-bold">Maria Aparecida da S. Numes</p>
                             <p className="font-bold">Secretária Escolar</p>
                             <p>Registro Nº 37899/65128092 CM</p>
+                        </div>
+                    </div>
+                     <div className="flex w-full mb-2">
+                        <div className="h-1.5 w-full" style={{backgroundColor: '#00857F'}}></div>
+                        <div className="h-1.5 w-1/4" style={{backgroundColor: '#F38A00'}}></div>
+                    </div>
+                    <div className="flex items-start text-[8px] font-bold">
+                        <div className="pr-4 border-r border-gray-400 leading-tight">
+                             <p>EDUCAÇÃO</p>
+                        </div>
+                        <div className="pl-4 leading-tight">
+                             <p>ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES</p>
+                             <p className="font-normal">AV. RECREIO, 1540 - CEP 60831-600 - LAGOA REDONDA</p>
+                             <p className="font-normal">INEP 23070188</p>
                         </div>
                     </div>
                 </footer>
