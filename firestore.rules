@@ -102,7 +102,7 @@ service cloud.firestore {
     }
 
     match /mural/{messageId} {
-      allow read, write: if isSignedIn();
+      allow read, write, list: if isSignedIn();
     }
   }
 }
