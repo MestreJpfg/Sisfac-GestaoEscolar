@@ -37,14 +37,14 @@ export default function CadastrosPage() {
         const id = doc(collection(firestore, 'disciplinas')).id;
         const docRef = doc(firestore, 'disciplinas', id);
         
-        // CORRIGIDO: Mapear os dados do formulário para os nomes de campo corretos.
+        // CORRIGIDO: Removido `{ merge: true }`. A operação correta é um 'create', não um 'update'.
         setDocumentNonBlocking(docRef, {
             id: id,
             nome: data.nome,
             diaPlanejamento: data.diaPlanejamento,
             horaAula: data.horaAula,
             createdAt: new Date().toISOString(),
-        }, { merge: true });
+        });
     
         toast({
             title: "Disciplina Criada",
