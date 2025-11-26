@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, doc } from 'firebase/firestore';
-import { Loader2, Users, UserCog, Shield, Database, ClipboardList, BookCopy, Archive } from 'lucide-react';
+import { Loader2, Users, UserCog, Shield, Database, ClipboardList, BookCopy, Archive, MessageSquare } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -174,6 +174,13 @@ export default function DashboardPage() {
                         description="Gerar listas de turmas para impressão"
                         action={<Button onClick={() => router.push('/dashboard/classes')}>Gerir Turmas</Button>}
                         />
+                    <StatCard
+                        title="Mural de Mensagens"
+                        value={"Avisos"}
+                        icon={MessageSquare}
+                        description="Ver e publicar mensagens para todos"
+                        action={<Button onClick={() => router.push('/dashboard/mural')}>Aceder ao Mural</Button>}
+                    />
                     
                     {isPermissionsLoading ? (
                         <StatCard title="..." value={<Loader2 className="h-5 w-5 animate-spin"/>} icon={Users} />
