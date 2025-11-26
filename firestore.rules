@@ -90,7 +90,7 @@ service cloud.firestore {
     }
 
     match /mural/{messageId} {
-      allow read, write, list: if isSignedIn();
+      allow list, read, write: if isSignedIn();
     }
   }
 }
