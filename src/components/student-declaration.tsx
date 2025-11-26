@@ -21,7 +21,7 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
         <div id={`declaration-${student.rm}`} className="bg-white text-black font-sans" style={{ width: '210mm', height: '297mm', fontFamily: 'Arial, sans-serif' }}>
             <div className="flex flex-col h-full p-8">
                 {/* Cabeçalho */}
-                <header className="flex flex-col items-center text-center text-[9px] font-bold">
+                <header className="flex flex-col items-center text-center text-[9px] font-bold mb-4">
                     <div className="flex items-center gap-4 mb-4">
                        <Image src="/logoyuri.png" alt="Logo da Prefeitura de Fortaleza" width={80} height={80} unoptimized />
                        <div className="h-10 border-l border-gray-400"></div>
@@ -33,7 +33,7 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
                 </header>
                 
                 {/* Título da Declaração */}
-                <div className="text-center my-10">
+                <div className="text-center my-8">
                     <h1 className="text-2xl font-bold tracking-wider uppercase">DECLARAÇÃO</h1>
                 </div>
 
@@ -63,19 +63,19 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
                             Observações: Frequência Bimestral em 100%
                         </p>
                     </div>
-                    <p className="mt-12 text-right">
+                    <p className="mt-10 text-right">
                         Fortaleza, {formattedDate}.
                     </p>
                 </main>
 
 
                 {/* Rodapé */}
-                <footer className="flex flex-col items-center justify-center text-center pt-6">
-                     <div className="w-full max-w-xs mx-auto text-center">
-                        <div className="relative h-16 w-full">
-                           <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized className="opacity-80" />
+                <footer className="flex flex-col items-center justify-center text-center pt-2">
+                    <div className="w-full max-w-xs mx-auto text-center">
+                         <div className="relative h-16 w-full -mt-8">
+                            <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized className="opacity-80" />
                         </div>
-                        <div className="border-t-2 border-black w-full pt-1">
+                        <div className="border-t-2 border-black w-full pt-1 -mt-4">
                             <p className="text-xs font-semibold">GESTÃO ESCOLAR</p>
                             <p className="text-[9px] leading-tight">Maria Aparecida da S. Numes - Secretária Escolar</p>
                             <p className="text-[9px] leading-tight">Registro Nº 37899/65128092 CM</p>
