@@ -37,7 +37,7 @@ export default function GenericUploader({ collectionName, title, description, on
         
         // Specific renaming for 'disciplinas' collection
         if (collectionName === 'disciplinas') {
-            if (h === 'diadeplanejamento') return 'diaPlanejamento';
+            if (h === 'diadeplanejamento' || h === 'diaplanejamento') return 'diaPlanejamento';
             if (h === 'horaaula') return 'horaAula';
         }
         
@@ -49,7 +49,12 @@ export default function GenericUploader({ collectionName, title, description, on
       row.forEach((value: any, index: number) => {
         const header = headers[index];
         if (header) {
-          item[header] = value;
+          // For 'disciplinas', ensure 'horaAula' is a string
+          if (collectionName === 'disciplinas' && header === 'horaAula' && value !== null && value !== undefined) {
+             item[header] = String(value);
+          } else {
+             item[header] = value;
+          }
         }
       });
       return item;
@@ -84,16 +89,18 @@ export default function GenericUploader({ collectionName, title, description, on
     
     normalizedData.forEach(item => {
         const newDocRef = doc(collectionRef);
-        const docData = {
+        const docData: any = {
             ...item,
             id: newDocRef.id,
             createdAt: new Date().toISOString()
         };
+        
         // Ensure all fields expected by the schema are at least present, even if null
         if (collectionName === 'disciplinas') {
             docData.diaPlanejamento = item.diaPlanejamento || null;
-            docData.horaAula = item.horaAula || null;
+            docData.horaAula = item.horaAula ? String(item.horaAula) : null;
         }
+
         setDocumentNonBlocking(newDocRef, docData);
     });
 
