@@ -17,7 +17,6 @@ import { useRouter } from 'next/navigation';
 import ProfileEditDialog from './profile-edit-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
-import DisciplineEditDialog from './discipline-edit-dialog';
 
 
 export default function ProfileManager() {
@@ -28,7 +27,6 @@ export default function ProfileManager() {
   const [editingProfile, setEditingProfile] = useState<any | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [deletingProfile, setDeletingProfile] = useState<any | null>(null);
-  const [isDisciplineDialogOpen, setIsDisciplineDialogOpen] = useState(false);
 
   const profilesQuery = useMemo(() => {
     if (!firestore) return null;
@@ -91,27 +89,6 @@ export default function ProfileManager() {
     handleCloseDialog();
   };
   
-  const handleSaveDiscipline = (data: any) => {
-    if (!firestore) return;
-    const id = doc(collection(firestore, 'disciplinas')).id;
-    const docRef = doc(firestore, 'disciplinas', id);
-    
-    // Corrected data structure
-    setDocumentNonBlocking(docRef, {
-        id: id,
-        nome: data.nome,
-        diaPlanejamento: data.diaPlanejamento,
-        horaAula: data.horaAula,
-        createdAt: new Date().toISOString(),
-    }, { merge: true });
-
-    toast({
-        title: "Disciplina Criada",
-        description: `A disciplina "${data.nome}" foi criada com sucesso.`
-    });
-    setIsDisciplineDialogOpen(false);
-  };
-
   return (
     <>
        <div className="flex min-h-screen flex-col">
@@ -129,9 +106,6 @@ export default function ProfileManager() {
                 <div className="flex flex-1 items-center justify-end space-x-2">
                     <Button onClick={handleNewProfile}>
                         <Plus className="mr-2 h-4 w-4" /> Novo Perfil
-                    </Button>
-                    <Button variant="secondary" onClick={() => setIsDisciplineDialogOpen(true)}>
-                        <Plus className="mr-2 h-4 w-4" /> Cadastrar Disciplina
                     </Button>
                     <nav className="flex items-center space-x-1">
                         <ThemeToggle />
@@ -167,12 +141,6 @@ export default function ProfileManager() {
           onSave={handleSaveChanges}
         />
       )}
-
-       <DisciplineEditDialog
-          isOpen={isDisciplineDialogOpen}
-          onClose={() => setIsDisciplineDialogOpen(false)}
-          onSave={handleSaveDiscipline}
-        />
 
       {deletingProfile && (
         <AlertDialog open={!!deletingProfile} onOpenChange={() => setDeletingProfile(null)}>
