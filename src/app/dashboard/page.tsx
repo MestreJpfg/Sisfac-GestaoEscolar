@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, doc, getCountFromServer } from 'firebase/firestore';
-import { Loader2, Users, UserCog, Shield, Database, ClipboardList, BookCopy, Archive, MessageSquare } from 'lucide-react';
+import { Loader2, Users, UserCog, Shield, Database, ClipboardList, BookCopy, Archive, MessageSquare, Megaphone } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -73,6 +73,11 @@ export default function DashboardPage() {
   const canViewStudents = useMemo(() => {
      if (isPermissionsLoading) return false;
     return hasPermission('manage:students') || hasPermission('view:students');
+  }, [isPermissionsLoading, userProfile, profileDetails]);
+  
+   const canManageAnnouncements = useMemo(() => {
+    if (isPermissionsLoading) return false;
+    return hasPermission('manage:announcements');
   }, [isPermissionsLoading, userProfile, profileDetails]);
 
   const isAdmin = useMemo(() => {
@@ -207,6 +212,15 @@ export default function DashboardPage() {
                         <StatCard title="..." value={<Loader2 className="h-5 w-5 animate-spin"/>} icon={Users} />
                     ) : (
                         <>
+                            {canManageAnnouncements && (
+                                <StatCard
+                                title="Comunicados"
+                                value={"Anúncios"}
+                                icon={Megaphone}
+                                description="Gerir comunicados para públicos específicos"
+                                action={<Button onClick={() => router.push('/dashboard/announcements')}>Aceder</Button>}
+                                />
+                            )}
                             {canManageCadastros && (
                                 <StatCard
                                 title="Cadastros"

@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -104,7 +105,7 @@ service cloud.firestore {
     
     // Permissions for announcements.
     match /announcements/{announcementId} {
-      allow read: if isSignedIn();
+      allow read, list: if isSignedIn();
       allow write: if hasPermission('manage:announcements');
     }
   }
