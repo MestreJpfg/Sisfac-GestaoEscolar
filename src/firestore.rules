@@ -11,106 +11,98 @@ service cloud.firestore {
     }
 
     function isOwner(userId) {
+      // Assume-se que esta função é sempre chamada após uma verificação de isSignedIn()
       return request.auth.uid == userId;
     }
-    
+
     // --- Collection Rules ---
 
-    // ANY authenticated user can interact with the message board.
+    // REGRA DO MURAL: Acesso de leitura/escrita para qualquer utilizador autenticado.
+    // Esta regra é mantida simples e no topo para garantir a sua avaliação sem interferências.
     match /mural/{messageId} {
-      allow read, write: if isSignedIn();
+      allow read, list, write: if isSignedIn();
     }
 
-    // Users can update their own data.
-    // Any authenticated user can READ another user's profile.
+    // REGRA DE UTILIZADORES:
     match /users/{userId} {
       allow read, list: if isSignedIn();
       allow create, update: if isOwner(userId) || (
         isSignedIn() &&
         (
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador' ||
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador(a)' ||
-          ('manage:users' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions)
+          // O utilizador é um Administrador?
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId in ['Administrador', 'Administrador(a)'] ||
+          // O utilizador tem a permissão 'manage:users' no seu perfil?
+          'manage:users' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions
         )
       );
       allow delete: if isSignedIn() && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador(a)' ||
-        ('manage:users' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions)
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId in ['Administrador', 'Administrador(a)'] ||
+        'manage:users' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions
       );
     }
     
-    // All authenticated users can read/list profiles.
-    // Only those with 'manage:cadastros' can write.
+    // REGRA DE PERFIS:
     match /profiles/{profileId} {
         allow read, list: if isSignedIn();
         allow write: if isSignedIn() && (
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador' ||
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador(a)' ||
-          ('manage:cadastros' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions)
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId in ['Administrador', 'Administrador(a)'] ||
+          'manage:cadastros' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions
         );
     }
 
-    // Permissions for students.
+    // REGRA DE ALUNOS:
     match /alunos/{alunoId} {
       allow read, list: if isSignedIn() && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador(a)' ||
-        ('manage:students' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions) ||
-        ('view:students' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions)
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId in ['Administrador', 'Administrador(a)'] ||
+        'manage:students' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions ||
+        'view:students' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions
       );
       allow write: if isSignedIn() && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador(a)' ||
-        ('manage:students' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions)
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId in ['Administrador', 'Administrador(a)'] ||
+        'manage:students' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions
       );
     }
 
-    // Permissions for employees.
+    // REGRA DE FUNCIONÁRIOS:
     match /funcionarios/{funcionarioId} {
       allow read, list, write: if isSignedIn() && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador(a)' ||
-        ('manage:cadastros' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions)
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId in ['Administrador', 'Administrador(a)'] ||
+        'manage:cadastros' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions
       );
     }
 
-    // Permissions for disciplines.
+    // REGRA DE DISCIPLINAS:
     match /disciplinas/{disciplinaId} {
        allow read, list, write: if isSignedIn() && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador(a)' ||
-        ('manage:cadastros' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions)
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId in ['Administrador', 'Administrador(a)'] ||
+        'manage:cadastros' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions
       );
     }
 
-    // Permissions for grades.
+    // REGRA DE NOTAS:
     match /grades/{gradeId} {
        allow read: if isSignedIn();
        allow write: if isSignedIn() && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador(a)' ||
-        ('manage:grades' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions)
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId in ['Administrador', 'Administrador(a)'] ||
+        'manage:grades' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions
       );
     }
 
-    // Permissions for attendance.
+    // REGRA DE FREQUÊNCIA:
     match /attendance/{attendanceId} {
        allow read: if isSignedIn();
        allow write: if isSignedIn() && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador(a)' ||
-        ('manage:attendance' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions)
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId in ['Administrador', 'Administrador(a)'] ||
+        'manage:attendance' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions
       );
     }
     
-    // Permissions for announcements.
+    // REGRA DE ANÚNCIOS:
     match /announcements/{announcementId} {
       allow read, list: if isSignedIn();
       allow write: if isSignedIn() && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador(a)' ||
-        ('manage:announcements' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions)
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId in ['Administrador', 'Administrador(a)'] ||
+        'manage:announcements' in get(/databases/$(database)/documents/profiles/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId)).data.permissions
       );
     }
   }
