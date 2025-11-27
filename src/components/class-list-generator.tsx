@@ -3,21 +3,13 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import jsPDF from "jspdf";
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { ClipboardList, X, Loader2, Download, Filter } from 'lucide-react';
 import { Button } from './ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetTrigger } from './ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-
-
-// Extend jsPDF with autoTable method
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
 
 interface ClassListGeneratorProps {
   allStudents: any[];
@@ -123,7 +115,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
         ];
         const title = titleParts.filter(Boolean).join(' ');
 
-        doc.autoTable({
+        autoTable(doc, {
             head: [['Nº', 'Nome do Aluno', 'Data de Nasc.', 'Observações']],
             body: tableData,
             startY: 20,
