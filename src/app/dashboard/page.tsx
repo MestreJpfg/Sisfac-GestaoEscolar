@@ -200,13 +200,6 @@ export default function DashboardPage() {
                         description="Gerar listas de turmas para impressão"
                         action={<Button onClick={() => router.push('/dashboard/classes')}>Gerir Turmas</Button>}
                         />
-                    <StatCard
-                        title="Mural de Mensagens"
-                        value={"Avisos"}
-                        icon={MessageSquare}
-                        description="Ver e publicar mensagens para todos"
-                        action={<Button onClick={() => router.push('/dashboard/mural')}>Aceder ao Mural</Button>}
-                    />
                     
                     {isPermissionsLoading ? (
                         <StatCard title="..." value={<Loader2 className="h-5 w-5 animate-spin"/>} icon={Users} />

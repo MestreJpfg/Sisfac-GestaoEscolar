@@ -172,20 +172,6 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "title", "content", "targetAudience", "createdAt"]
-    },
-    "MuralMessage": {
-      "title": "MuralMessage",
-      "type": "object",
-      "description": "Represents a message on the message board.",
-      "properties": {
-        "id": { "type": "string" },
-        "message": { "type": "string" },
-        "authorId": { "type": "string" },
-        "authorName": { "type": "string" },
-        "authorPhotoURL": { "type": ["string", "null"] },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "message", "authorId", "authorName", "createdAt"]
     }
   },
   "auth": {
@@ -224,10 +210,6 @@
       {
         "path": "/disciplinas/{disciplinaId}",
         "definition": { "schema": { "$ref": "#/entities/Disciplina" } }
-      },
-      {
-        "path": "/mural/{messageId}",
-        "definition": { "schema": { "$ref": "#/entities/MuralMessage" } }
       }
     ]
   }
