@@ -33,16 +33,19 @@ service cloud.firestore {
         return false;
       }
       
+      // Admin override
       if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
         return true;
       }
       
       let userProfile = getUserProfile();
       
+      // Check profile permissions
       if (userProfile != null && 'permissions' in userProfile && userProfile.permissions is list && permission in userProfile.permissions) {
         return true;
       }
         
+      // Check custom user permissions
       if ('customPermissions' in userData && userData.customPermissions is list && permission in userData.customPermissions) {
         return true;
       }
@@ -50,17 +53,38 @@ service cloud.firestore {
       return false;
     }
 
+    // --- Collection Rules ---
+
     match /users/{userId} {
       allow create, update: if isSignedIn() && request.auth.uid == userId;
       allow read: if isSignedIn() && (request.auth.uid == userId || hasPermission('manage:users'));
-      allow list, write: if hasPermission('manage:users');
+      allow list: if hasPermission('manage:users');
     }
     
     match /profiles/{profileId} {
-        allow write: if hasPermission('manage:cadastros');
         allow read, list: if isSignedIn();
+        allow write: if hasPermission('manage:cadastros');
     }
 
+    match /alunos/{alunoId} {
+      allow read, list: if hasPermission('manage:students') || hasPermission('view:students');
+      allow write: if hasPermission('manage:students');
+    }
+
+    match /funcionarios/{funcionarioId} {
+      allow read, list, write: if hasPermission('manage:cadastros');
+    }
+
+    match /disciplinas/{disciplinaId} {
+       allow read, list, write: if hasPermission('manage:cadastros');
+    }
+    
+    // Corrected rule for the message board
+    match /mural/{messageId} {
+      allow list, read, write: if isSignedIn();
+    }
+
+    // Rules for collections that might be less frequently used or have simpler permissions
     match /grades/{gradeId} {
        allow read: if isSignedIn();
        allow write: if hasPermission('manage:grades');
@@ -74,23 +98,6 @@ service cloud.firestore {
     match /announcements/{announcementId} {
       allow read: if isSignedIn();
       allow write: if hasPermission('manage:announcements');
-    }
-
-    match /alunos/{alunoId} {
-      allow read, list: if hasPermission('manage:students') || hasPermission('view:students');
-      allow write: if hasPermission('manage:students');
-    }
-
-    match /funcionarios/{funcionarioId} {
-      allow read, write, list: if hasPermission('manage:cadastros');
-    }
-
-    match /disciplinas/{disciplinaId} {
-      allow read, write, list: if request.auth != null;
-    }
-
-    match /mural/{messageId} {
-      allow list, read, write: if isSignedIn();
     }
   }
 }

@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -181,6 +182,7 @@
         "message": { "type": "string" },
         "authorId": { "type": "string" },
         "authorName": { "type": "string" },
+        "authorPhotoURL": { "type": ["string", "null"] },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "message", "authorId", "authorName", "createdAt"]
@@ -213,7 +215,7 @@
       },
        {
         "path": "/alunos/{alunoId}",
-        "definition": { "schema": { "$ref": "#/entities/User" } }
+        "definition": { "schema": { "$ref": "#/entities/Aluno" } }
       },
       {
         "path": "/funcionarios/{funcionarioId}",

@@ -1,9 +1,10 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, doc, getCountFromServer } from 'firebase/firestore';
@@ -12,10 +13,8 @@ import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
-import { useRouter } from 'next/navigation';
 import AuthGuard from '@/components/auth-guard';
 import AppFooter from '@/components/app-footer';
-import { useEffect, useState } from 'react';
 
 
 export default function DashboardPage() {
@@ -66,7 +65,7 @@ export default function DashboardPage() {
     return hasPermission('manage:users');
   }, [isPermissionsLoading, userProfile, profileDetails]);
   
-  const canManageProfiles = useMemo(() => {
+  const canManageCadastros = useMemo(() => {
     if (isPermissionsLoading) return false;
     return hasPermission('manage:cadastros');
   }, [isPermissionsLoading, userProfile, profileDetails]);
@@ -74,11 +73,6 @@ export default function DashboardPage() {
   const canViewStudents = useMemo(() => {
      if (isPermissionsLoading) return false;
     return hasPermission('manage:students') || hasPermission('view:students');
-  }, [isPermissionsLoading, userProfile, profileDetails]);
-
-  const canManageCadastros = useMemo(() => {
-    if (isPermissionsLoading) return false;
-    return hasPermission('manage:cadastros');
   }, [isPermissionsLoading, userProfile, profileDetails]);
 
   const isAdmin = useMemo(() => {
@@ -117,13 +111,10 @@ export default function DashboardPage() {
         }
 
         try {
-            if (canManageProfiles) {
-                const profilesColl = collection(firestore, 'profiles');
-                const profilesSnapshot = await getCountFromServer(query(profilesColl));
-                setProfileCount(profilesSnapshot.data().count);
-            } else {
-                setProfileCount(0);
-            }
+            // All authenticated users can list profiles
+            const profilesColl = collection(firestore, 'profiles');
+            const profilesSnapshot = await getCountFromServer(query(profilesColl));
+            setProfileCount(profilesSnapshot.data().count);
         } catch (e) {
             console.error("Error fetching profile count: ", e);
             setProfileCount('N/A');
@@ -133,7 +124,7 @@ export default function DashboardPage() {
     if (!isPermissionsLoading) {
       fetchCounts();
     }
-  }, [firestore, isPermissionsLoading, canViewStudents, canManageUsers, canManageProfiles]);
+  }, [firestore, isPermissionsLoading, canViewStudents, canManageUsers]);
 
 
   const welcomeName = user?.displayName?.split(' ')[0] || 'Utilizador';
@@ -234,7 +225,7 @@ export default function DashboardPage() {
                                 action={<Button onClick={() => router.push('/users')}>Gerir Utilizadores</Button>}
                                 />
                             )}
-                            {canManageProfiles && (
+                           {canManageCadastros && (
                                 <StatCard
                                 title="Perfis e Permissões"
                                 value={profileCount}

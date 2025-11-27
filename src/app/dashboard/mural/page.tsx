@@ -1,19 +1,19 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, orderBy } from 'firebase/firestore';
+import { collection, doc, query, orderBy, limit } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { format } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
 import { UserNav } from '@/components/user-nav';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Send, Loader2 } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, MessageSquare } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -37,15 +37,20 @@ export default function MuralPage() {
     const { toast } = useToast();
     const [newMessage, setNewMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const scrollAreaRef = useRef<HTMLDivElement>(null);
 
     const messagesQuery = useMemo(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'mural'), orderBy('createdAt', 'desc'));
+        // Correctly order by creation time and limit to the last 50 messages for performance
+        return query(collection(firestore, 'mural'), orderBy('createdAt', 'desc'), limit(50));
     }, [firestore]);
 
     const { data: messages, isLoading: isLoadingMessages } = useCollection(messagesQuery);
+    
+    // Reverse the array for chronological display
+    const displayedMessages = useMemo(() => messages?.slice().reverse() || [], [messages]);
 
-    const handleSubmitMessage = () => {
+    const handleSubmitMessage = async () => {
         if (!firestore || !user || !newMessage.trim()) return;
 
         setIsSubmitting(true);
@@ -61,21 +66,42 @@ export default function MuralPage() {
             authorPhotoURL: user.photoURL || null,
             createdAt: new Date().toISOString(),
         };
-
-        setDocumentNonBlocking(messageRef, messageData);
         
-        toast({
-            title: "Mensagem Enviada!",
-            description: "A sua mensagem foi publicada no mural.",
-        });
-
-        setNewMessage('');
-        setIsSubmitting(false);
+        try {
+            // Using await here to ensure the message is sent before clearing the input
+            await setDoc(messageRef, messageData);
+            
+            toast({
+                title: "Mensagem Enviada!",
+                description: "A sua mensagem foi publicada no mural.",
+            });
+            
+            setNewMessage('');
+        } catch (error) {
+            console.error("Error sending message: ", error);
+            toast({
+                variant: 'destructive',
+                title: "Erro ao Enviar",
+                description: "Não foi possível enviar a sua mensagem. Tente novamente.",
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
+    
+    // Auto-scroll to the bottom when new messages arrive
+    useEffect(() => {
+        if (scrollAreaRef.current) {
+            scrollAreaRef.current.scrollTo({
+                top: scrollAreaRef.current.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+    }, [displayedMessages]);
 
     return (
         <AuthGuard>
-            <div className="flex min-h-screen flex-col">
+            <div className="flex h-screen flex-col">
                 <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                     <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
                         <div className="flex items-center gap-4">
@@ -83,7 +109,7 @@ export default function MuralPage() {
                                 <ArrowLeft className="h-4 w-4" />
                             </Button>
                             <div className="flex items-center gap-2">
-                                <Image src="/logoyuri.png" alt="Logo" width={32} height={32} className="rounded-md" />
+                                <MessageSquare className="h-6 w-6 text-primary"/>
                                 <h1 className="text-xl font-bold text-primary hidden sm:block">Mural de Mensagens</h1>
                             </div>
                         </div>
@@ -96,70 +122,76 @@ export default function MuralPage() {
                     </div>
                 </header>
 
-                <main className="flex-1 py-8">
-                    <div className="container max-w-4xl">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Publicar Nova Mensagem</CardTitle>
-                                <CardDescription>Escreva uma mensagem que ficará visível para todos os utilizadores.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid w-full gap-2">
-                                    <Textarea
-                                        placeholder="Escreva a sua mensagem aqui..."
-                                        value={newMessage}
-                                        onChange={(e) => setNewMessage(e.target.value)}
-                                        rows={4}
-                                    />
-                                    <Button onClick={handleSubmitMessage} disabled={isSubmitting || !newMessage.trim()}>
-                                        {isSubmitting ? (
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <Send className="mr-2 h-4 w-4" />
-                                        )}
-                                        Publicar Mensagem
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                        
-                        <div className="mt-8">
-                            <h2 className="text-2xl font-bold tracking-tight mb-4">Mensagens Recentes</h2>
-                             {isLoadingMessages ? (
-                                <div className="flex justify-center items-center h-40">
+                <main className="flex-1 overflow-hidden">
+                    <div className="container h-full flex flex-col pt-6 pb-2">
+                        <div className="flex-1 overflow-y-auto pr-4 -mr-4 mb-4" ref={scrollAreaRef}>
+                            {isLoadingMessages ? (
+                                <div className="flex justify-center items-center h-full">
                                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                                 </div>
-                            ) : messages && messages.length > 0 ? (
-                                <ScrollArea className="h-[500px] pr-4">
-                                    <div className="space-y-6">
-                                        {messages.map((msg) => (
-                                            <Card key={msg.id} className="w-full">
-                                                <CardContent className="p-4 flex gap-4">
-                                                    <Avatar>
-                                                        <AvatarImage src={msg.authorPhotoURL} />
-                                                        <AvatarFallback>{getInitials(msg.authorName)}</AvatarFallback>
-                                                    </Avatar>
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center justify-between">
-                                                            <p className="font-semibold text-primary">{msg.authorName}</p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                {format(new Date(msg.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                                                            </p>
-                                                        </div>
-                                                        <p className="text-sm text-foreground mt-1 whitespace-pre-wrap">{msg.message}</p>
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        ))}
-                                    </div>
-                                </ScrollArea>
+                            ) : displayedMessages.length > 0 ? (
+                                <div className="space-y-6">
+                                    {displayedMessages.map((msg) => (
+                                        <div key={msg.id} className="flex gap-3">
+                                            <Avatar className="h-10 w-10">
+                                                <AvatarImage src={msg.authorPhotoURL} alt={msg.authorName} />
+                                                <AvatarFallback>{getInitials(msg.authorName)}</AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-1">
+                                                <div className="flex items-baseline gap-2">
+                                                    <p className="font-semibold text-primary">{msg.authorName}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true, locale: ptBR })}
+                                                    </p>
+                                                </div>
+                                                <div className="mt-1 text-sm text-foreground bg-secondary/30 rounded-lg p-3 whitespace-pre-wrap">
+                                                    {msg.message}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             ) : (
-                                <p className="text-center text-muted-foreground py-10">Ainda não há mensagens no mural. Seja o primeiro a publicar!</p>
+                                <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+                                    <MessageSquare size={48} className="mb-4" />
+                                    <p className="font-semibold">Ainda não há mensagens no mural.</p>
+                                    <p className="text-sm">Seja o primeiro a publicar!</p>
+                                </div>
                             )}
+                        </div>
+                        
+                        <div className="mt-auto pt-4 border-t">
+                            <form onSubmit={(e) => { e.preventDefault(); handleSubmitMessage(); }} className="relative">
+                                <Textarea
+                                    placeholder="Escreva a sua mensagem aqui..."
+                                    value={newMessage}
+                                    onChange={(e) => setNewMessage(e.target.value)}
+                                    rows={3}
+                                    className="pr-24"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleSubmitMessage();
+                                        }
+                                    }}
+                                />
+                                <Button 
+                                    type="submit" 
+                                    size="icon" 
+                                    className="absolute bottom-2 right-2 rounded-full" 
+                                    disabled={isSubmitting || !newMessage.trim()}
+                                >
+                                    {isSubmitting ? (
+                                        <Loader2 className="h-5 w-5 animate-spin" />
+                                    ) : (
+                                        <Send className="h-5 w-5" />
+                                    )}
+                                    <span className="sr-only">Enviar Mensagem</span>
+                                </Button>
+                            </form>
                         </div>
                     </div>
                 </main>
-                <AppFooter />
             </div>
         </AuthGuard>
     );
