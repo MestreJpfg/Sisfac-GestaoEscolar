@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -33,16 +32,18 @@ service cloud.firestore {
         return false;
       }
       
-      if (userData.profileId in ['Administrador', 'Administrador(a)']) {
+      if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
         return true;
       }
       
-      if ('customPermissions' in userData && userData.customPermissions.hasAny([permission])) {
+      // Use 'in' operator for lists (arrays)
+      if ('customPermissions' in userData && permission in userData.customPermissions) {
         return true;
       }
 
       let profileData = getProfileData(userData.profileId);
-      if ('permissions' in profileData && profileData.permissions.hasAny([permission])) {
+      // Use 'in' operator for lists (arrays)
+      if ('permissions' in profileData && permission in profileData.permissions) {
         return true;
       }
         
