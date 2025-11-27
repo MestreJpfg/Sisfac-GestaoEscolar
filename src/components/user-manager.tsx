@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -34,7 +35,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
 
   const hasActiveFilters = useMemo(() => {
     // A busca é considerada ativa se houver texto de busca OU um perfil específico for selecionado
-    return debouncedSearch.trim().length > 0 || (filters.profileId && filters.profileId !== 'all');
+    return debouncedSearch.trim().length >= 3 || (filters.profileId && filters.profileId !== 'all');
   }, [debouncedSearch, filters.profileId]);
 
   const usersQuery = useMemo(() => {
@@ -206,3 +207,5 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
     </div>
   );
 }
+
+    
