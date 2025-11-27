@@ -4,8 +4,8 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useFirestore, useUser } from '@/firebase';
-import { collection, doc, query, orderBy, setDoc } from 'firebase/firestore';
+import { useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
+import { collection, doc, query, orderBy } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -17,6 +17,8 @@ import { ArrowLeft, Send, Loader2, MessageSquare } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
+import AppFooter from '@/components/app-footer';
+
 
 const getInitials = (name: string | null | undefined) => {
     if (!name) return 'U';
@@ -75,7 +77,7 @@ export default function MuralPage() {
         
         try {
             // Usamos setDoc em vez de setDocumentNonBlocking para garantir que a mensagem foi enviada
-            await setDoc(messageRef, messageData);
+            setDocumentNonBlocking(messageRef, messageData);
             setNewMessage('');
         } catch (error) {
             console.error("Error sending message: ", error);
@@ -122,9 +124,9 @@ export default function MuralPage() {
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-hidden">
+                <main className="flex-1 overflow-hidden flex flex-col">
                     <div className="container h-full flex flex-col pt-6 pb-2">
-                        <div className="flex-1 overflow-y-auto pr-4 -mr-4 mb-4" ref={scrollAreaRef}>
+                        <div ref={scrollAreaRef} className="flex-1 overflow-y-auto pr-4 -mr-4 mb-4">
                             {isLoadingMessages ? (
                                 <div className="flex justify-center items-center h-full">
                                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -192,7 +194,10 @@ export default function MuralPage() {
                         </div>
                     </div>
                 </main>
+                <AppFooter />
             </div>
         </AuthGuard>
     );
 }
+
+    
