@@ -23,7 +23,7 @@ export default function StudentManager() {
   // It should be lightweight. We limit it to a reasonable number to avoid fetching everything.
   const studentsOptionsQuery = useMemo(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'alunos'), limit(500)); // Fetch a sample for filter options
+    return query(collection(firestore, 'alunos'), limit(100)); // Fetch a sample for filter options
   }, [firestore]);
 
   const { data: allStudents, isLoading: isDataLoading } = useCollection(studentsOptionsQuery);

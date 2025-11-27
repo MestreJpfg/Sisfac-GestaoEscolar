@@ -50,15 +50,13 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
         q = query(q, where('profileId', '==', filters.profileId));
     }
     
-    const searchLower = debouncedSearch.toLowerCase().trim();
-    if (searchLower.length >= 3) {
-      // Infelizmente, o Firestore não suporta consultas 'OR' complexas (nome OU email)
-      // nem busca de 'contains' não sensível a maiúsculas/minúsculas de forma nativa e eficiente.
-      // A busca por nome/email será feita no cliente após o fetch.
-    }
+    // Como o Firestore não suporta busca case-insensitive de sub-strings, 
+    // faremos o filtro de nome/email no lado do cliente.
+    // Limitamos a consulta para performance.
+    q = query(q, limit(100));
     
     return q;
-  }, [firestore, hasActiveFilters, filters.profileId, debouncedSearch]);
+  }, [firestore, hasActiveFilters, filters.profileId]);
 
   const { data: fetchedUsers, isLoading: isLoadingUsers } = useCollection(usersQuery);
 
@@ -69,7 +67,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
     const searchLower = debouncedSearch.toLowerCase().trim();
 
     // Filtro por nome/email no cliente, pois é mais flexível
-    if (searchLower.length > 0) {
+    if (searchLower.length >= 3) {
       filtered = filtered.filter(user => 
         (user.name?.toLowerCase().includes(searchLower) || user.email?.toLowerCase().includes(searchLower))
       );
@@ -165,8 +163,11 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
               <p>
                 {filteredAndSortedUsers.length > 0
                   ? `${filteredAndSortedUsers.length} utilizador(es) encontrado(s).`
-                  : 'Nenhum utilizador encontrado com os critérios fornecidos.'
+                  : (debouncedSearch.trim().length > 0 && debouncedSearch.trim().length < 3)
+                    ? 'Digite pelo menos 3 caracteres para buscar.'
+                    : 'Nenhum utilizador encontrado com os critérios fornecidos.'
                 }
+                 {filteredAndSortedUsers.length >= 100 && " Limite de 100 resultados atingido."}
               </p>
             )}
         </div>
@@ -207,5 +208,3 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
     </div>
   );
 }
-
-    

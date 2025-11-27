@@ -171,78 +171,78 @@ export default function DashboardPage() {
                 </div>
             </header>
 
-            <main className="flex-1 container px-4 sm:px-6 lg:px-8">
-            <div className="py-8">
+            <main className="flex-1">
+              <div className="container py-8">
                 <div className="mb-8">
-                <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Bem-vindo(a), {welcomeName}!</h2>
-                <p className="text-muted-foreground">Aqui está um resumo da sua plataforma.</p>
+                  <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Bem-vindo(a), {welcomeName}!</h2>
+                  <p className="text-muted-foreground">Aqui está um resumo da sua plataforma.</p>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <StatCard
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  <StatCard
                     title="Alunos"
                     value={studentCount}
                     icon={Users}
                     description="Total de alunos registados"
                     action={<Button onClick={() => router.push('/dashboard/students')}>Gerir Alunos</Button>}
-                    />
-                    <StatCard
-                        title="O meu Perfil"
-                        value={user?.displayName ?? ''}
-                        icon={UserCog}
-                        description="Gerir as suas informações e preferências"
-                        action={<Button onClick={() => router.push('/profile')}>Aceder ao Perfil</Button>}
-                    />
-                     <StatCard
-                        title="Turmas"
-                        value={"Gerar Listas"}
-                        icon={ClipboardList}
-                        description="Gerar listas de turmas para impressão"
-                        action={<Button onClick={() => router.push('/dashboard/classes')}>Gerir Turmas</Button>}
-                        />
-                    
-                    {isPermissionsLoading ? (
-                        <StatCard title="..." value={<Loader2 className="h-5 w-5 animate-spin"/>} icon={Users} />
-                    ) : (
-                        <>
-                            {canManageAnnouncements && (
-                                <StatCard
-                                title="Comunicados"
-                                value={"Anúncios"}
-                                icon={Megaphone}
-                                description="Gerir comunicados para públicos específicos"
-                                action={<Button onClick={() => router.push('/dashboard/announcements')}>Aceder</Button>}
-                                />
-                            )}
-                            {canManageUsers && (
-                                <StatCard
-                                title="Utilizadores"
-                                value={userCount}
-                                icon={UserCog}
-                                description="Total de contas no sistema"
-                                action={<Button onClick={() => router.push('/users')}>Gerir Utilizadores</Button>}
-                                />
-                            )}
-                           {canManageCadastros && (
-                                <StatCard
-                                title="Perfis e Permissões"
-                                value={profileCount}
-                                icon={Shield}
-                                description="Perfis de acesso no sistema"
-                                action={<Button onClick={() => router.push('/profiles')}>Gerir Perfis</Button>}
-                                />
-                            )}
-                            {isAdmin && (
-                                <StatCard
-                                title="Gestão da Base de Dados"
-                                value={"Ferramentas"}
-                                icon={Database}
-                                description="Importar, exportar e gerir dados"
-                                action={<Button onClick={() => router.push('/dashboard/database')}>Aceder</Button>}
-                                />
-                            )}
-                        </>
-                    )}
+                  />
+                  <StatCard
+                      title="O meu Perfil"
+                      value={user?.displayName ?? ''}
+                      icon={UserCog}
+                      description="Gerir as suas informações e preferências"
+                      action={<Button onClick={() => router.push('/profile')}>Aceder ao Perfil</Button>}
+                  />
+                  <StatCard
+                      title="Turmas"
+                      value={"Gerar Listas"}
+                      icon={ClipboardList}
+                      description="Gerar listas de turmas para impressão"
+                      action={<Button onClick={() => router.push('/dashboard/classes')}>Gerir Turmas</Button>}
+                  />
+                  
+                  {isPermissionsLoading ? (
+                      <StatCard title="..." value={<Loader2 className="h-5 w-5 animate-spin"/>} icon={Users} />
+                  ) : (
+                      <>
+                          {canManageAnnouncements && (
+                              <StatCard
+                              title="Comunicados"
+                              value={"Anúncios"}
+                              icon={Megaphone}
+                              description="Gerir comunicados para públicos específicos"
+                              action={<Button onClick={() => router.push('/dashboard/announcements')}>Aceder</Button>}
+                              />
+                          )}
+                          {canManageUsers && (
+                              <StatCard
+                              title="Utilizadores"
+                              value={userCount}
+                              icon={UserCog}
+                              description="Total de contas no sistema"
+                              action={<Button onClick={() => router.push('/users')}>Gerir Utilizadores</Button>}
+                              />
+                          )}
+                          {canManageCadastros && (
+                              <StatCard
+                              title="Perfis e Permissões"
+                              value={profileCount}
+                              icon={Shield}
+                              description="Perfis de acesso no sistema"
+                              action={<Button onClick={() => router.push('/profiles')}>Gerir Perfis</Button>}
+                              />
+                          )}
+                          {isAdmin && (
+                              <StatCard
+                              title="Gestão da Base de Dados"
+                              value={"Ferramentas"}
+                              icon={Database}
+                              description="Importar, exportar e gerir dados"
+                              action={<Button onClick={() => router.push('/dashboard/database')}>Aceder</Button>}
+                              />
+                          )}
+                      </>
+                  )}
                 </div>
 
                 <div className="mt-8">
