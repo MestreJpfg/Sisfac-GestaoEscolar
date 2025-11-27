@@ -5,7 +5,8 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useFirestore, useUser } from '@/firebase';
-import { collection, doc, query, orderBy, limit, setDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, query, orderBy, setDoc } from 'firebase/firestore';
+import { useCollection } from '@/firebase/firestore/use-collection';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import AuthGuard from "@/components/auth-guard";
@@ -33,33 +34,26 @@ export default function MuralPage() {
     const { toast } = useToast();
     const [newMessage, setNewMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [messages, setMessages] = useState<any[]>([]);
-    const [isLoadingMessages, setIsLoadingMessages] = useState(true);
     const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-    const fetchMessages = async () => {
-        if (!firestore) return;
-        setIsLoadingMessages(true);
-        try {
-            const q = query(collection(firestore, 'mural'), orderBy('createdAt', 'asc'));
-            const querySnapshot = await getDocs(q);
-            const fetchedMessages = querySnapshot.docs.map(doc => doc.data());
-            setMessages(fetchedMessages);
-        } catch (error) {
+    const messagesQuery = useMemo(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'mural'), orderBy('createdAt', 'asc'));
+    }, [firestore]);
+
+    const { data: messages, isLoading: isLoadingMessages, error } = useCollection(messagesQuery);
+
+    // Efeito para lidar com erros da coleção
+    useEffect(() => {
+        if (error) {
             console.error("Error fetching messages: ", error);
             toast({
                 variant: 'destructive',
                 title: "Erro ao Carregar Mural",
                 description: "Não foi possível carregar as mensagens. Verifique as suas permissões e tente novamente.",
             });
-        } finally {
-            setIsLoadingMessages(false);
         }
-    };
-    
-    useEffect(() => {
-        fetchMessages();
-    }, [firestore]);
+    }, [error, toast]);
 
 
     const handleSubmitMessage = async () => {
@@ -80,10 +74,9 @@ export default function MuralPage() {
         };
         
         try {
+            // Usamos setDoc em vez de setDocumentNonBlocking para garantir que a mensagem foi enviada
             await setDoc(messageRef, messageData);
             setNewMessage('');
-            // Adiciona a nova mensagem localmente para uma atualização instantânea
-            setMessages(prevMessages => [...prevMessages, messageData]);
         } catch (error) {
             console.error("Error sending message: ", error);
             toast({
@@ -136,7 +129,7 @@ export default function MuralPage() {
                                 <div className="flex justify-center items-center h-full">
                                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                                 </div>
-                            ) : messages.length > 0 ? (
+                            ) : messages && messages.length > 0 ? (
                                 <div className="space-y-6">
                                     {messages.map((msg) => (
                                         <div key={msg.id} className="flex gap-3">
