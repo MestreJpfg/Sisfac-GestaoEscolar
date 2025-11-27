@@ -134,12 +134,26 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
             ];
             const title = titleParts.filter(Boolean).join(' ');
             
-            // Desenha a tabela
             autoTable(doc, {
                 head: [['Nº', 'Nome do Aluno', 'Data de Nasc.', 'Observações']],
                 body: tableData,
-                startY: 20,
-                 styles: {
+                didDrawPage: (data) => {
+                    // Header
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', data.settings.margin.left + 80, 10, { align: 'center' });
+                    
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(title, data.settings.margin.left + 80, 15, { align: 'center' });
+
+                    // Footer
+                    const pageCount = (doc.internal as any).getNumberOfPages();
+                    doc.setFontSize(7);
+                    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, data.settings.margin.left, doc.internal.pageSize.getHeight() - 5);
+                    doc.text(`Página ${data.pageNumber} de ${pageCount}`, doc.internal.pageSize.getWidth() - data.settings.margin.right, doc.internal.pageSize.getHeight() - 5, { align: 'right' });
+                },
+                styles: {
                     font: 'helvetica',
                     fontSize: 8,
                     cellPadding: 1.5,
@@ -152,31 +166,6 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                 margin: { top: 25 },
             });
             
-            // Adiciona cabeçalho e rodapé após a tabela ser desenhada
-            const pageCount = (doc.internal as any).getNumberOfPages();
-            for (let i = 1; i <= pageCount; i++) {
-                doc.setPage(i);
-                const pageW = doc.internal.pageSize.getWidth();
-                const pageH = doc.internal.pageSize.getHeight();
-                
-                // Header
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'bold');
-                doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', pageW / 2, 10, { align: 'center' });
-                
-                doc.setFontSize(9);
-                doc.setFont('helvetica', 'normal');
-                // Adiciona o título específico da turma apenas na página correta
-                const lastAutoTable = (doc as any).lastAutoTable;
-                if (lastAutoTable && lastAutoTable.doc.internal.getCurrentPageInfo().pageNumber === i) {
-                   doc.text(title, pageW / 2, 15, { align: 'center' });
-                }
-
-                // Footer
-                doc.setFontSize(7);
-                doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, doc.internal.pageSize.getMargin('left'), pageH - 5);
-                doc.text(`Página ${i} de ${pageCount}`, pageW - doc.internal.pageSize.getMargin('right'), pageH - 5, { align: 'right' });
-            }
             isFirstClass = false;
         }
 
