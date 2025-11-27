@@ -1,5 +1,4 @@
-
-'use client';
+"use client";
 
 import { useState, useMemo } from 'react';
 import { useFirestore } from '@/firebase';
@@ -39,24 +38,24 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
 
 
   const usersQuery = useMemo(() => {
-    if (!firestore || !hasActiveFilters) {
-        return null;
-    }
+    if (!firestore) return null;
 
     let q = query(collection(firestore, 'users'));
 
+    // Apply profile filter at the Firestore level if selected
     if (filters.profileId) {
         q = query(q, where('profileId', '==', filters.profileId));
     }
     
-    // Name search is not efficient as a "contains" query in Firestore.
-    // This will fetch users and filter on the client, which is okay for a limited number of users.
-    // For very large user bases, a search service like Algolia would be better.
-    // We will apply a limit to prevent fetching too many documents.
-    q = query(q, limit(100));
-    
+    // If no filters are active, don't fetch any users yet.
+    if (!filters.profileId && debouncedSearch.trim().length < 3) {
+        return null;
+    }
+
+    // This query will fetch users based on profile or all users if search term is present.
+    // The text search will then be applied on the client side.
     return q;
-  }, [firestore, hasActiveFilters, filters.profileId]);
+  }, [firestore, filters.profileId, debouncedSearch]);
 
   const { data: fetchedUsers, isLoading: isLoadingUsers } = useCollection(usersQuery);
 
@@ -64,7 +63,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
     if (!fetchedUsers) return [];
 
     let filtered = fetchedUsers;
-    const searchLower = debouncedSearch.toLowerCase();
+    const searchLower = debouncedSearch.toLowerCase().trim();
 
     // Client-side search for name/email on the already filtered (by profileId) data
     if (searchLower.length >= 3) {
