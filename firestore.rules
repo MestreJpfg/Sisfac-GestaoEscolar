@@ -63,7 +63,7 @@ service cloud.firestore {
     // All signed-in users can read/list profiles (e.g., for dropdowns).
     // Only users with 'manage:cadastros' can create, update, or delete profiles.
     match /profiles/{profileId} {
-        allow read: if isSignedIn();
+        allow read, list: if isSignedIn();
         allow write: if hasPermission('manage:cadastros');
     }
 

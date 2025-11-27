@@ -4,9 +4,8 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
-import { collection, doc, query, orderBy, limit } from 'firebase/firestore';
-import { useCollection } from '@/firebase/firestore/use-collection';
+import { useFirestore, useUser } from '@/firebase';
+import { collection, doc, query, orderBy, limit, setDoc, getDocs } from 'firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import AuthGuard from "@/components/auth-guard";
@@ -14,11 +13,8 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { UserNav } from '@/components/user-nav';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Send, Loader2, MessageSquare } from 'lucide-react';
-import AppFooter from '@/components/app-footer';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 
 const getInitials = (name: string | null | undefined) => {
@@ -37,18 +33,34 @@ export default function MuralPage() {
     const { toast } = useToast();
     const [newMessage, setNewMessage] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [messages, setMessages] = useState<any[]>([]);
+    const [isLoadingMessages, setIsLoadingMessages] = useState(true);
     const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-    const messagesQuery = useMemo(() => {
-        if (!firestore) return null;
-        // Correctly order by creation time and limit to the last 50 messages for performance
-        return query(collection(firestore, 'mural'), orderBy('createdAt', 'desc'), limit(50));
+    const fetchMessages = async () => {
+        if (!firestore) return;
+        setIsLoadingMessages(true);
+        try {
+            const q = query(collection(firestore, 'mural'), orderBy('createdAt', 'asc'));
+            const querySnapshot = await getDocs(q);
+            const fetchedMessages = querySnapshot.docs.map(doc => doc.data());
+            setMessages(fetchedMessages);
+        } catch (error) {
+            console.error("Error fetching messages: ", error);
+            toast({
+                variant: 'destructive',
+                title: "Erro ao Carregar Mural",
+                description: "Não foi possível carregar as mensagens. Verifique as suas permissões e tente novamente.",
+            });
+        } finally {
+            setIsLoadingMessages(false);
+        }
+    };
+    
+    useEffect(() => {
+        fetchMessages();
     }, [firestore]);
 
-    const { data: messages, isLoading: isLoadingMessages } = useCollection(messagesQuery);
-    
-    // Reverse the array for chronological display
-    const displayedMessages = useMemo(() => messages?.slice().reverse() || [], [messages]);
 
     const handleSubmitMessage = async () => {
         if (!firestore || !user || !newMessage.trim()) return;
@@ -68,15 +80,10 @@ export default function MuralPage() {
         };
         
         try {
-            // Using await here to ensure the message is sent before clearing the input
             await setDoc(messageRef, messageData);
-            
-            toast({
-                title: "Mensagem Enviada!",
-                description: "A sua mensagem foi publicada no mural.",
-            });
-            
             setNewMessage('');
+            // Adiciona a nova mensagem localmente para uma atualização instantânea
+            setMessages(prevMessages => [...prevMessages, messageData]);
         } catch (error) {
             console.error("Error sending message: ", error);
             toast({
@@ -97,7 +104,7 @@ export default function MuralPage() {
                 behavior: 'smooth'
             });
         }
-    }, [displayedMessages]);
+    }, [messages]);
 
     return (
         <AuthGuard>
@@ -129,9 +136,9 @@ export default function MuralPage() {
                                 <div className="flex justify-center items-center h-full">
                                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                                 </div>
-                            ) : displayedMessages.length > 0 ? (
+                            ) : messages.length > 0 ? (
                                 <div className="space-y-6">
-                                    {displayedMessages.map((msg) => (
+                                    {messages.map((msg) => (
                                         <div key={msg.id} className="flex gap-3">
                                             <Avatar className="h-10 w-10">
                                                 <AvatarImage src={msg.authorPhotoURL} alt={msg.authorName} />
