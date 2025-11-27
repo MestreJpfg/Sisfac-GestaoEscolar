@@ -214,15 +214,6 @@ export default function DashboardPage() {
                                 action={<Button onClick={() => router.push('/dashboard/announcements')}>Aceder</Button>}
                                 />
                             )}
-                            {canManageCadastros && (
-                                <StatCard
-                                title="Cadastros"
-                                value={"Gerais"}
-                                icon={Archive}
-                                description="Gerir cadastros gerais do sistema"
-                                action={<Button onClick={() => router.push('/dashboard/cadastros')}>Aceder</Button>}
-                                />
-                            )}
                             {canManageUsers && (
                                 <StatCard
                                 title="Utilizadores"
