@@ -89,6 +89,7 @@ service cloud.firestore {
       allow read, write, list: if hasPermission('manage:cadastros');
     }
 
+    // CORREÇÃO DEFINITIVA: Permite ler, escrever e listar mensagens no mural para qualquer utilizador autenticado.
     match /mural/{messageId} {
       allow list, read, write: if isSignedIn();
     }
