@@ -86,11 +86,11 @@ service cloud.firestore {
     }
 
     match /disciplinas/{disciplinaId} {
-      allow read, write, list: if request.auth != null;
+      allow read, write, list: if hasPermission('manage:cadastros');
     }
 
     match /mural/{messageId} {
-      allow read, write, list: if isSignedIn();
+      allow list, read, write: if isSignedIn();
     }
   }
 }
