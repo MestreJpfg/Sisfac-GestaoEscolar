@@ -1,7 +1,6 @@
 
 'use client';
 
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -10,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, CalendarCheck } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
 import AttendanceManager from '@/components/attendance-manager';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import AttendanceReports from '@/components/attendance-reports';
 
 export default function AttendancePage() {
     const router = useRouter();
@@ -39,7 +40,18 @@ export default function AttendancePage() {
 
                 <main className="flex-1 py-8">
                     <div className="container">
-                       <AttendanceManager />
+                       <Tabs defaultValue="registro" className="w-full">
+                          <TabsList className="grid w-full grid-cols-2 max-w-lg mx-auto">
+                            <TabsTrigger value="registro">Registo Diário</TabsTrigger>
+                            <TabsTrigger value="relatorios">Relatórios</TabsTrigger>
+                          </TabsList>
+                          <TabsContent value="registro" className="mt-6">
+                            <AttendanceManager />
+                          </TabsContent>
+                          <TabsContent value="relatorios" className="mt-6">
+                            <AttendanceReports />
+                          </TabsContent>
+                        </Tabs>
                     </div>
                 </main>
                 <AppFooter />
