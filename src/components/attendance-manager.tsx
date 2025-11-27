@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useFirestore, useCollection, setDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection } from '@/firebase';
 import { collection, query, where, orderBy, doc, writeBatch, getDocs, limit } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -47,18 +47,27 @@ export default function AttendanceManager() {
     }, [firestore]);
     const { data: allStudents, isLoading: isLoadingOptions } = useCollection(studentsOptionsQuery);
     
-    // Derived unique options for filters
+    // Derived unique options for filters, now dependent on other filters
     const uniqueFilterOptions = useMemo(() => {
+        if (!allStudents) return { ensinos: [], series: [], classes: [], turnos: [] };
+        
         const getUniqueValues = (key: string, data: any[]) =>
             [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
+
+        let filteredForOptions = allStudents;
+        const ensinos = getUniqueValues('ensino', filteredForOptions);
+
+        if(filters.ensino) filteredForOptions = filteredForOptions.filter(s => s.ensino === filters.ensino);
+        const series = getUniqueValues('serie', filteredForOptions);
+
+        if(filters.serie) filteredForOptions = filteredForOptions.filter(s => s.serie === filters.serie);
+        const classes = getUniqueValues('classe', filteredForOptions);
         
-        return {
-            ensinos: getUniqueValues('ensino', allStudents || []),
-            series: getUniqueValues('serie', allStudents || []),
-            classes: getUniqueValues('classe', allStudents || []),
-            turnos: getUniqueValues('turno', allStudents || []),
-        };
-    }, [allStudents]);
+        if(filters.classe) filteredForOptions = filteredForOptions.filter(s => s.classe === filters.classe);
+        const turnos = getUniqueValues('turno', filteredForOptions);
+        
+        return { ensinos, series, classes, turnos };
+    }, [allStudents, filters]);
     
     const isClassSelected = useMemo(() => {
         return filters.ensino && filters.serie && filters.classe && filters.turno;
@@ -80,6 +89,10 @@ export default function AttendanceManager() {
         return q;
     }, [firestore, isClassSelected, filters]);
     const { data: studentsInClass, isLoading: isLoadingStudents } = useCollection(studentsInClassQuery);
+
+    const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
+        setAttendance(prev => new Map(prev).set(studentId, status));
+    };
 
     // Effect to fetch existing attendance for the selected date and class
     useEffect(() => {
@@ -110,7 +123,22 @@ export default function AttendanceManager() {
     }, [firestore, classId, selectedDate, studentsInClass]);
 
     const handleFilterChange = (name: string, value: string) => {
-        setFilters(prev => ({ ...prev, [name]: value === 'all' ? '' : value }));
+        const newValue = value === 'all' ? '' : value;
+        setFilters(prev => {
+            const newFilters = { ...prev, [name]: newValue };
+            // Reset dependent filters when a parent filter changes
+            if (name === 'ensino') {
+                newFilters.serie = '';
+                newFilters.classe = '';
+                newFilters.turno = '';
+            } else if (name === 'serie') {
+                newFilters.classe = '';
+                newFilters.turno = '';
+            } else if (name === 'classe') {
+                newFilters.turno = '';
+            }
+            return newFilters;
+        });
     };
 
     const handleSaveAttendance = async () => {
@@ -173,15 +201,15 @@ export default function AttendanceManager() {
                             <SelectTrigger><SelectValue placeholder="Ensino..." /></SelectTrigger>
                             <SelectContent>{uniqueFilterOptions.ensinos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                         </Select>
-                        <Select value={filters.serie} onValueChange={(v) => handleFilterChange('serie', v)} disabled={!filters.ensino}>
+                        <Select value={filters.serie} onValueChange={(v) => handleFilterChange('serie', v)} disabled={!filters.ensino || uniqueFilterOptions.series.length === 0}>
                             <SelectTrigger><SelectValue placeholder="Série..." /></SelectTrigger>
                             <SelectContent>{uniqueFilterOptions.series.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                         </Select>
-                        <Select value={filters.classe} onValueChange={(v) => handleFilterChange('classe', v)} disabled={!filters.serie}>
+                        <Select value={filters.classe} onValueChange={(v) => handleFilterChange('classe', v)} disabled={!filters.serie || uniqueFilterOptions.classes.length === 0}>
                             <SelectTrigger><SelectValue placeholder="Classe..." /></SelectTrigger>
                             <SelectContent>{uniqueFilterOptions.classes.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                         </Select>
-                        <Select value={filters.turno} onValueChange={(v) => handleFilterChange('turno', v)} disabled={!filters.classe}>
+                         <Select value={filters.turno} onValueChange={(v) => handleFilterChange('turno', v)} disabled={!filters.classe || uniqueFilterOptions.turnos.length === 0}>
                             <SelectTrigger><SelectValue placeholder="Turno..." /></SelectTrigger>
                             <SelectContent>{uniqueFilterOptions.turnos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                         </Select>
