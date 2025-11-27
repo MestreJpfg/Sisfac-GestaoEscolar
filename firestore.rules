@@ -85,7 +85,7 @@ service cloud.firestore {
     
     // Any signed-in user can interact with the message board.
     match /mural/{messageId} {
-      allow read, write: if isSignedIn();
+      allow read, write, list: if isSignedIn();
     }
 
     // Permissions for grades.
