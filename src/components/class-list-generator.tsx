@@ -159,9 +159,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                 head: [['Nº', 'Nome do Aluno', 'Data de Nasc.', 'Observações']],
                 body: tableData,
                 startY: 16,
-                didDrawPage: (data) => {
-                    addHeaderAndFooter(doc, title, data.pageNumber, (doc.internal as any).pages.length);
-                },
+                // We will draw headers and footers manually after all pages are created
                 styles: {
                     font: 'helvetica',
                     fontSize: 7.5,
@@ -176,6 +174,17 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                 },
                 margin: { top: 16, bottom: 10, right: 10, left: 10 }
             });
+
+             // Now, iterate through the pages of the current group and add header/footer
+            const totalPages = (doc.internal as any).pages.length;
+            let startPage = 1; // Assume start from page 1 for simplicity in a single-doc context
+            
+            // This logic assumes we generate one PDF doc in the end.
+            // If each group was a new doc, this would need adjustment.
+            for (let i = 1; i <= totalPages; i++) {
+                doc.setPage(i);
+                addHeaderAndFooter(doc, title, i, totalPages);
+            }
         }
   
         const fileName = `Listas_de_Turmas_${filters.ensino || 'Geral'}.pdf`.replace(/ /g, '_');
@@ -320,3 +329,5 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
     </Sheet>
   );
 }
+
+    
