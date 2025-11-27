@@ -1,25 +1,22 @@
-
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // --- Helper Functions ---
     
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function getUserData() {
-      if (!isSignedIn()) {
-        return null;
-      }
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
-    function getUserProfile() {
-      let userData = getUserData();
-      if (userData == null || !('profileId' in userData) || userData.profileId == null) {
-        return null;
-      }
-      return get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
+    function getUserData(userId) {
+      // Allow reading user data if it's for the currently signed-in user.
+      // This is necessary for hasPermission to work for non-admin users checking their own permissions.
+      return get(/databases/$(database)/documents/users/$(userId)).data;
     }
     
     function hasPermission(permission) {
@@ -27,26 +24,27 @@ service cloud.firestore {
         return false;
       }
 
-      let userData = getUserData();
+      let userData = getUserData(request.auth.uid);
       
       if (userData == null) {
         return false;
       }
       
-      // Admin override
+      // Admin override: check for specific profile names for admin access.
       if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
         return true;
       }
       
-      let userProfile = getUserProfile();
-      
-      // Check profile permissions
-      if (userProfile != null && 'permissions' in userProfile && userProfile.permissions is list && permission in userProfile.permissions) {
-        return true;
+      // Check permissions from the user's assigned profile.
+      if (userData.profileId != null) {
+        let profileData = get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
+        if (profileData != null && permission in profileData.permissions) {
+          return true;
+        }
       }
         
-      // Check custom user permissions
-      if ('customPermissions' in userData && userData.customPermissions is list && permission in userData.customPermissions) {
+      // Check for individual custom permissions assigned directly to the user.
+      if ('customPermissions' in userData && permission in userData.customPermissions) {
         return true;
       }
 
@@ -55,46 +53,54 @@ service cloud.firestore {
 
     // --- Collection Rules ---
 
+    // Users can read/update their own data.
+    // Users with 'manage:users' permission can read any user's data and list all users.
     match /users/{userId} {
-      allow create, update: if isSignedIn() && request.auth.uid == userId;
-      allow read: if isSignedIn() && (request.auth.uid == userId || hasPermission('manage:users'));
-      allow list: if hasPermission('manage:users');
+      allow read, update: if isOwner(userId);
+      allow get, list: if hasPermission('manage:users');
     }
     
+    // All signed-in users can read/list profiles (e.g., for dropdowns).
+    // Only users with 'manage:cadastros' can create, update, or delete profiles.
     match /profiles/{profileId} {
-        allow read, list: if isSignedIn();
+        allow read: if isSignedIn();
         allow write: if hasPermission('manage:cadastros');
     }
 
+    // Permissions for students data.
     match /alunos/{alunoId} {
-      allow read, list: if hasPermission('manage:students') || hasPermission('view:students');
+      allow read, list: if hasPermission('view:students') || hasPermission('manage:students');
       allow write: if hasPermission('manage:students');
     }
 
+    // Permissions for employees data.
     match /funcionarios/{funcionarioId} {
       allow read, list, write: if hasPermission('manage:cadastros');
     }
 
+    // Permissions for subjects data.
     match /disciplinas/{disciplinaId} {
        allow read, list, write: if hasPermission('manage:cadastros');
     }
     
-    // Corrected rule for the message board
+    // Any signed-in user can interact with the message board.
     match /mural/{messageId} {
-      allow list, read, write: if isSignedIn();
+      allow read, write: if isSignedIn();
     }
 
-    // Rules for collections that might be less frequently used or have simpler permissions
+    // Permissions for grades.
     match /grades/{gradeId} {
        allow read: if isSignedIn();
        allow write: if hasPermission('manage:grades');
     }
 
+    // Permissions for attendance.
     match /attendance/{attendanceId} {
        allow read: if isSignedIn();
        allow write: if hasPermission('manage:attendance');
     }
     
+    // Permissions for announcements.
     match /announcements/{announcementId} {
       allow read: if isSignedIn();
       allow write: if hasPermission('manage:announcements');
