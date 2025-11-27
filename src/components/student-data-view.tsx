@@ -2,9 +2,11 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useUser } from '@/firebase';
+import { useFirestore } from '@/firebase';
+import { collection, query, where, orderBy, limit } from 'firebase/firestore';
+import { useCollection } from '@/firebase/firestore/use-collection';
 import StudentTable from './student-table';
-import { Filter, X, ChevronDown, AlertTriangle, Search } from 'lucide-react';
+import { Filter, X, ChevronDown, AlertTriangle, Search, Loader2 } from 'lucide-react';
 import StudentDetailSheet from './student-detail-sheet';
 import { Input } from './ui/input';
 import { Card, CardContent } from './ui/card';
@@ -21,6 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function StudentDataView({ allStudents }: { allStudents: any[] }) {
   const { toast } = useToast();
+  const firestore = useFirestore();
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [reportCardStudent, setReportCardStudent] = useState<any | null>(null);
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
@@ -34,84 +37,71 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
     nee: false,
   });
 
-  const debouncedNome = useDebounce(filters.nome, 300);
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'serie', direction: 'ascending' });
+  const debouncedNome = useDebounce(filters.nome, 400);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: 'ascending' });
 
   const hasActiveFilters = useMemo(() => {
     return debouncedNome.trim().length >= 3 || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
   }, [debouncedNome, filters]);
 
-  const filteredAndSortedStudents = useMemo(() => {
-    if (!allStudents || !hasActiveFilters) {
-      return [];
+  const studentsQuery = useMemo(() => {
+    if (!firestore || !hasActiveFilters) {
+      return null;
     }
+    
+    let q = query(collection(firestore, 'alunos'));
 
-    let filtered = [...allStudents];
-
-    // Client-side filtering
-    const nameSearch = debouncedNome.trim().toUpperCase();
-    if (nameSearch && nameSearch.length >= 3) {
-      filtered = filtered.filter(student =>
-        student.nome && student.nome.toUpperCase().includes(nameSearch)
-      );
-    }
     if (filters.ensino) {
-      filtered = filtered.filter(s => s.ensino === filters.ensino);
+      q = query(q, where('ensino', '==', filters.ensino));
     }
     if (filters.serie) {
-      filtered = filtered.filter(s => s.serie === filters.serie);
+      q = query(q, where('serie', '==', filters.serie));
     }
     if (filters.classe) {
-      filtered = filtered.filter(s => s.classe === filters.classe);
+      q = query(q, where('classe', '==', filters.classe));
     }
     if (filters.turno) {
-      filtered = filtered.filter(s => s.turno === filters.turno);
+      q = query(q, where('turno', '==', filters.turno));
     }
     if (filters.nee) {
-      filtered = filtered.filter(s => s.nee);
+      q = query(q, where('nee', '==', true));
     }
 
-    // Sorting
-    if (sortConfig.key !== null) {
-      filtered.sort((a, b) => {
-        const aValue = a[sortConfig.key] || '';
-        const bValue = b[sortConfig.key] || '';
-
-        if (sortConfig.key === 'nee') {
-            const valA = a.nee ? 1 : 0;
-            const valB = b.nee ? 1 : 0;
-            if (valA < valB) return sortConfig.direction === 'ascending' ? -1 : 1;
-            if (valA > valB) return sortConfig.direction === 'ascending' ? 1 : -1;
-            return 0;
-        }
-
-        if (typeof aValue === 'string' && typeof bValue === 'string') {
-          const comparison = aValue.localeCompare(bValue, 'pt-BR', { numeric: true });
-          return sortConfig.direction === 'ascending' ? comparison : -comparison;
-        }
-        
-        if (aValue < bValue) {
-          return sortConfig.direction === 'ascending' ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConfig.direction === 'ascending' ? 1 : -1;
-        }
-        return 0;
-      });
+    const nameSearch = debouncedNome.trim().toUpperCase();
+    if (nameSearch.length >= 3) {
+        q = query(q, where('nome', '>=', nameSearch), where('nome', '<=', nameSearch + '\uf8ff'));
     }
+    
+    q = query(q, limit(100));
 
-    // Secondary sort by name if primary sort key is the same
-    if (sortConfig.key !== 'nome') {
-        filtered.sort((a, b) => {
-             if (a[sortConfig.key] === b[sortConfig.key]) {
-                return a.nome.localeCompare(b.nome, 'pt-BR');
+    return q;
+  }, [firestore, hasActiveFilters, debouncedNome, filters]);
+
+  const { data: students, isLoading: isLoadingStudents } = useCollection(studentsQuery);
+
+  const sortedStudents = useMemo(() => {
+    if (!students) return [];
+
+    const sorted = [...students];
+
+    if (sortConfig.key) {
+        sorted.sort((a, b) => {
+            const aValue = a[sortConfig.key] || '';
+            const bValue = b[sortConfig.key] || '';
+
+            if (typeof aValue === 'string' && typeof bValue === 'string') {
+              const comparison = aValue.localeCompare(bValue, 'pt-BR', { numeric: true });
+              return sortConfig.direction === 'ascending' ? comparison : -comparison;
             }
+            
+            if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
             return 0;
         });
     }
 
-    return filtered;
-  }, [allStudents, debouncedNome, filters, sortConfig, hasActiveFilters]);
+    return sorted;
+  }, [students, sortConfig]);
 
   const uniqueFilterOptions = useMemo(() => {
     const getUniqueValues = (key: string, data: any[]) => 
@@ -252,38 +242,43 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {allStudents && hasActiveFilters && (
+        {hasActiveFilters && !isLoadingStudents && (
           <p>
-            {filteredAndSortedStudents.length > 0
-              ? `${filteredAndSortedStudents.length} de ${allStudents.length} alunos encontrados.`
+            {students && students.length > 0
+              ? `${students.length} aluno(s) encontrado(s).`
               : (debouncedNome.trim().length > 0 && debouncedNome.trim().length < 3)
                 ? 'Digite pelo menos 3 caracteres para buscar por nome.'
                 : 'Nenhum aluno encontrado com os critérios fornecidos.'
             }
+             {students && students.length >= 100 && " Limite de 100 resultados atingido."}
           </p>
         )}
       </div>
 
-      {hasActiveFilters ? (
-        <StudentTable
-            students={filteredAndSortedStudents}
-            isLoading={!allStudents}
-            onRowClick={handleStudentSelect}
-            onReportCardClick={handleOpenReportCard}
-            onSort={handleSort}
-            sortConfig={sortConfig}
-        />
-      ) : (
-         <Card>
-            <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
-                <Search className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-medium text-foreground">Inicie uma Busca</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                    Utilize a busca por nome ou os filtros avançados para encontrar os alunos.
-                </p>
-            </CardContent>
-        </Card>
-      )}
+        {isLoadingStudents ? (
+             <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <p className="mt-4 text-muted-foreground">A buscar alunos...</p>
+            </div>
+        ) : hasActiveFilters ? (
+            <StudentTable
+                students={sortedStudents}
+                onRowClick={handleStudentSelect}
+                onReportCardClick={handleOpenReportCard}
+                onSort={handleSort}
+                sortConfig={sortConfig}
+            />
+        ) : (
+            <Card>
+                <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
+                    <Search className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <h3 className="mt-4 text-lg font-medium text-foreground">Inicie uma Busca</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Utilize a busca por nome ou os filtros avançados para encontrar os alunos.
+                    </p>
+                </CardContent>
+            </Card>
+        )}
       
       <StudentDetailSheet
         student={selectedStudent}

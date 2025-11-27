@@ -1,8 +1,10 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
 import { useFirestore } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { collection, query, where, doc, limit } from 'firebase/firestore';
+import { useCollection } from '@/firebase/firestore/use-collection';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import UserTable from './user-table';
 import UserEditDialog from './user-edit-dialog';
@@ -11,16 +13,15 @@ import { Input } from './ui/input';
 import { Card, CardContent } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Button } from './ui/button';
-import { X } from 'lucide-react';
+import { X, Search, Loader2 } from 'lucide-react';
 import { useDebounce } from '@/hooks/use-debounce';
 import type { SortConfig } from './user-table';
 
 interface UserManagerProps {
-  initialUsers: any[];
   allProfiles: any[];
 }
 
-export default function UserManager({ initialUsers, allProfiles }: UserManagerProps) {
+export default function UserManager({ allProfiles }: UserManagerProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   
@@ -30,7 +31,64 @@ export default function UserManager({ initialUsers, allProfiles }: UserManagerPr
     profileId: '',
   });
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name', direction: 'ascending' });
-  const debouncedSearch = useDebounce(filters.search, 300);
+  const debouncedSearch = useDebounce(filters.search, 400);
+
+  const hasActiveFilters = useMemo(() => {
+    return debouncedSearch.trim().length >= 3 || filters.profileId;
+  }, [debouncedSearch, filters.profileId]);
+
+
+  const usersQuery = useMemo(() => {
+    if (!firestore || !hasActiveFilters) {
+        return null;
+    }
+
+    let q = query(collection(firestore, 'users'));
+
+    if (filters.profileId) {
+        q = query(q, where('profileId', '==', filters.profileId));
+    }
+    
+    // Name search is not efficient as a "contains" query in Firestore.
+    // This will fetch users and filter on the client, which is okay for a limited number of users.
+    // For very large user bases, a search service like Algolia would be better.
+    // We will apply a limit to prevent fetching too many documents.
+    q = query(q, limit(100));
+    
+    return q;
+  }, [firestore, hasActiveFilters, filters.profileId]);
+
+  const { data: fetchedUsers, isLoading: isLoadingUsers } = useCollection(usersQuery);
+
+  const filteredAndSortedUsers = useMemo(() => {
+    if (!fetchedUsers) return [];
+
+    let filtered = fetchedUsers;
+    const searchLower = debouncedSearch.toLowerCase();
+
+    // Client-side search for name/email on the already filtered (by profileId) data
+    if (searchLower.length >= 3) {
+      filtered = filtered.filter(user => 
+        (user.name?.toLowerCase().includes(searchLower) || user.email?.toLowerCase().includes(searchLower))
+      );
+    }
+    
+    // Sorting
+    if (sortConfig.key) {
+      const profileNameMap = new Map(allProfiles.map(p => [p.id, p.name]));
+      filtered.sort((a, b) => {
+        let aValue: any = sortConfig.key === 'profileId' ? (profileNameMap.get(a.profileId) || a.profileId) : a[sortConfig.key] || '';
+        let bValue: any = sortConfig.key === 'profileId' ? (profileNameMap.get(b.profileId) || b.profileId) : b[sortConfig.key] || '';
+
+        if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return filtered;
+  }, [fetchedUsers, debouncedSearch, sortConfig, allProfiles]);
+
 
   const handleFilterChange = (name: string, value: string) => {
     setFilters(prev => ({ ...prev, [name]: value === 'all' ? '' : value }));
@@ -47,53 +105,6 @@ export default function UserManager({ initialUsers, allProfiles }: UserManagerPr
     }));
   };
   
-  const filteredAndSortedUsers = useMemo(() => {
-    const searchLower = debouncedSearch.toLowerCase();
-    
-    let filtered = initialUsers;
-
-    // Apply profile filter first if it exists
-    if (filters.profileId) {
-      filtered = filtered.filter(user => user.profileId === filters.profileId);
-    }
-    
-    // Then apply search filter if it exists
-    if (searchLower) {
-      filtered = filtered.filter(user => 
-        (user.name?.toLowerCase().includes(searchLower) || user.email?.toLowerCase().includes(searchLower))
-      );
-    }
-
-    if (sortConfig.key !== null) {
-      const profileNameMap = new Map(allProfiles.map(p => [p.id, p.name]));
-
-      filtered.sort((a, b) => {
-        let aValue: any;
-        let bValue: any;
-
-        if (sortConfig.key === 'profileId') {
-            aValue = profileNameMap.get(a.profileId) || a.profileId;
-            bValue = profileNameMap.get(b.profileId) || b.profileId;
-        } else {
-            aValue = a[sortConfig.key] || '';
-            bValue = b[sortConfig.key] || '';
-        }
-        
-        if (aValue < bValue) {
-          return sortConfig.direction === 'ascending' ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConfig.direction === 'ascending' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-
-    return filtered;
-  }, [initialUsers, debouncedSearch, filters.profileId, sortConfig, allProfiles]);
-
-  const hasActiveFilters = filters.search || filters.profileId;
-
   const handleEditUser = (user: any) => {
     setEditingUser(user);
   };
@@ -121,7 +132,7 @@ export default function UserManager({ initialUsers, allProfiles }: UserManagerPr
        <Card>
         <CardContent className="p-4 flex flex-col sm:flex-row gap-4">
           <Input
-            placeholder="Buscar por nome ou email..."
+            placeholder="Buscar por nome ou email (mín. 3 caracteres)..."
             value={filters.search}
             onChange={(e) => handleFilterChange('search', e.target.value)}
             className="flex-1"
@@ -147,13 +158,43 @@ export default function UserManager({ initialUsers, allProfiles }: UserManagerPr
         </CardContent>
       </Card>
       
-      <UserTable 
-        users={filteredAndSortedUsers}
-        profiles={allProfiles}
-        onEdit={handleEditUser} 
-        onSort={handleSort}
-        sortConfig={sortConfig}
-      />
+        <div className="text-sm text-muted-foreground h-5">
+            {hasActiveFilters && !isLoadingUsers && (
+            <p>
+                {filteredAndSortedUsers.length > 0
+                ? `${filteredAndSortedUsers.length} utilizador(es) encontrado(s).`
+                : (debouncedSearch.trim().length > 0 && debouncedSearch.trim().length < 3)
+                    ? 'Digite pelo menos 3 caracteres para buscar.'
+                    : 'Nenhum utilizador encontrado com os critérios fornecidos.'
+                }
+            </p>
+            )}
+        </div>
+
+        {isLoadingUsers ? (
+            <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <p className="mt-4 text-muted-foreground">A buscar utilizadores...</p>
+            </div>
+        ) : hasActiveFilters ? (
+            <UserTable 
+                users={filteredAndSortedUsers}
+                profiles={allProfiles}
+                onEdit={handleEditUser} 
+                onSort={handleSort}
+                sortConfig={sortConfig}
+            />
+        ) : (
+             <Card>
+                <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
+                    <Search className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <h3 className="mt-4 text-lg font-medium text-foreground">Inicie uma Busca</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Utilize a busca ou os filtros para encontrar os utilizadores.
+                    </p>
+                </CardContent>
+            </Card>
+        )}
 
       {editingUser && (
         <UserEditDialog

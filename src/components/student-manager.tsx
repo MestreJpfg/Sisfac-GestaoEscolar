@@ -1,38 +1,38 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import Image from 'next/image';
 import { Loader2, ArrowLeft } from 'lucide-react';
-import { useUser, useFirestore } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import StudentDataView from './student-data-view';
 import { ThemeToggle } from './theme-toggle';
 import { Button } from './ui/button';
 import { UserNav } from './user-nav';
 import AppFooter from './app-footer';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, limit } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import FileUploaderSheet from './file-uploader-sheet';
 
 export default function StudentManager() {
-  const { isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
 
-  const studentsQuery = useMemo(() => {
+  // This query is now just for populating filter dropdowns.
+  // It should be lightweight. We limit it to a reasonable number to avoid fetching everything.
+  const studentsOptionsQuery = useMemo(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'alunos'), orderBy('nome'));
+    return query(collection(firestore, 'alunos'), limit(500)); // Fetch a sample for filter options
   }, [firestore]);
 
-  const { data: students, isLoading: isDataLoading } = useCollection(studentsQuery);
+  const { data: allStudents, isLoading: isDataLoading } = useCollection(studentsOptionsQuery);
 
   const onUploadSuccess = () => {
-    // O hook useCollection irá atualizar automaticamente a UI.
+    // The useCollection hook will automatically update the UI.
   };
 
-  const isPageLoading = isUserLoading || isDataLoading;
-  const dataExists = students && students.length > 0;
+  const dataExists = allStudents && allStudents.length > 0;
 
   return (
     <>
@@ -50,6 +50,7 @@ export default function StudentManager() {
                 </div>
                 <div className="flex flex-1 items-center justify-end space-x-4">
                     <nav className="flex items-center space-x-1">
+                        <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
                         <ThemeToggle />
                         <UserNav />
                     </nav>
@@ -59,13 +60,13 @@ export default function StudentManager() {
 
         <main className="flex-1 py-8">
             <div className="container">
-              {isPageLoading ? (
+              {isDataLoading && !dataExists ? (
                 <div className="flex flex-col items-center justify-center h-96 rounded-lg border-2 border-dashed border-border bg-card/50">
                   <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                  <p className="mt-4 text-muted-foreground">A carregar a base de dados...</p>
+                  <p className="mt-4 text-muted-foreground">A carregar opções de filtro...</p>
                 </div>
               ) : dataExists ? (
-                <StudentDataView allStudents={students} />
+                <StudentDataView allStudents={allStudents || []} />
               ) : (
                 <div className="flex flex-col items-center justify-center h-96 rounded-lg border-2 border-dashed border-border bg-card/50">
                   <p className="text-muted-foreground mb-4">Nenhum dado encontrado. Comece por carregar os dados dos alunos.</p>

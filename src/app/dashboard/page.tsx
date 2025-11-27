@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, doc } from 'firebase/firestore';
+import { collection, query, doc, getCountFromServer } from 'firebase/firestore';
 import { Loader2, Users, UserCog, Shield, Database, ClipboardList, BookCopy, Archive, MessageSquare } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
@@ -15,12 +15,17 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import AuthGuard from '@/components/auth-guard';
 import AppFooter from '@/components/app-footer';
+import { useEffect, useState } from 'react';
 
 
 export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+
+  const [studentCount, setStudentCount] = useState<number | React.ReactNode>(<Loader2 className="h-5 w-5 animate-spin" />);
+  const [userCount, setUserCount] = useState<number | React.ReactNode>(<Loader2 className="h-5 w-5 animate-spin" />);
+  const [profileCount, setProfileCount] = useState<number | React.ReactNode>(<Loader2 className="h-5 w-5 animate-spin" />);
 
   const userDocRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -81,29 +86,54 @@ export default function DashboardPage() {
     return userProfile?.profileId === 'Administrador' || userProfile?.profileId === 'Administrador(a)';
   }, [isPermissionsLoading, userProfile]);
 
+  useEffect(() => {
+    const fetchCounts = async () => {
+        if (!firestore) return;
 
-  const studentsQuery = useMemoFirebase(() => {
-    // Defer query creation until permissions are confirmed
-    if (!firestore || !canViewStudents) return null;
-    return query(collection(firestore, 'alunos'));
-  }, [firestore, canViewStudents]);
+        try {
+            if (canViewStudents) {
+                const studentsColl = collection(firestore, 'alunos');
+                const studentsSnapshot = await getCountFromServer(query(studentsColl));
+                setStudentCount(studentsSnapshot.data().count);
+            } else {
+                 setStudentCount(0);
+            }
+        } catch (e) {
+            console.error("Error fetching student count: ", e);
+            setStudentCount('N/A');
+        }
 
-  const usersQuery = useMemoFirebase(() => {
-    // Defer query creation until permissions are confirmed
-    if (!firestore || !canManageUsers) return null; 
-    return query(collection(firestore, 'users'));
-  }, [firestore, canManageUsers]);
-  
-  const profilesQuery = useMemoFirebase(() => {
-    // Defer query creation until permissions are confirmed
-    if (!firestore || !canManageProfiles) return null;
-    return query(collection(firestore, 'profiles'));
-  }, [firestore, canManageProfiles]);
+         try {
+            if (canManageUsers) {
+                const usersColl = collection(firestore, 'users');
+                const usersSnapshot = await getCountFromServer(query(usersColl));
+                setUserCount(usersSnapshot.data().count);
+            } else {
+                setUserCount(0);
+            }
+        } catch (e) {
+            console.error("Error fetching user count: ", e);
+            setUserCount('N/A');
+        }
 
+        try {
+            if (canManageProfiles) {
+                const profilesColl = collection(firestore, 'profiles');
+                const profilesSnapshot = await getCountFromServer(query(profilesColl));
+                setProfileCount(profilesSnapshot.data().count);
+            } else {
+                setProfileCount(0);
+            }
+        } catch (e) {
+            console.error("Error fetching profile count: ", e);
+            setProfileCount('N/A');
+        }
+    };
 
-  const { data: students, isLoading: isStudentsLoading } = useCollection(studentsQuery);
-  const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
-  const { data: profiles, isLoading: isProfilesLoading } = useCollection(profilesQuery);
+    if (!isPermissionsLoading) {
+      fetchCounts();
+    }
+  }, [firestore, isPermissionsLoading, canViewStudents, canManageUsers, canManageProfiles]);
 
 
   const welcomeName = user?.displayName?.split(' ')[0] || 'Utilizador';
@@ -155,7 +185,7 @@ export default function DashboardPage() {
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <StatCard
                     title="Alunos"
-                    value={isStudentsLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (students?.length ?? 0)}
+                    value={studentCount}
                     icon={Users}
                     description="Total de alunos registados"
                     action={<Button onClick={() => router.push('/dashboard/students')}>Gerir Alunos</Button>}
@@ -198,7 +228,7 @@ export default function DashboardPage() {
                             {canManageUsers && (
                                 <StatCard
                                 title="Utilizadores"
-                                value={isUsersLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (users?.length ?? 0)}
+                                value={userCount}
                                 icon={UserCog}
                                 description="Total de contas no sistema"
                                 action={<Button onClick={() => router.push('/users')}>Gerir Utilizadores</Button>}
@@ -207,7 +237,7 @@ export default function DashboardPage() {
                             {canManageProfiles && (
                                 <StatCard
                                 title="Perfis e Permissões"
-                                value={isProfilesLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (profiles?.length ?? 0)}
+                                value={profileCount}
                                 icon={Shield}
                                 description="Perfis de acesso no sistema"
                                 action={<Button onClick={() => router.push('/profiles')}>Gerir Perfis</Button>}

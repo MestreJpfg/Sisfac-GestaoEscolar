@@ -3,7 +3,7 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent } from "./ui/card";
-import { BookUser, Loader2, Search, ArrowUpDown, BookCheck } from "lucide-react";
+import { BookUser, ArrowUpDown, BookCheck } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
@@ -15,14 +15,13 @@ export interface SortConfig {
 
 interface StudentTableProps {
   students: any[];
-  isLoading: boolean;
   onRowClick: (student: any) => void;
   onReportCardClick: (student: any) => void;
   onSort: (key: string) => void;
   sortConfig: SortConfig;
 }
 
-export default function StudentTable({ students, isLoading, onRowClick, onReportCardClick, onSort, sortConfig }: StudentTableProps) {
+export default function StudentTable({ students, onRowClick, onReportCardClick, onSort, sortConfig }: StudentTableProps) {
   
   const SortableHeader = ({ sortKey, children, className }: { sortKey: string, children: React.ReactNode, className?: string }) => {
     const isSorted = sortConfig.key === sortKey;
@@ -40,15 +39,6 @@ export default function StudentTable({ students, isLoading, onRowClick, onReport
             </Button>
         </TableHead>
     );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">A buscar dados...</p>
-      </div>
-    )
   }
 
   if (students.length === 0) {

@@ -20,23 +20,13 @@ export default function UsersPage() {
     const router = useRouter();
     const firestore = useFirestore();
 
-    // As consultas são agora seguras para serem executadas aqui,
-    // pois as regras do Firestore são a verdadeira barreira de segurança, e a dashboard
-    // já filtrou quem pode aceder a esta página.
-    const usersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, 'users'), orderBy('name'));
-    }, [firestore]);
-    
+    // A consulta de perfis é leve e pode ser mantida para popular o filtro.
     const profilesQuery = useMemoFirebase(() => {
         if (!firestore) return null;
         return query(collection(firestore, 'profiles'), orderBy('name'));
     }, [firestore]);
 
-    const { data: users, isLoading: isLoadingUsers } = useCollection(usersQuery);
     const { data: profiles, isLoading: isLoadingProfiles } = useCollection(profilesQuery);
-
-    const isLoading = isLoadingUsers || isLoadingProfiles;
 
     return (
          <AuthGuard>
@@ -63,13 +53,13 @@ export default function UsersPage() {
 
                 <main className="flex-1 py-8">
                     <div className="container">
-                        {isLoading ? (
+                        {isLoadingProfiles ? (
                             <div className="flex h-64 items-center justify-center">
                                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
                             </div>
                         ) : (
-                           // Passa os dados carregados diretamente para o UserManager
-                           <UserManager initialUsers={users || []} allProfiles={profiles || []} />
+                           // Passa apenas os perfis para o UserManager. Os utilizadores serão carregados sob demanda.
+                           <UserManager allProfiles={profiles || []} />
                         )}
                     </div>
                 </main>
