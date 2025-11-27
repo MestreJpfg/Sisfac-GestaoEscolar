@@ -101,95 +101,66 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
   const handleDownload = async () => {
     if (students.length === 0) return;
     setIsDownloading(true);
-  
+
     try {
         const doc = new jsPDF();
-        const today = new Date();
-        const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(today);
-  
-        const addHeaderAndFooter = (doc: jsPDF, title: string, pageNumber: number, totalPages: number) => {
-            const pageW = doc.internal.pageSize.getWidth();
-            const pageH = doc.internal.pageSize.getHeight();
-            
-            doc.setFontSize(8).setFont('helvetica', 'bold');
-            doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', pageW / 2, 8, { align: 'center' });
-            
-            doc.setFontSize(9).setFont('helvetica', 'normal');
-            doc.text(title, pageW / 2, 13, { align: 'center' });
-  
-            const footerText = `Gerado em: ${formattedDate}`;
-            doc.setFontSize(7);
-            doc.text(footerText, 10, pageH - 5);
-            doc.text(`Página ${pageNumber} de ${totalPages}`, pageW - 10, pageH - 5, { align: 'right' });
-        };
-  
-        const groupedStudents = students.reduce((acc, student) => {
-            const key = `${student.ensino || 'N/A'}|${student.serie || 'N/A'}|${student.classe || 'N/A'}|${student.turno || 'N/A'}`;
-            if (!acc[key]) {
-                acc[key] = [];
-            }
-            acc[key].push(student);
-            return acc;
-        }, {} as Record<string, any[]>);
-  
-        const sortedGroupKeys = Object.keys(groupedStudents).sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
+        
+        const tableData = students.map((student, index) => {
+            return [
+                index + 1,
+                student.nome,
+                student.data_nascimento || '',
+                '' // Coluna de observações vazia
+            ];
+        });
 
-        let isFirstPageOfDoc = true;
-  
-        for (const key of sortedGroupKeys) {
-            const group = groupedStudents[key];
-            const [ensino, serie, classe, turno] = key.split('|');
-            const tableData = group.map((student, index) => {
-                return [
-                    index + 1,
-                    student.nome,
-                    student.data_nascimento || '',
-                    ''
-                ]
-            });
-  
-            if (!isFirstPageOfDoc) {
-                doc.addPage();
-            }
-            isFirstPageOfDoc = false;
-  
-            const title = `Lista de Alunos - ${ensino} ${serie} ${classe} - Turno: ${turno}`.trim().replace(/N\/A/g, '').replace(/ +/g, ' ');
-  
-            doc.autoTable({
-                head: [['Nº', 'Nome do Aluno', 'Data de Nasc.', 'Observações']],
-                body: tableData,
-                startY: 16,
-                // We will draw headers and footers manually after all pages are created
-                styles: {
-                    font: 'helvetica',
-                    fontSize: 7.5,
-                    cellPadding: { top: 0.8, right: 1, bottom: 0.8, left: 1 },
-                    valign: 'middle',
-                },
-                headStyles: {
-                    fillColor: [230, 230, 230],
-                    textColor: [40, 40, 40],
-                    fontStyle: 'bold',
-                    fontSize: 8,
-                },
-                margin: { top: 16, bottom: 10, right: 10, left: 10 }
-            });
+        const titleParts = [
+            'Lista de Alunos',
+            filters.ensino,
+            filters.serie,
+            filters.classe,
+            filters.turno ? `- Turno: ${filters.turno}` : ''
+        ];
+        const title = titleParts.filter(Boolean).join(' ');
 
-             // Now, iterate through the pages of the current group and add header/footer
-            const totalPages = (doc.internal as any).pages.length;
-            let startPage = 1; // Assume start from page 1 for simplicity in a single-doc context
-            
-            // This logic assumes we generate one PDF doc in the end.
-            // If each group was a new doc, this would need adjustment.
-            for (let i = 1; i <= totalPages; i++) {
-                doc.setPage(i);
-                addHeaderAndFooter(doc, title, i, totalPages);
-            }
-        }
-  
-        const fileName = `Listas_de_Turmas_${filters.ensino || 'Geral'}.pdf`.replace(/ /g, '_');
+        doc.autoTable({
+            head: [['Nº', 'Nome do Aluno', 'Data de Nasc.', 'Observações']],
+            body: tableData,
+            startY: 20,
+            styles: {
+                font: 'helvetica',
+                fontSize: 8,
+                cellPadding: 1.5,
+            },
+            headStyles: {
+                fillColor: [230, 230, 230],
+                textColor: [40, 40, 40],
+                fontStyle: 'bold',
+            },
+            didDrawPage: (data) => {
+                // Header
+                const pageW = doc.internal.pageSize.getWidth();
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', pageW / 2, 10, { align: 'center' });
+                
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'normal');
+                doc.text(title, pageW / 2, 15, { align: 'center' });
+
+                // Footer
+                const pageH = doc.internal.pageSize.getHeight();
+                const pageCount = (doc.internal as any).getNumberOfPages();
+                doc.setFontSize(7);
+                doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, data.settings.margin.left, pageH - 5);
+                doc.text(`Página ${data.pageNumber} de ${pageCount}`, pageW - data.settings.margin.right, pageH - 5, { align: 'right' });
+            },
+            margin: { top: 20, bottom: 10 }
+        });
+
+        const fileName = `Lista_Alunos_${filters.serie || 'Geral'}.pdf`.replace(/ /g, '_');
         doc.save(fileName);
-  
+
     } catch (error) {
         console.error("Error generating PDF:", error);
         toast({
@@ -201,6 +172,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
         setIsDownloading(false);
     }
   };
+
 
   const clearFiltersAndResults = () => {
     setFilters({ ensino: '', serie: '', turno: '', classe: '' });
@@ -329,5 +301,3 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
     </Sheet>
   );
 }
-
-    
