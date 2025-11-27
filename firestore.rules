@@ -30,8 +30,7 @@ service cloud.firestore {
       }
       
       // 3. Check for Admin override.
-      // Note: Use a list for multiple admin role names for easier maintenance.
-      if (userData.profileId in ['Administrador', 'Administrador(a)']) {
+      if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
         return true;
       }
       
@@ -44,7 +43,7 @@ service cloud.firestore {
       let profilePath = /databases/$(database)/documents/profiles/$(userData.profileId);
       if (exists(profilePath)) {
         let profilePermissions = get(profilePath).data.permissions;
-        // Correctly check if the permission string exists in the array
+        // CORRECT WAY TO CHECK IF A VALUE EXISTS IN AN ARRAY
         if (permission in profilePermissions) {
           return true;
         }
