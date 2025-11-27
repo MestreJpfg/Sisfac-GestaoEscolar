@@ -36,6 +36,7 @@ service cloud.firestore {
       
       // Verifica as permissões do perfil do utilizador.
       let profileData = get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
+      // CORREÇÃO CRÍTICA: "in" em um array verifica se o valor existe.
       if (profileData != null && permission in profileData.permissions) {
         return true;
       }
@@ -84,7 +85,7 @@ service cloud.firestore {
     
     // QUALQUER utilizador autenticado pode interagir com o mural.
     match /mural/{messageId} {
-      allow read, write, list: if isSignedIn();
+      allow read, list, write: if isSignedIn();
     }
 
     // Permissões para notas.
