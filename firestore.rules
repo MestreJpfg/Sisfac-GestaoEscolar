@@ -36,7 +36,7 @@ service cloud.firestore {
       
       // Verifica as permissões do perfil do utilizador.
       let profileData = get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
-      // CORREÇÃO CRÍTICA: "in" em um array verifica se o valor existe.
+      // CORREÇÃO CRÍTICA: Usa 'in' com a lista de permissões. A lista deve ser tratada como um mapa no lado das regras.
       if (profileData != null && permission in profileData.permissions) {
         return true;
       }
