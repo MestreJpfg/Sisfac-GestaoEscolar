@@ -97,60 +97,88 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
     try {
         const doc = new jsPDF();
         
-        const tableData = students.map((student, index) => {
-            return [
-                index + 1,
-                student.nome,
-                student.data_nascimento || '',
-                '' // Coluna de observações vazia
+        const groupedStudents = students.reduce((acc, student) => {
+            const key = student.classe || 'Sem Classe';
+            if (!acc[key]) {
+                acc[key] = [];
+            }
+            acc[key].push(student);
+            return acc;
+        }, {} as { [key: string]: any[] });
+
+        let isFirstPage = true;
+
+        for (const className in groupedStudents) {
+            if (!isFirstPage) {
+                doc.addPage();
+            }
+
+            const classStudents = groupedStudents[className];
+            const studentSample = classStudents[0] || {};
+            
+            const tableData = classStudents.map((student, index) => {
+                return [
+                    index + 1,
+                    student.nome,
+                    student.data_nascimento || '',
+                    '' // Coluna de observações vazia
+                ];
+            });
+            
+            const titleParts = [
+                'Lista de Alunos',
+                studentSample.ensino,
+                studentSample.serie,
+                className, // Use a key do grupo (nome da turma)
+                studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
             ];
-        });
+            const title = titleParts.filter(Boolean).join(' ');
 
-        const titleParts = [
-            'Lista de Alunos',
-            filters.ensino,
-            filters.serie,
-            filters.classe,
-            filters.turno ? `- Turno: ${filters.turno}` : ''
-        ];
-        const title = titleParts.filter(Boolean).join(' ');
+            autoTable(doc, {
+                head: [['Nº', 'Nome do Aluno', 'Data de Nasc.', 'Observações']],
+                body: tableData,
+                startY: 20,
+                styles: {
+                    font: 'helvetica',
+                    fontSize: 8,
+                    cellPadding: 1.5,
+                },
+                headStyles: {
+                    fillColor: [230, 230, 230],
+                    textColor: [40, 40, 40],
+                    fontStyle: 'bold',
+                },
+                didDrawPage: (data) => {
+                    // Header
+                    const pageW = doc.internal.pageSize.getWidth();
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', pageW / 2, 10, { align: 'center' });
+                    
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(title, pageW / 2, 15, { align: 'center' });
 
-        autoTable(doc, {
-            head: [['Nº', 'Nome do Aluno', 'Data de Nasc.', 'Observações']],
-            body: tableData,
-            startY: 20,
-            styles: {
-                font: 'helvetica',
-                fontSize: 8,
-                cellPadding: 1.5,
-            },
-            headStyles: {
-                fillColor: [230, 230, 230],
-                textColor: [40, 40, 40],
-                fontStyle: 'bold',
-            },
-            didDrawPage: (data) => {
-                // Header
-                const pageW = doc.internal.pageSize.getWidth();
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'bold');
-                doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', pageW / 2, 10, { align: 'center' });
-                
-                doc.setFontSize(9);
-                doc.setFont('helvetica', 'normal');
-                doc.text(title, pageW / 2, 15, { align: 'center' });
+                    // Footer - a ser adicionado após todas as páginas serem renderizadas
+                },
+                margin: { top: 20, bottom: 10 }
+            });
+            isFirstPage = false;
+        }
 
-                // Footer
-                const pageH = doc.internal.pageSize.getHeight();
-                const pageCount = (doc.internal as any).getNumberOfPages();
-                doc.setFontSize(7);
-                doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, data.settings.margin.left, pageH - 5);
-                doc.text(`Página ${data.pageNumber} de ${pageCount}`, pageW - data.settings.margin.right, pageH - 5, { align: 'right' });
-            },
-            margin: { top: 20, bottom: 10 }
-        });
+        // Adicionar o rodapé em todas as páginas após a renderização
+        const pageCount = (doc.internal as any).getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            const pageH = doc.internal.pageSize.getHeight();
+            const pageW = doc.internal.pageSize.getWidth();
+            doc.setFontSize(7);
+            doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, doc.internal.pageSize.getMargin('left'), pageH - 5);
+            doc.text(`Página ${i} de ${pageCount}`, pageW - doc.internal.pageSize.getMargin('right'), pageH - 5, { align: 'right' });
+        }
 
-        const fileName = `Lista_Alunos_${filters.serie || 'Geral'}.pdf`.replace(/ /g, '_');
+
+        const fileName = `Listas_Turmas_${filters.serie || 'Geral'}.pdf`.replace(/ /g, '_');
         doc.save(fileName);
 
     } catch (error) {
@@ -293,3 +321,4 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
     </Sheet>
   );
 }
+
