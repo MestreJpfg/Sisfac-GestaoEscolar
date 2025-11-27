@@ -13,6 +13,10 @@ service cloud.firestore {
       // This function gets a user's profile data.
       return get(/databases/$(database)/documents/users/$(userId)).data;
     }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
     
     function hasPermission(permission) {
       if (!isSignedIn()) {
@@ -31,10 +35,13 @@ service cloud.firestore {
       }
       
       // Check user's profile permissions.
-      // The `exists` check is crucial before accessing `data`.
       let profilePath = /databases/$(database)/documents/profiles/$(userData.profileId);
-      if (exists(profilePath) && permission in get(profilePath).data.permissions) {
-        return true;
+      if (exists(profilePath)) {
+        let profilePermissions = get(profilePath).data.permissions;
+        // Correctly check if the permission string exists in the array
+        if (permission in profilePermissions) {
+          return true;
+        }
       }
         
       // Check individual custom permissions.
@@ -50,9 +57,9 @@ service cloud.firestore {
     // Users can update their own data.
     // Any authenticated user can READ another user's profile (needed for `hasPermission`).
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow update: if isOwner(userId); 
-      allow list: if hasPermission('manage:users');
+      allow read, list: if isSignedIn();
+      allow create, update: if isOwner(userId) || hasPermission('manage:users');
+      allow delete: if hasPermission('manage:users');
     }
     
     // All authenticated users can read/list profiles.
