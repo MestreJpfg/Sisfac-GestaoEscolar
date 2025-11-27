@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, where, orderBy, doc, writeBatch, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, orderBy, doc, writeBatch, getDocs, limit, deleteDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -43,7 +43,6 @@ export default function AttendanceManager() {
     // Query to get all students for filter options
     const studentsOptionsQuery = useMemo(() => {
         if (!firestore) return null;
-        // Fetch all students to ensure all filter options are available
         return query(collection(firestore, 'alunos'), orderBy('nome'));
     }, [firestore]);
     const { data: allStudents, isLoading: isLoadingOptions } = useCollection(studentsOptionsQuery);
@@ -144,24 +143,32 @@ export default function AttendanceManager() {
 
     const handleSaveAttendance = async () => {
         if (!firestore || !classId || !selectedDate || attendance.size === 0) return;
-
+    
         setIsSaving(true);
         const batch = writeBatch(firestore);
         const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-
+    
         attendance.forEach((status, studentId) => {
             const attendanceId = `${studentId}_${formattedDate}`;
             const docRef = doc(firestore, 'attendance', attendanceId);
-            const record: AttendanceRecord = {
-                id: attendanceId,
-                studentId,
-                classId,
-                date: formattedDate,
-                status,
-            };
-            batch.set(docRef, record);
+    
+            if (status === 'Ausente' || status === 'Justificado') {
+                // Create or update records for absent or justified students
+                const record: AttendanceRecord = {
+                    id: attendanceId,
+                    studentId,
+                    classId,
+                    date: formattedDate,
+                    status,
+                };
+                batch.set(docRef, record);
+            } else { // status === 'Presente'
+                // If the student is present, delete any existing non-present record for that day.
+                // This handles the case where a student was marked absent and then changed to present.
+                batch.delete(docRef);
+            }
         });
-
+    
         try {
             await batch.commit();
             toast({
@@ -314,5 +321,7 @@ export default function AttendanceManager() {
         </div>
     );
 }
+
+    
 
     
