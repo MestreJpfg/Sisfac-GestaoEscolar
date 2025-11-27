@@ -14,8 +14,7 @@ service cloud.firestore {
     }
 
     function getUserData(userId) {
-      // Allow reading user data if it's for the currently signed-in user.
-      // This is necessary for hasPermission to work for non-admin users checking their own permissions.
+      // Esta função obtém os dados do perfil de um utilizador.
       return get(/databases/$(database)/documents/users/$(userId)).data;
     }
     
@@ -30,20 +29,18 @@ service cloud.firestore {
         return false;
       }
       
-      // Admin override: check for specific profile names for admin access.
+      // Admin override: verifica se o ID do perfil é de administrador.
       if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
         return true;
       }
       
-      // Check permissions from the user's assigned profile.
-      if (userData.profileId != null) {
-        let profileData = get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
-        if (profileData != null && permission in profileData.permissions) {
-          return true;
-        }
+      // Verifica as permissões do perfil do utilizador.
+      let profileData = get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
+      if (profileData != null && permission in profileData.permissions) {
+        return true;
       }
         
-      // Check for individual custom permissions assigned directly to the user.
+      // Verifica permissões personalizadas individuais.
       if ('customPermissions' in userData && permission in userData.customPermissions) {
         return true;
       }
@@ -53,54 +50,56 @@ service cloud.firestore {
 
     // --- Collection Rules ---
 
-    // Users can read/update their own data.
-    // Users with 'manage:users' permission can read any user's data and list all users.
+    // Utilizadores podem atualizar os seus próprios dados.
+    // Qualquer utilizador autenticado pode LER o perfil de outro utilizador (necessário para `hasPermission`).
+    // Apenas quem tem a permissão 'manage:users' pode LISTAR todos os utilizadores.
     match /users/{userId} {
-      allow read, update: if isOwner(userId);
-      allow get, list: if hasPermission('manage:users');
+      allow update: if isOwner(userId);
+      allow get: if isSignedIn(); 
+      allow list: if hasPermission('manage:users');
     }
     
-    // All signed-in users can read/list profiles (e.g., for dropdowns).
-    // Only users with 'manage:cadastros' can create, update, or delete profiles.
+    // Todos os utilizadores autenticados podem ler/listar perfis.
+    // Apenas quem tem 'manage:cadastros' pode escrever.
     match /profiles/{profileId} {
         allow read, list: if isSignedIn();
         allow write: if hasPermission('manage:cadastros');
     }
 
-    // Permissions for students data.
+    // Permissões para alunos.
     match /alunos/{alunoId} {
       allow read, list: if hasPermission('view:students') || hasPermission('manage:students');
       allow write: if hasPermission('manage:students');
     }
 
-    // Permissions for employees data.
+    // Permissões para funcionários.
     match /funcionarios/{funcionarioId} {
       allow read, list, write: if hasPermission('manage:cadastros');
     }
 
-    // Permissions for subjects data.
+    // Permissões para disciplinas.
     match /disciplinas/{disciplinaId} {
        allow read, list, write: if hasPermission('manage:cadastros');
     }
     
-    // Any signed-in user can interact with the message board.
+    // QUALQUER utilizador autenticado pode interagir com o mural.
     match /mural/{messageId} {
       allow read, write, list: if isSignedIn();
     }
 
-    // Permissions for grades.
+    // Permissões para notas.
     match /grades/{gradeId} {
        allow read: if isSignedIn();
        allow write: if hasPermission('manage:grades');
     }
 
-    // Permissions for attendance.
+    // Permissões para frequência.
     match /attendance/{attendanceId} {
        allow read: if isSignedIn();
        allow write: if hasPermission('manage:attendance');
     }
     
-    // Permissions for announcements.
+    // Permissões para anúncios.
     match /announcements/{announcementId} {
       allow read: if isSignedIn();
       allow write: if hasPermission('manage:announcements');
