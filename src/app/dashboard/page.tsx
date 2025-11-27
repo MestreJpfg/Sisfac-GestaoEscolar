@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, doc, getCountFromServer } from 'firebase/firestore';
-import { Loader2, Users, UserCog, Shield, Database, ClipboardList, BookCopy, Archive, MessageSquare, Megaphone } from 'lucide-react';
+import { Loader2, Users, UserCog, Shield, Database, ClipboardList, BookCopy, Archive, MessageSquare, Megaphone, CalendarCheck } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -64,11 +64,6 @@ export default function DashboardPage() {
     if (isPermissionsLoading) return false;
     return hasPermission('manage:users');
   }, [isPermissionsLoading, userProfile, profileDetails]);
-  
-  const canManageCadastros = useMemo(() => {
-    if (isPermissionsLoading) return false;
-    return hasPermission('manage:cadastros');
-  }, [isPermissionsLoading, userProfile, profileDetails]);
 
   const canViewStudents = useMemo(() => {
      if (isPermissionsLoading) return false;
@@ -78,6 +73,11 @@ export default function DashboardPage() {
    const canManageAnnouncements = useMemo(() => {
     if (isPermissionsLoading) return false;
     return hasPermission('manage:announcements');
+  }, [isPermissionsLoading, userProfile, profileDetails]);
+
+   const canManageAttendance = useMemo(() => {
+    if (isPermissionsLoading) return false;
+    return hasPermission('manage:attendance');
   }, [isPermissionsLoading, userProfile, profileDetails]);
 
   const isAdmin = useMemo(() => {
@@ -205,6 +205,15 @@ export default function DashboardPage() {
                       <StatCard title="..." value={<Loader2 className="h-5 w-5 animate-spin"/>} icon={Users} />
                   ) : (
                       <>
+                          {canManageAttendance && (
+                            <StatCard
+                                title="Registo de Frequência"
+                                value={"Chamada"}
+                                icon={CalendarCheck}
+                                description="Registar a frequência diária dos alunos"
+                                action={<Button onClick={() => router.push('/dashboard/attendance')}>Aceder</Button>}
+                            />
+                           )}
                           {canManageAnnouncements && (
                               <StatCard
                               title="Comunicados"
@@ -223,23 +232,23 @@ export default function DashboardPage() {
                               action={<Button onClick={() => router.push('/users')}>Gerir Utilizadores</Button>}
                               />
                           )}
-                          {canManageCadastros && (
-                              <StatCard
-                              title="Perfis e Permissões"
-                              value={profileCount}
-                              icon={Shield}
-                              description="Perfis de acesso no sistema"
-                              action={<Button onClick={() => router.push('/profiles')}>Gerir Perfis</Button>}
-                              />
-                          )}
                           {isAdmin && (
+                            <>
                               <StatCard
-                              title="Gestão da Base de Dados"
-                              value={"Ferramentas"}
-                              icon={Database}
-                              description="Importar, exportar e gerir dados"
-                              action={<Button onClick={() => router.push('/dashboard/database')}>Aceder</Button>}
+                                title="Perfis e Permissões"
+                                value={profileCount}
+                                icon={Shield}
+                                description="Perfis de acesso no sistema"
+                                action={<Button onClick={() => router.push('/profiles')}>Gerir Perfis</Button>}
                               />
+                              <StatCard
+                                title="Gestão da Base de Dados"
+                                value={"Ferramentas"}
+                                icon={Database}
+                                description="Importar, exportar e gerir dados"
+                                action={<Button onClick={() => router.push('/dashboard/database')}>Aceder</Button>}
+                              />
+                            </>
                           )}
                       </>
                   )}

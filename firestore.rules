@@ -63,7 +63,7 @@ service cloud.firestore {
     }
     
     // All authenticated users can read/list profiles.
-    // Only those with 'manage:cadastros' can write.
+    // Only admins can write.
     match /profiles/{profileId} {
         allow read, list: if isSignedIn();
         allow write: if hasPermission('manage:cadastros');
