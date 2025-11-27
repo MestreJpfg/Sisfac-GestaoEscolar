@@ -10,32 +10,37 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function getUserData(userId) {
-      // This function gets a user's profile data.
-      return get(/databases/$(database)/documents/users/$(userId)).data;
-    }
-
     function isOwner(userId) {
+      // isOwner is only called after isSignedIn, so request.auth is safe.
       return request.auth.uid == userId;
     }
     
     function hasPermission(permission) {
+      // 1. Must be signed in to have any permission.
       if (!isSignedIn()) {
         return false;
       }
 
-      let userData = getUserData(request.auth.uid);
+      // 2. Get the user's data from the /users collection.
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
       
-      if (userData == null) {
+      // If user document doesn't exist, they have no permissions.
+      if (userData == null || !('profileId' in userData)) {
         return false;
       }
       
-      // Admin override: checks if the profile ID is administrator.
-      if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
+      // 3. Check for Admin override.
+      // Note: Use a list for multiple admin role names for easier maintenance.
+      if (userData.profileId in ['Administrador', 'Administrador(a)']) {
         return true;
       }
       
-      // Check user's profile permissions.
+      // 4. Check for individual custom permissions on the user document.
+      if ('customPermissions' in userData && permission in userData.customPermissions) {
+          return true;
+      }
+
+      // 5. Check for permissions granted by the user's profile.
       let profilePath = /databases/$(database)/documents/profiles/$(userData.profileId);
       if (exists(profilePath)) {
         let profilePermissions = get(profilePath).data.permissions;
@@ -45,11 +50,6 @@ service cloud.firestore {
         }
       }
         
-      // Check individual custom permissions.
-      if ('customPermissions' in userData && userData.customPermissions.hasAny([permission])) {
-        return true;
-      }
-
       return false;
     }
 
