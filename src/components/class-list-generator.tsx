@@ -98,7 +98,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
         const doc = new jsPDF();
         
         const groupedStudents = students.reduce((acc, student) => {
-            const key = student.classe || 'Sem Classe';
+            const key = `${student.serie || 'Série Indefinida'}|${student.classe || 'Classe Indefinida'}|${student.turno || 'Turno Indefinido'}`;
             if (!acc[key]) {
                 acc[key] = [];
             }
@@ -106,14 +106,14 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
             return acc;
         }, {} as { [key: string]: any[] });
 
-        let isFirstClass = true;
+        let isFirstPage = true;
 
-        for (const className in groupedStudents) {
-            if (!isFirstClass) {
+        for (const groupKey in groupedStudents) {
+            if (!isFirstPage) {
                 doc.addPage();
             }
 
-            const classStudents = groupedStudents[className];
+            const classStudents = groupedStudents[groupKey];
             const studentSample = classStudents[0] || {};
             
             const tableData = classStudents.map((student, index) => {
@@ -129,7 +129,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                 'Lista de Alunos',
                 studentSample.ensino,
                 studentSample.serie,
-                className,
+                studentSample.classe,
                 studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
             ];
             const title = titleParts.filter(Boolean).join(' ');
@@ -141,17 +141,17 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                     // Header
                     doc.setFontSize(10);
                     doc.setFont('helvetica', 'bold');
-                    doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', data.settings.margin.left + 80, 10, { align: 'center' });
+                    doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
                     
                     doc.setFontSize(9);
                     doc.setFont('helvetica', 'normal');
-                    doc.text(title, data.settings.margin.left + 80, 15, { align: 'center' });
+                    doc.text(title, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
 
                     // Footer
                     const pageCount = (doc.internal as any).getNumberOfPages();
                     doc.setFontSize(7);
                     doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, data.settings.margin.left, doc.internal.pageSize.getHeight() - 5);
-                    doc.text(`Página ${data.pageNumber} de ${pageCount}`, doc.internal.pageSize.getWidth() - data.settings.margin.right, doc.internal.pageSize.getHeight() - 5, { align: 'right' });
+                    doc.text(`Página ${doc.internal.pages.length -1}`, doc.internal.pageSize.getWidth() - data.settings.margin.right, doc.internal.pageSize.getHeight() - 5, { align: 'right' });
                 },
                 styles: {
                     font: 'helvetica',
@@ -166,7 +166,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                 margin: { top: 25 },
             });
             
-            isFirstClass = false;
+            isFirstPage = false;
         }
 
         const fileName = `Listas_Turmas_${filters.serie || 'Geral'}.pdf`.replace(/ /g, '_');
@@ -312,3 +312,5 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
     </Sheet>
   );
 }
+
+    
