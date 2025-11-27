@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -60,17 +61,16 @@ export function useCollection<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
-    // If the query is not ready (e.g., waiting for auth), do nothing.
-    // The isLoading state will remain true until a valid query is provided.
     if (!targetRefOrQuery) {
       setIsLoading(true);
       setData(null);
       setError(null);
       return;
     }
-
-    // Set loading to true only when a new, valid query is provided.
+    
+    // Reset state for new query
     setIsLoading(true);
+    setError(null);
 
     const unsubscribe = onSnapshot(
       targetRefOrQuery,
@@ -85,6 +85,8 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (err: FirestoreError) => {
+        console.error("Firestore onSnapshot error:", err);
+        
         const path: string =
           targetRefOrQuery.type === 'collection'
             ? (targetRefOrQuery as CollectionReference).path
@@ -103,9 +105,8 @@ export function useCollection<T = any>(
       }
     );
 
-    // Cleanup subscription on unmount or when the query changes
     return () => unsubscribe();
-  }, [targetRefOrQuery]); // This hook re-runs only when the memoized query object changes.
+  }, [targetRefOrQuery]);
 
   return { data, isLoading, error };
 }

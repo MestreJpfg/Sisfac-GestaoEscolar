@@ -42,9 +42,9 @@ service cloud.firestore {
       // 5. Check for permissions granted by the user's profile.
       let profilePath = /databases/$(database)/documents/profiles/$(userData.profileId);
       if (exists(profilePath)) {
-        let profilePermissions = get(profilePath).data.permissions;
+        let profileData = get(profilePath).data;
         // CORRECT WAY TO CHECK IF A VALUE EXISTS IN AN ARRAY
-        if (permission in profilePermissions) {
+        if ('permissions' in profileData && permission in profileData.permissions) {
           return true;
         }
       }
@@ -53,6 +53,12 @@ service cloud.firestore {
     }
 
     // --- Collection Rules ---
+
+    // ANY authenticated user can interact with the message board.
+    // This is placed first to ensure it's evaluated without interference.
+    match /mural/{messageId} {
+      allow read, list, write: if isSignedIn();
+    }
 
     // Users can update their own data.
     // Any authenticated user can READ another user's profile (needed for `hasPermission`).
@@ -83,11 +89,6 @@ service cloud.firestore {
     // Permissions for disciplines.
     match /disciplinas/{disciplinaId} {
        allow read, list, write: if hasPermission('manage:cadastros');
-    }
-    
-    // ANY authenticated user can interact with the message board.
-    match /mural/{messageId} {
-      allow read, list, write: if isSignedIn();
     }
 
     // Permissions for grades.

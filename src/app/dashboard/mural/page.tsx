@@ -45,14 +45,13 @@ export default function MuralPage() {
 
     const { data: messages, isLoading: isLoadingMessages, error } = useCollection(messagesQuery);
 
-    // Efeito para lidar com erros da coleção
     useEffect(() => {
         if (error) {
-            console.error("Error fetching messages: ", error);
+            console.error("Error fetching mural messages:", error);
             toast({
                 variant: 'destructive',
                 title: "Erro ao Carregar Mural",
-                description: "Não foi possível carregar as mensagens. Verifique as suas permissões e tente novamente.",
+                description: "Não foi possível carregar as mensagens. Verifique as suas permissões de acesso e tente novamente mais tarde.",
             });
         }
     }, [error, toast]);
@@ -76,11 +75,10 @@ export default function MuralPage() {
         };
         
         try {
-            // Usamos setDoc em vez de setDocumentNonBlocking para garantir que a mensagem foi enviada
             setDocumentNonBlocking(messageRef, messageData);
             setNewMessage('');
-        } catch (error) {
-            console.error("Error sending message: ", error);
+        } catch (err) {
+            console.error("Error sending message: ", err);
             toast({
                 variant: 'destructive',
                 title: "Erro ao Enviar",
@@ -91,7 +89,6 @@ export default function MuralPage() {
         }
     };
     
-    // Auto-scroll to the bottom when new messages arrive
     useEffect(() => {
         if (scrollAreaRef.current) {
             scrollAreaRef.current.scrollTo({
@@ -127,9 +124,15 @@ export default function MuralPage() {
                 <main className="flex-1 overflow-hidden flex flex-col">
                     <div className="container h-full flex flex-col pt-6 pb-2">
                         <div ref={scrollAreaRef} className="flex-1 overflow-y-auto pr-4 -mr-4 mb-4">
-                            {isLoadingMessages ? (
+                            {isLoadingMessages && !messages ? (
                                 <div className="flex justify-center items-center h-full">
                                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                </div>
+                            ) : error ? (
+                                <div className="flex flex-col items-center justify-center h-full text-center text-destructive">
+                                    <MessageSquare size={48} className="mb-4" />
+                                    <p className="font-semibold">Erro ao carregar mensagens.</p>
+                                    <p className="text-sm">Por favor, verifique as suas permissões e tente novamente.</p>
                                 </div>
                             ) : messages && messages.length > 0 ? (
                                 <div className="space-y-6">
@@ -199,5 +202,3 @@ export default function MuralPage() {
         </AuthGuard>
     );
 }
-
-    
