@@ -113,10 +113,6 @@ export default function AttendanceManager() {
         setFilters(prev => ({ ...prev, [name]: value === 'all' ? '' : value }));
     };
 
-    const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
-        setAttendance(prev => new Map(prev).set(studentId, status));
-    };
-
     const handleSaveAttendance = async () => {
         if (!firestore || !classId || !selectedDate || attendance.size === 0) return;
 
@@ -283,3 +279,5 @@ export default function AttendanceManager() {
         </div>
     );
 }
+
+    
