@@ -40,10 +40,11 @@ export default function AttendanceManager() {
     const [attendance, setAttendance] = useState<Map<string, AttendanceStatus>>(new Map());
     const [isSaving, setIsSaving] = useState(false);
 
-    // Query to get a sample of students for filter options
+    // Query to get all students for filter options
     const studentsOptionsQuery = useMemo(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'alunos'), limit(500));
+        // Fetch all students to ensure all filter options are available
+        return query(collection(firestore, 'alunos'), orderBy('nome'));
     }, [firestore]);
     const { data: allStudents, isLoading: isLoadingOptions } = useCollection(studentsOptionsQuery);
     
@@ -196,35 +197,41 @@ export default function AttendanceManager() {
                     <CardDescription>Escolha uma turma e uma data para registar ou visualizar a frequência.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                        <Select value={filters.ensino} onValueChange={(v) => handleFilterChange('ensino', v)} disabled={isLoadingOptions}>
-                            <SelectTrigger><SelectValue placeholder="Ensino..." /></SelectTrigger>
-                            <SelectContent>{uniqueFilterOptions.ensinos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
-                        </Select>
-                        <Select value={filters.serie} onValueChange={(v) => handleFilterChange('serie', v)} disabled={!filters.ensino || uniqueFilterOptions.series.length === 0}>
-                            <SelectTrigger><SelectValue placeholder="Série..." /></SelectTrigger>
-                            <SelectContent>{uniqueFilterOptions.series.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
-                        </Select>
-                        <Select value={filters.classe} onValueChange={(v) => handleFilterChange('classe', v)} disabled={!filters.serie || uniqueFilterOptions.classes.length === 0}>
-                            <SelectTrigger><SelectValue placeholder="Classe..." /></SelectTrigger>
-                            <SelectContent>{uniqueFilterOptions.classes.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
-                        </Select>
-                         <Select value={filters.turno} onValueChange={(v) => handleFilterChange('turno', v)} disabled={!filters.classe || uniqueFilterOptions.turnos.length === 0}>
-                            <SelectTrigger><SelectValue placeholder="Turno..." /></SelectTrigger>
-                            <SelectContent>{uniqueFilterOptions.turnos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
-                        </Select>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant={"outline"} className={cn("justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}>
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {selectedDate ? format(selectedDate, "PPP", { locale: ptBR }) : <span>Escolha uma data</span>}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus disabled={(date) => date > new Date()} />
-                            </PopoverContent>
-                        </Popover>
-                    </div>
+                    {isLoadingOptions ? (
+                        <div className="flex items-center justify-center h-24">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                            <Select value={filters.ensino} onValueChange={(v) => handleFilterChange('ensino', v)}>
+                                <SelectTrigger><SelectValue placeholder="Ensino..." /></SelectTrigger>
+                                <SelectContent>{uniqueFilterOptions.ensinos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                            </Select>
+                            <Select value={filters.serie} onValueChange={(v) => handleFilterChange('serie', v)} disabled={!filters.ensino || uniqueFilterOptions.series.length === 0}>
+                                <SelectTrigger><SelectValue placeholder="Série..." /></SelectTrigger>
+                                <SelectContent>{uniqueFilterOptions.series.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                            </Select>
+                            <Select value={filters.classe} onValueChange={(v) => handleFilterChange('classe', v)} disabled={!filters.serie || uniqueFilterOptions.classes.length === 0}>
+                                <SelectTrigger><SelectValue placeholder="Classe..." /></SelectTrigger>
+                                <SelectContent>{uniqueFilterOptions.classes.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                            </Select>
+                            <Select value={filters.turno} onValueChange={(v) => handleFilterChange('turno', v)} disabled={!filters.classe || uniqueFilterOptions.turnos.length === 0}>
+                                <SelectTrigger><SelectValue placeholder="Turno..." /></SelectTrigger>
+                                <SelectContent>{uniqueFilterOptions.turnos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                            </Select>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant={"outline"} className={cn("justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}>
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {selectedDate ? format(selectedDate, "PPP", { locale: ptBR }) : <span>Escolha uma data</span>}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                    <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus disabled={(date) => date > new Date()} />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
@@ -307,5 +314,7 @@ export default function AttendanceManager() {
         </div>
     );
 }
+
+    
 
     
