@@ -258,8 +258,8 @@ export default function AttendanceManager() {
                         <CardContent>
                             <div className="space-y-4">
                                 {studentsInClass.map((student) => (
-                                    <div key={student.id} className="flex items-center justify-between p-3 border rounded-md hover:bg-muted/50 transition-colors">
-                                        <span className="font-medium">{student.nome}</span>
+                                    <div key={student.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-md hover:bg-muted/50 transition-colors">
+                                        <span className="font-medium mb-3 sm:mb-0">{student.nome}</span>
                                         <RadioGroup
                                             value={attendance.get(student.id) || 'Presente'}
                                             onValueChange={(value) => handleStatusChange(student.id, value as AttendanceStatus)}
@@ -267,15 +267,15 @@ export default function AttendanceManager() {
                                         >
                                             <div className="flex items-center space-x-2">
                                                 <RadioGroupItem value="Presente" id={`presente-${student.id}`} />
-                                                <Label htmlFor={`presente-${student.id}`} className="text-green-600">Presente</Label>
+                                                <Label htmlFor={`presente-${student.id}`} className="text-green-600 cursor-pointer">Presente</Label>
                                             </div>
                                             <div className="flex items-center space-x-2">
                                                 <RadioGroupItem value="Ausente" id={`ausente-${student.id}`} />
-                                                <Label htmlFor={`ausente-${student.id}`} className="text-red-600">Ausente</Label>
+                                                <Label htmlFor={`ausente-${student.id}`} className="text-red-600 cursor-pointer">Ausente</Label>
                                             </div>
                                             <div className="flex items-center space-x-2">
                                                 <RadioGroupItem value="Justificado" id={`justificado-${student.id}`} />
-                                                <Label htmlFor={`justificado-${student.id}`} className="text-yellow-600">Justificado</Label>
+                                                <Label htmlFor={`justificado-${student.id}`} className="text-yellow-600 cursor-pointer">Justificado</Label>
                                             </div>
                                         </RadioGroup>
                                     </div>
@@ -314,7 +314,5 @@ export default function AttendanceManager() {
         </div>
     );
 }
-
-    
 
     
