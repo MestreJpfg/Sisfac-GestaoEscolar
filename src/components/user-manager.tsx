@@ -30,29 +30,34 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
     profileId: '',
   });
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name', direction: 'ascending' });
-  const debouncedSearch = useDebounce(filters.search, 300);
+  const debouncedSearch = useDebounce(filters.search, 400);
 
   const hasActiveFilters = useMemo(() => {
-    return debouncedSearch.trim().length > 0 || filters.profileId;
+    // A busca é considerada ativa se houver texto de busca OU um perfil específico for selecionado
+    return debouncedSearch.trim().length > 0 || (filters.profileId && filters.profileId !== 'all');
   }, [debouncedSearch, filters.profileId]);
 
   const usersQuery = useMemo(() => {
-    if (!firestore) return null;
+    if (!firestore || !hasActiveFilters) {
+      return null; // Não faz a consulta se não houver filtros ativos
+    }
 
     let q = query(collection(firestore, 'users'));
 
-    // Apply profile filter at the Firestore level if selected
-    if (filters.profileId) {
+    // Filtra por perfil APENAS se um perfil específico (diferente de 'all') for selecionado
+    if (filters.profileId && filters.profileId !== 'all') {
         q = query(q, where('profileId', '==', filters.profileId));
     }
     
-    // If no profile is selected, don't fetch any users yet.
-    if (!filters.profileId) {
-        return null;
+    const searchLower = debouncedSearch.toLowerCase().trim();
+    if (searchLower.length >= 3) {
+      // Infelizmente, o Firestore não suporta consultas 'OR' complexas (nome OU email)
+      // nem busca de 'contains' não sensível a maiúsculas/minúsculas de forma nativa e eficiente.
+      // A busca por nome/email será feita no cliente após o fetch.
     }
-
+    
     return q;
-  }, [firestore, filters.profileId]);
+  }, [firestore, hasActiveFilters, filters.profileId, debouncedSearch]);
 
   const { data: fetchedUsers, isLoading: isLoadingUsers } = useCollection(usersQuery);
 
@@ -62,12 +67,14 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
     let filtered = fetchedUsers;
     const searchLower = debouncedSearch.toLowerCase().trim();
 
+    // Filtro por nome/email no cliente, pois é mais flexível
     if (searchLower.length > 0) {
       filtered = filtered.filter(user => 
         (user.name?.toLowerCase().includes(searchLower) || user.email?.toLowerCase().includes(searchLower))
       );
     }
     
+    // Ordenação
     if (sortConfig.key) {
       const profileNameMap = new Map(allProfiles.map(p => [p.id, p.name]));
       filtered.sort((a, b) => {
@@ -85,7 +92,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
 
 
   const handleFilterChange = (name: string, value: string) => {
-    setFilters(prev => ({ ...prev, [name]: value === 'all' ? '' : value }));
+    setFilters(prev => ({ ...prev, [name]: value }));
   };
 
   const clearFilters = () => {
@@ -126,19 +133,18 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
        <Card>
         <CardContent className="p-4 flex flex-col sm:flex-row gap-4">
           <Input
-            placeholder="Buscar por nome ou email..."
+            placeholder="Buscar por nome ou email (mín. 3 letras)..."
             value={filters.search}
             onChange={(e) => handleFilterChange('search', e.target.value)}
             className="flex-1"
-            disabled={!filters.profileId}
           />
           <div className="flex gap-2">
             <Select value={filters.profileId} onValueChange={(value) => handleFilterChange('profileId', value)}>
               <SelectTrigger className="w-full sm:w-[240px]">
-                <SelectValue placeholder="Selecione um perfil para começar" />
+                <SelectValue placeholder="Filtrar por perfil..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Limpar Seleção</SelectItem>
+                <SelectItem value="all">Todos os Perfis</SelectItem>
                 {allProfiles.map(profile => (
                   <SelectItem key={profile.id} value={profile.id}>{profile.name}</SelectItem>
                 ))}
@@ -154,19 +160,22 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       </Card>
       
         <div className="text-sm text-muted-foreground h-5">
-            {filters.profileId && !isLoadingUsers && (
-            <p>
-                {filteredAndSortedUsers.length} de {fetchedUsers?.length || 0} utilizador(es) exibido(s).
-            </p>
+            {hasActiveFilters && !isLoadingUsers && (
+              <p>
+                {filteredAndSortedUsers.length > 0
+                  ? `${filteredAndSortedUsers.length} utilizador(es) encontrado(s).`
+                  : 'Nenhum utilizador encontrado com os critérios fornecidos.'
+                }
+              </p>
             )}
         </div>
 
         {isLoadingUsers ? (
             <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="mt-4 text-muted-foreground">A carregar utilizadores do perfil selecionado...</p>
+                <p className="mt-4 text-muted-foreground">A buscar utilizadores...</p>
             </div>
-        ) : filters.profileId ? (
+        ) : hasActiveFilters ? (
             <UserTable 
                 users={filteredAndSortedUsers}
                 profiles={allProfiles}
@@ -178,9 +187,9 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
              <Card>
                 <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
                     <Search className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-medium text-foreground">Selecione um Perfil</h3>
+                    <h3 className="mt-4 text-lg font-medium text-foreground">Inicie uma Busca</h3>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Escolha um perfil no menu acima para carregar e gerir os utilizadores.
+                        Utilize os filtros acima para pesquisar os utilizadores.
                     </p>
                 </CardContent>
             </Card>
