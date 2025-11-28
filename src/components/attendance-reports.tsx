@@ -2,15 +2,18 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, where, orderBy, doc, getDocs, limit, startAt, endAt } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs, startAt, endAt } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarIcon, Loader2, Search, User, FileText } from 'lucide-react';
-import { format } from 'date-fns';
+import { DateRange } from 'react-day-picker';
+import { Calendar as CalendarIcon, Loader2, Search, User, FileText, Download } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -18,13 +21,170 @@ import { Input } from './ui/input';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import MonthlyAttendanceReport from './monthly-attendance-report';
 
-// Placeholder. This will be built out.
+
+interface ReportFilters {
+    ensino: string;
+    serie: string;
+    classe: string;
+    turno: string;
+}
+
+interface AttendanceRecord {
+    id: string;
+    studentId: string;
+    classId: string;
+    date: string;
+    status: 'Ausente' | 'Justificado';
+    studentName?: string;
+}
+
 export default function AttendanceReports() {
     const firestore = useFirestore();
     const { toast } = useToast();
+
+    // Student data for filters
+    const studentsOptionsQuery = useMemo(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'alunos'), orderBy('nome'));
+    }, [firestore]);
+    const { data: allStudents, isLoading: isLoadingStudentsOptions } = useCollection(studentsOptionsQuery);
     
-    // States for filters, data, etc. will go here
+    // Daily Report State
+    const [dailyFilters, setDailyFilters] = useState<ReportFilters>({ ensino: '', serie: '', classe: '', turno: '' });
+    const [dailyDate, setDailyDate] = useState<Date | undefined>(new Date());
+    const [dailyReportData, setDailyReportData] = useState<AttendanceRecord[]>([]);
+    const [isLoadingDaily, setIsLoadingDaily] = useState(false);
+
+    // Individual Report State
+    const [individualSearch, setIndividualSearch] = useState('');
+    const debouncedSearch = useDebounce(individualSearch, 500);
+    const [searchedStudents, setSearchedStudents] = useState<any[]>([]);
+    const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
+    const [individualDateRange, setIndividualDateRange] = useState<DateRange | undefined>();
+    const [individualReportData, setIndividualReportData] = useState<AttendanceRecord[]>([]);
+    const [isLoadingIndividual, setIsLoadingIndividual] = useState(false);
+
+
+    const studentMap = useMemo(() => {
+        if (!allStudents) return new Map();
+        return new Map(allStudents.map(s => [s.id, s.nome]));
+    }, [allStudents]);
+
+    // Common filter logic
+    const uniqueFilterOptions = useMemo(() => {
+        const getUniqueValues = (key: string, data: any[]) =>
+            [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
+
+        let filteredForOptions = allStudents || [];
+        const ensinos = getUniqueValues('ensino', filteredForOptions);
+        if(dailyFilters.ensino) filteredForOptions = filteredForOptions.filter(s => s.ensino === dailyFilters.ensino);
+        const series = getUniqueValues('serie', filteredForOptions);
+        if(dailyFilters.serie) filteredForOptions = filteredForOptions.filter(s => s.serie === dailyFilters.serie);
+        const classes = getUniqueValues('classe', filteredForOptions);
+        if(dailyFilters.classe) filteredForOptions = filteredForOptions.filter(s => s.classe === dailyFilters.classe);
+        const turnos = getUniqueValues('turno', filteredForOptions);
+        
+        return { ensinos, series, classes, turnos };
+    }, [allStudents, dailyFilters]);
+
+    const handleDailyFilterChange = (name: keyof ReportFilters, value: string) => {
+        const newValue = value === 'all' ? '' : value;
+        setDailyFilters(prev => {
+            const newFilters = { ...prev, [name]: newValue };
+            if (name === 'ensino') { newFilters.serie = ''; newFilters.classe = ''; newFilters.turno = ''; }
+            else if (name === 'serie') { newFilters.classe = ''; newFilters.turno = ''; }
+            else if (name === 'classe') { newFilters.turno = ''; }
+            return newFilters;
+        });
+    };
+
+    const generateDailyReport = async () => {
+        if (!firestore || !dailyDate || !dailyFilters.ensino || !dailyFilters.serie || !dailyFilters.classe || !dailyFilters.turno) {
+            toast({ variant: 'destructive', title: 'Filtros incompletos', description: 'Por favor, selecione uma turma completa e uma data.' });
+            return;
+        }
+        setIsLoadingDaily(true);
+        setDailyReportData([]);
+
+        const classId = `${dailyFilters.ensino}-${dailyFilters.serie}-${dailyFilters.classe}-${dailyFilters.turno}`.replace(/\s+/g, '_');
+        const formattedDate = format(dailyDate, 'yyyy-MM-dd');
+
+        const q = query(
+            collection(firestore, 'attendance'),
+            where('classId', '==', classId),
+            where('date', '==', formattedDate)
+        );
+
+        const snapshot = await getDocs(q);
+        const records = snapshot.docs.map(doc => {
+            const data = doc.data() as AttendanceRecord;
+            return { ...data, studentName: studentMap.get(data.studentId) || 'Aluno não encontrado' };
+        }).sort((a, b) => a.studentName!.localeCompare(b.studentName!));
+
+        setDailyReportData(records);
+        setIsLoadingDaily(false);
+        if (records.length === 0) {
+            toast({ title: 'Nenhum registo encontrado', description: 'Não há faltas ou justificativas para esta turma nesta data.' });
+        }
+    };
+
+    const generateIndividualReport = async () => {
+        if (!firestore || !selectedStudent || !individualDateRange?.from || !individualDateRange?.to) {
+            toast({ variant: 'destructive', title: 'Filtros incompletos', description: 'Por favor, selecione um aluno e um intervalo de datas.' });
+            return;
+        }
+        setIsLoadingIndividual(true);
+        setIndividualReportData([]);
+
+        const startDate = format(individualDateRange.from, 'yyyy-MM-dd');
+        const endDate = format(individualDateRange.to, 'yyyy-MM-dd');
+
+        const q = query(
+            collection(firestore, 'attendance'),
+            where('studentId', '==', selectedStudent.id),
+            where('date', '>=', startDate),
+            where('date', '<=', endDate),
+            orderBy('date', 'asc')
+        );
+
+        const snapshot = await getDocs(q);
+        const records = snapshot.docs.map(doc => doc.data() as AttendanceRecord);
+        
+        setIndividualReportData(records);
+        setIsLoadingIndividual(false);
+        if (records.length === 0) {
+            toast({ title: 'Nenhum registo encontrado', description: 'Nenhuma falta registada para este aluno no período selecionado.' });
+        }
+    };
+
+    useMemo(() => {
+        if (debouncedSearch.length < 3) {
+            setSearchedStudents([]);
+            return;
+        }
+        const searchLower = debouncedSearch.toLowerCase();
+        setSearchedStudents(
+            allStudents?.filter(s => s.nome.toLowerCase().includes(searchLower)).slice(0, 5) || []
+        );
+    }, [debouncedSearch, allStudents]);
+
+    const exportToPDF = (type: 'daily' | 'individual', data: any[], title: string, head: string[][], body: any[][]) => {
+        const doc = new jsPDF();
+        doc.setFontSize(16);
+        doc.text(title, 14, 15);
+        
+        autoTable(doc, {
+            head: head,
+            body: body,
+            startY: 20,
+            theme: 'striped',
+            headStyles: { fillColor: [30, 136, 229] }, // Um azul agradável
+        });
+
+        doc.save(`${title.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    };
 
     const renderDailyReport = () => (
         <Card>
@@ -32,9 +192,27 @@ export default function AttendanceReports() {
                 <CardTitle>Relatório Diário de Faltas</CardTitle>
                 <CardDescription>Selecione uma turma e uma data para ver os alunos ausentes ou com falta justificada.</CardDescription>
             </CardHeader>
-            <CardContent className="text-center text-muted-foreground py-16">
-                <FileText className="mx-auto h-12 w-12" />
-                <p className="mt-4">Funcionalidade de Relatório Diário em construção.</p>
+            <CardContent className="space-y-4">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <Select value={dailyFilters.ensino} onValueChange={(v) => handleDailyFilterChange('ensino', v)}><SelectTrigger><SelectValue placeholder="Ensino..." /></SelectTrigger><SelectContent>{uniqueFilterOptions.ensinos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
+                    <Select value={dailyFilters.serie} onValueChange={(v) => handleDailyFilterChange('serie', v)} disabled={!dailyFilters.ensino}><SelectTrigger><SelectValue placeholder="Série..." /></SelectTrigger><SelectContent>{uniqueFilterOptions.series.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
+                    <Select value={dailyFilters.classe} onValueChange={(v) => handleDailyFilterChange('classe', v)} disabled={!dailyFilters.serie}><SelectTrigger><SelectValue placeholder="Classe..." /></SelectTrigger><SelectContent>{uniqueFilterOptions.classes.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
+                    <Select value={dailyFilters.turno} onValueChange={(v) => handleDailyFilterChange('turno', v)} disabled={!dailyFilters.classe}><SelectTrigger><SelectValue placeholder="Turno..." /></SelectTrigger><SelectContent>{uniqueFilterOptions.turnos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
+                    <Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("justify-start text-left font-normal", !dailyDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{dailyDate ? format(dailyDate, "PPP", { locale: ptBR }) : <span>Escolha uma data</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={dailyDate} onSelect={setDailyDate} initialFocus disabled={(date) => date > new Date()} /></PopoverContent></Popover>
+                </div>
+                <Button onClick={generateDailyReport} disabled={isLoadingDaily}>
+                    {isLoadingDaily ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Search className="mr-2 h-4 w-4"/>}
+                    Gerar Relatório
+                </Button>
+                {dailyReportData.length > 0 && (
+                    <div className="pt-4 space-y-2">
+                        <Button onClick={() => exportToPDF('daily', dailyReportData, `Relatório de Faltas - ${format(dailyDate!, 'dd/MM/yyyy')}`, [['Aluno', 'Status']], dailyReportData.map(r => [r.studentName, r.status]))} variant="outline"><Download className="mr-2 h-4 w-4"/>Exportar PDF</Button>
+                        <Table>
+                            <TableHeader><TableRow><TableHead>Aluno</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                            <TableBody>{dailyReportData.map(r => <TableRow key={r.id}><TableCell>{r.studentName}</TableCell><TableCell>{r.status}</TableCell></TableRow>)}</TableBody>
+                        </Table>
+                    </div>
+                )}
             </CardContent>
         </Card>
     );
@@ -45,9 +223,8 @@ export default function AttendanceReports() {
                 <CardTitle>Relatório Mensal de Faltas</CardTitle>
                 <CardDescription>Selecione uma turma, mês e ano para gerar um relatório consolidado de faltas.</CardDescription>
             </CardHeader>
-            <CardContent className="text-center text-muted-foreground py-16">
-                <FileText className="mx-auto h-12 w-12" />
-                <p className="mt-4">Funcionalidade de Relatório Mensal em construção.</p>
+            <CardContent>
+                <MonthlyAttendanceReport />
             </CardContent>
         </Card>
     );
@@ -58,12 +235,49 @@ export default function AttendanceReports() {
                 <CardTitle>Relatório Individual de Faltas</CardTitle>
                 <CardDescription>Pesquise por um aluno e selecione um período para ver o seu histórico de faltas.</CardDescription>
             </CardHeader>
-            <CardContent className="text-center text-muted-foreground py-16">
-                <User className="mx-auto h-12 w-12" />
-                <p className="mt-4">Funcionalidade de Relatório Individual em construção.</p>
+            <CardContent className="space-y-4">
+                <div className="relative">
+                    <Input placeholder="Pesquisar aluno por nome..." value={individualSearch} onChange={e => {setIndividualSearch(e.target.value); setSelectedStudent(null);}} />
+                    {individualSearch && searchedStudents.length > 0 && !selectedStudent && (
+                        <Card className="absolute z-10 w-full mt-1">
+                            <CardContent className="p-2">
+                                {searchedStudents.map(s => (
+                                    <div key={s.id} onClick={() => { setSelectedStudent(s); setIndividualSearch(s.nome); setSearchedStudents([]); }} className="p-2 hover:bg-muted rounded-md cursor-pointer">{s.nome}</div>
+                                ))}
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
+                 <Popover>
+                    <PopoverTrigger asChild>
+                        <Button id="date" variant={"outline"} className={cn("w-[300px] justify-start text-left font-normal", !individualDateRange && "text-muted-foreground")} >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {individualDateRange?.from ? (individualDateRange.to ? (<>{format(individualDateRange.from, "LLL dd, y")} - {format(individualDateRange.to, "LLL dd, y")}</>) : (format(individualDateRange.from, "LLL dd, y"))) : (<span>Escolha um período</span>)}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={individualDateRange?.from} selected={individualDateRange} onSelect={setIndividualDateRange} numberOfMonths={2}/></PopoverContent>
+                </Popover>
+                <Button onClick={generateIndividualReport} disabled={isLoadingIndividual || !selectedStudent}>
+                     {isLoadingIndividual ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Search className="mr-2 h-4 w-4"/>}
+                    Gerar Relatório Individual
+                </Button>
+                {individualReportData.length > 0 && (
+                     <div className="pt-4 space-y-2">
+                        <h3 className="font-semibold">{selectedStudent.nome} - Faltas: {individualReportData.length}</h3>
+                        <Button onClick={() => exportToPDF('individual', individualReportData, `Relatório de Faltas - ${selectedStudent.nome}`, [['Data', 'Status']], individualReportData.map(r => [format(new Date(r.date), 'dd/MM/yyyy', { locale: ptBR }), r.status]))} variant="outline"><Download className="mr-2 h-4 w-4"/>Exportar PDF</Button>
+                        <Table>
+                            <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                            <TableBody>{individualReportData.map(r => <TableRow key={r.id}><TableCell>{format(new Date(r.date + 'T00:00:00-03:00'), 'dd/MM/yyyy', { locale: ptBR })}</TableCell><TableCell>{r.status}</TableCell></TableRow>)}</TableBody>
+                        </Table>
+                    </div>
+                )}
             </CardContent>
         </Card>
     );
+
+    if (isLoadingStudentsOptions) {
+        return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    }
 
     return (
         <Tabs defaultValue="diario" className="w-full">
