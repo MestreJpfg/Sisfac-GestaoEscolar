@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, doc, getCountFromServer } from 'firebase/firestore';
+import { collection, query, doc, getCountFromServer, orderBy } from 'firebase/firestore';
 import { Loader2, Users, UserCog, Shield, Database, ClipboardList, BookCopy, Archive, MessageSquare, Megaphone, CalendarCheck } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
@@ -15,6 +15,8 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import AuthGuard from '@/components/auth-guard';
 import AppFooter from '@/components/app-footer';
+import StudentDistributionChart from '@/components/student-distribution-chart';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 
 export default function DashboardPage() {
@@ -38,13 +40,20 @@ export default function DashboardPage() {
   }, [userProfile, firestore]);
 
   const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
+  
+  // Query for all students, to be passed to the chart
+  const studentsQuery = useMemo(() => {
+      if (!firestore) return null;
+      return query(collection(firestore, 'alunos'), orderBy('nome'));
+  }, [firestore]);
+  const { data: allStudents, isLoading: isLoadingAllStudents } = useCollection(studentsQuery);
 
   const isPermissionsLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
 
   const hasPermission = (permission: string) => {
     if (isPermissionsLoading || !userProfile || !firestore) return false;
     
-    // This logic must stay in sync with the hasPermission function in firestore.rules
+    // This logic must stay in sync with the firestore.rules
     if (userProfile.profileId === 'Administrador' || userProfile.profileId === 'Administrador(a)') {
       return true;
     }
@@ -255,7 +264,23 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="mt-8">
-                    {/* Futuro espaço para mais componentes, como anúncios ou calendário */}
+                    {canViewStudents && (
+                         <Card>
+                             <CardHeader>
+                                <CardTitle>Distribuição de Alunos por Série</CardTitle>
+                                <CardDescription>Total de alunos em cada série registada.</CardDescription>
+                             </CardHeader>
+                             <CardContent className="pl-2">
+                                {isLoadingAllStudents ? (
+                                    <div className="flex h-[350px] w-full items-center justify-center">
+                                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                    </div>
+                                ) : (
+                                    <StudentDistributionChart students={allStudents || []} />
+                                )}
+                             </CardContent>
+                         </Card>
+                    )}
                 </div>
             </div>
             </main>
