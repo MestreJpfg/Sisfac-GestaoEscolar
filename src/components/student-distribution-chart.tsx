@@ -2,15 +2,21 @@
 'use client';
 
 import { useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { useTheme } from 'next-themes';
 
 interface StudentDistributionChartProps {
     students: any[];
 }
 
+// Extrai o número do início de uma string para ordenação (ex: "1º Ano" -> 1)
+const getSeriesNumber = (name: string): number => {
+    const match = name.match(/^(\d+)/);
+    return match ? parseInt(match[0], 10) : Infinity;
+};
+
 export default function StudentDistributionChart({ students }: StudentDistributionChartProps) {
-    const { theme } = useTheme();
+    const { resolvedTheme } = useTheme();
 
     const data = useMemo(() => {
         if (!students) return [];
@@ -27,21 +33,26 @@ export default function StudentDistributionChart({ students }: StudentDistributi
                 Alunos: seriesCount[serie],
             }))
             .sort((a, b) => {
-                // Tenta extrair um número do nome da série para uma ordenação mais natural
-                const matchA = a.name.match(/\d+/);
-                const matchB = b.name.match(/\d+/);
-                if (matchA && matchB) {
-                    return parseInt(matchA[0]) - parseInt(matchB[0]);
+                const numA = getSeriesNumber(a.name);
+                const numB = getSeriesNumber(b.name);
+                
+                if (numA !== Infinity && numB !== Infinity) {
+                    return numA - numB;
                 }
-                // Fallback para ordenação alfabética
-                return a.name.localeCompare(b.name);
+                return a.name.localeCompare(b.name, 'pt-BR');
             });
     }, [students]);
     
-    // Determine colors based on the current theme
-    const tickColor = theme === 'dark' ? '#a1a1aa' : '#71717a'; // zinc-400 / zinc-500
-    const barColor = theme === 'dark' ? 'hsl(var(--primary))' : 'hsl(var(--primary))';
+    // Cores do tema para o gráfico
+    const chartColors = [
+        'hsl(var(--chart-1))',
+        'hsl(var(--chart-2))',
+        'hsl(var(--chart-3))',
+        'hsl(var(--chart-4))',
+        'hsl(var(--chart-5))',
+    ];
 
+    const tickColor = resolvedTheme === 'dark' ? '#a1a1aa' : '#71717a'; // zinc-400 / zinc-500
 
     if (data.length === 0) {
         return (
@@ -54,7 +65,7 @@ export default function StudentDistributionChart({ students }: StudentDistributi
     return (
         <ResponsiveContainer width="100%" height={350}>
             <BarChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
+                <CartesianGrid strokeDasharray="3 3" strokeOpacity={resolvedTheme === 'dark' ? 0.1 : 0.2} />
                 <XAxis 
                     dataKey="name" 
                     stroke={tickColor}
@@ -68,18 +79,23 @@ export default function StudentDistributionChart({ students }: StudentDistributi
                     tickLine={false}
                     axisLine={false}
                     allowDecimals={false}
+                    width={30}
                 />
                 <Tooltip 
+                     cursor={{ fill: 'hsl(var(--accent))' }}
                      contentStyle={{
-                        backgroundColor: theme === 'dark' ? 'hsl(var(--background))' : 'white',
+                        backgroundColor: 'hsl(var(--background))',
                         borderColor: 'hsl(var(--border))',
                         borderRadius: 'var(--radius)',
+                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
                      }}
                 />
-                <Legend />
-                <Bar dataKey="Alunos" fill={barColor} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Alunos" radius={[4, 4, 0, 0]}>
+                    {data.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
+                    ))}
+                </Bar>
             </BarChart>
         </ResponsiveContainer>
     );
 }
-
