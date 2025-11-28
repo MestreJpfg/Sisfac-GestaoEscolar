@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, doc, getCountFromServer, orderBy } from 'firebase/firestore';
-import { Loader2, Users, UserCog, Shield, Database, ClipboardList, Megaphone, CalendarCheck, ArrowLeft } from 'lucide-react';
+import { Loader2, Users, UserCog, Shield, Database, ClipboardList, Megaphone, CalendarCheck, ArrowLeft, NotebookText } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -44,6 +44,7 @@ export default function DashboardPage() {
   
   const studentsQuery = useMemo(() => {
       if (!firestore) return null;
+      // Filtra alunos que não têm a propriedade 'serie' ou cujo valor é vazio/nulo
       return query(collection(firestore, 'alunos'), orderBy('nome'));
   }, [firestore]);
   const { data: allStudents, isLoading: isLoadingAllStudents } = useCollection(studentsQuery);
@@ -77,6 +78,7 @@ export default function DashboardPage() {
   const canManageAnnouncements = useMemo(() => hasPermission('manage:announcements'), [userProfile, profileDetails, isPermissionsLoading]);
   const canManageAttendance = useMemo(() => hasPermission('manage:attendance'), [userProfile, profileDetails, isPermissionsLoading]);
   const canManageDatabase = useMemo(() => hasPermission('manage:database'), [userProfile, profileDetails, isPermissionsLoading]);
+  const canManageGrades = useMemo(() => hasPermission('manage:grades'), [userProfile, profileDetails, isPermissionsLoading]);
 
 
   useEffect(() => {
@@ -200,6 +202,15 @@ export default function DashboardPage() {
                                 action={<Button onClick={() => router.push('/dashboard/attendance')}>Aceder</Button>}
                             />
                            )}
+                          {canManageGrades && (
+                            <StatCard
+                                title="Gestão de Notas"
+                                value={"Boletins"}
+                                icon={NotebookText}
+                                description="Lançar e gerir notas e boletins"
+                                action={<Button onClick={() => router.push('/dashboard/grades')}>Aceder</Button>}
+                            />
+                           )}
                           {canManageAnnouncements && (
                               <StatCard
                               title="Comunicados"
@@ -259,7 +270,7 @@ export default function DashboardPage() {
                                     {chartDrilldown ? `Detalhes de ${chartDrilldown}` : 'Distribuição de Alunos por Série'}
                                 </CardTitle>
                                 <CardDescription>
-                                    {chartDrilldown ? `Total de alunos por turma e turno (${allStudents?.filter(s => s.serie === chartDrilldown).length || 0} alunos).` : 'Clique duplo numa barra para ver os detalhes da série.'}
+                                    {chartDrilldown ? `Total de alunos por turma e turno (${(allStudents || []).filter(s => s.serie === chartDrilldown).length || 0} alunos).` : 'Clique duplo numa barra para ver os detalhes da série.'}
                                 </CardDescription>
                                 </div>
                                 {chartDrilldown && (
