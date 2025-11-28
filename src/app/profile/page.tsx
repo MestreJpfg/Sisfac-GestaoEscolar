@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useUser, useAuth, useFirestore, useStorage, useDoc, useMemoFirebase } from '@/firebase';
-import { updateProfile } from 'firebase/auth';
+import { updateProfile, signOut } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc } from 'firebase/firestore';
 import AuthGuard from '@/components/auth-guard';
@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Camera, ArrowLeft, Briefcase, Info, Phone } from 'lucide-react';
+import { Loader2, Camera, LogOut, Briefcase, Info, Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -148,6 +148,13 @@ export default function ProfilePage() {
             setPhotoPreview(URL.createObjectURL(file));
         }
     };
+    
+    const handleLogout = async () => {
+        if (auth) {
+            await signOut(auth);
+        }
+        router.push('/login');
+    };
 
     const onSubmit = async (data: ProfileFormValues) => {
         if (!user || !firestore) {
@@ -190,16 +197,15 @@ export default function ProfilePage() {
             if (newPhotoURL) {
                  userData.photoURL = newPhotoURL;
             }
-            // Use await here to ensure data is set before redirecting
+            
             await setDoc(userDocToUpdate, userData, { merge: true });
 
             toast({
                 title: 'Perfil Atualizado!',
-                description: 'As suas informações foram salvas com sucesso.',
+                description: 'As suas informações foram salvas com sucesso. Por favor, faça login novamente.',
             });
             
-            // Explicitly push to dashboard after saving.
-            router.push('/dashboard');
+            await handleLogout();
 
         } catch (error: any) {
             console.error("Erro ao atualizar perfil:", error);
@@ -399,14 +405,14 @@ export default function ProfilePage() {
 
                         <div className="flex justify-end gap-2">
                              {userProfile?.profileCompleted ? (
-                                <Button variant="outline" type="button" onClick={() => router.push('/dashboard')}>
-                                    <ArrowLeft className="mr-2 h-4 w-4"/> Voltar para a Dashboard
+                                <Button variant="outline" type="button" onClick={handleLogout}>
+                                    <LogOut className="mr-2 h-4 w-4"/> Sair
                                 </Button>
                              ) : (
                                 <p className="text-sm text-muted-foreground mr-auto">Por favor, complete o seu perfil para continuar.</p>
                              )}
                             <Button type="submit" disabled={isSaving}>
-                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (userProfile?.profileCompleted ? 'Salvar Alterações' : 'Salvar e Ir para a Dashboard')}
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Salvar e Sair'}
                             </Button>
                         </div>
                     </form>
