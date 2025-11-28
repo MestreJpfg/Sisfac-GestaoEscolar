@@ -111,13 +111,21 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
     const getUniqueValues = (key: string, data: any[]) => 
       [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
-    return {
-        ensinos: getUniqueValues('ensino', allStudents || []),
-        series: getUniqueValues('serie', allStudents || []),
-        classes: getUniqueValues('classe', allStudents || []),
-        turnos: getUniqueValues('turno', allStudents || []),
-    };
-  }, [allStudents]);
+    let filteredData = allStudents || [];
+    const ensinos = getUniqueValues('ensino', filteredData);
+
+    if (filters.ensino) filteredData = filteredData.filter(s => s.ensino === filters.ensino);
+    const series = getUniqueValues('serie', filteredData);
+
+    if (filters.serie) filteredData = filteredData.filter(s => s.serie === filters.serie);
+    const classes = getUniqueValues('classe', filteredData);
+    
+    if(filters.classe) filteredData = filteredData.filter(s => s.classe === filters.classe);
+    const turnos = getUniqueValues('turno', filteredData);
+
+    return { ensinos, series, classes, turnos };
+  }, [allStudents, filters]);
+
 
   const handleSort = (key: string) => {
     setSortConfig(prevConfig => ({
@@ -127,7 +135,23 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
   };
 
   const handleFilterChange = (name: string, value: string | boolean) => {
-    setFilters(prev => ({ ...prev, [name]: typeof value === 'string' && value === 'all' ? '' : value }));
+    const newValue = typeof value === 'string' && value === 'all' ? '' : value;
+    
+    setFilters(prev => {
+        const newFilters = { ...prev, [name]: newValue };
+        // Reset dependent filters when a parent filter changes
+        if (name === 'ensino') {
+            newFilters.serie = '';
+            newFilters.classe = '';
+            newFilters.turno = '';
+        } else if (name === 'serie') {
+            newFilters.classe = '';
+            newFilters.turno = '';
+        } else if (name === 'classe') {
+            newFilters.turno = '';
+        }
+        return newFilters;
+    });
   };
 
   const clearFilters = () => {
@@ -190,7 +214,7 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
                       {uniqueFilterOptions.ensinos.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Select value={filters.serie || ''} onValueChange={(value) => handleFilterChange('serie', value)}>
+                  <Select value={filters.serie || ''} onValueChange={(value) => handleFilterChange('serie', value)} disabled={!filters.ensino}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filtrar por série..." />
                     </SelectTrigger>
@@ -200,7 +224,7 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
                       <SelectItem value="N/A">Não Definida</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Select value={filters.classe || ''} onValueChange={(value) => handleFilterChange('classe', value)}>
+                  <Select value={filters.classe || ''} onValueChange={(value) => handleFilterChange('classe', value)} disabled={!filters.serie}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filtrar por classe..." />
                     </SelectTrigger>
@@ -209,7 +233,7 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
                       {uniqueFilterOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Select value={filters.turno || ''} onValueChange={(value) => handleFilterChange('turno', value)}>
+                  <Select value={filters.turno || ''} onValueChange={(value) => handleFilterChange('turno', value)} disabled={!filters.classe}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filtrar por turno..." />
                     </SelectTrigger>

@@ -11,7 +11,7 @@ import { Button } from './ui/button';
 import { UserNav } from './user-nav';
 import AppFooter from './app-footer';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, limit } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import FileUploaderSheet from './file-uploader-sheet';
 
@@ -19,11 +19,11 @@ export default function StudentManager() {
   const firestore = useFirestore();
   const router = useRouter();
 
-  // This query is now just for populating filter dropdowns.
-  // It should be lightweight. We limit it to a reasonable number to avoid fetching everything.
+  // This query is for populating filter dropdowns.
+  // It needs all students to create accurate cascaded filters.
   const studentsOptionsQuery = useMemo(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'alunos'), limit(100)); // Fetch a sample for filter options
+    return query(collection(firestore, 'alunos'), orderBy('nome'));
   }, [firestore]);
 
   const { data: allStudents, isLoading: isDataLoading } = useCollection(studentsOptionsQuery);
@@ -63,7 +63,7 @@ export default function StudentManager() {
               {isDataLoading && !dataExists ? (
                 <div className="flex flex-col items-center justify-center h-96 rounded-lg border-2 border-dashed border-border bg-card/50">
                   <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                  <p className="mt-4 text-muted-foreground">A carregar opções de filtro...</p>
+                  <p className="mt-4 text-muted-foreground">A carregar dados dos alunos...</p>
                 </div>
               ) : dataExists ? (
                 <StudentDataView allStudents={allStudents || []} />
