@@ -13,6 +13,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, getYear, getMonth 
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { cn } from '@/lib/utils';
 
 interface ReportFilters {
     ensino: string;
