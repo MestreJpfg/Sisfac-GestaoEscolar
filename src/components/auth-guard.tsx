@@ -37,7 +37,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   // If loading is finished and there's no user, we are about to redirect,
-  // so render the loader to avoid a flash of content.
+  // so render the loader to avoid a flash of content from the children.
   return (
     <div className="flex h-screen w-full items-center justify-center">
       <Loader2 className="h-12 w-12 animate-spin text-primary" />
