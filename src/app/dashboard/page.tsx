@@ -271,7 +271,7 @@ export default function DashboardPage() {
                                       {chartDrilldown ? `Detalhes de ${chartDrilldown}` : 'Distribuição de Alunos por Série'}
                                     </CardTitle>
                                     <CardDescription>
-                                        {chartDrilldown ? 'Total de alunos por turma e turno.' : 'Total de alunos em cada série registada.'}
+                                        {chartDrilldown ? 'Total de alunos por turma e turno.' : 'Clique duplo numa barra para ver os detalhes da série.'}
                                     </CardDescription>
                                   </div>
                                   {chartDrilldown && (
@@ -290,7 +290,8 @@ export default function DashboardPage() {
                                 ) : (
                                     <StudentDistributionChart 
                                       students={allStudents || []}
-                                      onDrilldown={setChartDrilldown} 
+                                      onDrilldown={setChartDrilldown}
+                                      drilledSerie={chartDrilldown}
                                     />
                                 )}
                              </CardContent>

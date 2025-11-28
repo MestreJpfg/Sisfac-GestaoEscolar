@@ -1,13 +1,14 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { useTheme } from 'next-themes';
 
 interface StudentDistributionChartProps {
     students: any[];
     onDrilldown: (serie: string | null) => void;
+    drilledSerie: string | null;
 }
 
 const getSeriesNumber = (name: string): number => {
@@ -15,28 +16,18 @@ const getSeriesNumber = (name: string): number => {
     return match ? parseInt(match[0], 10) : Infinity;
 };
 
-export default function StudentDistributionChart({ students, onDrilldown }: StudentDistributionChartProps) {
+export default function StudentDistributionChart({ students, onDrilldown, drilledSerie }: StudentDistributionChartProps) {
     const { resolvedTheme } = useTheme();
-    const [drilledSerie, setDrilledSerie] = useState<string | null>(null);
 
     const handleBarClick = (payload: any) => {
         if (payload && payload.activePayload && payload.activePayload[0]) {
             const serieName = payload.activePayload[0].payload.name;
-            setDrilledSerie(serieName);
-            onDrilldown(serieName);
+            // Apenas permite drilldown se não estivermos já numa visão detalhada
+            if (!drilledSerie) {
+                onDrilldown(serieName);
+            }
         }
     };
-    
-    // Hook to go back to overview when onDrilldown prop becomes null
-    useMemo(() => {
-        if (drilledSerie !== null) {
-            onDrilldown(drilledSerie);
-        }
-        if (drilledSerie === null) {
-             onDrilldown(null);
-        }
-    }, [drilledSerie, onDrilldown]);
-
 
     const data = useMemo(() => {
         if (!students) return [];
@@ -102,7 +93,7 @@ export default function StudentDistributionChart({ students, onDrilldown }: Stud
         <ResponsiveContainer width="100%" height={350}>
             <BarChart 
                 data={data}
-                onDoubleClick={!drilledSerie ? handleBarClick : undefined}
+                onClick={handleBarClick}
             >
                 <CartesianGrid strokeDasharray="3 3" strokeOpacity={resolvedTheme === 'dark' ? 0.1 : 0.2} />
                 <XAxis 
