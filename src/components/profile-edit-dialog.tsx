@@ -31,15 +31,22 @@ interface ProfileEditDialogProps {
 }
 
 const allPermissions = [
-    { id: 'manage:database', label: 'Gerir Base de Dados' },
-    { id: 'manage:students', label: 'Gerir Alunos' },
     { id: 'view:students', label: 'Visualizar Alunos' },
-    { id: 'manage:users', label: 'Gerir Utilizadores' },
-    { id: 'manage:grades', label: 'Gerir Notas' },
-    { id: 'manage:attendance', label: 'Gerir Frequência' },
-    { id: 'manage:announcements', label: 'Gerir Anúncios' },
+    { id: 'manage:students', label: 'Gerir Alunos (Criar, Editar, Apagar)' },
+    { id: 'view:users', label: 'Visualizar Utilizadores' },
+    { id: 'manage:users', label: 'Gerir Utilizadores (Criar, Editar, Apagar)' },
+    { id: 'view:profiles', label: 'Visualizar Perfis e Permissões' },
     { id: 'manage:profiles', label: 'Gerir Perfis e Permissões' },
+    { id: 'view:grades', label: 'Visualizar Notas e Boletins' },
+    { id: 'manage:grades', label: 'Gerir Notas (Lançar, Editar)' },
+    { id: 'view:attendance', label: 'Visualizar Frequência' },
+    { id: 'manage:attendance', label: 'Gerir Frequência (Lançar, Editar)' },
+    { id: 'view:announcements', label: 'Visualizar Comunicados' },
+    { id: 'manage:announcements', label: 'Gerir Comunicados (Criar, Editar, Apagar)' },
+    { id: 'view:database', label: 'Visualizar Ferramentas de Base de Dados' },
+    { id: 'manage:database', label: 'Gerir Base de Dados (Importar, Exportar, Apagar)' },
 ];
+
 
 export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: ProfileEditDialogProps) {
   const { toast } = useToast();

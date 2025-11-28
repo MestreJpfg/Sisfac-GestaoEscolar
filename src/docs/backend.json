@@ -85,14 +85,20 @@
           "items": {
             "type": "string",
             "enum": [
-                "manage:database",
-                "manage:students",
                 "view:students",
+                "manage:students",
+                "view:users",
                 "manage:users",
+                "view:profiles",
+                "manage:profiles",
+                "view:grades",
                 "manage:grades",
+                "view:attendance",
                 "manage:attendance",
+                "view:announcements",
                 "manage:announcements",
-                "manage:profiles"
+                "view:database",
+                "manage:database"
             ]
           },
           "description": "A list of permission keys granted to this profile."

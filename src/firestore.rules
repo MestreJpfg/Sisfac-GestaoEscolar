@@ -43,7 +43,6 @@ service cloud.firestore {
       let profilePath = /databases/$(database)/documents/profiles/$(userData.profileId);
       if (exists(profilePath)) {
         let profileData = get(profilePath).data;
-        // CORRECT WAY TO CHECK IF A VALUE EXISTS IN AN ARRAY
         if ('permissions' in profileData && permission in profileData.permissions.toSet()) {
           return true;
         }
@@ -54,53 +53,34 @@ service cloud.firestore {
 
     // --- Collection Rules ---
 
-    // Users can update their own data.
-    // Any authenticated user can READ another user's profile (needed for `hasPermission`).
     match /users/{userId} {
-      allow read, list: if isSignedIn();
+      allow read, list: if hasPermission('view:users') || hasPermission('manage:users');
       allow create, update: if isOwner(userId) || hasPermission('manage:users');
       allow delete: if hasPermission('manage:users');
     }
     
-    // All authenticated users can read/list profiles.
-    // Only admins can write.
     match /profiles/{profileId} {
-        allow read, list: if isSignedIn();
-        allow write: if hasPermission('manage:cadastros');
+        allow read, list: if hasPermission('view:profiles') || hasPermission('manage:profiles');
+        allow write: if hasPermission('manage:profiles');
     }
 
-    // Permissions for students.
     match /alunos/{alunoId} {
       allow read, list: if hasPermission('view:students') || hasPermission('manage:students');
       allow write: if hasPermission('manage:students');
     }
-    
-    // Permissions for employees.
-    match /funcionarios/{funcionarioId} {
-      allow read, list, write: if hasPermission('manage:cadastros');
-    }
 
-    // Permissions for disciplines.
-    match /disciplinas/{disciplinaId} {
-       allow read, list: if isSignedIn();
-       allow write: if hasPermission('manage:cadastros');
-    }
-
-    // Permissions for grades.
     match /grades/{gradeId} {
-       allow read: if isSignedIn();
+       allow read, list: if hasPermission('view:grades') || hasPermission('manage:grades');
        allow write: if hasPermission('manage:grades');
     }
 
-    // Permissions for attendance.
     match /attendance/{attendanceId} {
-       allow read: if isSignedIn();
+       allow read, list: if hasPermission('view:attendance') || hasPermission('manage:attendance');
        allow write: if hasPermission('manage:attendance');
     }
     
-    // Permissions for announcements.
     match /announcements/{announcementId} {
-      allow read, list: if isSignedIn();
+      allow read, list: if hasPermission('view:announcements') || hasPermission('manage:announcements');
       allow write: if hasPermission('manage:announcements');
     }
   }
