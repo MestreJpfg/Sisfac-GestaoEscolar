@@ -35,7 +35,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name', direction: 'ascending' });
   const debouncedSearch = useDebounce(filters.search, 400);
 
-  const fetchUsers = useCallback(async ({ pageParam = null }: { pageParam?: any | null }) => {
+  const fetchUsers = useCallback(async ({ pageParam = null }: { pageParam?: DocumentData | null }) => {
     if (!firestore) return { data: [], lastDoc: null };
 
     const usersCollection = collection(firestore, 'users');
@@ -50,26 +50,24 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
         usersCollection,
         where('profileId', '==', filters.profileId),
         orderBy(orderByKey, orderDirection),
-        orderBy('uid', orderDirection) // Secondary sort for stable pagination
       );
     } else {
       q = query(
         usersCollection,
         orderBy(orderByKey, orderDirection),
-        orderBy('uid', orderDirection) // Secondary sort for stable pagination
       );
+    }
+    
+    // Apply pagination cursor if it exists
+    if (pageParam) {
+      q = query(q, startAfter(pageParam));
     }
     
     q = query(q, limit(USERS_PER_PAGE));
 
-    // Apply pagination cursor if it exists
-    if (pageParam) {
-      q = query(q, startAfter(pageParam[orderByKey], pageParam.uid));
-    }
-    
     const snapshot = await getDocs(q);
     const usersData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, uid: doc.id }));
-    const lastDoc = snapshot.docs[snapshot.docs.length - 1];
+    const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
 
     return { data: usersData, lastDoc };
 }, [firestore, filters.profileId, sortConfig]);
@@ -87,8 +85,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       queryFn: fetchUsers,
       initialPageParam: null,
       getNextPageParam: (lastPage) => {
-        // Pass the actual last document's data for the cursor
-        return lastPage.lastDoc ? lastPage.lastDoc.data() : undefined;
+        return lastPage.lastDoc;
       },
   });
 
@@ -185,13 +182,13 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 <p className="mt-4 text-muted-foreground">A carregar utilizadores...</p>
             </div>
-        ) : filteredAndSortedUsers.length === 0 && (filters.search || filters.profileId) ? (
-            <Card>
+        ) : filteredAndSortedUsers.length === 0 ? (
+             <Card>
                 <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
                     <Search className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum Utilizador Encontrado</h3>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Tente refinar os seus filtros de busca.
+                        Tente refinar os seus filtros de busca ou verifique se existem utilizadores no sistema.
                     </p>
                 </CardContent>
             </Card>
