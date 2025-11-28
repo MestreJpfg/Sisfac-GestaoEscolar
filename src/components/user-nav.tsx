@@ -48,12 +48,33 @@ export function UserNav() {
   };
 
   const isPermissionsLoading = isProfileLoading || isProfileDetailsLoading;
-  const isAdmin = useMemo(() => !isPermissionsLoading && userProfile?.profileId === 'Administrador', [isPermissionsLoading, userProfile]);
+  
+  const hasPermission = (permission: string) => {
+    if (isPermissionsLoading || !userProfile || !firestore) return false;
+    
+    if (userProfile.profileId === 'Administrador' || userProfile.profileId === 'Administrador(a)') {
+      return true;
+    }
+    
+    if (permission.startsWith('view:')) {
+        const managePermission = permission.replace('view:', 'manage:');
+        if (profileDetails?.permissions?.includes(managePermission) || userProfile.customPermissions?.includes(managePermission)) {
+            return true;
+        }
+    }
+    
+    if (profileDetails?.permissions?.includes(permission)) {
+      return true;
+    }
+    
+    if (userProfile.customPermissions?.includes(permission)) {
+      return true;
+    }
 
-  const canManageUsers = useMemo(() => {
-    if (isPermissionsLoading) return false;
-    return isAdmin || profileDetails?.permissions?.includes('manage:users') || userProfile?.customPermissions?.includes('manage:users');
-  }, [isPermissionsLoading, profileDetails, userProfile, isAdmin]);
+    return false;
+  };
+  
+  const canManageUsers = useMemo(() => hasPermission('manage:users'), [userProfile, profileDetails, isPermissionsLoading]);
 
   if (!user) {
     return null;
