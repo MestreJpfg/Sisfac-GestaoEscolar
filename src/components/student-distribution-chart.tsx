@@ -57,11 +57,13 @@ export default function StudentDistributionChart({ students, onDrilldown, drille
                 .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 
         } else {
-             const seriesCount = students.reduce((acc, student) => {
-                const serie = student.serie || 'Não definida';
-                acc[serie] = (acc[serie] || 0) + 1;
-                return acc;
-            }, {} as { [key: string]: number });
+             const seriesCount = students
+                .filter(student => student.serie) // Filtra alunos sem série definida
+                .reduce((acc, student) => {
+                    const serie = student.serie;
+                    acc[serie] = (acc[serie] || 0) + 1;
+                    return acc;
+                }, {} as { [key: string]: number });
 
             return Object.keys(seriesCount)
                 .map(serie => ({
