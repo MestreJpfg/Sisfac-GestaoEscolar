@@ -41,20 +41,18 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
     const usersCollection = collection(firestore, 'users');
     let q: Query<DocumentData, DocumentData>;
 
-    const orderByKey = sortConfig.key;
-    const orderDirection = sortConfig.direction;
-
-    // Base query with filtering and ordering
+    // Base query is now simpler. We always order by 'name' for consistent pagination.
+    // The dynamic sorting will happen on the client side.
     if (filters.profileId && filters.profileId !== 'all') {
       q = query(
         usersCollection,
         where('profileId', '==', filters.profileId),
-        orderBy(orderByKey, orderDirection),
+        orderBy('name', 'asc') // Consistent ordering for pagination
       );
     } else {
       q = query(
         usersCollection,
-        orderBy(orderByKey, orderDirection),
+        orderBy('name', 'asc') // Consistent ordering for pagination
       );
     }
     
@@ -70,7 +68,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
     const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
 
     return { data: usersData, lastDoc };
-}, [firestore, filters.profileId, sortConfig]);
+}, [firestore, filters.profileId]);
 
 
   const {
@@ -81,7 +79,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       isFetchingNextPage,
       error,
   } = useInfiniteQuery({
-      queryKey: ['users', filters, sortConfig],
+      queryKey: ['users', filters.profileId], // Query key depends only on the profile filter
       queryFn: fetchUsers,
       initialPageParam: null,
       getNextPageParam: (lastPage) => {
@@ -92,17 +90,30 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
   const allUsers = useMemo(() => data?.pages.flatMap(page => page.data) ?? [], [data]);
 
   const filteredAndSortedUsers = useMemo(() => {
-    let filtered = allUsers;
+    let processedUsers = [...allUsers];
     const searchLower = debouncedSearch.toLowerCase().trim();
 
-    if (searchLower.length > 0) { // Allow search even with 1 or 2 characters now
-      filtered = filtered.filter(user => 
+    // 1. Filter by search term (client-side)
+    if (searchLower.length > 0) {
+      processedUsers = processedUsers.filter(user => 
         (user.name?.toLowerCase().includes(searchLower) || user.email?.toLowerCase().includes(searchLower))
       );
     }
+
+    // 2. Sort the data (client-side)
+    if (sortConfig.key) {
+        processedUsers.sort((a, b) => {
+            const aValue = a[sortConfig.key] || '';
+            const bValue = b[sortConfig.key] || '';
+
+            if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+            return 0;
+        });
+    }
     
-    return filtered;
-  }, [allUsers, debouncedSearch]);
+    return processedUsers;
+  }, [allUsers, debouncedSearch, sortConfig]);
 
 
   const handleFilterChange = (name: string, value: string) => {
@@ -174,21 +185,21 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       </Card>
       
         <div className="text-sm text-muted-foreground h-5">
-           {filteredAndSortedUsers.length > 0 && `A exibir ${filteredAndSortedUsers.length} utilizador(es).`}
+           {filteredAndSortedUsers.length > 0 && `A exibir ${filteredAndSortedUsers.length} de ${allUsers.length} utilizador(es) carregados.`}
         </div>
 
         {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 <p className="mt-4 text-muted-foreground">A carregar utilizadores...</p>
-            </div>
-        ) : filteredAndSortedUsers.length === 0 ? (
+            </div>>
+        ) : allUsers.length === 0 ? (
              <Card>
                 <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
                     <Search className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum Utilizador Encontrado</h3>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Tente refinar os seus filtros de busca ou verifique se existem utilizadores no sistema.
+                        Não existem utilizadores para o filtro selecionado.
                     </p>
                 </CardContent>
             </Card>
