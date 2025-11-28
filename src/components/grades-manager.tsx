@@ -42,7 +42,7 @@ export default function GradesManager() {
     
     // Derived unique options for filters
     const uniqueFilterOptions = useMemo(() => {
-        if (!allStudents) return { ensinos: [], series: [], classes: [], turnos: [] };
+        if (!allStudents) return { ensinos: [], series: [], classes: [], turnos: [], disciplines: [] };
         
         const getUniqueValues = (key: string, data: any[]) =>
             [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
@@ -58,12 +58,16 @@ export default function GradesManager() {
         
         if(filters.classe) filteredForOptions = filteredForOptions.filter(s => s.classe === filters.classe);
         const turnos = getUniqueValues('turno', filteredForOptions);
+
+        const disciplines = [...new Set(allStudents.flatMap(s => s.boletim ? Object.keys(s.boletim) : []))]
+            .map(d => d.replace(/_/g, ' ').replace(/-/g, '/'))
+            .sort((a, b) => a.localeCompare(b));
         
-        return { ensinos, series, classes, turnos };
+        return { ensinos, series, classes, turnos, disciplines };
     }, [allStudents, filters]);
     
     const isReadyToLoad = useMemo(() => {
-        return filters.ensino && filters.serie && filters.classe && filters.turno && selectedDiscipline.trim() && selectedEtapa;
+        return filters.ensino && filters.serie && filters.classe && filters.turno && selectedDiscipline && selectedEtapa;
     }, [filters, selectedDiscipline, selectedEtapa]);
 
     // Query for students in the selected class
@@ -83,7 +87,7 @@ export default function GradesManager() {
     }, [selectedDiscipline]);
 
     useEffect(() => {
-        if (studentsInClass && disciplineId) {
+        if (studentsInClass && disciplineId && selectedEtapa) {
             const newGrades: Grades = {};
             studentsInClass.forEach(student => {
                 const grade = student.boletim?.[disciplineId]?.[selectedEtapa];
@@ -157,6 +161,7 @@ export default function GradesManager() {
     };
     
     const calculateAverage = (student: any): string => {
+        if (!disciplineId) return '-';
         const boletim = student.boletim;
         if (!boletim || !boletim[disciplineId]) return '-';
         
@@ -204,12 +209,14 @@ export default function GradesManager() {
                                 <SelectTrigger><SelectValue placeholder="Turno..." /></SelectTrigger>
                                 <SelectContent>{uniqueFilterOptions.turnos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                             </Select>
-                            <Input 
-                                value={selectedDiscipline}
-                                onChange={(e) => setSelectedDiscipline(e.target.value)}
-                                placeholder="Nome da Disciplina"
-                                disabled={!filters.turno}
-                            />
+                             <Select value={selectedDiscipline} onValueChange={setSelectedDiscipline} disabled={!filters.turno}>
+                                <SelectTrigger><SelectValue placeholder="Disciplina..." /></SelectTrigger>
+                                <SelectContent>
+                                    {uniqueFilterOptions.disciplines.map(d => 
+                                        <SelectItem key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</SelectItem>
+                                    )}
+                                </SelectContent>
+                            </Select>
                              <Select value={selectedEtapa} onValueChange={setSelectedEtapa} disabled={!selectedDiscipline}>
                                 <SelectTrigger><SelectValue placeholder="Etapa..." /></SelectTrigger>
                                 <SelectContent>
@@ -296,4 +303,5 @@ export default function GradesManager() {
             )}
         </div>
     );
-}
+
+    
