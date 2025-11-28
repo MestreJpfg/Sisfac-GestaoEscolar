@@ -86,46 +86,54 @@ export default function MonthlyAttendanceReport() {
     }, [selectedYear, selectedMonth]);
 
     const generateReport = async () => {
-        if (!firestore || !filters.ensino || !filters.serie || !filters.classe || !filters.turno) {
-            toast({ variant: 'destructive', title: 'Filtros incompletos', description: 'Por favor, selecione uma turma completa.' });
+        if (!firestore || !allStudents) {
+            toast({ variant: 'destructive', title: 'Dados não carregados', description: 'Aguarde o carregamento dos dados dos alunos.' });
+            return;
+        }
+        if (!filters.ensino && !filters.serie && !filters.classe && !filters.turno) {
+            toast({ variant: 'destructive', title: 'Filtros incompletos', description: 'Por favor, selecione pelo menos um filtro.' });
             return;
         }
         setIsLoading(true);
         setReportData([]);
 
-        const classId = `${filters.ensino}-${filters.serie}-${filters.classe}-${filters.turno}`.replace(/\s+/g, '_');
-        const startDate = format(startOfMonth(new Date(selectedYear, selectedMonth)), 'yyyy-MM-dd');
-        const endDate = format(endOfMonth(new Date(selectedYear, selectedMonth)), 'yyyy-MM-dd');
-
-        const studentsInClass = allStudents?.filter(s => 
-            s.ensino === filters.ensino &&
-            s.serie === filters.serie &&
-            s.classe === filters.classe &&
-            s.turno === filters.turno
+        const studentsInClass = allStudents.filter(s => 
+            (!filters.ensino || s.ensino === filters.ensino) &&
+            (!filters.serie || s.serie === filters.serie) &&
+            (!filters.classe || s.classe === filters.classe) &&
+            (!filters.turno || s.turno === filters.turno)
         ).sort((a, b) => a.nome.localeCompare(b.nome));
 
-        if (!studentsInClass || studentsInClass.length === 0) {
-            toast({ title: 'Nenhum aluno encontrado', description: 'Não há alunos nesta turma.' });
+        if (studentsInClass.length === 0) {
+            toast({ title: 'Nenhum aluno encontrado', description: 'Não há alunos que correspondam aos filtros selecionados.' });
             setIsLoading(false);
             return;
         }
-
-        const q = query(
-            collection(firestore, 'attendance'),
-            where('classId', '==', classId),
-            where('date', '>=', startDate),
-            where('date', '<=', endDate)
-        );
-
-        const snapshot = await getDocs(q);
+        
+        const studentIds = studentsInClass.map(s => s.id);
+        const startDate = format(startOfMonth(new Date(selectedYear, selectedMonth)), 'yyyy-MM-dd');
+        const endDate = format(endOfMonth(new Date(selectedYear, selectedMonth)), 'yyyy-MM-dd');
         const attendanceByStudent: { [studentId: string]: { [date: string]: 'F' | 'J' } } = {};
-        snapshot.docs.forEach(doc => {
-            const record = doc.data();
-            if (!attendanceByStudent[record.studentId]) {
-                attendanceByStudent[record.studentId] = {};
-            }
-            attendanceByStudent[record.studentId][record.date] = record.status === 'Ausente' ? 'F' : 'J';
-        });
+
+        // Firestore 'in' query has a limit of 30 items. We need to chunk the requests.
+        const chunkSize = 30;
+        for (let i = 0; i < studentIds.length; i += chunkSize) {
+            const chunk = studentIds.slice(i, i + chunkSize);
+            const q = query(
+                collection(firestore, 'attendance'),
+                where('studentId', 'in', chunk),
+                where('date', '>=', startDate),
+                where('date', '<=', endDate)
+            );
+            const snapshot = await getDocs(q);
+            snapshot.docs.forEach(doc => {
+                const record = doc.data();
+                if (!attendanceByStudent[record.studentId]) {
+                    attendanceByStudent[record.studentId] = {};
+                }
+                attendanceByStudent[record.studentId][record.date] = record.status === 'Ausente' ? 'F' : 'J';
+            });
+        }
 
         const newReportData = studentsInClass.map(student => {
             const studentAbsences = attendanceByStudent[student.id] || {};
@@ -152,13 +160,13 @@ export default function MonthlyAttendanceReport() {
         setReportData(newReportData);
         setIsLoading(false);
         if (newReportData.every(r => Object.keys(r.absences).length === 0)) {
-            toast({ title: 'Nenhuma falta registada', description: 'Não há faltas para esta turma no mês selecionado.' });
+            toast({ title: 'Nenhuma falta registada', description: 'Não há faltas para esta seleção no mês selecionado.' });
         }
     };
     
     const exportMonthlyPDF = () => {
         const doc = new jsPDF({ orientation: 'landscape' });
-        const title = `Relatório Mensal de Faltas - ${filters.serie} ${filters.classe}`;
+        const title = `Relatório Mensal de Faltas - ${filters.serie || filters.ensino || ''}`;
         const subtitle = `${format(new Date(selectedYear, selectedMonth), 'MMMM yyyy', { locale: ptBR })}`;
 
         doc.setFontSize(16);
@@ -203,7 +211,7 @@ export default function MonthlyAttendanceReport() {
             }
         });
 
-        doc.save(`Relatorio_Mensal_${filters.serie}_${filters.classe}.pdf`);
+        doc.save(`Relatorio_Mensal_${filters.serie || filters.ensino || 'geral'}.pdf`);
     };
 
     return (

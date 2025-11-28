@@ -13,7 +13,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DateRange } from 'react-day-picker';
 import { Calendar as CalendarIcon, Loader2, Search, User, FileText, Download } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -101,32 +101,57 @@ export default function AttendanceReports() {
     };
 
     const generateDailyReport = async () => {
-        if (!firestore || !dailyDate || !dailyFilters.ensino || !dailyFilters.serie || !dailyFilters.classe || !dailyFilters.turno) {
-            toast({ variant: 'destructive', title: 'Filtros incompletos', description: 'Por favor, selecione uma turma completa e uma data.' });
+        if (!firestore || !dailyDate || !allStudents) {
+            toast({ variant: 'destructive', title: 'Dados não carregados', description: 'Aguarde o carregamento dos dados dos alunos.' });
             return;
         }
+        if (!dailyFilters.ensino && !dailyFilters.serie && !dailyFilters.classe && !dailyFilters.turno) {
+            toast({ variant: 'destructive', title: 'Filtros incompletos', description: 'Por favor, selecione pelo menos um filtro.' });
+            return;
+        }
+
         setIsLoadingDaily(true);
         setDailyReportData([]);
 
-        const classId = `${dailyFilters.ensino}-${dailyFilters.serie}-${dailyFilters.classe}-${dailyFilters.turno}`.replace(/\s+/g, '_');
+        let studentsToQuery = allStudents.filter(s => {
+            return (!dailyFilters.ensino || s.ensino === dailyFilters.ensino) &&
+                   (!dailyFilters.serie || s.serie === dailyFilters.serie) &&
+                   (!dailyFilters.classe || s.classe === dailyFilters.classe) &&
+                   (!dailyFilters.turno || s.turno === dailyFilters.turno);
+        });
+
+        if (studentsToQuery.length === 0) {
+            toast({ title: 'Nenhum aluno encontrado', description: 'Não há alunos que correspondam aos filtros selecionados.' });
+            setIsLoadingDaily(false);
+            return;
+        }
+
+        const studentIds = studentsToQuery.map(s => s.id);
         const formattedDate = format(dailyDate, 'yyyy-MM-dd');
+        const records: AttendanceRecord[] = [];
 
-        const q = query(
-            collection(firestore, 'attendance'),
-            where('classId', '==', classId),
-            where('date', '==', formattedDate)
-        );
-
-        const snapshot = await getDocs(q);
-        const records = snapshot.docs.map(doc => {
-            const data = doc.data() as AttendanceRecord;
-            return { ...data, studentName: studentMap.get(data.studentId) || 'Aluno não encontrado' };
-        }).sort((a, b) => a.studentName!.localeCompare(b.studentName!));
+        // Firestore 'in' query has a limit of 30 items. We need to chunk the requests.
+        const chunkSize = 30;
+        for (let i = 0; i < studentIds.length; i += chunkSize) {
+            const chunk = studentIds.slice(i, i + chunkSize);
+            const q = query(
+                collection(firestore, 'attendance'),
+                where('studentId', 'in', chunk),
+                where('date', '==', formattedDate)
+            );
+            const snapshot = await getDocs(q);
+            snapshot.forEach(doc => {
+                const data = doc.data() as AttendanceRecord;
+                records.push({ ...data, studentName: studentMap.get(data.studentId) || 'Aluno não encontrado' });
+            });
+        }
+        
+        records.sort((a, b) => a.studentName!.localeCompare(b.studentName!));
 
         setDailyReportData(records);
         setIsLoadingDaily(false);
         if (records.length === 0) {
-            toast({ title: 'Nenhum registo encontrado', description: 'Não há faltas ou justificativas para esta turma nesta data.' });
+            toast({ title: 'Nenhum registo encontrado', description: 'Não há faltas ou justificativas para esta seleção nesta data.' });
         }
     };
 
@@ -190,7 +215,7 @@ export default function AttendanceReports() {
         <Card>
             <CardHeader>
                 <CardTitle>Relatório Diário de Faltas</CardTitle>
-                <CardDescription>Selecione uma turma e uma data para ver os alunos ausentes ou com falta justificada.</CardDescription>
+                <CardDescription>Selecione os filtros e uma data para ver os alunos ausentes ou com falta justificada.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
