@@ -40,13 +40,6 @@ export default function GradesManager() {
     }, [firestore]);
     const { data: allStudents, isLoading: isLoadingOptions } = useCollection(studentsOptionsQuery);
     
-    // Query for disciplines
-    const disciplinesQuery = useMemo(() => {
-        if(!firestore) return null;
-        return query(collection(firestore, 'disciplinas'), orderBy('nome'));
-    }, [firestore]);
-    const { data: allDisciplines, isLoading: isLoadingDisciplines } = useCollection(disciplinesQuery);
-
     // Derived unique options for filters
     const uniqueFilterOptions = useMemo(() => {
         if (!allStudents) return { ensinos: [], series: [], classes: [], turnos: [] };
@@ -70,7 +63,7 @@ export default function GradesManager() {
     }, [allStudents, filters]);
     
     const isReadyToLoad = useMemo(() => {
-        return filters.ensino && filters.serie && filters.classe && filters.turno && selectedDiscipline && selectedEtapa;
+        return filters.ensino && filters.serie && filters.classe && filters.turno && selectedDiscipline.trim() && selectedEtapa;
     }, [filters, selectedDiscipline, selectedEtapa]);
 
     // Query for students in the selected class
@@ -85,18 +78,22 @@ export default function GradesManager() {
     }, [firestore, isReadyToLoad, filters]);
     const { data: studentsInClass, isLoading: isLoadingStudents } = useCollection(studentsInClassQuery);
 
+    const disciplineId = useMemo(() => {
+        return selectedDiscipline.trim().replace(/\s+/g, '_').toLowerCase();
+    }, [selectedDiscipline]);
+
     useEffect(() => {
-        if (studentsInClass) {
+        if (studentsInClass && disciplineId) {
             const newGrades: Grades = {};
             studentsInClass.forEach(student => {
-                const grade = student.boletim?.[selectedDiscipline]?.[selectedEtapa];
+                const grade = student.boletim?.[disciplineId]?.[selectedEtapa];
                 newGrades[student.id] = grade === undefined ? null : grade;
             });
             setGrades(newGrades);
         } else {
             setGrades({});
         }
-    }, [studentsInClass, selectedDiscipline, selectedEtapa]);
+    }, [studentsInClass, disciplineId, selectedEtapa]);
 
     const handleFilterChange = (name: string, value: string) => {
         const newValue = value === 'all' ? '' : value;
@@ -107,8 +104,8 @@ export default function GradesManager() {
             else if (name === 'classe') { newFilters.turno = ''; }
             return newFilters;
         });
-        setSelectedDiscipline(''); // Reset discipline when class changes
-        setSelectedEtapa(''); // Reset etapa when class changes
+        setSelectedDiscipline('');
+        setSelectedEtapa('');
     };
 
     const handleGradeChange = (studentId: string, value: string) => {
@@ -125,7 +122,7 @@ export default function GradesManager() {
     };
 
     const handleSaveChanges = async () => {
-        if (!firestore || !studentsInClass || Object.keys(grades).length === 0) return;
+        if (!firestore || !studentsInClass || !disciplineId || Object.keys(grades).length === 0) return;
     
         setIsSaving(true);
         
@@ -136,12 +133,11 @@ export default function GradesManager() {
                 const studentId = student.id;
                 const newGrade = grades[studentId];
                 const studentDocRef = doc(firestore, 'alunos', studentId);
-                const fieldPath = `boletim.${selectedDiscipline}.${selectedEtapa}`;
+                const fieldPath = `boletim.${disciplineId}.${selectedEtapa}`;
     
                 batch.update(studentDocRef, { [fieldPath]: newGrade });
             }
             
-            // Use a non-blocking commit
             await batch.commit();
     
             toast({
@@ -162,13 +158,13 @@ export default function GradesManager() {
     
     const calculateAverage = (student: any): string => {
         const boletim = student.boletim;
-        if (!boletim || !boletim[selectedDiscipline]) return '-';
+        if (!boletim || !boletim[disciplineId]) return '-';
         
         const validGrades = [
-            boletim[selectedDiscipline].etapa1,
-            boletim[selectedDiscipline].etapa2,
-            boletim[selectedDiscipline].etapa3,
-            boletim[selectedDiscipline].etapa4
+            boletim[disciplineId].etapa1,
+            boletim[disciplineId].etapa2,
+            boletim[disciplineId].etapa3,
+            boletim[disciplineId].etapa4
         ].filter((nota): nota is number => nota !== null && nota !== undefined && !isNaN(nota));
 
         if (validGrades.length === 0) return '-';
@@ -186,7 +182,7 @@ export default function GradesManager() {
                     <CardDescription>Escolha os filtros para lançar as notas de uma turma específica.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {(isLoadingOptions || isLoadingDisciplines) ? (
+                    {isLoadingOptions ? (
                         <div className="flex items-center justify-center h-24">
                             <Loader2 className="h-8 w-8 animate-spin text-primary" />
                         </div>
@@ -208,10 +204,12 @@ export default function GradesManager() {
                                 <SelectTrigger><SelectValue placeholder="Turno..." /></SelectTrigger>
                                 <SelectContent>{uniqueFilterOptions.turnos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                             </Select>
-                             <Select value={selectedDiscipline} onValueChange={setSelectedDiscipline} disabled={!filters.turno}>
-                                <SelectTrigger><SelectValue placeholder="Disciplina..." /></SelectTrigger>
-                                <SelectContent>{allDisciplines?.map(d => <SelectItem key={d.id} value={d.nome.replace(/\s+/g, '_').toLowerCase()}>{d.nome}</SelectItem>)}</SelectContent>
-                            </Select>
+                            <Input 
+                                value={selectedDiscipline}
+                                onChange={(e) => setSelectedDiscipline(e.target.value)}
+                                placeholder="Nome da Disciplina"
+                                disabled={!filters.turno}
+                            />
                              <Select value={selectedEtapa} onValueChange={setSelectedEtapa} disabled={!selectedDiscipline}>
                                 <SelectTrigger><SelectValue placeholder="Etapa..." /></SelectTrigger>
                                 <SelectContent>
@@ -234,7 +232,7 @@ export default function GradesManager() {
                         <CardHeader>
                             <CardTitle>Lançamento de Notas</CardTitle>
                             <CardDescription>
-                                Insira as notas para a disciplina de <strong>{selectedDiscipline.replace(/_/g, ' ')}</strong> na <strong>{selectedEtapa.replace('etapa', 'Etapa ')}</strong>.
+                                Insira as notas para a disciplina de <strong>{selectedDiscipline}</strong> na <strong>{selectedEtapa.replace('etapa', 'Etapa ')}</strong>.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>

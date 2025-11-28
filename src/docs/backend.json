@@ -1,20 +1,153 @@
+
 {
   "entities": {
     "User": {
       "title": "User",
       "type": "object",
-      "description": "Represents a user profile.",
+      "description": "Represents a user in the system, with an assigned profile and permissions.",
       "properties": {
-        "uid": { "type": "string" },
-        "name": { "type": "string" },
-        "email": { "type": "string", "format": "email" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "cargo": { "type": "string", "description": "The user's role or position." },
-        "photoURL": { "type": "string", "format": "uri", "description": "URL of the user's profile picture." }
+        "uid": {
+          "type": "string",
+          "description": "The unique identifier from Firebase Authentication."
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's full name."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "profileId": {
+          "type": "string",
+          "description": "The ID of the profile assigned to this user, linking to the 'profiles' collection."
+        },
+        "customPermissions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Specific individual permissions that override the profile's defaults."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "photoURL": {
+          "type": "string",
+          "format": "uri"
+        },
+        "position": {
+            "type": "string",
+            "description": "The user's job title or position (e.g., 'Professor de Matemática')."
+        },
+        "phoneNumber": {
+            "type": "string",
+            "description": "The user's contact phone number."
+        },
+        "dateOfBirth": {
+            "type": "string",
+            "format": "date",
+            "description": "The user's date of birth."
+        },
+        "bio": {
+            "type": "string",
+            "description": "A short biography or professional summary."
+        },
+        "profileCompleted": {
+            "type": "boolean",
+            "description": "Flag indicating if the user has completed their initial profile setup."
+        }
       },
-      "required": ["uid", "name", "email", "cargo"]
+      "required": ["uid", "name", "email", "profileId"]
     },
-    "Aluno": {
+    "Profile": {
+      "title": "Profile",
+      "type": "object",
+      "description": "Defines a user role and its set of default permissions.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": {
+          "type": "string",
+          "description": "The name of the profile (e.g., Administrador, Professor)."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the profile's responsibilities."
+        },
+        "color": {
+            "type": "string",
+            "description": "A hex color code to associate with the profile for UI elements."
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+                "manage:database",
+                "manage:students",
+                "view:students",
+                "manage:users",
+                "manage:grades",
+                "manage:attendance",
+                "manage:announcements",
+                "manage:profiles"
+            ]
+          },
+          "description": "A list of permission keys granted to this profile."
+        }
+      },
+      "required": ["id", "name", "permissions"]
+    },
+    "Grade": {
+      "title": "Grade",
+      "type": "object",
+      "description": "Represents a student's grade in a specific subject.",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "classId": { "type": "string" },
+        "subject": { "type": "string" },
+        "grade": { "type": "number" },
+        "term": { "type": "string", "description": "The grading period (e.g., '1st Trimester')." }
+      },
+      "required": ["id", "studentId", "classId", "subject", "grade", "term"]
+    },
+    "Attendance": {
+      "title": "Attendance",
+      "type": "object",
+      "description": "Represents a student's attendance on a specific date.",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string" },
+        "classId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "status": {
+          "type": "string",
+          "enum": ["Presente", "Ausente", "Justificado"]
+        }
+      },
+      "required": ["id", "studentId", "classId", "date", "status"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "type": "object",
+      "description": "Represents a school-wide or class-specific announcement.",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "targetAudience": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Array of profile IDs or class IDs to target."
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "content", "targetAudience", "createdAt"]
+    },
+     "Aluno": {
       "title": "Aluno",
       "type": "object",
       "description": "Representa um único aluno na base de dados escolar.",
@@ -72,27 +205,33 @@
     }
   },
   "auth": {
-    "providers": [
-      "password"
-    ]
+    "providers": ["password", "google.com"]
   },
   "firestore": {
     "structure": [
       {
         "path": "/users/{userId}",
-        "definition": {
-          "schema": { "$ref": "#/entities/User" },
-          "description": "Stores user profile information."
-        }
+        "definition": { "schema": { "$ref": "#/entities/User" } }
       },
       {
+        "path": "/profiles/{profileId}",
+        "definition": { "schema": { "$ref": "#/entities/Profile" } }
+      },
+      {
+        "path": "/grades/{gradeId}",
+        "definition": { "schema": { "$ref": "#/entities/Grade" } }
+      },
+      {
+        "path": "/attendance/{attendanceId}",
+        "definition": { "schema": { "$ref": "#/entities/Attendance" } }
+      },
+      {
+        "path": "/announcements/{announcementId}",
+        "definition": { "schema": { "$ref": "#/entities/Announcement" } }
+      },
+       {
         "path": "/alunos/{alunoId}",
-        "definition": {
-          "schema": {
-            "$ref": "#/entities/Aluno"
-          },
-          "description": "Coleção que armazena os dados de todos os alunos."
-        }
+        "definition": { "schema": { "$ref": "#/entities/Aluno" } }
       }
     ]
   }

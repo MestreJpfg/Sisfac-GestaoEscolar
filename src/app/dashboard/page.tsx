@@ -73,12 +73,12 @@ export default function DashboardPage() {
   };
   
   const canManageUsers = useMemo(() => hasPermission('manage:users'), [userProfile, profileDetails, isPermissionsLoading]);
-  const canManageCadastros = useMemo(() => hasPermission('manage:cadastros'), [userProfile, profileDetails, isPermissionsLoading]);
   const canViewStudents = useMemo(() => hasPermission('manage:students') || hasPermission('view:students'), [userProfile, profileDetails, isPermissionsLoading]);
   const canManageAnnouncements = useMemo(() => hasPermission('manage:announcements'), [userProfile, profileDetails, isPermissionsLoading]);
   const canManageAttendance = useMemo(() => hasPermission('manage:attendance'), [userProfile, profileDetails, isPermissionsLoading]);
   const canManageDatabase = useMemo(() => hasPermission('manage:database'), [userProfile, profileDetails, isPermissionsLoading]);
   const canManageGrades = useMemo(() => hasPermission('manage:grades'), [userProfile, profileDetails, isPermissionsLoading]);
+  const canManageProfiles = useMemo(() => hasPermission('manage:profiles'), [userProfile, profileDetails, isPermissionsLoading]);
 
 
   useEffect(() => {
@@ -112,7 +112,7 @@ export default function DashboardPage() {
         }
 
         try {
-            if (canManageCadastros) {
+            if (canManageProfiles) {
               const profilesColl = collection(firestore, 'profiles');
               const profilesSnapshot = await getCountFromServer(query(profilesColl));
               setProfileCount(profilesSnapshot.data().count);
@@ -128,7 +128,7 @@ export default function DashboardPage() {
     if (!isPermissionsLoading) {
       fetchCounts();
     }
-  }, [firestore, isPermissionsLoading, canViewStudents, canManageUsers, canManageCadastros]);
+  }, [firestore, isPermissionsLoading, canViewStudents, canManageUsers, canManageProfiles]);
 
 
   const welcomeName = user?.displayName?.split(' ')[0] || 'Utilizador';
@@ -229,7 +229,7 @@ export default function DashboardPage() {
                               action={<Button onClick={() => router.push('/users')}>Gerir Utilizadores</Button>}
                               />
                           )}
-                          {canManageCadastros && (
+                          {canManageProfiles && (
                             <>
                               <StatCard
                                 title="Perfis e Permissões"
@@ -237,13 +237,6 @@ export default function DashboardPage() {
                                 icon={Shield}
                                 description="Perfis de acesso no sistema"
                                 action={<Button onClick={() => router.push('/profiles')}>Gerir Perfis</Button>}
-                              />
-                              <StatCard
-                                title="Cadastros"
-                                value={"Gerais"}
-                                icon={Database}
-                                description="Gerir funcionários e disciplinas"
-                                action={<Button onClick={() => router.push('/dashboard/cadastros')}>Aceder</Button>}
                               />
                             </>
                           )}

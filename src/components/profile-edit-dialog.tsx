@@ -38,7 +38,7 @@ const allPermissions = [
     { id: 'manage:grades', label: 'Gerir Notas' },
     { id: 'manage:attendance', label: 'Gerir Frequência' },
     { id: 'manage:announcements', label: 'Gerir Anúncios' },
-    { id: 'manage:cadastros', label: 'Gerir Cadastros (Perfis, Funcionários, Disciplinas)' },
+    { id: 'manage:profiles', label: 'Gerir Perfis e Permissões' },
 ];
 
 export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: ProfileEditDialogProps) {
