@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, doc, limit, orderBy, startAfter, getDocs, Query } from 'firebase/firestore';
+import { collection, query, where, doc, limit, orderBy, startAfter, getDocs, Query, DocumentData } from 'firebase/firestore';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import UserTable from './user-table';
@@ -35,42 +35,45 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name', direction: 'ascending' });
   const debouncedSearch = useDebounce(filters.search, 400);
 
-  const fetchUsers = useCallback(async ({ pageParam }: { pageParam: any }) => {
-    if (!firestore) return { data: [], nextPage: undefined };
+  const fetchUsers = useCallback(async ({ pageParam = null }: { pageParam?: any | null }) => {
+    if (!firestore) return { data: [], lastDoc: null };
 
-    let q: Query;
     const usersCollection = collection(firestore, 'users');
+    let q: Query<DocumentData, DocumentData>;
 
-    const useProfileFilter = filters.profileId && filters.profileId !== 'all';
+    const orderByKey = sortConfig.key;
+    const orderDirection = sortConfig.direction;
 
-    if (useProfileFilter) {
+    // Base query with filtering and ordering
+    if (filters.profileId && filters.profileId !== 'all') {
       q = query(
         usersCollection,
         where('profileId', '==', filters.profileId),
-        orderBy(sortConfig.key, sortConfig.direction),
-        limit(USERS_PER_PAGE)
+        orderBy(orderByKey, orderDirection),
+        orderBy('uid', orderDirection) // Secondary sort for stable pagination
       );
     } else {
       q = query(
         usersCollection,
-        orderBy(sortConfig.key, sortConfig.direction),
-        limit(USERS_PER_PAGE)
+        orderBy(orderByKey, orderDirection),
+        orderBy('uid', orderDirection) // Secondary sort for stable pagination
       );
     }
     
-    if (pageParam) {
-      q = query(q, startAfter(pageParam));
-    }
+    q = query(q, limit(USERS_PER_PAGE));
 
-    const snapshot = await getDocs(q);
-    const usersData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-    const lastVisible = snapshot.docs[snapshot.docs.length - 1];
+    // Apply pagination cursor if it exists
+    if (pageParam) {
+      q = query(q, startAfter(pageParam[orderByKey], pageParam.uid));
+    }
     
-    return {
-        data: usersData,
-        nextPage: lastVisible
-    };
-  }, [firestore, filters.profileId, sortConfig]);
+    const snapshot = await getDocs(q);
+    const usersData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, uid: doc.id }));
+    const lastDoc = snapshot.docs[snapshot.docs.length - 1];
+
+    return { data: usersData, lastDoc };
+}, [firestore, filters.profileId, sortConfig]);
+
 
   const {
       data,
@@ -83,7 +86,10 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       queryKey: ['users', filters, sortConfig],
       queryFn: fetchUsers,
       initialPageParam: null,
-      getNextPageParam: (lastPage) => lastPage.nextPage,
+      getNextPageParam: (lastPage) => {
+        // Pass the actual last document's data for the cursor
+        return lastPage.lastDoc ? lastPage.lastDoc.data() : undefined;
+      },
   });
 
   const allUsers = useMemo(() => data?.pages.flatMap(page => page.data) ?? [], [data]);
