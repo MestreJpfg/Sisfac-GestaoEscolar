@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import { ClipboardList, X, Loader2, Download, Filter } from 'lucide-react';
 import { Button } from './ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetTrigger } from './ui/sheet';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -17,7 +17,6 @@ interface ClassListGeneratorProps {
 
 export default function ClassListGenerator({ allStudents }: ClassListGeneratorProps) {
   const { toast } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
@@ -75,7 +74,9 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
   const handleGenerateList = async () => {
     setIsGenerating(true);
     setStudents([]);
-    setActiveAccordion(""); // Collapse accordion
+    
+    // Pequeno delay para feedback visual
+    await new Promise(resolve => setTimeout(resolve, 300));
 
     let studentsData = allStudents;
 
@@ -86,6 +87,16 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
 
     studentsData.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
     setStudents(studentsData);
+
+    if(studentsData.length > 0) {
+      setActiveAccordion(""); // Collapse accordion on successful generation
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Nenhum Aluno Encontrado",
+        description: "Não foram encontrados alunos com os filtros selecionados.",
+      });
+    }
 
     setIsGenerating(false);
   };
@@ -148,10 +159,10 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                     doc.text(title, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
 
                     // Footer
-                    const pageCount = (doc.internal as any).getNumberOfPages();
                     doc.setFontSize(7);
                     doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, data.settings.margin.left, doc.internal.pageSize.getHeight() - 5);
-                    doc.text(`Página ${doc.internal.pages.length -1}`, doc.internal.pageSize.getWidth() - data.settings.margin.right, doc.internal.pageSize.getHeight() - 5, { align: 'right' });
+                    const pageNum = doc.internal.getNumberOfPages();
+                    doc.text(`Página ${pageNum}`, doc.internal.pageSize.getWidth() - data.settings.margin.right, doc.internal.pageSize.getHeight() - 5, { align: 'right' });
                 },
                 styles: {
                     font: 'helvetica',
@@ -194,22 +205,15 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
   const isAnyFilterSelected = filters.ensino || filters.serie || filters.turno || filters.classe;
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetTrigger asChild>
-            <Button variant="secondary" className="flex items-center gap-2 shadow-lg">
-                <ClipboardList className="h-4 w-4" />
-                <span>Criar Listas</span>
-            </Button>
-        </SheetTrigger>
-        <SheetContent className="w-full max-w-md sm:max-w-md flex flex-col">
-            <SheetHeader>
-                <SheetTitle>Gerar Lista de Turma</SheetTitle>
-                <SheetDescription>
-                    Selecione os filtros para gerar uma lista de alunos para impressão.
-                </SheetDescription>
-            </SheetHeader>
-            
-             <Accordion type="single" collapsible value={activeAccordion} onValueChange={setActiveAccordion} className="w-full">
+    <Card className="w-full">
+        <CardHeader>
+            <CardTitle>Gerador de Listas de Turmas</CardTitle>
+            <CardDescription>
+                Selecione os filtros para gerar uma lista de alunos para impressão.
+            </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+            <Accordion type="single" collapsible value={activeAccordion} onValueChange={setActiveAccordion} className="w-full">
                 <AccordionItem value="item-1">
                     <AccordionTrigger>
                         <div className="flex items-center gap-2">
@@ -218,99 +222,85 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                         </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                        <div className="space-y-4 py-4">
-                            { !allStudents ? (
-                                <div className="flex items-center justify-center h-40">
-                                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                </div>
-                            ) : (
-                            <>
-                                <Select value={filters.ensino} onValueChange={(value) => handleFilterChange('ensino', value)}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Filtrar por Ensino..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todos os Segmentos</SelectItem>
-                                        {uniqueOptions.ensinos.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)} disabled={!filters.ensino && uniqueOptions.series.length === 0}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Filtrar por Série..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todas as Séries</SelectItem>
-                                        {uniqueOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)} disabled={!filters.serie && uniqueOptions.turnos.length === 0}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Filtrar por Turno..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todos os Turnos</SelectItem>
-                                        {uniqueOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)} disabled={!filters.turno && uniqueOptions.classes.length === 0}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Filtrar por Classe..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todas as Classes</SelectItem>
-                                        {uniqueOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
+                            <Select value={filters.ensino} onValueChange={(value) => handleFilterChange('ensino', value)}>
+                                <SelectTrigger><SelectValue placeholder="Filtrar por Ensino..." /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos os Segmentos</SelectItem>
+                                    {uniqueOptions.ensinos.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)} disabled={!filters.ensino && uniqueOptions.series.length === 0}>
+                                <SelectTrigger><SelectValue placeholder="Filtrar por Série..." /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todas as Séries</SelectItem>
+                                    {uniqueOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)} disabled={!filters.serie && uniqueOptions.turnos.length === 0}>
+                                <SelectTrigger><SelectValue placeholder="Filtrar por Turno..." /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos os Turnos</SelectItem>
+                                    {uniqueOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)} disabled={!filters.turno && uniqueOptions.classes.length === 0}>
+                                <SelectTrigger><SelectValue placeholder="Filtrar por Classe..." /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todas as Classes</SelectItem>
+                                    {uniqueOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                         <div className="flex items-center gap-2 pt-2">
+                            <Button onClick={handleGenerateList} disabled={!isAnyFilterSelected || isGenerating} className="flex-1">
+                                {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Gerar Lista'}
+                            </Button>
+                            {isAnyFilterSelected && (
+                            <Button variant="ghost" size="icon" onClick={clearFiltersAndResults}>
+                                <X className="h-4 w-4" />
+                            </Button>
                             )}
                         </div>
                     </AccordionContent>
                 </AccordionItem>
             </Accordion>
             
-            <div className="flex items-center gap-2 pt-4">
-                <Button onClick={handleGenerateList} disabled={!isAnyFilterSelected || isGenerating || !allStudents} className="flex-1">
-                    {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Gerar Lista'}
-                </Button>
-                {isAnyFilterSelected && (
-                <Button variant="ghost" size="icon" onClick={clearFiltersAndResults}>
-                    <X className="h-4 w-4" />
-                </Button>
-                )}
-            </div>
-
-            <div className="mt-4 flex-1 overflow-y-auto border-t pt-4">
-                {students.length > 0 ? (
-                     <div className='flex flex-col h-full'>
-                        <h3 className="font-semibold text-center mb-2">{`Resultado da Filtragem`}</h3>
-                        <p className="text-sm text-muted-foreground text-center mb-4">{`${students.length} alunos encontrados`}</p>
-                        <div className="flex-1 overflow-y-auto">
-                            <ul className="divide-y">
-                                {students.map((student) => (
+            <div className="mt-4 border rounded-lg min-h-[200px] flex flex-col">
+                {isGenerating ? (
+                    <div className="flex-1 flex items-center justify-center text-center text-sm text-muted-foreground">
+                       <Loader2 className="h-6 w-6 animate-spin" />
+                    </div>
+                ) : students.length > 0 ? (
+                     <div className='flex flex-col h-full max-h-96'>
+                        <div className="p-4 border-b">
+                            <h3 className="font-semibold text-center">{`Resultado da Filtragem`}</h3>
+                            <p className="text-sm text-muted-foreground text-center">{`${students.length} alunos encontrados`}</p>
+                        </div>
+                        <ScrollArea className="flex-1">
+                            <ul className="divide-y p-4">
+                                {students.map((student, index) => (
                                 <li key={student.rm} className="py-2 text-sm flex items-center">
-                                    <span className="w-6 text-right mr-2 text-muted-foreground">{students.indexOf(student) + 1}.</span>
+                                    <span className="w-8 text-right mr-2 text-muted-foreground">{index + 1}.</span>
                                     <span>{student.nome}</span>
                                 </li>
                                 ))}
                             </ul>
+                        </ScrollArea>
+                        <div className="p-4 border-t mt-auto">
+                            <Button onClick={handleDownload} disabled={isDownloading} className="w-full">
+                                {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                                {isDownloading ? 'A gerar PDF...' : 'Download da Lista'}
+                            </Button>
                         </div>
                     </div>
                 ) : (
-                    <div className="text-center text-sm text-muted-foreground pt-10">
-                        {isGenerating ? 'A gerar...' : 'Nenhum aluno encontrado ou nenhum filtro aplicado.'}
+                    <div className="flex-1 flex items-center justify-center text-center text-sm text-muted-foreground p-4">
+                        <p>Nenhum aluno encontrado ou nenhum filtro aplicado. Selecione os filtros acima e clique em "Gerar Lista".</p>
                     </div>
                 )}
             </div>
-
-            <SheetFooter className="mt-auto pt-4 border-t">
-                <Button onClick={handleDownload} disabled={students.length === 0 || isDownloading} className="w-full">
-                    {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                    {isDownloading ? 'A gerar PDF...' : 'Download da Lista'}
-                </Button>
-            </SheetFooter>
-        </SheetContent>
-    </Sheet>
+        </CardContent>
+    </Card>
   );
 }
-
-    

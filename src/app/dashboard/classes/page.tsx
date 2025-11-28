@@ -11,9 +11,10 @@ import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
 import { UserNav } from '@/components/user-nav';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, ClipboardList, Loader2 } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
 import ClassListGenerator from '@/components/class-list-generator';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 export default function ClassesPage() {
     const router = useRouter();
@@ -36,7 +37,7 @@ export default function ClassesPage() {
                                 <ArrowLeft className="h-4 w-4" />
                             </Button>
                             <div className="flex items-center gap-2">
-                                <Image src="/logoyuri.png" alt="Logo" width={32} height={32} className="rounded-md" />
+                                <ClipboardList className="h-6 w-6 text-primary" />
                                 <h1 className="text-xl font-bold text-primary hidden sm:block">Gestão de Turmas</h1>
                             </div>
                         </div>
@@ -50,9 +51,9 @@ export default function ClassesPage() {
                 </header>
 
                 <main className="flex-1 py-8">
-                    <div className="container flex justify-center">
+                    <div className="container max-w-4xl">
                         {isDataLoading ? (
-                            <div className="flex flex-col items-center gap-4">
+                            <div className="flex flex-col items-center gap-4 text-center">
                                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                                 <p className="text-muted-foreground">A carregar dados dos alunos...</p>
                             </div>
