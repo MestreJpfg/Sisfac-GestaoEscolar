@@ -37,56 +37,35 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
     nee: false,
   });
 
-  const debouncedNome = useDebounce(filters.nome, 400);
+  const debouncedNome = useDebounce(filters.nome, 300);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: 'ascending' });
 
   const hasActiveFilters = useMemo(() => {
-    return debouncedNome.trim().length >= 3 || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
+    return debouncedNome.trim().length > 0 || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
   }, [debouncedNome, filters]);
 
-  const studentsQuery = useMemo(() => {
-    if (!firestore || !hasActiveFilters) {
-      return null;
-    }
-    
-    let q = query(collection(firestore, 'alunos'));
-
-    if (filters.ensino) {
-      q = query(q, where('ensino', '==', filters.ensino));
-    }
-    if (filters.serie) {
-        if (filters.serie === 'N/A') {
-             q = query(q, where('serie', 'in', [null, '']));
-        } else {
-            q = query(q, where('serie', '==', filters.serie));
-        }
-    }
-    if (filters.classe) {
-      q = query(q, where('classe', '==', filters.classe));
-    }
-    if (filters.turno) {
-      q = query(q, where('turno', '==', filters.turno));
-    }
-    if (filters.nee) {
-      q = query(q, where('nee', '==', true));
+  const filteredStudents = useMemo(() => {
+    if (!hasActiveFilters) {
+      return allStudents;
     }
 
-    const nameSearch = debouncedNome.trim().toUpperCase();
-    if (nameSearch.length >= 3) {
-        q = query(q, where('nome', '>=', nameSearch), where('nome', '<=', nameSearch + '\uf8ff'));
-    }
-    
-    q = query(q, limit(100));
+    const searchLower = debouncedNome.trim().toLowerCase();
 
-    return q;
-  }, [firestore, hasActiveFilters, debouncedNome, filters]);
+    return allStudents.filter(student => {
+      const nameMatch = searchLower.length > 0 ? student.nome?.toLowerCase().includes(searchLower) : true;
+      const ensinoMatch = filters.ensino ? student.ensino === filters.ensino : true;
+      const serieMatch = filters.serie ? (filters.serie === 'N/A' ? !student.serie : student.serie === filters.serie) : true;
+      const classeMatch = filters.classe ? student.classe === filters.classe : true;
+      const turnoMatch = filters.turno ? student.turno === filters.turno : true;
+      const neeMatch = filters.nee ? student.nee === true : true;
+      
+      return nameMatch && ensinoMatch && serieMatch && classeMatch && turnoMatch && neeMatch;
+    });
+  }, [allStudents, debouncedNome, filters, hasActiveFilters]);
 
-  const { data: students, isLoading: isLoadingStudents } = useCollection(studentsQuery);
 
   const sortedStudents = useMemo(() => {
-    if (!students) return [];
-
-    const sorted = [...students];
+    const sorted = [...filteredStudents];
 
     if (sortConfig.key) {
         sorted.sort((a, b) => {
@@ -105,7 +84,7 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
     }
 
     return sorted;
-  }, [students, sortConfig]);
+  }, [filteredStudents, sortConfig]);
 
   const uniqueFilterOptions = useMemo(() => {
     const getUniqueValues = (key: string, data: any[]) => 
@@ -190,7 +169,7 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
         <CardContent className="p-4 space-y-4">
           <Input
             name="nome"
-            placeholder="Buscar por nome (mín. 3 caracteres)..."
+            placeholder="Buscar por nome..."
             value={filters.nome}
             onChange={(e) => handleFilterChange('nome', e.target.value)}
           />
@@ -271,25 +250,17 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {hasActiveFilters && !isLoadingStudents && (
+        {hasActiveFilters && (
           <p>
-            {students && students.length > 0
-              ? `${students.length} aluno(s) encontrado(s).`
-              : (debouncedNome.trim().length > 0 && debouncedNome.trim().length < 3)
-                ? 'Digite pelo menos 3 caracteres para buscar por nome.'
-                : 'Nenhum aluno encontrado com os critérios fornecidos.'
+            {sortedStudents.length > 0
+              ? `${sortedStudents.length} aluno(s) encontrado(s).`
+              : 'Nenhum aluno encontrado com os critérios fornecidos.'
             }
-             {students && students.length >= 100 && " Limite de 100 resultados atingido."}
           </p>
         )}
       </div>
 
-        {isLoadingStudents ? (
-             <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="mt-4 text-muted-foreground">A buscar alunos...</p>
-            </div>
-        ) : hasActiveFilters ? (
+        {hasActiveFilters ? (
             <StudentTable
                 students={sortedStudents}
                 onRowClick={handleStudentSelect}
