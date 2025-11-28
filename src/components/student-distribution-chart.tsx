@@ -1,8 +1,8 @@
 
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import { useMemo } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import { useTheme } from 'next-themes';
 
 interface StudentDistributionChartProps {
@@ -16,12 +16,22 @@ const getSeriesNumber = (name: string): number => {
     return match ? parseInt(match[0], 10) : Infinity;
 };
 
+const CustomLabel = (props: any) => {
+    const { x, y, width, value, theme } = props;
+    const tickColor = theme === 'dark' ? '#ffffff' : '#000000';
+    return (
+        <text x={x + width / 2} y={y} dy={-4} fill={tickColor} fontSize={12} textAnchor="middle">
+            {value}
+        </text>
+    );
+};
+
 export default function StudentDistributionChart({ students, onDrilldown, drilledSerie }: StudentDistributionChartProps) {
     const { resolvedTheme } = useTheme();
 
     const handleBarClick = (payload: any) => {
         if (payload && payload.activePayload && payload.activePayload[0]) {
-            const serieName = payload.activePayload[0].payload.originalName || payload.activePayload[0].payload.name;
+            const serieName = payload.activePayload[0].payload.name;
             if (!drilledSerie) {
                 onDrilldown(serieName);
             }
@@ -40,15 +50,11 @@ export default function StudentDistributionChart({ students, onDrilldown, drille
             }, {} as { [key: string]: number });
 
             return Object.keys(classCount)
-                .map(className => {
-                    const count = classCount[className];
-                    return {
-                        name: `${className} (${count} Alunos)`,
-                        originalName: className,
-                        Alunos: count,
-                    };
-                })
-                .sort((a, b) => a.originalName.localeCompare(b.originalName, 'pt-BR'));
+                .map(className => ({
+                    name: className,
+                    Alunos: classCount[className],
+                }))
+                .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 
         } else {
              const seriesCount = students.reduce((acc, student) => {
@@ -97,6 +103,7 @@ export default function StudentDistributionChart({ students, onDrilldown, drille
             <BarChart 
                 data={data}
                 onDoubleClick={handleBarClick}
+                margin={{ top: 20, right: 20, left: 0, bottom: 5 }}
             >
                 <CartesianGrid strokeDasharray="3 3" strokeOpacity={resolvedTheme === 'dark' ? 0.1 : 0.2} />
                 <XAxis 
@@ -123,8 +130,16 @@ export default function StudentDistributionChart({ students, onDrilldown, drille
                         borderRadius: 'var(--radius)',
                         boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
                      }}
+                     formatter={(value: number) => [`${value} Alunos`, 'Total']}
                 />
                 <Bar dataKey="Alunos" radius={[4, 4, 0, 0]}>
+                    {drilledSerie && (
+                        <LabelList 
+                            dataKey="Alunos" 
+                            position="top" 
+                            content={<CustomLabel theme={resolvedTheme} />} 
+                        />
+                    )}
                     {data.map((entry, index) => (
                         <Cell 
                             key={`cell-${index}`} 
