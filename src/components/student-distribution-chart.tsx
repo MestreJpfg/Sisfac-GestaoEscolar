@@ -21,31 +21,34 @@ export default function StudentDistributionChart({ students, onDrilldown, drille
 
     const handleBarClick = (payload: any) => {
         if (payload && payload.activePayload && payload.activePayload[0]) {
-            const serieName = payload.activePayload[0].payload.name;
-            // Apenas permite drilldown se não estivermos já numa visão detalhada
+            const serieName = payload.activePayload[0].payload.originalName || payload.activePayload[0].payload.name;
             if (!drilledSerie) {
                 onDrilldown(serieName);
             }
         }
     };
-
+    
     const data = useMemo(() => {
         if (!students) return [];
 
         if (drilledSerie) {
             const filteredStudents = students.filter(s => s.serie === drilledSerie);
             const classCount = filteredStudents.reduce((acc, student) => {
-                const key = `${student.classe || 'N/C'} - ${student.turno || 'N/T'}`; // N/C = Não classificado, N/T = Não tem turno
+                const key = `${student.classe || 'N/C'} - ${student.turno || 'N/T'}`;
                 acc[key] = (acc[key] || 0) + 1;
                 return acc;
             }, {} as { [key: string]: number });
 
             return Object.keys(classCount)
-                .map(className => ({
-                    name: className,
-                    Alunos: classCount[className],
-                }))
-                .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+                .map(className => {
+                    const count = classCount[className];
+                    return {
+                        name: `${className} (${count} Alunos)`,
+                        originalName: className,
+                        Alunos: count,
+                    };
+                })
+                .sort((a, b) => a.originalName.localeCompare(b.originalName, 'pt-BR'));
 
         } else {
              const seriesCount = students.reduce((acc, student) => {
@@ -93,7 +96,7 @@ export default function StudentDistributionChart({ students, onDrilldown, drille
         <ResponsiveContainer width="100%" height={350}>
             <BarChart 
                 data={data}
-                onClick={handleBarClick}
+                onDoubleClick={handleBarClick}
             >
                 <CartesianGrid strokeDasharray="3 3" strokeOpacity={resolvedTheme === 'dark' ? 0.1 : 0.2} />
                 <XAxis 
@@ -102,6 +105,7 @@ export default function StudentDistributionChart({ students, onDrilldown, drille
                     fontSize={12}
                     tickLine={false}
                     axisLine={false}
+                    interval={0}
                 />
                 <YAxis 
                     stroke={tickColor}
