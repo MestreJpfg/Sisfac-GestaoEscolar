@@ -8,8 +8,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent } from "./ui/card";
-import { User, Search, Edit, ArrowUpDown } from "lucide-react";
+import { Card, CardContent, CardFooter } from "./ui/card";
+import { User, Search, Edit, ArrowUpDown, Loader2 } from "lucide-react";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -28,6 +28,9 @@ interface UserTableProps {
   onEdit: (user: any) => void;
   onSort: (key: string) => void;
   sortConfig: SortConfig;
+  hasNextPage: boolean | undefined;
+  isFetchingNextPage: boolean;
+  fetchNextPage: () => void;
 }
 
 const getInitials = (name: string | null | undefined) => {
@@ -39,7 +42,6 @@ const getInitials = (name: string | null | undefined) => {
     return name.substring(0, 2).toUpperCase();
 };
 
-// Função para determinar se a cor de fundo é clara ou escura
 const isColorLight = (hexColor: string) => {
     if (!hexColor) return false;
     const color = hexColor.charAt(0) === '#' ? hexColor.substring(1, 7) : hexColor;
@@ -51,7 +53,7 @@ const isColorLight = (hexColor: string) => {
 };
 
 
-export default function UserTable({ users, profiles, onEdit, onSort, sortConfig }: UserTableProps) {
+export default function UserTable({ users, profiles, onEdit, onSort, sortConfig, hasNextPage, isFetchingNextPage, fetchNextPage }: UserTableProps) {
   
   const SortableHeader = ({ sortKey, children, className }: { sortKey: string, children: React.ReactNode, className?: string }) => {
     const isSorted = sortConfig.key === sortKey;
@@ -76,9 +78,9 @@ export default function UserTable({ users, profiles, onEdit, onSort, sortConfig 
       <Card>
         <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
           <Search className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum utilizador encontrado</h3>
+          <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum utilizador para exibir</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Tente refinar os seus filtros ou verifique se existem utilizadores registados.
+            A busca inicial não retornou resultados. Tente aplicar um filtro.
           </p>
         </CardContent>
       </Card>
@@ -158,6 +160,20 @@ export default function UserTable({ users, profiles, onEdit, onSort, sortConfig 
           </Table>
         </div>
       </CardContent>
+       {hasNextPage && (
+        <CardFooter className="pt-4 justify-center">
+          <Button
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            variant="secondary"
+          >
+            {isFetchingNextPage ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
+            Carregar Mais
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 }

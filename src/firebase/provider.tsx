@@ -6,6 +6,7 @@ import { Firestore } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseStorage } from 'firebase/storage';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -56,6 +57,8 @@ export interface UserHookResult { // Renamed from UserAuthHookResult for consist
 // React Context
 export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
 
+const queryClient = new QueryClient();
+
 /**
  * FirebaseProvider manages and provides Firebase services and user authentication state.
  */
@@ -79,10 +82,14 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       auth,
       (firebaseUser) => { // Auth state determined
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
+        // When auth state changes, it's a good idea to clear the query cache
+        // to re-fetch data for the new user's permissions.
+        queryClient.clear();
       },
       (error) => { // Auth listener error
         console.error("FirebaseProvider: onAuthStateChanged error:", error);
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
+        queryClient.clear();
       }
     );
     return () => unsubscribe(); // Cleanup
@@ -106,10 +113,12 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   };
 
   return (
-    <FirebaseContext.Provider value={contextValue}>
-      <FirebaseErrorListener />
-      {children}
-    </FirebaseContext.Provider>
+    <QueryClientProvider client={queryClient}>
+        <FirebaseContext.Provider value={contextValue}>
+          <FirebaseErrorListener />
+          {children}
+        </FirebaseContext.Provider>
+    </QueryClientProvider>
   );
 };
 

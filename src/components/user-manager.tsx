@@ -1,10 +1,9 @@
-
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, doc, limit } from 'firebase/firestore';
-import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection, query, where, doc, limit, orderBy, startAfter, getDocs, Query } from 'firebase/firestore';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import UserTable from './user-table';
 import UserEditDialog from './user-edit-dialog';
@@ -21,6 +20,8 @@ interface UserManagerProps {
   allProfiles: any[];
 }
 
+const USERS_PER_PAGE = 20;
+
 export default function UserManager({ allProfiles }: UserManagerProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -33,61 +34,67 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name', direction: 'ascending' });
   const debouncedSearch = useDebounce(filters.search, 400);
 
-  const hasActiveFilters = useMemo(() => {
-    // A busca é considerada ativa se houver texto de busca OU um perfil específico for selecionado
-    return debouncedSearch.trim().length >= 3 || (filters.profileId && filters.profileId !== 'all');
-  }, [debouncedSearch, filters.profileId]);
+  const fetchUsers = useCallback(async ({ pageParam }: { pageParam: any }) => {
+    if (!firestore) return { data: [], nextPage: undefined };
 
-  const usersQuery = useMemo(() => {
-    if (!firestore || !hasActiveFilters) {
-      return null; // Não faz a consulta se não houver filtros ativos
-    }
+    let q: Query = query(
+        collection(firestore, 'users'), 
+        orderBy(sortConfig.key, sortConfig.direction),
+        limit(USERS_PER_PAGE)
+    );
 
-    let q = query(collection(firestore, 'users'));
-
-    // Filtra por perfil APENAS se um perfil específico (diferente de 'all') for selecionado
+    // Apply filters
     if (filters.profileId && filters.profileId !== 'all') {
         q = query(q, where('profileId', '==', filters.profileId));
     }
     
-    // Como o Firestore não suporta busca case-insensitive de sub-strings, 
-    // faremos o filtro de nome/email no lado do cliente.
-    // Limitamos a consulta para performance.
-    q = query(q, limit(100));
-    
-    return q;
-  }, [firestore, hasActiveFilters, filters.profileId]);
+    // Client-side search will be applied after fetching
+    if (pageParam) {
+      q = query(q, startAfter(pageParam));
+    }
 
-  const { data: fetchedUsers, isLoading: isLoadingUsers } = useCollection(usersQuery);
+    const snapshot = await getDocs(q);
+    const usersData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+    const lastVisible = snapshot.docs[snapshot.docs.length - 1];
+    
+    return {
+        data: usersData,
+        nextPage: lastVisible
+    };
+  }, [firestore, filters.profileId, sortConfig]);
+
+  const {
+      data,
+      fetchNextPage,
+      hasNextPage,
+      isLoading,
+      isFetchingNextPage,
+      error,
+  } = useInfiniteQuery({
+      queryKey: ['users', filters, sortConfig],
+      queryFn: fetchUsers,
+      initialPageParam: null,
+      getNextPageParam: (lastPage) => lastPage.nextPage,
+  });
+
+  const allUsers = useMemo(() => data?.pages.flatMap(page => page.data) ?? [], [data]);
 
   const filteredAndSortedUsers = useMemo(() => {
-    if (!fetchedUsers) return [];
-
-    let filtered = fetchedUsers;
+    let filtered = allUsers;
     const searchLower = debouncedSearch.toLowerCase().trim();
 
-    // Filtro por nome/email no cliente, pois é mais flexível
-    if (searchLower.length >= 3) {
+    if (searchLower.length > 0) { // Allow search even with 1 or 2 characters now
       filtered = filtered.filter(user => 
         (user.name?.toLowerCase().includes(searchLower) || user.email?.toLowerCase().includes(searchLower))
       );
     }
     
-    // Ordenação
-    if (sortConfig.key) {
-      const profileNameMap = new Map(allProfiles.map(p => [p.id, p.name]));
-      filtered.sort((a, b) => {
-        let aValue: any = sortConfig.key === 'profileId' ? (profileNameMap.get(a.profileId) || a.profileId) : a[sortConfig.key] || '';
-        let bValue: any = sortConfig.key === 'profileId' ? (profileNameMap.get(b.profileId) || b.profileId) : b[sortConfig.key] || '';
-
-        if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
-        return 0;
-      });
-    }
+    // Sorting is now handled by the Firestore query `orderBy`, so no extra client-side sort is needed
+    // unless the search filter is active, in which case we might re-sort the filtered subset if necessary,
+    // but the initial order from Firestore is usually sufficient.
 
     return filtered;
-  }, [fetchedUsers, debouncedSearch, sortConfig, allProfiles]);
+  }, [allUsers, debouncedSearch]);
 
 
   const handleFilterChange = (name: string, value: string) => {
@@ -132,7 +139,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
        <Card>
         <CardContent className="p-4 flex flex-col sm:flex-row gap-4">
           <Input
-            placeholder="Buscar por nome ou email (mín. 3 letras)..."
+            placeholder="Buscar por nome ou email..."
             value={filters.search}
             onChange={(e) => handleFilterChange('search', e.target.value)}
             className="flex-1"
@@ -159,42 +166,35 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       </Card>
       
         <div className="text-sm text-muted-foreground h-5">
-            {hasActiveFilters && !isLoadingUsers && (
-              <p>
-                {filteredAndSortedUsers.length > 0
-                  ? `${filteredAndSortedUsers.length} utilizador(es) encontrado(s).`
-                  : (debouncedSearch.trim().length > 0 && debouncedSearch.trim().length < 3)
-                    ? 'Digite pelo menos 3 caracteres para buscar.'
-                    : 'Nenhum utilizador encontrado com os critérios fornecidos.'
-                }
-                 {filteredAndSortedUsers.length >= 100 && " Limite de 100 resultados atingido."}
-              </p>
-            )}
+           {filteredAndSortedUsers.length > 0 && `A exibir ${filteredAndSortedUsers.length} utilizador(es).`}
         </div>
 
-        {isLoadingUsers ? (
+        {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="mt-4 text-muted-foreground">A buscar utilizadores...</p>
-            </div>
-        ) : hasActiveFilters ? (
-            <UserTable 
+                <p className="mt-4 text-muted-foreground">A carregar utilizadores...</p>
+            </div>>
+        ) : filteredAndSortedUsers.length === 0 && (filters.search || filters.profileId) ? (
+            <Card>
+                <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
+                    <Search className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum Utilizador Encontrado</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Tente refinar os seus filtros de busca.
+                    </p>
+                </CardContent>
+            </Card>
+        ) : (
+             <UserTable 
                 users={filteredAndSortedUsers}
                 profiles={allProfiles}
                 onEdit={handleEditUser} 
                 onSort={handleSort}
                 sortConfig={sortConfig}
+                hasNextPage={hasNextPage}
+                isFetchingNextPage={isFetchingNextPage}
+                fetchNextPage={fetchNextPage}
             />
-        ) : (
-             <Card>
-                <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
-                    <Search className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-medium text-foreground">Inicie uma Busca</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Utilize os filtros acima para pesquisar os utilizadores.
-                    </p>
-                </CardContent>
-            </Card>
         )}
 
       {editingUser && (
