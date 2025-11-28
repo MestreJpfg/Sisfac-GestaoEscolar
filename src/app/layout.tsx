@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import GoogleAnalytics from '@/components/google-analytics';
 import { ThemeProvider } from '@/components/theme-provider';
 import { FirebaseClientProvider } from '@/firebase';
+import ProfileCompletionGuard from '@/components/profile-completion-guard';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -45,7 +46,9 @@ export default function RootLayout({
             disableTransitionOnChange
         >
           <FirebaseClientProvider>
-            {children}
+            <ProfileCompletionGuard>
+              {children}
+            </ProfileCompletionGuard>
           </FirebaseClientProvider>
           <Toaster />
         </ThemeProvider>

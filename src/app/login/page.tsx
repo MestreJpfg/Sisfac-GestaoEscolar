@@ -64,28 +64,32 @@ export default function LoginPage() {
     const userDoc = await getDoc(userDocRef);
 
     if (userDoc.exists()) {
+        // User already exists, check if profile is complete
         const userData = userDoc.data();
         if (userData?.profileCompleted) {
             router.push('/dashboard');
         } else {
+            // This case handles users who signed up but didn't finish the profile page
             router.push('/profile'); 
         }
     } else {
-        const adminEmails = ['mestrejp@hotmail.com', 'mestrejpfg@gmail.com'];
+        // This is a new user (likely via Google Sign-In)
+        const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',') || [];
         const isAdmin = user.email && adminEmails.includes(user.email);
 
         const newUserData = {
             uid: user.uid,
             name: user.displayName || user.email?.split('@')[0] || 'Novo Utilizador',
             email: user.email,
-            profileId: isAdmin ? 'Administrador' : 'Aluno',
+            profileId: isAdmin ? 'Administrador' : 'Aluno', // Default profile
+            customPermissions: [],
             createdAt: new Date().toISOString(),
-            photoURL: user.photoURL,
-            profileCompleted: false, 
+            photoURL: user.photoURL || null,
+            profileCompleted: false, // New users MUST complete their profile
         };
     
-        await setDoc(userDocRef, newUserData, { merge: true });
-        router.push('/profile');
+        await setDoc(userDocRef, newUserData);
+        router.push('/profile'); // Always redirect new users to complete their profile
     }
   };
   
@@ -239,5 +243,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-    

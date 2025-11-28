@@ -11,9 +11,22 @@ import AppFooter from '@/components/app-footer';
 import AttendanceManager from '@/components/attendance-manager';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AttendanceReports from '@/components/attendance-reports';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+
 
 export default function AttendancePage() {
     const router = useRouter();
+    const { user } = useUser();
+    const firestore = useFirestore();
+
+    const userDocRef = useMemoFirebase(() => {
+        if (!user || !firestore) return null;
+        return doc(firestore, 'users', user.uid);
+    }, [user, firestore]);
+    const { data: userProfile } = useDoc(userDocRef);
+
+    const canViewReports = userProfile?.profileId === 'Administrador' || userProfile?.profileId === 'Administrador(a)';
     
     return (
         <AuthGuard>
@@ -41,16 +54,18 @@ export default function AttendancePage() {
                 <main className="flex-1 py-8">
                     <div className="container">
                        <Tabs defaultValue="registro" className="w-full">
-                          <TabsList className="grid w-full grid-cols-2 max-w-lg mx-auto">
+                          <TabsList className={`grid w-full ${canViewReports ? 'grid-cols-2' : 'grid-cols-1'} max-w-lg mx-auto`}>
                             <TabsTrigger value="registro">Registo Diário</TabsTrigger>
-                            <TabsTrigger value="relatorios">Relatórios</TabsTrigger>
+                            {canViewReports && <TabsTrigger value="relatorios">Relatórios</TabsTrigger>}
                           </TabsList>
                           <TabsContent value="registro" className="mt-6">
                             <AttendanceManager />
                           </TabsContent>
-                          <TabsContent value="relatorios" className="mt-6">
-                            <AttendanceReports />
-                          </TabsContent>
+                          {canViewReports && (
+                            <TabsContent value="relatorios" className="mt-6">
+                                <AttendanceReports />
+                            </TabsContent>
+                          )}
                         </Tabs>
                     </div>
                 </main>

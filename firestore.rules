@@ -74,6 +74,16 @@ service cloud.firestore {
       allow read, list: if hasPermission('view:students') || hasPermission('manage:students');
       allow write: if hasPermission('manage:students');
     }
+    
+    // Permissions for employees.
+    match /funcionarios/{funcionarioId} {
+      allow read, list, write: if hasPermission('manage:cadastros');
+    }
+
+    // Permissions for disciplines.
+    match /disciplinas/{disciplinaId} {
+       allow read, list, write: if hasPermission('manage:cadastros');
+    }
 
     // Permissions for grades.
     match /grades/{gradeId} {

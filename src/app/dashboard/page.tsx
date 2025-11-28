@@ -3,12 +3,11 @@
 
 import { useMemo, useEffect, useState } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, doc, getCountFromServer, orderBy } from 'firebase/firestore';
-import { Loader2, Users, UserCog, Shield, Database, ClipboardList, BookCopy, Archive, MessageSquare, Megaphone, CalendarCheck, ArrowLeft } from 'lucide-react';
+import { Loader2, Users, UserCog, Shield, Database, ClipboardList, Megaphone, CalendarCheck, ArrowLeft } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -54,14 +53,17 @@ export default function DashboardPage() {
   const hasPermission = (permission: string) => {
     if (isPermissionsLoading || !userProfile || !firestore) return false;
     
+    // Rule 1: Admin override
     if (userProfile.profileId === 'Administrador' || userProfile.profileId === 'Administrador(a)') {
       return true;
     }
     
+    // Rule 2: Check profile permissions
     if (profileDetails?.permissions?.includes(permission)) {
       return true;
     }
     
+    // Rule 3: Check custom user permissions
     if (userProfile.customPermissions?.includes(permission)) {
       return true;
     }
@@ -69,30 +71,13 @@ export default function DashboardPage() {
     return false;
   };
   
-  const canManageUsers = useMemo(() => {
-    if (isPermissionsLoading) return false;
-    return hasPermission('manage:users');
-  }, [isPermissionsLoading, userProfile, profileDetails]);
+  const canManageUsers = useMemo(() => hasPermission('manage:users'), [userProfile, profileDetails, isPermissionsLoading]);
+  const canManageCadastros = useMemo(() => hasPermission('manage:cadastros'), [userProfile, profileDetails, isPermissionsLoading]);
+  const canViewStudents = useMemo(() => hasPermission('manage:students') || hasPermission('view:students'), [userProfile, profileDetails, isPermissionsLoading]);
+  const canManageAnnouncements = useMemo(() => hasPermission('manage:announcements'), [userProfile, profileDetails, isPermissionsLoading]);
+  const canManageAttendance = useMemo(() => hasPermission('manage:attendance'), [userProfile, profileDetails, isPermissionsLoading]);
+  const canManageDatabase = useMemo(() => hasPermission('manage:database'), [userProfile, profileDetails, isPermissionsLoading]);
 
-  const canViewStudents = useMemo(() => {
-     if (isPermissionsLoading) return false;
-    return hasPermission('manage:students') || hasPermission('view:students');
-  }, [isPermissionsLoading, userProfile, profileDetails]);
-  
-   const canManageAnnouncements = useMemo(() => {
-    if (isPermissionsLoading) return false;
-    return hasPermission('manage:announcements');
-  }, [isPermissionsLoading, userProfile, profileDetails]);
-
-   const canManageAttendance = useMemo(() => {
-    if (isPermissionsLoading) return false;
-    return hasPermission('manage:attendance');
-  }, [isPermissionsLoading, userProfile, profileDetails]);
-
-  const isAdmin = useMemo(() => {
-    if (isPermissionsLoading) return false;
-    return userProfile?.profileId === 'Administrador' || userProfile?.profileId === 'Administrador(a)';
-  }, [isPermissionsLoading, userProfile]);
 
   useEffect(() => {
     const fetchCounts = async () => {
@@ -125,9 +110,13 @@ export default function DashboardPage() {
         }
 
         try {
-            const profilesColl = collection(firestore, 'profiles');
-            const profilesSnapshot = await getCountFromServer(query(profilesColl));
-            setProfileCount(profilesSnapshot.data().count);
+            if (canManageCadastros) {
+              const profilesColl = collection(firestore, 'profiles');
+              const profilesSnapshot = await getCountFromServer(query(profilesColl));
+              setProfileCount(profilesSnapshot.data().count);
+            } else {
+              setProfileCount(0);
+            }
         } catch (e) {
             console.error("Error fetching profile count: ", e);
             setProfileCount('N/A');
@@ -137,7 +126,7 @@ export default function DashboardPage() {
     if (!isPermissionsLoading) {
       fetchCounts();
     }
-  }, [firestore, isPermissionsLoading, canViewStudents, canManageUsers]);
+  }, [firestore, isPermissionsLoading, canViewStudents, canManageUsers, canManageCadastros]);
 
 
   const welcomeName = user?.displayName?.split(' ')[0] || 'Utilizador';
@@ -147,17 +136,6 @@ export default function DashboardPage() {
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
-    );
-  }
-  
-  const shouldCompleteProfile = userProfile && !userProfile.profileCompleted;
-  
-  if (shouldCompleteProfile) {
-    router.replace('/profile');
-    return (
-        <div className="flex h-screen w-full items-center justify-center">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
     );
   }
 
@@ -192,7 +170,7 @@ export default function DashboardPage() {
                     value={studentCount}
                     icon={Users}
                     description="Total de alunos registados"
-                    action={<Button onClick={() => router.push('/dashboard/students')}>Gerir Alunos</Button>}
+                    action={canViewStudents ? <Button onClick={() => router.push('/dashboard/students')}>Gerir Alunos</Button> : undefined}
                   />
                   <StatCard
                       title="O meu Perfil"
@@ -206,7 +184,7 @@ export default function DashboardPage() {
                       value={"Gerar Listas"}
                       icon={ClipboardList}
                       description="Gerar listas de turmas para impressão"
-                      action={<Button onClick={() => router.push('/dashboard/classes')}>Gerir Turmas</Button>}
+                      action={canViewStudents ? <Button onClick={() => router.push('/dashboard/classes')}>Gerir Turmas</Button> : undefined}
                   />
                   
                   {isPermissionsLoading ? (
@@ -240,7 +218,7 @@ export default function DashboardPage() {
                               action={<Button onClick={() => router.push('/users')}>Gerir Utilizadores</Button>}
                               />
                           )}
-                          {isAdmin && (
+                          {canManageCadastros && (
                             <>
                               <StatCard
                                 title="Perfis e Permissões"
@@ -250,13 +228,22 @@ export default function DashboardPage() {
                                 action={<Button onClick={() => router.push('/profiles')}>Gerir Perfis</Button>}
                               />
                               <StatCard
-                                title="Gestão da Base de Dados"
-                                value={"Ferramentas"}
+                                title="Cadastros"
+                                value={"Gerais"}
                                 icon={Database}
-                                description="Importar, exportar e gerir dados"
-                                action={<Button onClick={() => router.push('/dashboard/database')}>Aceder</Button>}
+                                description="Gerir funcionários e disciplinas"
+                                action={<Button onClick={() => router.push('/dashboard/cadastros')}>Aceder</Button>}
                               />
                             </>
+                          )}
+                           {canManageDatabase && (
+                            <StatCard
+                              title="Gestão da Base de Dados"
+                              value={"Ferramentas"}
+                              icon={Database}
+                              description="Importar, exportar e gerir dados"
+                              action={<Button onClick={() => router.push('/dashboard/database')}>Aceder</Button>}
+                            />
                           )}
                       </>
                   )}

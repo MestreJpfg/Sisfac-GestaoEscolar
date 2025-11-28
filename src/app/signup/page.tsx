@@ -7,9 +7,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -65,15 +65,18 @@ export default function SignupPage() {
 
       const userDocRef = doc(firestore, 'users', user.uid);
       
-      // Use await to ensure this operation completes before moving on.
+      const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',') || [];
+      const isAdmin = user.email && adminEmails.includes(user.email);
+
+      // Create the user document in Firestore.
       await setDoc(userDocRef, {
         uid: user.uid,
         name: data.name,
         email: data.email,
-        profileId: 'Aluno', // Default profile for new users
+        profileId: isAdmin ? 'Administrador' : 'Aluno', // Default profile
         customPermissions: [],
         createdAt: new Date().toISOString(),
-        photoURL: user.photoURL,
+        photoURL: user.photoURL || null,
         profileCompleted: false, // New users must complete their profile
       });
 

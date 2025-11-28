@@ -22,7 +22,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
@@ -116,9 +116,24 @@ export default function ProfilePage() {
 
     useEffect(() => {
         if (userProfile) {
+            let birthDate = null;
+            if (userProfile.dateOfBirth && typeof userProfile.dateOfBirth === 'string') {
+                try {
+                    // Tenta fazer o parse da data no formato 'yyyy-MM-dd'
+                    birthDate = parse(userProfile.dateOfBirth, 'yyyy-MM-dd', new Date());
+                    if (isNaN(birthDate.getTime())) {
+                        // Se falhar, tenta como timestamp ISO
+                        birthDate = new Date(userProfile.dateOfBirth);
+                    }
+                } catch {
+                     birthDate = null; // Data inválida
+                }
+            }
+
+
             form.reset({
                 name: userProfile.name || user?.displayName || '',
-                dateOfBirth: userProfile.dateOfBirth ? new Date(userProfile.dateOfBirth) : null,
+                dateOfBirth: birthDate && !isNaN(birthDate.getTime()) ? birthDate : null,
                 phoneNumber: userProfile.phoneNumber ? formatPhoneNumber(userProfile.phoneNumber) : '',
                 position: userProfile.position || '',
                 bio: userProfile.bio || '',
@@ -163,17 +178,9 @@ export default function ProfilePage() {
 
             const userDocToUpdate = doc(firestore, 'users', user.uid);
             
-            let formattedDate = null;
-            if (data.dateOfBirth) {
-                const date = new Date(data.dateOfBirth);
-                // Adiciona um dia à data, como solicitado pelo utilizador para contornar o bug de fuso horário
-                date.setDate(date.getDate() + 1);
-                formattedDate = format(date, 'yyyy-MM-dd');
-            }
-
             const userData: any = {
                 name: data.name,
-                dateOfBirth: formattedDate,
+                dateOfBirth: data.dateOfBirth ? format(data.dateOfBirth, 'yyyy-MM-dd') : null,
                 phoneNumber: data.phoneNumber ? data.phoneNumber.replace(/\D/g, '') : null,
                 position: data.position,
                 bio: data.bio,
@@ -399,7 +406,7 @@ export default function ProfilePage() {
                                 <p className="text-sm text-muted-foreground mr-auto">Por favor, complete o seu perfil para continuar.</p>
                              )}
                             <Button type="submit" disabled={isSaving}>
-                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Salvar Alterações e Ir para a Dashboard'}
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (userProfile?.profileCompleted ? 'Salvar Alterações' : 'Salvar e Ir para a Dashboard')}
                             </Button>
                         </div>
                     </form>
