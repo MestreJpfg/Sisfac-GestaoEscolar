@@ -17,6 +17,7 @@ import AuthGuard from '@/components/auth-guard';
 import AppFooter from '@/components/app-footer';
 import StudentDistributionChart from '@/components/student-distribution-chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import NeeDistributionChart from '@/components/nee-distribution-chart';
 
 
 export default function DashboardPage() {
@@ -261,43 +262,44 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                <div className="mt-8">
-                    {canViewStudents && (
-                         <Card>
-                             <CardHeader>
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <CardTitle>
-                                      {chartDrilldown ? `Detalhes de ${chartDrilldown}` : 'Distribuição de Alunos por Série'}
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {chartDrilldown ? 'Total de alunos por turma e turno.' : 'Clique duplo numa barra para ver os detalhes da série.'}
-                                    </CardDescription>
-                                  </div>
-                                  {chartDrilldown && (
-                                      <Button variant="outline" size="sm" onClick={() => setChartDrilldown(null)}>
-                                          <ArrowLeft className="h-4 w-4 mr-2" />
-                                          Voltar
-                                      </Button>
-                                  )}
+                {canViewStudents && (
+                  <div className="mt-8 grid gap-8 lg:grid-cols-3">
+                    <Card className="lg:col-span-2">
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                <CardTitle>
+                                    {chartDrilldown ? `Detalhes de ${chartDrilldown}` : 'Distribuição de Alunos por Série'}
+                                </CardTitle>
+                                <CardDescription>
+                                    {chartDrilldown ? `Total de alunos por turma e turno (${allStudents?.filter(s => s.serie === chartDrilldown).length || 0} alunos).` : 'Clique duplo numa barra para ver os detalhes da série.'}
+                                </CardDescription>
                                 </div>
-                             </CardHeader>
-                             <CardContent className="pl-2">
-                                {isLoadingAllStudents ? (
-                                    <div className="flex h-[350px] w-full items-center justify-center">
-                                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                    </div>
-                                ) : (
-                                    <StudentDistributionChart 
-                                      students={allStudents || []}
-                                      onDrilldown={setChartDrilldown}
-                                      drilledSerie={chartDrilldown}
-                                    />
+                                {chartDrilldown && (
+                                    <Button variant="outline" size="sm" onClick={() => setChartDrilldown(null)}>
+                                        <ArrowLeft className="h-4 w-4 mr-2" />
+                                        Voltar
+                                    </Button>
                                 )}
-                             </CardContent>
-                         </Card>
-                    )}
-                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="pl-2">
+                            {isLoadingAllStudents ? (
+                                <div className="flex h-[350px] w-full items-center justify-center">
+                                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                </div>
+                            ) : (
+                                <StudentDistributionChart 
+                                    students={allStudents || []}
+                                    onDrilldown={setChartDrilldown}
+                                    drilledSerie={chartDrilldown}
+                                />
+                            )}
+                        </CardContent>
+                    </Card>
+                    <NeeDistributionChart students={allStudents || []} isLoading={isLoadingAllStudents} />
+                  </div>
+                )}
             </div>
             </main>
             <AppFooter />
