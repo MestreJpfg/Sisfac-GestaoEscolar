@@ -55,7 +55,11 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
       q = query(q, where('ensino', '==', filters.ensino));
     }
     if (filters.serie) {
-      q = query(q, where('serie', '==', filters.serie));
+        if (filters.serie === 'N/A') {
+             q = query(q, where('serie', 'in', [null, '']));
+        } else {
+            q = query(q, where('serie', '==', filters.serie));
+        }
     }
     if (filters.classe) {
       q = query(q, where('classe', '==', filters.classe));
@@ -193,6 +197,7 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
                     <SelectContent>
                       <SelectItem value="all">Todas as séries</SelectItem>
                       {uniqueFilterOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      <SelectItem value="N/A">Não Definida</SelectItem>
                     </SelectContent>
                   </Select>
                   <Select value={filters.classe || ''} onValueChange={(value) => handleFilterChange('classe', value)}>
