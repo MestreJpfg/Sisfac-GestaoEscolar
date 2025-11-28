@@ -38,25 +38,15 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
   const fetchUsers = useCallback(async ({ pageParam = null }: { pageParam?: DocumentData | null }) => {
     if (!firestore) return { data: [], lastDoc: null };
 
-    const usersCollection = collection(firestore, 'users');
     let q: Query<DocumentData, DocumentData>;
+    const usersCollection = collection(firestore, 'users');
 
-    // Base query is now simpler. We always order by 'name' for consistent pagination.
-    // The dynamic sorting will happen on the client side.
     if (filters.profileId && filters.profileId !== 'all') {
-      q = query(
-        usersCollection,
-        where('profileId', '==', filters.profileId),
-        orderBy('name', 'asc') // Consistent ordering for pagination
-      );
+      q = query(usersCollection, where('profileId', '==', filters.profileId), orderBy('name', 'asc'));
     } else {
-      q = query(
-        usersCollection,
-        orderBy('name', 'asc') // Consistent ordering for pagination
-      );
+      q = query(usersCollection, orderBy('name', 'asc'));
     }
     
-    // Apply pagination cursor if it exists
     if (pageParam) {
       q = query(q, startAfter(pageParam));
     }
@@ -68,7 +58,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
     const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
 
     return { data: usersData, lastDoc };
-}, [firestore, filters.profileId]);
+  }, [firestore, filters.profileId]);
 
 
   const {
@@ -79,7 +69,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       isFetchingNextPage,
       error,
   } = useInfiniteQuery({
-      queryKey: ['users', filters.profileId], // Query key depends only on the profile filter
+      queryKey: ['users', filters.profileId],
       queryFn: fetchUsers,
       initialPageParam: null,
       getNextPageParam: (lastPage) => {
@@ -93,14 +83,12 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
     let processedUsers = [...allUsers];
     const searchLower = debouncedSearch.toLowerCase().trim();
 
-    // 1. Filter by search term (client-side)
     if (searchLower.length > 0) {
       processedUsers = processedUsers.filter(user => 
         (user.name?.toLowerCase().includes(searchLower) || user.email?.toLowerCase().includes(searchLower))
       );
     }
 
-    // 2. Sort the data (client-side)
     if (sortConfig.key) {
         processedUsers.sort((a, b) => {
             const aValue = a[sortConfig.key] || '';
@@ -192,7 +180,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
             <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 <p className="mt-4 text-muted-foreground">A carregar utilizadores...</p>
-            </div>>
+            </div>
         ) : allUsers.length === 0 ? (
              <Card>
                 <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
