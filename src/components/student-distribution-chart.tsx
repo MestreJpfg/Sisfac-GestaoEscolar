@@ -103,7 +103,7 @@ export default function StudentDistributionChart({ students, onDrilldown, drille
             <BarChart 
                 data={data}
                 onDoubleClick={handleBarClick}
-                margin={{ top: 20, right: 20, left: 0, bottom: 5 }}
+                margin={{ top: 20, right: 20, left: 0, bottom: drilledSerie ? 5 : 60 }}
             >
                 <CartesianGrid strokeDasharray="3 3" strokeOpacity={resolvedTheme === 'dark' ? 0.1 : 0.2} />
                 <XAxis 
@@ -113,6 +113,10 @@ export default function StudentDistributionChart({ students, onDrilldown, drille
                     tickLine={false}
                     axisLine={false}
                     interval={0}
+                    angle={drilledSerie ? 0 : -90}
+                    textAnchor={drilledSerie ? 'middle' : 'end'}
+                    dy={drilledSerie ? 0 : 5}
+                    height={drilledSerie ? 15 : 75}
                 />
                 <YAxis 
                     stroke={tickColor}
