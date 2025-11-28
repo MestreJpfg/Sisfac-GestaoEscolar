@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
@@ -70,7 +70,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   storage,
 }) => {
   const [userAuthState, setUserAuthState] = useState<UserAuthState>({
-    user: auth.currentUser,
+    user: null, // Start with null user
     isUserLoading: true, // Start loading until first auth event
     userError: null,
   });
@@ -84,7 +84,9 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
         // When auth state changes, it's a good idea to clear the query cache
         // to re-fetch data for the new user's permissions.
-        queryClient.clear();
+        if (firebaseUser) {
+           queryClient.clear();
+        }
       },
       (error) => { // Auth listener error
         console.error("FirebaseProvider: onAuthStateChanged error:", error);
