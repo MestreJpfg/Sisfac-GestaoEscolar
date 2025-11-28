@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useToast } from '@/hooks/use-toast';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 
 interface ClassListGeneratorProps {
   allStudents: any[];
@@ -273,21 +274,29 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                        <Loader2 className="h-6 w-6 animate-spin" />
                     </div>
                 ) : students.length > 0 ? (
-                     <div className='flex flex-col h-full max-h-96'>
+                     <div className='flex flex-col h-full'>
                         <div className="p-4 border-b">
                             <h3 className="font-semibold text-center">{`Resultado da Filtragem`}</h3>
                             <p className="text-sm text-muted-foreground text-center">{`${students.length} alunos encontrados`}</p>
                         </div>
-                        <ScrollArea className="flex-1">
-                            <ul className="divide-y p-4">
-                                {students.map((student, index) => (
-                                <li key={student.rm} className="py-2 text-sm flex items-center">
-                                    <span className="w-8 text-right mr-2 text-muted-foreground">{index + 1}.</span>
-                                    <span>{student.nome}</span>
-                                </li>
-                                ))}
-                            </ul>
-                        </ScrollArea>
+                        <div className="overflow-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-16 text-center">Nº</TableHead>
+                                        <TableHead>Nome do Aluno</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {students.map((student, index) => (
+                                    <TableRow key={student.rm}>
+                                        <TableCell className="text-center font-medium">{index + 1}</TableCell>
+                                        <TableCell>{student.nome}</TableCell>
+                                    </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                         <div className="p-4 border-t mt-auto">
                             <Button onClick={handleDownload} disabled={isDownloading} className="w-full">
                                 {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
@@ -305,3 +314,5 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
     </Card>
   );
 }
+
+    
