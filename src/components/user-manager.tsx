@@ -41,27 +41,21 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
     let q: Query;
     const usersCollection = collection(firestore, 'users');
 
-    // Firestore requires that if you use a filter with a comparison other than '==', 
-    // your first ordering must be on the same field.
-    // To handle our flexible filtering, we adjust the query construction logic.
-    if (filters.profileId && filters.profileId !== 'all') {
-        // When filtering by profileId, it must be the first orderBy clause if other fields are used for sorting.
-        // However, since we are using '==' for profileId, we can order by another field first.
-        // The issue arises when combining where() with orderBy() on different fields.
-        // Let's create the base query with the filter first.
-        q = query(
-            usersCollection,
-            where('profileId', '==', filters.profileId),
-            orderBy(sortConfig.key, sortConfig.direction),
-            limit(USERS_PER_PAGE)
-        );
+    const useProfileFilter = filters.profileId && filters.profileId !== 'all';
+
+    if (useProfileFilter) {
+      q = query(
+        usersCollection,
+        where('profileId', '==', filters.profileId),
+        orderBy(sortConfig.key, sortConfig.direction),
+        limit(USERS_PER_PAGE)
+      );
     } else {
-        // No profile filter, just order and limit.
-        q = query(
-            usersCollection,
-            orderBy(sortConfig.key, sortConfig.direction),
-            limit(USERS_PER_PAGE)
-        );
+      q = query(
+        usersCollection,
+        orderBy(sortConfig.key, sortConfig.direction),
+        limit(USERS_PER_PAGE)
+      );
     }
     
     if (pageParam) {
