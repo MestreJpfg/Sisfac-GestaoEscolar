@@ -173,7 +173,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
             <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 <p className="mt-4 text-muted-foreground">A carregar utilizadores...</p>
-            </div>>
+            </div>
         ) : filteredAndSortedUsers.length === 0 && (filters.search || filters.profileId) ? (
             <Card>
                 <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
