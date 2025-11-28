@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useCallback } from 'react';
@@ -37,18 +38,32 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
   const fetchUsers = useCallback(async ({ pageParam }: { pageParam: any }) => {
     if (!firestore) return { data: [], nextPage: undefined };
 
-    let q: Query = query(
-        collection(firestore, 'users'), 
-        orderBy(sortConfig.key, sortConfig.direction),
-        limit(USERS_PER_PAGE)
-    );
+    let q: Query;
+    const usersCollection = collection(firestore, 'users');
 
-    // Apply filters
+    // Firestore requires that if you use a filter with a comparison other than '==', 
+    // your first ordering must be on the same field.
+    // To handle our flexible filtering, we adjust the query construction logic.
     if (filters.profileId && filters.profileId !== 'all') {
-        q = query(q, where('profileId', '==', filters.profileId));
+        // When filtering by profileId, it must be the first orderBy clause if other fields are used for sorting.
+        // However, since we are using '==' for profileId, we can order by another field first.
+        // The issue arises when combining where() with orderBy() on different fields.
+        // Let's create the base query with the filter first.
+        q = query(
+            usersCollection,
+            where('profileId', '==', filters.profileId),
+            orderBy(sortConfig.key, sortConfig.direction),
+            limit(USERS_PER_PAGE)
+        );
+    } else {
+        // No profile filter, just order and limit.
+        q = query(
+            usersCollection,
+            orderBy(sortConfig.key, sortConfig.direction),
+            limit(USERS_PER_PAGE)
+        );
     }
     
-    // Client-side search will be applied after fetching
     if (pageParam) {
       q = query(q, startAfter(pageParam));
     }
@@ -89,10 +104,6 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       );
     }
     
-    // Sorting is now handled by the Firestore query `orderBy`, so no extra client-side sort is needed
-    // unless the search filter is active, in which case we might re-sort the filtered subset if necessary,
-    // but the initial order from Firestore is usually sufficient.
-
     return filtered;
   }, [allUsers, debouncedSearch]);
 
