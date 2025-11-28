@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, doc, getCountFromServer, orderBy } from 'firebase/firestore';
-import { Loader2, Users, UserCog, Shield, Database, ClipboardList, BookCopy, Archive, MessageSquare, Megaphone, CalendarCheck } from 'lucide-react';
+import { Loader2, Users, UserCog, Shield, Database, ClipboardList, BookCopy, Archive, MessageSquare, Megaphone, CalendarCheck, ArrowLeft } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -27,6 +27,7 @@ export default function DashboardPage() {
   const [studentCount, setStudentCount] = useState<number | React.ReactNode>(<Loader2 className="h-5 w-5 animate-spin" />);
   const [userCount, setUserCount] = useState<number | React.ReactNode>(<Loader2 className="h-5 w-5 animate-spin" />);
   const [profileCount, setProfileCount] = useState<number | React.ReactNode>(<Loader2 className="h-5 w-5 animate-spin" />);
+  const [chartDrilldown, setChartDrilldown] = useState<string | null>(null);
 
   const userDocRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -41,7 +42,6 @@ export default function DashboardPage() {
 
   const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
   
-  // Query for all students, to be passed to the chart
   const studentsQuery = useMemo(() => {
       if (!firestore) return null;
       return query(collection(firestore, 'alunos'), orderBy('nome'));
@@ -53,7 +53,6 @@ export default function DashboardPage() {
   const hasPermission = (permission: string) => {
     if (isPermissionsLoading || !userProfile || !firestore) return false;
     
-    // This logic must stay in sync with the firestore.rules
     if (userProfile.profileId === 'Administrador' || userProfile.profileId === 'Administrador(a)') {
       return true;
     }
@@ -125,7 +124,6 @@ export default function DashboardPage() {
         }
 
         try {
-            // All authenticated users can list profiles
             const profilesColl = collection(firestore, 'profiles');
             const profilesSnapshot = await getCountFromServer(query(profilesColl));
             setProfileCount(profilesSnapshot.data().count);
@@ -267,8 +265,22 @@ export default function DashboardPage() {
                     {canViewStudents && (
                          <Card>
                              <CardHeader>
-                                <CardTitle>Distribuição de Alunos por Série</CardTitle>
-                                <CardDescription>Total de alunos em cada série registada.</CardDescription>
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <CardTitle>
+                                      {chartDrilldown ? `Detalhes de ${chartDrilldown}` : 'Distribuição de Alunos por Série'}
+                                    </CardTitle>
+                                    <CardDescription>
+                                        {chartDrilldown ? 'Total de alunos por turma e turno.' : 'Total de alunos em cada série registada.'}
+                                    </CardDescription>
+                                  </div>
+                                  {chartDrilldown && (
+                                      <Button variant="outline" size="sm" onClick={() => setChartDrilldown(null)}>
+                                          <ArrowLeft className="h-4 w-4 mr-2" />
+                                          Voltar
+                                      </Button>
+                                  )}
+                                </div>
                              </CardHeader>
                              <CardContent className="pl-2">
                                 {isLoadingAllStudents ? (
@@ -276,7 +288,10 @@ export default function DashboardPage() {
                                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
                                     </div>
                                 ) : (
-                                    <StudentDistributionChart students={allStudents || []} />
+                                    <StudentDistributionChart 
+                                      students={allStudents || []}
+                                      onDrilldown={setChartDrilldown} 
+                                    />
                                 )}
                              </CardContent>
                          </Card>

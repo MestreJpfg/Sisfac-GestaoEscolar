@@ -1,49 +1,85 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { useTheme } from 'next-themes';
 
 interface StudentDistributionChartProps {
     students: any[];
+    onDrilldown: (serie: string | null) => void;
 }
 
-// Extrai o número do início de uma string para ordenação (ex: "1º Ano" -> 1)
 const getSeriesNumber = (name: string): number => {
     const match = name.match(/^(\d+)/);
     return match ? parseInt(match[0], 10) : Infinity;
 };
 
-export default function StudentDistributionChart({ students }: StudentDistributionChartProps) {
+export default function StudentDistributionChart({ students, onDrilldown }: StudentDistributionChartProps) {
     const { resolvedTheme } = useTheme();
+    const [drilledSerie, setDrilledSerie] = useState<string | null>(null);
+
+    const handleBarClick = (payload: any) => {
+        if (payload && payload.activePayload && payload.activePayload[0]) {
+            const serieName = payload.activePayload[0].payload.name;
+            setDrilledSerie(serieName);
+            onDrilldown(serieName);
+        }
+    };
+    
+    // Hook to go back to overview when onDrilldown prop becomes null
+    useMemo(() => {
+        if (drilledSerie !== null) {
+            onDrilldown(drilledSerie);
+        }
+        if (drilledSerie === null) {
+             onDrilldown(null);
+        }
+    }, [drilledSerie, onDrilldown]);
+
 
     const data = useMemo(() => {
         if (!students) return [];
 
-        const seriesCount = students.reduce((acc, student) => {
-            const serie = student.serie || 'Não definida';
-            acc[serie] = (acc[serie] || 0) + 1;
-            return acc;
-        }, {} as { [key: string]: number });
+        if (drilledSerie) {
+            const filteredStudents = students.filter(s => s.serie === drilledSerie);
+            const classCount = filteredStudents.reduce((acc, student) => {
+                const key = `${student.classe || 'N/C'} - ${student.turno || 'N/T'}`; // N/C = Não classificado, N/T = Não tem turno
+                acc[key] = (acc[key] || 0) + 1;
+                return acc;
+            }, {} as { [key: string]: number });
 
-        return Object.keys(seriesCount)
-            .map(serie => ({
-                name: serie,
-                Alunos: seriesCount[serie],
-            }))
-            .sort((a, b) => {
-                const numA = getSeriesNumber(a.name);
-                const numB = getSeriesNumber(b.name);
-                
-                if (numA !== Infinity && numB !== Infinity) {
-                    return numA - numB;
-                }
-                return a.name.localeCompare(b.name, 'pt-BR');
-            });
-    }, [students]);
-    
-    // Cores do tema para o gráfico
+            return Object.keys(classCount)
+                .map(className => ({
+                    name: className,
+                    Alunos: classCount[className],
+                }))
+                .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+
+        } else {
+             const seriesCount = students.reduce((acc, student) => {
+                const serie = student.serie || 'Não definida';
+                acc[serie] = (acc[serie] || 0) + 1;
+                return acc;
+            }, {} as { [key: string]: number });
+
+            return Object.keys(seriesCount)
+                .map(serie => ({
+                    name: serie,
+                    Alunos: seriesCount[serie],
+                }))
+                .sort((a, b) => {
+                    const numA = getSeriesNumber(a.name);
+                    const numB = getSeriesNumber(b.name);
+                    
+                    if (numA !== Infinity && numB !== Infinity) {
+                        return numA - numB;
+                    }
+                    return a.name.localeCompare(b.name, 'pt-BR');
+                });
+        }
+    }, [students, drilledSerie]);
+
     const chartColors = [
         'hsl(var(--chart-1))',
         'hsl(var(--chart-2))',
@@ -52,7 +88,7 @@ export default function StudentDistributionChart({ students }: StudentDistributi
         'hsl(var(--chart-5))',
     ];
 
-    const tickColor = resolvedTheme === 'dark' ? '#a1a1aa' : '#71717a'; // zinc-400 / zinc-500
+    const tickColor = resolvedTheme === 'dark' ? '#a1a1aa' : '#71717a';
 
     if (data.length === 0) {
         return (
@@ -64,7 +100,10 @@ export default function StudentDistributionChart({ students }: StudentDistributi
     
     return (
         <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={data}>
+            <BarChart 
+                data={data}
+                onDoubleClick={!drilledSerie ? handleBarClick : undefined}
+            >
                 <CartesianGrid strokeDasharray="3 3" strokeOpacity={resolvedTheme === 'dark' ? 0.1 : 0.2} />
                 <XAxis 
                     dataKey="name" 
@@ -92,7 +131,11 @@ export default function StudentDistributionChart({ students }: StudentDistributi
                 />
                 <Bar dataKey="Alunos" radius={[4, 4, 0, 0]}>
                     {data.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
+                        <Cell 
+                            key={`cell-${index}`} 
+                            fill={chartColors[index % chartColors.length]}
+                            className={!drilledSerie ? 'cursor-pointer' : ''}
+                        />
                     ))}
                 </Bar>
             </BarChart>
