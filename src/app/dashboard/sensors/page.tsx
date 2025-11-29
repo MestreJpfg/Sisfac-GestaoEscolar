@@ -1,193 +1,383 @@
-
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
 import { UserNav } from '@/components/user-nav';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Smartphone, Zap, Move3d } from 'lucide-react';
+import { ArrowLeft, Smartphone, Play, Repeat, Trophy } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
-interface MotionData {
-    x: number | null;
-    y: number | null;
-    z: number | null;
+
+// --- Game Configuration ---
+const PLAYER_SIZE = 30;
+const ENEMY_SIZE = 50;
+const ITEM_SIZE = 20;
+const NUM_ENEMIES = 3;
+const ENEMY_SPEED_MIN = 1;
+const ENEMY_SPEED_MAX = 2.5;
+const SENSITIVITY = 0.5; // Player movement sensitivity
+
+// --- Type Definitions ---
+interface Vector {
+    x: number;
+    y: number;
 }
 
-interface OrientationData {
-    alpha: number | null;
-    beta: number | null;
-    gamma: number | null;
+interface GameObject {
+    position: Vector;
+    velocity: Vector;
+    size: number;
 }
 
-const SensorCard = ({ title, data, unit, icon: Icon }: { title: string, data: { [key: string]: number | null }, unit: string, icon: React.ElementType }) => (
-    <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2"><Icon className="h-4 w-4 text-muted-foreground" /> {title}</CardTitle>
-        </CardHeader>
-        <CardContent>
-            {Object.entries(data).map(([key, value]) => (
-                <div key={key} className="text-lg font-bold flex justify-between">
-                    <span className="text-muted-foreground">{key.toUpperCase()}:</span>
-                    <span>{value !== null ? value.toFixed(2) : 'N/A'} {unit}</span>
-                </div>
-            ))}
-        </CardContent>
-    </Card>
-);
+type GameStatus = 'permissions' | 'ready' | 'playing' | 'gameOver';
 
-export default function SensorsPage() {
+// --- Main Game Component ---
+export default function SensorGamePage() {
     const router = useRouter();
     const { toast } = useToast();
-
-    const [motion, setMotion] = useState<MotionData>({ x: null, y: null, z: null });
-    const [orientation, setOrientation] = useState<OrientationData>({ alpha: null, beta: null, gamma: null });
-    const [permissionState, setPermissionState] = useState<'granted' | 'denied' | 'prompt'>('prompt');
+    const gameAreaRef = useRef<HTMLDivElement>(null);
+    const animationFrameId = useRef<number>();
     
+    // --- State Management ---
+    const [status, setStatus] = useState<GameStatus>('permissions');
+    const [score, setScore] = useState(0);
+    const [time, setTime] = useState(0);
+    const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>('prompt');
+    
+    const [player, setPlayer] = useState<GameObject>({
+        position: { x: 0, y: 0 },
+        velocity: { x: 0, y: 0 },
+        size: PLAYER_SIZE
+    });
+    const [enemies, setEnemies] = useState<GameObject[]>([]);
+    const [item, setItem] = useState<GameObject>({
+        position: { x: 0, y: 0 },
+        velocity: { x: 0, y: 0 },
+        size: ITEM_SIZE
+    });
+
+    const resetGame = useCallback(() => {
+        const gameArea = gameAreaRef.current;
+        if (!gameArea) return;
+
+        const { width, height } = gameArea.getBoundingClientRect();
+        
+        // Reset player to center
+        setPlayer({
+            position: { x: width / 2, y: height / 2 },
+            velocity: { x: 0, y: 0 },
+            size: PLAYER_SIZE,
+        });
+
+        // Reset enemies with random positions and velocities
+        setEnemies(Array.from({ length: NUM_ENEMIES }).map(() => ({
+            position: {
+                x: Math.random() * (width - ENEMY_SIZE),
+                y: Math.random() * (height - ENEMY_SIZE),
+            },
+            velocity: {
+                x: (Math.random() * (ENEMY_SPEED_MAX - ENEMY_SPEED_MIN) + ENEMY_SPEED_MIN) * (Math.random() < 0.5 ? 1 : -1),
+                y: (Math.random() * (ENEMY_SPEED_MAX - ENEMY_SPEED_MIN) + ENEMY_SPEED_MIN) * (Math.random() < 0.5 ? 1 : -1),
+            },
+            size: ENEMY_SIZE,
+        })));
+        
+        // Reset item
+        setItem({
+            position: { 
+                x: Math.random() * (width - ITEM_SIZE),
+                y: Math.random() * (height - ITEM_SIZE),
+            },
+            velocity: { x: 0, y: 0 },
+            size: ITEM_SIZE,
+        });
+
+        setScore(0);
+        setTime(0);
+    }, []);
+
+    // --- Permissions and Initialization ---
     useEffect(() => {
-        const handleMotion = (event: DeviceMotionEvent) => {
-            setMotion({
-                x: event.acceleration?.x ?? null,
-                y: event.acceleration?.y ?? null,
-                z: event.acceleration?.z ?? null,
-            });
-        };
-
-        const handleOrientation = (event: DeviceOrientationEvent) => {
-            setOrientation({
-                alpha: event.alpha,
-                beta: event.beta,
-                gamma: event.gamma,
-            });
-        };
-
         if (permissionState === 'granted') {
-            window.addEventListener('devicemotion', handleMotion);
-            window.addEventListener('deviceorientation', handleOrientation);
+             resetGame();
+             setStatus('ready');
         }
-
-        return () => {
-            window.removeEventListener('devicemotion', handleMotion);
-            window.removeEventListener('deviceorientation', handleOrientation);
-        };
-    }, [permissionState]);
+    }, [permissionState, resetGame]);
 
     const requestPermissions = async () => {
-        if (typeof (DeviceMotionEvent as any).requestPermission !== 'function') {
-            // Se a API de permissão não existir, assuma que a permissão é concedida (padrão em dispositivos Android e desktops)
+        if (typeof (DeviceOrientationEvent as any).requestPermission !== 'function') {
             setPermissionState('granted');
-            toast({
-                title: 'Acesso automático aos sensores.',
-                description: 'O seu navegador permite o acesso direto aos sensores do dispositivo.',
-            });
+            toast({ title: 'Acesso automático aos sensores.' });
             return;
         }
 
         try {
-            const motionPermission = await (DeviceMotionEvent as any).requestPermission();
-            const orientationPermission = await (DeviceOrientationEvent as any).requestPermission();
-
-            if (motionPermission === 'granted' && orientationPermission === 'granted') {
+            const permission = await (DeviceOrientationEvent as any).requestPermission();
+            if (permission === 'granted') {
                 setPermissionState('granted');
-                toast({
-                    title: 'Permissão concedida!',
-                    description: 'A ler os dados dos sensores do dispositivo.',
-                });
+                toast({ title: 'Permissão concedida!', description: 'Prepare-se para jogar!' });
             } else {
                 setPermissionState('denied');
-                toast({
-                    variant: 'destructive',
-                    title: 'Permissão negada.',
-                    description: 'Não é possível aceder aos sensores do dispositivo.',
-                });
+                toast({ variant: 'destructive', title: 'Permissão negada.' });
             }
         } catch (error) {
-            console.error('Erro ao pedir permissão para os sensores:', error);
-             setPermissionState('denied');
-             toast({
-                variant: 'destructive',
-                title: 'Erro ao pedir permissão',
-                description: 'Não foi possível solicitar acesso aos sensores.',
-            });
+            setPermissionState('denied');
+            toast({ variant: 'destructive', title: 'Erro ao pedir permissão.' });
         }
     };
+    
+    // --- Game Loop ---
+    const gameLoop = useCallback(() => {
+        if (status !== 'playing') return;
 
+        const gameArea = gameAreaRef.current;
+        if (!gameArea) return;
+        const { width, height } = gameArea.getBoundingClientRect();
 
+        // Update player position
+        setPlayer(p => {
+            let newX = p.position.x + p.velocity.x;
+            let newY = p.position.y + p.velocity.y;
+
+            // Wall collision for player
+            if (newX < 0) newX = 0;
+            if (newX > width - p.size) newX = width - p.size;
+            if (newY < 0) newY = 0;
+            if (newY > height - p.size) newY = height - p.size;
+            
+            return { ...p, position: { x: newX, y: newY } };
+        });
+
+        // Update enemy positions
+        setEnemies(e_arr => e_arr.map(e => {
+            let newX = e.position.x + e.velocity.x;
+            let newY = e.position.y + e.velocity.y;
+            let newVelX = e.velocity.x;
+            let newVelY = e.velocity.y;
+
+            // Wall collision for enemies
+            if (newX <= 0 || newX >= width - e.size) newVelX *= -1;
+            if (newY <= 0 || newY >= height - e.size) newVelY *= -1;
+            
+            return { ...e, position: { x: newX, y: newY }, velocity: { x: newVelX, y: newVelY }};
+        }));
+        
+        // Collision Detection
+        const p = player;
+        
+        // Player vs Item
+        if (checkCollision(p, item)) {
+            setScore(s => s + 1);
+            setItem(i => ({
+                ...i,
+                position: {
+                    x: Math.random() * (width - i.size),
+                    y: Math.random() * (height - i.size),
+                }
+            }));
+        }
+
+        // Player vs Enemies
+        for (const enemy of enemies) {
+            if (checkCollision(p, enemy)) {
+                setStatus('gameOver');
+                return;
+            }
+        }
+
+        animationFrameId.current = requestAnimationFrame(gameLoop);
+    }, [status, player, enemies, item]);
+    
+    // --- Effects ---
+    useEffect(() => {
+        if (status === 'playing') {
+            const startTime = Date.now();
+            const timer = setInterval(() => {
+                setTime(Math.floor((Date.now() - startTime) / 1000));
+            }, 1000);
+
+            animationFrameId.current = requestAnimationFrame(gameLoop);
+            
+            return () => {
+                if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
+                clearInterval(timer);
+            };
+        }
+    }, [status, gameLoop]);
+    
+    // Sensor listener effect
+    useEffect(() => {
+        if (permissionState !== 'granted') return;
+
+        const handleOrientation = (event: DeviceOrientationEvent) => {
+            const { beta, gamma } = event; // beta: front-back tilt, gamma: left-right tilt
+            if (beta === null || gamma === null) return;
+            
+            // Map tilt to velocity
+            // Clamp values to prevent extreme speed
+            const vx = Math.max(-5, Math.min(5, gamma * SENSITIVITY));
+            const vy = Math.max(-5, Math.min(5, beta * SENSITIVITY));
+            
+            setPlayer(p => ({ ...p, velocity: { x: vx, y: vy } }));
+        };
+
+        window.addEventListener('deviceorientation', handleOrientation);
+        return () => window.removeEventListener('deviceorientation', handleOrientation);
+    }, [permissionState]);
+
+    const checkCollision = (obj1: GameObject, obj2: GameObject) => {
+        const dx = (obj1.position.x + obj1.size / 2) - (obj2.position.x + obj2.size / 2);
+        const dy = (obj1.position.y + obj1.size / 2) - (obj2.position.y + obj2.size / 2);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        return distance < (obj1.size / 2 + obj2.size / 2);
+    };
+
+    const startGame = () => {
+        resetGame();
+        setStatus('playing');
+    };
+    
+    // --- Render ---
     return (
         <AuthGuard>
-            <div className="flex min-h-screen flex-col">
-                <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                    <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
+            <div className="flex min-h-screen flex-col bg-gray-900 text-gray-100">
+                <header className="sticky top-0 z-40 w-full border-b border-purple-500/30 bg-gray-900/80 backdrop-blur">
+                    <div className="container flex h-16 items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <Button variant="outline" size="icon" onClick={() => router.push('/dashboard')}>
+                            <Button variant="outline" size="icon" onClick={() => router.push('/dashboard')} className="border-purple-400/50 text-purple-400 hover:bg-purple-400/10 hover:text-purple-300">
                                 <ArrowLeft className="h-4 w-4" />
                             </Button>
                             <div className="flex items-center gap-2">
-                                <Smartphone className="h-6 w-6 text-primary" />
-                                <h1 className="text-xl font-bold text-primary hidden sm:block">Sensores do Dispositivo</h1>
+                                <Smartphone className="h-6 w-6 text-cyan-400" />
+                                <h1 className="text-xl font-bold tracking-widest text-cyan-400 font-mono hidden sm:block">SENSOR RUSH</h1>
                             </div>
                         </div>
-                        <div className="flex flex-1 items-center justify-end space-x-4">
-                            <nav className="flex items-center space-x-1">
-                                <ThemeToggle />
-                                <UserNav />
-                            </nav>
+                        <div className="flex items-center space-x-2">
+                            <ThemeToggle />
+                            <UserNav />
                         </div>
                     </div>
                 </header>
 
-                <main className="flex-1 py-8">
-                    <div className="container max-w-2xl">
-                         <Card>
-                            <CardHeader>
-                                <CardTitle>Demonstração dos Sensores</CardTitle>
-                                <CardDescription>
-                                    Esta página mostra os dados em tempo real do acelerómetro e do giroscópio do seu dispositivo. 
-                                    É necessária a sua permissão para aceder a estes dados, especialmente em dispositivos iOS.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                {permissionState === 'prompt' && (
-                                    <div className="text-center p-8 border-2 border-dashed rounded-lg">
-                                        <h3 className="text-lg font-medium">Permissão Necessária</h3>
-                                        <p className="text-muted-foreground mt-2 mb-4">Clique no botão abaixo para permitir que a aplicação aceda aos sensores do seu dispositivo.</p>
-                                        <Button onClick={requestPermissions}>
-                                            <Zap className="mr-2 h-4 w-4" />
-                                            Pedir Permissão
+                <main className="flex-1 flex flex-col items-center justify-center p-4">
+                    <div className="w-full max-w-4xl flex justify-between items-center mb-4 font-mono px-2">
+                         <div className="flex items-center gap-2 text-lg">
+                            <Trophy className="h-5 w-5 text-yellow-400" />
+                            <span>Score:</span>
+                            <span className="font-bold text-xl text-yellow-400">{score}</span>
+                        </div>
+                         <div className="flex items-center gap-2 text-lg">
+                            <span>Time:</span>
+                            <span className="font-bold text-xl text-white">{time}s</span>
+                        </div>
+                    </div>
+                    
+                    <Card className="w-full max-w-4xl aspect-video bg-black/50 border-2 border-purple-500/50 shadow-2xl shadow-purple-500/20 overflow-hidden">
+                        <CardContent ref={gameAreaRef} className="p-0 h-full w-full relative">
+                            {/* Game Objects */}
+                            {status !== 'permissions' && status !== 'denied' && (
+                                <>
+                                    {/* Player */}
+                                    <div style={{
+                                        position: 'absolute',
+                                        left: player.position.x,
+                                        top: player.position.y,
+                                        width: player.size,
+                                        height: player.size,
+                                        backgroundColor: 'hsl(180, 100%, 50%)',
+                                        borderRadius: '50%',
+                                        boxShadow: '0 0 15px 5px hsl(180, 100%, 50%, 0.7)',
+                                        transition: 'left 0.05s linear, top 0.05s linear'
+                                    }}/>
+                                    
+                                    {/* Item */}
+                                    <div style={{
+                                        position: 'absolute',
+                                        left: item.position.x,
+                                        top: item.position.y,
+                                        width: item.size,
+                                        height: item.size,
+                                        backgroundColor: 'hsl(50, 100%, 50%)',
+                                        borderRadius: '50%',
+                                        boxShadow: '0 0 15px 5px hsl(50, 100%, 50%, 0.7)',
+                                    }}/>
+
+                                    {/* Enemies */}
+                                    {enemies.map((enemy, i) => (
+                                        <div key={i} style={{
+                                            position: 'absolute',
+                                            left: enemy.position.x,
+                                            top: enemy.position.y,
+                                            width: enemy.size,
+                                            height: enemy.size,
+                                            backgroundColor: 'hsl(340, 100%, 50%)',
+                                            borderRadius: '50%',
+                                            boxShadow: '0 0 20px 8px hsl(340, 100%, 50%, 0.6)',
+                                            transition: 'left 0.05s linear, top 0.05s linear'
+                                        }}/>
+                                    ))}
+                                </>
+                            )}
+                            
+                            {/* Game Overlays */}
+                            <div className={cn("absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center transition-opacity duration-500",
+                                (status === 'playing') ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                            )}>
+                                {status === 'permissions' && (
+                                     <div className="text-center font-mono space-y-4">
+                                        <h2 className="text-3xl font-bold text-cyan-400 tracking-widest">PERMISSÃO NECESSÁRIA</h2>
+                                        <p className="text-purple-300">O jogo necessita de acesso aos sensores de movimento do seu dispositivo.</p>
+                                        <Button onClick={requestPermissions} size="lg" variant="outline" className="text-yellow-300 border-yellow-300 hover:bg-yellow-300/10 hover:text-yellow-200">
+                                            <Play className="mr-2 h-5 w-5" />
+                                            Conceder Permissão
                                         </Button>
                                     </div>
                                 )}
-                                {permissionState === 'denied' && (
-                                    <div className="text-center text-destructive p-8 border-2 border-dashed border-destructive/50 rounded-lg">
-                                        <h3 className="text-lg font-medium">Acesso Negado</h3>
-                                        <p className="mt-2">Você negou o acesso aos sensores. Para usar esta funcionalidade, precisa de conceder a permissão nas configurações do seu navegador.</p>
+                                {status === 'ready' && (
+                                    <div className="text-center font-mono space-y-4">
+                                        <h2 className="text-4xl font-bold text-cyan-400 tracking-widest">SENSOR RUSH</h2>
+                                        <p className="text-purple-300">Incline o seu dispositivo para mover a esfera azul.<br/>Colete os orbes amarelos e evite os vermelhos!</p>
+                                        <Button onClick={startGame} size="lg" className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold">
+                                            <Play className="mr-2 h-5 w-5" />
+                                            Iniciar Jogo
+                                        </Button>
                                     </div>
                                 )}
-                                {permissionState === 'granted' && (
-                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <SensorCard 
-                                            title="Acelerómetro" 
-                                            data={{ x: motion.x, y: motion.y, z: motion.z }}
-                                            unit="m/s²"
-                                            icon={Move3d}
-                                        />
-                                        <SensorCard 
-                                            title="Giroscópio" 
-                                            data={{ alpha: orientation.alpha, beta: orientation.beta, gamma: orientation.gamma }}
-                                            unit="°"
-                                            icon={Smartphone}
-                                        />
+                                {status === 'gameOver' && (
+                                     <div className="text-center font-mono space-y-4">
+                                        <h2 className="text-5xl font-bold text-red-500 tracking-widest">GAME OVER</h2>
+                                        <p className="text-xl text-white">Score Final: <span className="font-bold text-yellow-300">{score}</span></p>
+                                         <p className="text-xl text-white">Tempo: <span className="font-bold">{time}s</span></p>
+                                        <Button onClick={startGame} size="lg" className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold">
+                                            <Repeat className="mr-2 h-5 w-5" />
+                                            Tentar Novamente
+                                        </Button>
                                     </div>
                                 )}
-                            </CardContent>
-                         </Card>
-                    </div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </main>
                 <AppFooter />
+                 <AlertDialog open={permissionState === 'denied'}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Acesso aos Sensores Negado</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                O jogo não pode funcionar sem acesso aos sensores de movimento. Por favor, ative a permissão nas configurações do seu navegador para esta página.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogAction onClick={() => router.push('/dashboard')}>Voltar para a Dashboard</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
         </AuthGuard>
     );
