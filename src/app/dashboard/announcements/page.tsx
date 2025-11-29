@@ -52,7 +52,7 @@ export default function AnnouncementsPage() {
     
     const profilesQuery = useMemo(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'profiles'), orderBy('name'));
+        return query(collection(firestore, 'profiles'));
     }, [firestore]);
     const { data: profiles } = useCollection(profilesQuery);
     const profileMap = useMemo(() => new Map(profiles?.map(p => [p.id, p.name])), [profiles]);

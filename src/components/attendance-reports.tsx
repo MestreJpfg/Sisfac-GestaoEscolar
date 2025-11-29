@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -46,7 +47,7 @@ export default function AttendanceReports() {
     // Student data for filters
     const studentsOptionsQuery = useMemo(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'alunos'), orderBy('nome'));
+        return query(collection(firestore, 'alunos'));
     }, [firestore]);
     const { data: allStudents, isLoading: isLoadingStudentsOptions } = useCollection(studentsOptionsQuery);
     

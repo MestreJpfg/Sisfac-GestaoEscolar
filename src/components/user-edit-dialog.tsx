@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect } from "react";
@@ -32,7 +33,7 @@ export default function UserEditDialog({ isOpen, onClose, user, onSave }: UserEd
   
   const profilesQuery = useMemoFirebase(() => {
       if (!firestore) return null;
-      return query(collection(firestore, 'profiles'), orderBy('name'))
+      return query(collection(firestore, 'profiles'))
   }, [firestore]);
 
   const { data: profiles, isLoading: isLoadingProfiles } = useCollection(profilesQuery);
