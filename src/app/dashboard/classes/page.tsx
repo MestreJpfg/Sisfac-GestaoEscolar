@@ -20,6 +20,9 @@ export default function ClassesPage() {
     const router = useRouter();
     const firestore = useFirestore();
 
+    // This query fetches all students to populate the filter options in the generator.
+    // This is acceptable for this feature as it's less frequently used than the main student list
+    // and provides a better UX for building the class list.
     const studentsQuery = useMemo(() => {
         if (!firestore) return null;
         return query(collection(firestore, 'alunos'), orderBy('nome'));

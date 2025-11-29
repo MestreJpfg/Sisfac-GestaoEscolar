@@ -279,7 +279,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                             <h3 className="font-semibold text-center">{`Resultado da Filtragem`}</h3>
                             <p className="text-sm text-muted-foreground text-center">{`${students.length} alunos encontrados`}</p>
                         </div>
-                        <div className="overflow-auto">
+                        <ScrollArea className="flex-1" style={{ maxHeight: '500px' }}>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -296,7 +296,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                                     ))}
                                 </TableBody>
                             </Table>
-                        </div>
+                        </ScrollArea>
                         <div className="p-4 border-t mt-auto">
                             <Button onClick={handleDownload} disabled={isDownloading} className="w-full">
                                 {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
@@ -314,5 +314,3 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
     </Card>
   );
 }
-
-    
