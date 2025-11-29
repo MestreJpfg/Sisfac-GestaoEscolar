@@ -1,4 +1,5 @@
 
+
 export interface Choice {
     text: string;
     to: number | string;
@@ -36,9 +37,14 @@ export interface Spell {
 }
 
 export interface Gamebook {
+    id: string;
     title: string;
+    theme: string;
     description: string;
     player_stats: {
+        skill_name: string;
+        stamina_name: string;
+        luck_name: string;
         initial_skill: number;
         initial_stamina: number;
         initial_luck: number;
@@ -50,9 +56,14 @@ export interface Gamebook {
 
 export const gamebooks: Record<string, Gamebook> = {
     cidadelaDoCaos: {
+        id: "cidadelaDoCaos",
         title: "A Cidadela do Caos",
+        theme: "Fantasia Medieval",
         description: "Aventure-se na perigosa cidadela para derrotar o feiticeiro Balthus Dire.",
         player_stats: {
+            skill_name: "Habilidade",
+            stamina_name: "Energia",
+            luck_name: "Sorte",
             initial_skill: 9,
             initial_stamina: 18,
             initial_luck: 9,
@@ -244,9 +255,14 @@ export const gamebooks: Record<string, Gamebook> = {
         }
     },
     navePerdida: {
+        id: "navePerdida",
         title: "A Nave Perdida",
+        theme: "Ficção Científica",
         description: "Explore uma nave espacial abandonada à deriva no espaço profundo.",
          player_stats: {
+            skill_name: "Habilidade",
+            stamina_name: "Energia",
+            luck_name: "Sorte",
             initial_skill: 8,
             initial_stamina: 20,
             initial_luck: 8,
@@ -396,9 +412,14 @@ export const gamebooks: Record<string, Gamebook> = {
         }
     },
     detetiveNoir: {
+        id: "detetiveNoir",
         title: "O Detetive de Nova York",
+        theme: "Mistério/Noir",
         description: "Investigue um assassinato misterioso na chuvosa Nova York dos anos 40.",
         player_stats: {
+            skill_name: "Habilidade",
+            stamina_name: "Energia",
+            luck_name: "Sorte",
             initial_skill: 7,
             initial_stamina: 16,
             initial_luck: 10,
@@ -519,7 +540,186 @@ export const gamebooks: Record<string, Gamebook> = {
                 text: "Com a confissão do capanga, a polícia prende Lefty Malone. Não era um crime passional, mas um caso de chantagem que correu terrivelmente mal. Você acende um cigarro e observa a chuva a cair. Mais um caso encerrado. FIM.",
             }
         }
+    },
+    desertoDeFerrugem: {
+        id: "desertoDeFerrugem",
+        title: "Crônicas do Deserto de Ferrugem",
+        theme: "Sobrevivência Pós-Apocalíptica",
+        description: "Sobreviva num deserto pós-apocalíptico e encontre o lendário Último Oásis.",
+        player_stats: {
+            skill_name: "Astúcia",
+            stamina_name: "Água",
+            luck_name: "Sorte",
+            initial_skill: 8,
+            initial_stamina: 15,
+            initial_luck: 9,
+        },
+        inventory: ["Faca de Combate", "Cantil (meio cheio)", "Mapa Desgastado"],
+        spells: [],
+        nodes: {
+            "start": {
+                text: "O sol inclemente castiga o Deserto de Ferrugem, um mar de areia e metal retorcido que se estende até onde a vista alcança. Você é um Nômade, um dos poucos que ainda respiram neste mundo moribundo. A sua garganta está seca, e o seu cantil está perigosamente leve. A sua única esperança é a lenda do 'Último Oásis', um lugar de água pura e vegetação. O seu mapa desgastado aponta para o leste. Perca 1 ponto de ÁGUA. No horizonte, você avista a carcaça de um comboio descarrilado e, mais adiante, uma pequena povoação improvisada com fumo a sair de uma chaminé.",
+                staminaChange: -1,
+                choices: [
+                    { text: "Investigar o comboio descarrilado.", to: 1, success: { to: 1 }, failure: { to: 1 } },
+                    { text: "Aproximar-se da povoação.", to: 2, success: { to: 2 }, failure: { to: 2 } }
+                ]
+            },
+            1: {
+                text: "Os vagões do comboio estão semi-enterrados na areia. Ao entrar no primeiro vagão, você encontra caixas apodrecidas. O som de algo a mover-se no vagão seguinte chama a sua atenção. Parece ser um animal. Perca 1 ponto de ÁGUA.",
+                staminaChange: -1,
+                choices: [
+                    { text: "Investigar o barulho com cautela.", to: 3, success: { to: 3 }, failure: { to: 3 } },
+                    { text: "Ignorar o barulho e procurar por mantimentos.", to: 4, success: { to: 4 }, failure: { to: 4 } }
+                ]
+            },
+            2: {
+                text: "A povoação, chamada 'Ferro-Velho', é uma coleção de cabanas feitas de sucata. Os habitantes olham-no com desconfiança. Um homem com um tapa-olho, o líder aparente, aproxima-se. 'Forasteiro, o que o traz aqui? A água não é de graça.'",
+                choices: [
+                    { text: "Oferecer algo em troca de água.", to: 5, success: { to: 5 }, failure: { to: 5 } },
+                    { text: "Perguntar sobre o Último Oásis.", to: 6, success: { to: 6 }, failure: { to: 6 } }
+                ]
+            },
+            3: {
+                text: "No vagão seguinte, você encontra um CÃO-MUTANTE de duas cabeças, a roer um osso. Ele rosna, e as duas cabeças olham para si com fome. Ele prepara-se para atacar!",
+                event: "combat",
+                combat: {
+                    enemy: "Cão-Mutante",
+                    skill: 7,
+                    stamina: 8,
+                    success: { to: 7 },
+                    failure: { to: 8 }
+                }
+            },
+            4: {
+                text: "Você encontra uma caixa de metal trancada. Você pode tentar arrombá-la, mas o barulho pode atrair o que quer que esteja no outro vagão. TESTE A SUA SORTE. Se for sortudo, você abre a caixa silenciosamente. Se for azarado, a fechadura emperra e faz um barulho alto.",
+                event: "test_luck",
+                choices: [
+                    {
+                        text: "Testar Sorte",
+                        to: 0,
+                        success: { to: 9, text: "A caixa abre-se com um clique. Dentro, encontra um cantil cheio de água limpa!" },
+                        failure: { to: 3, text: "Um estalo metálico ecoa pelo vagão. O Cão-Mutante de duas cabeças aparece, furioso." }
+                    }
+                ]
+            },
+            5: {
+                text: "O líder examina os seus pertences. Ele não tem interesse na sua faca, mas o seu mapa chama-lhe a atenção. 'Este mapa... posso dar-lhe um pouco de água e comida por ele.'",
+                choices: [
+                    { text: "Trocar o mapa por suprimentos.", to: 10, success: { to: 10 }, failure: { to: 10 }, requires: { item: "Mapa Desgastado" } },
+                    { text: "Recusar a troca e ir embora.", to: 11, success: { to: 11 }, failure: { to: 11 } }
+                ]
+            },
+            6: {
+                text: "Ao mencionar o Último Oásis, o líder ri-se. 'Uma lenda para tolos. Se existir, fica para lá da 'Ravina dos Sussurros', um lugar de onde ninguém volta. Mas se quiser tentar a sua sorte, vá em frente. Ninguém o vai impedir.' Ele aponta para um desfiladeiro distante.",
+                choices: [
+                    { text: "Agradecer e seguir em direção à ravina.", to: 12, success: { to: 12 }, failure: { to: 12 } },
+                    { text: "Tentar mesmo assim trocar algo por água antes de partir.", to: 5, success: { to: 5 }, failure: { to: 5 } }
+                ]
+            },
+            7: {
+                text: "Você derrota o Cão-Mutante. O seu corpo mutado não oferece nada de útil. Exausto, você continua a explorar o comboio. Num dos últimos vagões, você encontra o esqueleto de um viajante, e ao lado dele, um filtro de água portátil.",
+                getItems: ["Filtro de Água"],
+                choices: [
+                    { text: "Sair do comboio e seguir para o leste.", to: 13, success: { to: 13 }, failure: { to: 13 } }
+                ]
+            },
+            8: {
+                text: "O Cão-Mutante é rápido e selvagem. As suas presas encontram a sua carne, e você cai, tornando-se a próxima refeição da criatura. \n\nFIM.",
+            },
+            9: {
+                text: "Você bebe a água fresca, recuperando 5 pontos de ÁGUA! Satisfeito, você deixa o comboio para trás e continua a sua jornada para o leste.",
+                staminaChange: 5,
+                choices: [
+                    { text: "Continuar a jornada.", to: 13, success: { to: 13 }, failure: { to: 13 } }
+                ]
+            },
+            10: {
+                text: "Você entrega o mapa. O líder dá-lhe um cantil cheio de água e um pedaço de carne seca. Você recupera 6 pontos de ÁGUA, mas perdeu o seu único guia. Sem o mapa, a sua busca pelo Oásis torna-se quase impossível. Você vagueia pelo deserto até os seus recursos acabarem. \n\nFIM.",
+                staminaChange: 6,
+                loseItems: ["Mapa Desgastado"]
+            },
+            11: {
+                text: "Você recusa a oferta. O líder dá de ombros. 'Como queira, forasteiro. Mas não espere hospitalidade por muito tempo.' Você deixa a povoação para trás, ainda com sede.",
+                choices: [
+                    { text: "Seguir para a Ravina dos Sussurros.", to: 12, success: { to: 12 }, failure: { to: 12 } }
+                ]
+            },
+            12: {
+                text: "A Ravina dos Sussurros é um corte profundo na terra. O vento produz sons estranhos ao passar pelas formações rochosas, parecendo vozes fantasmagóricas. Há uma ponte de corda precária que atravessa a ravina e um caminho estreito que desce para o fundo escuro. Perca 1 ponto de ÁGUA.",
+                staminaChange: -1,
+                choices: [
+                    { text: "Atravesar a ponte de corda.", to: 14, success: { to: 14 }, failure: { to: 14 } },
+                    { text: "Descer pelo caminho estreito.", to: 15, success: { to: 15 }, failure: { to: 15 } }
+                ]
+            },
+            13: {
+                text: "Após horas de caminhada sob o sol escaldante, você chega à Ravina dos Sussurros. Perca 2 pontos de ÁGUA.",
+                staminaChange: -2,
+                autoNavigate: { to: 12 }
+            },
+            14: {
+                text: "Você começa a atravessar a ponte. A meio do caminho, uma das cordas parte-se! TESTE A SUA SORTE. Se for sortudo, você consegue agarrar-se e chegar ao outro lado. Se for azarado, você cai.",
+                event: "test_luck",
+                choices: [
+                    {
+                        text: "Testar Sorte",
+                        to: 0,
+                        success: { to: 16, text: "Por um triz, você agarra-se às cordas restantes e chega ao outro lado, exausto." },
+                        failure: { to: 17, text: "Você despenca na escuridão da ravina. A sua jornada termina aqui." }
+                    }
+                ]
+            },
+            15: {
+                text: "O caminho leva-o a uma caverna húmida. No fundo, você encontra uma pequena nascente de água a pingar, mas ela é guardada por um Escorpião-Mutante gigante! Ele avança, a sua cauda venenosa erguida.",
+                event: "combat",
+                combat: {
+                    enemy: "Escorpião-Mutante",
+                    skill: 9,
+                    stamina: 12,
+                    success: { to: 18 },
+                    failure: { to: 19 }
+                }
+            },
+            16: {
+                text: "Do outro lado da ravina, o terreno muda. A areia dá lugar a solo mais escuro, e você vê plantas ressequidas. O seu mapa indica que o Oásis está próximo. Você encontra as ruínas de uma antiga estação de tratamento de água.",
+                choices: [
+                    { text: "Explorar a estação de tratamento.", to: 20, success: { to: 20 }, failure: { to: 20 } }
+                ]
+            },
+            17: {
+                text: "A queda é longa. A sua aventura termina no fundo rochoso da ravina. \n\nFIM."
+            },
+            18: {
+                text: "Após uma luta terrível, você derrota o escorpião. Você pode agora beber da nascente. Se tiver um filtro de água, a água é pura e restaura 6 pontos de ÁGUA. Caso contrário, a água está contaminada e restaura apenas 2 pontos, mas fá-lo-á perder 1 de ASTÚCIA permanentemente.",
+                choices: [
+                    { text: "Beber com o Filtro de Água.", to: 21, success: { to: 21 }, failure: { to: 21 }, requires: { item: "Filtro de Água" } },
+                    { text: "Beber a água sem filtro.", to: 22, success: { to: 22 }, failure: { to: 22 } }
+                ]
+            },
+            19: {
+                text: "O ferrão do escorpião encontra o seu alvo. O veneno age rapidamente, paralisando-o antes de uma morte agonizante. \n\nFIM."
+            },
+            20: {
+                text: "Dentro da estação, você encontra maquinaria antiga e tubulações enferrujadas. Num terminal de controlo, um ecrã ainda pisca. Ele mostra um mapa da área e uma mensagem: 'Falha catastrófica no purificador principal. Sistema de emergência ativado. A água está a ser redirecionada para o reservatório subterrâneo de acesso manual.' Uma luz vermelha pisca no mapa, não muito longe da sua localização.",
+                choices: [
+                    { text: "Seguir a localização da luz vermelha no mapa.", to: 23, success: { to: 23 }, failure: { to: 23 } }
+                ]
+            },
+            21: {
+                text: "A água filtrada é a melhor que você já provou. Você sente as suas forças a voltarem. Recupere 6 pontos de ÁGUA. Você sobe de volta para fora da ravina e continua a sua jornada.",
+                staminaChange: 6,
+                autoNavigate: { to: 16 }
+            },
+            22: {
+                text: "A água mata a sua sede, mas tem um gosto metálico. Você sente-se um pouco tonto. Recupere 2 pontos de ÁGUA, mas perca 1 ponto de ASTÚCIA. Você sobe de volta para fora da ravina e continua a sua jornada.",
+                staminaChange: 2,
+                // Implement logic for skill change in the main component
+                autoNavigate: { to: 16 }
+            },
+            23: {
+                text: "Seguindo o mapa do terminal, você encontra uma escotilha de metal pesada no chão, parcialmente coberta de areia. Com um grande esforço, você abre-a. Uma escada desce para a escuridão. Um ar fresco e húmido sobe do poço. Este deve ser o caminho. Ao descer, você encontra um vasto reservatório subterrâneo. A água é cristalina e à sua volta, plantas verdes crescem sob luzes artificiais. Você encontrou o Último Oásis. \n\nVITÓRIA!",
+            }
+        }
     }
 };
-
-    

@@ -6,7 +6,7 @@ import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
 import { UserNav } from '@/components/user-nav';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Gamepad2, Play, BookOpen } from 'lucide-react';
+import { ArrowLeft, Gamepad2, Play, BookOpen, Wind } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
