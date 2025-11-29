@@ -145,27 +145,29 @@ export default function GeneratedAdventurePage() {
     const renderGameContent = () => {
         if (gameState === 'setup') {
             return (
-                <div className="text-center animate-fade-in space-y-6 flex flex-col h-full">
-                    <h2 className="text-3xl font-bold">Gerador de Aventuras</h2>
-                    <p className="text-muted-foreground">Descreva a aventura que você quer criar ou importe um ficheiro de texto.</p>
+                <div className="text-center animate-fade-in space-y-4 sm:space-y-6 flex flex-col h-full items-center justify-center">
+                    <div className="space-y-2">
+                        <h2 className="text-3xl font-bold">Gerador de Aventuras</h2>
+                        <p className="text-muted-foreground max-w-md mx-auto">Descreva a aventura que você quer criar ou importe um ficheiro de texto.</p>
+                    </div>
                     
-                     <div className="w-full max-w-2xl mx-auto space-y-2 flex-1 flex flex-col">
-                        <Label htmlFor="adventure-prompt">A sua ideia de aventura:</Label>
+                     <div className="w-full max-w-lg mx-auto space-y-2 flex-1 flex flex-col">
+                        <Label htmlFor="adventure-prompt" className="text-left">A sua ideia de aventura:</Label>
                         <Textarea
                             id="adventure-prompt"
                             value={adventurePrompt}
                             onChange={(e) => setAdventurePrompt(e.target.value)}
                             placeholder="Exemplo: 'Crie uma aventura de fantasia sombria numa floresta assombrada, onde o objetivo é encontrar uma flor rara que cura qualquer doença. O perigo principal são criaturas da sombra e armadilhas antigas.'"
-                            className="flex-1 text-base"
+                            className="flex-1 text-base min-h-[150px] sm:min-h-[200px]"
                         />
                         <p className="text-xs text-muted-foreground text-left">Dica: Descreva o tema, o objetivo principal e os tipos de perigos que o jogador deve enfrentar para uma melhor experiência.</p>
                     </div>
 
-                    <div className="flex gap-4 justify-center items-center">
-                        <Button onClick={() => startGame(adventurePrompt)} size="lg">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center items-center w-full max-w-lg">
+                        <Button onClick={() => startGame(adventurePrompt)} size="lg" className="w-full sm:w-auto">
                             <Sparkles className="mr-2 h-4 w-4" /> Gerar Aventura
                         </Button>
-                        <Button variant="outline" size="lg" onClick={() => fileInputRef.current?.click()}>
+                        <Button variant="outline" size="lg" onClick={() => fileInputRef.current?.click()} className="w-full sm:w-auto">
                            <Upload className="mr-2 h-4 w-4" /> Importar de Ficheiro
                         </Button>
                         <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept=".txt,.md" />
@@ -261,7 +263,7 @@ export default function GeneratedAdventurePage() {
                     )}
 
                     <Card className="flex-grow flex flex-col">
-                        <CardContent className="p-6 w-full flex-grow flex flex-col">
+                        <CardContent className="p-4 sm:p-6 w-full flex-grow flex flex-col">
                            {renderGameContent()}
                         </CardContent>
                     </Card>
