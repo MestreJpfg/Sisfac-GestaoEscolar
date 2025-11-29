@@ -18,9 +18,10 @@ interface StudentTableProps {
   onReportCardClick: (student: any) => void;
   onSort: (key: string) => void;
   sortConfig: SortConfig;
+  hasSearched: boolean;
 }
 
-export default function StudentTable({ students, onRowClick, onReportCardClick, onSort, sortConfig }: StudentTableProps) {
+export default function StudentTable({ students, onRowClick, onReportCardClick, onSort, sortConfig, hasSearched }: StudentTableProps) {
   
   const SortableHeader = ({ sortKey, children, className }: { sortKey: string, children: React.ReactNode, className?: string }) => {
     const isSorted = sortConfig.key === sortKey;
@@ -41,13 +42,19 @@ export default function StudentTable({ students, onRowClick, onReportCardClick, 
   }
 
   if (students.length === 0) {
+    const message = hasSearched 
+      ? "Nenhum aluno encontrado com os critérios fornecidos." 
+      : "Utilize a busca ou os filtros para encontrar os alunos.";
+
     return (
        <Card>
         <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
             <BookUser className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-medium text-foreground">Nenhum aluno encontrado</h3>
+            <h3 className="mt-4 text-lg font-medium text-foreground">
+              {hasSearched ? "Nenhum aluno encontrado" : "Aguardando busca"}
+            </h3>
             <p className="mt-1 text-sm text-muted-foreground">
-                Tente um termo de busca diferente ou refine os seus filtros.
+                {message}
             </p>
         </CardContent>
       </Card>

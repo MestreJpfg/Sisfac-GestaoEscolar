@@ -26,6 +26,8 @@ export default function StudentDataView() {
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [reportCardStudent, setReportCardStudent] = useState<any | null>(null);
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+
 
   const [filters, setFilters] = useState({
     nome: '',
@@ -65,15 +67,22 @@ export default function StudentDataView() {
 
     return { ensinos, series, classes, turnos };
   }, [allStudentsData, filters]);
+  
+  const hasActiveFilters = useMemo(() => {
+    return filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee || debouncedNome.length >= 3;
+  }, [filters, debouncedNome]);
+
 
   const filteredAndSortedStudents = useMemo(() => {
-    if (!allStudentsData) return [];
+    if (!allStudentsData || !hasActiveFilters) {
+        return [];
+    }
 
     let filteredStudents = allStudentsData;
     const searchLower = debouncedNome.trim().toLowerCase();
 
     // Apply filters
-    if (searchLower.length > 0) {
+    if (searchLower.length >= 3) {
       filteredStudents = filteredStudents.filter(student => student.nome?.toLowerCase().includes(searchLower));
     }
     if (filters.ensino) {
@@ -106,7 +115,7 @@ export default function StudentDataView() {
     });
 
     return sortedStudents;
-  }, [allStudentsData, debouncedNome, filters, sortConfig]);
+  }, [allStudentsData, debouncedNome, filters, sortConfig, hasActiveFilters]);
 
   const handleSort = (key: string) => {
     setSortConfig(prevConfig => ({
@@ -132,6 +141,7 @@ export default function StudentDataView() {
         }
         return newFilters;
     });
+    setHasSearched(true);
   };
 
   const clearFilters = () => {
@@ -143,9 +153,8 @@ export default function StudentDataView() {
       turno: '',
       nee: false,
     });
+    setHasSearched(false);
   };
-  
-  const hasActiveFilters = filters.nome || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
 
   const handleStudentSelect = (student: any) => {
     setSelectedStudent(student);
@@ -173,7 +182,7 @@ export default function StudentDataView() {
         <CardContent className="p-4 space-y-4">
           <Input
             name="nome"
-            placeholder="Buscar por nome..."
+            placeholder="Buscar por nome (mínimo 3 caracteres)..."
             value={filters.nome}
             onChange={(e) => handleFilterChange('nome', e.target.value)}
           />
@@ -254,13 +263,11 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {!isLoadingStudents && (
+        {!isLoadingStudents && hasActiveFilters && (
             <p>
                 {filteredAndSortedStudents.length > 0
                   ? `A exibir ${filteredAndSortedStudents.length} aluno(s) encontrado(s).`
-                  : hasActiveFilters
-                  ? 'Nenhum aluno encontrado com os critérios fornecidos.'
-                  : `Total de ${allStudentsData?.length || 0} alunos na base de dados.`
+                  : 'Nenhum aluno encontrado com os critérios fornecidos.'
                 }
             </p>
         )}
@@ -278,6 +285,7 @@ export default function StudentDataView() {
                 onReportCardClick={handleOpenReportCard}
                 onSort={handleSort}
                 sortConfig={sortConfig}
+                hasSearched={hasSearched}
             />
         )}
       
