@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, doc, getCountFromServer } from 'firebase/firestore';
-import { Loader2, Users, UserCog, Shield, Database, ClipboardList, Megaphone, CalendarCheck, ArrowLeft, NotebookText, Smartphone } from 'lucide-react';
+import { Loader2, Users, UserCog, Shield, Database, ClipboardList, Megaphone, CalendarCheck, ArrowLeft, NotebookText, Gamepad2 } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -215,11 +215,11 @@ export default function DashboardPage() {
                             />
                           )}
                           <StatCard
-                            title="Sensores do Dispositivo"
-                            value={"Demo"}
-                            icon={Smartphone}
-                            description="Ver dados do acelerómetro e giroscópio"
-                            action={<Button onClick={() => router.push('/dashboard/sensors')}>Testar</Button>}
+                            title="Entretenimento"
+                            value={"Jogos"}
+                            icon={Gamepad2}
+                            description="Pequenos jogos para passar o tempo"
+                            action={<Button onClick={() => router.push('/dashboard/games')}>Jogar</Button>}
                            />
                       </>
                   )}
@@ -270,3 +270,5 @@ export default function DashboardPage() {
     </AuthGuard>
   );
 }
+
+    
