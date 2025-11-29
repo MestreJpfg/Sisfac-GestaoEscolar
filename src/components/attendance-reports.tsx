@@ -1,18 +1,17 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, where, orderBy, getDocs, startAt, endAt } from 'firebase/firestore';
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DateRange } from 'react-day-picker';
-import { Calendar as CalendarIcon, Loader2, Search, User, FileText, Download } from 'lucide-react';
+import { Calendar as CalendarIcon, Loader2, Search, FileText, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -195,7 +194,7 @@ export default function AttendanceReports() {
         );
     }, [debouncedSearch, allStudents]);
 
-    const exportToPDF = (type: 'daily' | 'individual', data: any[], title: string, head: string[][], body: any[][]) => {
+    const exportToPDF = (data: any[], title: string, head: string[][], body: any[][]) => {
         const doc = new jsPDF();
         doc.setFontSize(16);
         doc.text(title, 14, 15);
@@ -231,7 +230,7 @@ export default function AttendanceReports() {
                 </Button>
                 {dailyReportData.length > 0 && (
                     <div className="pt-4 space-y-2">
-                        <Button onClick={() => exportToPDF('daily', dailyReportData, `Relatório de Faltas - ${format(dailyDate!, 'dd/MM/yyyy')}`, [['Aluno', 'Status']], dailyReportData.map(r => [r.studentName, r.status]))} variant="outline"><Download className="mr-2 h-4 w-4"/>Exportar PDF</Button>
+                        <Button onClick={() => exportToPDF(dailyReportData, `Relatório de Faltas - ${format(dailyDate!, 'dd/MM/yyyy')}`, [['Aluno', 'Status']], dailyReportData.map(r => [r.studentName, r.status]))} variant="outline"><Download className="mr-2 h-4 w-4"/>Exportar PDF</Button>
                         <Table>
                             <TableHeader><TableRow><TableHead>Aluno</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
                             <TableBody>{dailyReportData.map(r => <TableRow key={r.id}><TableCell>{r.studentName}</TableCell><TableCell>{r.status}</TableCell></TableRow>)}</TableBody>
@@ -275,9 +274,9 @@ export default function AttendanceReports() {
                 </div>
                  <Popover>
                     <PopoverTrigger asChild>
-                        <Button id="date" variant={"outline"} className={cn("w-[300px] justify-start text-left font-normal", !individualDateRange && "text-muted-foreground")} >
+                        <Button id="date" variant={"outline"} className={cn("w-full sm:w-[300px] justify-start text-left font-normal", !individualDateRange && "text-muted-foreground")} >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {individualDateRange?.from ? (individualDateRange.to ? (<>{format(individualDateRange.from, "LLL dd, y")} - {format(individualDateRange.to, "LLL dd, y")}</>) : (format(individualDateRange.from, "LLL dd, y"))) : (<span>Escolha um período</span>)}
+                            {individualDateRange?.from ? (individualDateRange.to ? (<>{format(individualDateRange.from, "PPP", { locale: ptBR })} - {format(individualDateRange.to, "PPP", { locale: ptBR })}</>) : (format(individualDateRange.from, "PPP", { locale: ptBR }))) : (<span>Escolha um período</span>)}
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={individualDateRange?.from} selected={individualDateRange} onSelect={setIndividualDateRange} numberOfMonths={2}/></PopoverContent>
@@ -289,7 +288,7 @@ export default function AttendanceReports() {
                 {individualReportData.length > 0 && (
                      <div className="pt-4 space-y-2">
                         <h3 className="font-semibold">{selectedStudent.nome} - Faltas: {individualReportData.length}</h3>
-                        <Button onClick={() => exportToPDF('individual', individualReportData, `Relatório de Faltas - ${selectedStudent.nome}`, [['Data', 'Status']], individualReportData.map(r => [format(new Date(r.date), 'dd/MM/yyyy', { locale: ptBR }), r.status]))} variant="outline"><Download className="mr-2 h-4 w-4"/>Exportar PDF</Button>
+                        <Button onClick={() => exportToPDF(individualReportData, `Relatório de Faltas - ${selectedStudent.nome}`, [['Data', 'Status']], individualReportData.map(r => [format(new Date(r.date), 'dd/MM/yyyy', { locale: ptBR }), r.status]))} variant="outline"><Download className="mr-2 h-4 w-4"/>Exportar PDF</Button>
                         <Table>
                             <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
                             <TableBody>{individualReportData.map(r => <TableRow key={r.id}><TableCell>{format(new Date(r.date + 'T00:00:00-03:00'), 'dd/MM/yyyy', { locale: ptBR })}</TableCell><TableCell>{r.status}</TableCell></TableRow>)}</TableBody>

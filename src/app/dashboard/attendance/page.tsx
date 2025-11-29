@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -26,6 +25,8 @@ export default function AttendancePage() {
     }, [user, firestore]);
     const { data: userProfile } = useDoc(userDocRef);
 
+    // Simplified permission check: only show reports for admin profiles.
+    // This could be expanded to check for a specific 'view:attendance_reports' permission.
     const canViewReports = userProfile?.profileId === 'Administrador' || userProfile?.profileId === 'Administrador(a)';
     
     return (
