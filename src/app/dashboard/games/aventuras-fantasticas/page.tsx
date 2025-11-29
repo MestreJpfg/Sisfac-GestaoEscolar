@@ -273,9 +273,9 @@ export default function AventurasFantasticasPage() {
                 ) : (
                     <div className="mt-auto space-y-3 pt-4 border-t">
                         {availableChoices.map((choice, index) => (
-                            <Button key={index} variant="outline" className="w-full justify-start text-left h-auto py-3 gap-2" onClick={() => handleChoice(choice)}>
-                                {choice.type === 'spell' && <Wand2 className="h-4 w-4 text-purple-400" />}
-                                {choice.text}
+                            <Button key={index} variant="outline" className="w-full justify-start text-left h-auto py-3 gap-2 whitespace-normal" onClick={() => handleChoice(choice)}>
+                                {choice.type === 'spell' && <Wand2 className="h-4 w-4 text-purple-400 flex-shrink-0" />}
+                                <span>{choice.text}</span>
                             </Button>
                         ))}
                     </div>
