@@ -254,7 +254,7 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {!isLoading && (
+        {!isLoadingStudents && (
             <p>
                 {filteredAndSortedStudents.length > 0
                   ? `A exibir ${filteredAndSortedStudents.length} aluno(s) encontrado(s).`
@@ -266,7 +266,7 @@ export default function StudentDataView() {
         )}
       </div>
       
-       {isLoading ? (
+       {isLoadingStudents ? (
             <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 <p className="mt-4 text-muted-foreground">A carregar alunos...</p>
