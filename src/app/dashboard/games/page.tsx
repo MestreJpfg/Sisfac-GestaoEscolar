@@ -296,21 +296,21 @@ export default function GamesPage() {
         
         // --- Direct DOM Manipulation for Performance ---
         if(player.element) {
-            player.element.style.transform = `translate3d(${'${player.position.x}'}px, ${'${player.position.y}'}px, 0)`;
+            player.element.style.transform = `translate3d(${player.position.x}px, ${player.position.y}px, 0)`;
         }
         if(item.element) {
-            item.element.style.transform = `translate3d(${'${item.position.x}'}px, ${'${item.position.y}'}px, 0)`;
+            item.element.style.transform = `translate3d(${item.position.x}px, ${item.position.y}px, 0)`;
         }
         if(powerUp.element) {
-            powerUp.element.style.transform = `translate3d(${'${powerUp.position.x}'}px, ${'${powerUp.position.y}'}px, 0)`;
+            powerUp.element.style.transform = `translate3d(${powerUp.position.x}px, ${powerUp.position.y}px, 0)`;
             powerUp.element.style.display = powerUp.active ? 'block' : 'none';
         }
         enemies.forEach(e => {
             if (e.element) {
-                e.element.style.transform = `translate3d(${'${e.position.x}'}px, ${'${e.position.y}'}px, 0)`;
+                e.element.style.transform = `translate3d(${e.position.x}px, ${e.position.y}px, 0)`;
                 const isSlow = isPowerUpActiveRef.current;
                 e.element.style.backgroundColor = isSlow ? 'hsl(340, 50%, 70%)' : 'hsl(340, 100%, 50%)';
-                e.element.style.boxShadow = `0 0 20px 8px ${'${isSlow ? \'hsl(340, 50%, 70%, 0.6)\' : \'hsl(340, 100%, 50%, 0.6)\'}'}`;
+                e.element.style.boxShadow = `0 0 20px 8px ${isSlow ? 'hsl(340, 50%, 70%, 0.6)' : 'hsl(340, 100%, 50%, 0.6)'}`;
             }
         });
 
@@ -553,5 +553,3 @@ export default function GamesPage() {
         </AuthGuard>
     );
 }
-
-    
