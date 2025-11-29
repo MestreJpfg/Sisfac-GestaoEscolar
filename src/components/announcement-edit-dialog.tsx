@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useFirestore } from "@/firebase";
-import { collection, query, orderBy } from "firebase/firestore";
+import { collection, query } from "firebase/firestore";
 import { useCollection } from "@/firebase/firestore/use-collection";
 import { MultiSelect } from "./multi-select";
 
@@ -36,10 +36,17 @@ export default function AnnouncementEditDialog({ isOpen, onClose, announcement, 
 
   const profilesQuery = useMemo(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'profiles'), orderBy('name'));
+    // Removido orderBy('name') para evitar erros de asserção interna do Firestore.
+    // A ordenação será feita no cliente.
+    return query(collection(firestore, 'profiles'));
   }, [firestore]);
   
-  const { data: profiles, isLoading: isLoadingProfiles } = useCollection(profilesQuery);
+  const { data: profilesData, isLoading: isLoadingProfiles } = useCollection(profilesQuery);
+
+  const profiles = useMemo(() => {
+    if (!profilesData) return [];
+    return [...profilesData].sort((a, b) => a.name.localeCompare(b.name));
+  }, [profilesData]);
 
   const form = useForm<AnnouncementFormValues>({
     resolver: zodResolver(announcementSchema),
