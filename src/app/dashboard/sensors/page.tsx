@@ -41,36 +41,34 @@ type GameStatus = 'permissions' | 'ready' | 'playing' | 'gameOver';
 export default function SensorGamePage() {
     const router = useRouter();
     const { toast } = useToast();
+    
+    // --- Refs for Game Objects & Animation ---
     const gameAreaRef = useRef<HTMLDivElement>(null);
     const animationFrameId = useRef<number>();
     const gameTimeStartRef = useRef<number>(0);
-    
-    // --- State Management ---
+    const playerRef = useRef<GameObject>({ position: { x: -100, y: -100 }, velocity: { x: 0, y: 0 }, size: PLAYER_SIZE });
+    const enemiesRef = useRef<GameObject[]>([]);
+    const itemRef = useRef<GameObject>({ position: { x: -100, y: -100 }, velocity: { x: 0, y: 0 }, size: ITEM_SIZE });
+
+    // --- State for React Rendering ---
     const [status, setStatus] = useState<GameStatus>('permissions');
     const [score, setScore] = useState(0);
     const [time, setTime] = useState(0);
     const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>('prompt');
-    
-    const [player, setPlayer] = useState<GameObject>({
-        position: { x: -100, y: -100 }, // Start off-screen
-        velocity: { x: 0, y: 0 },
-        size: PLAYER_SIZE
-    });
-    const [enemies, setEnemies] = useState<GameObject[]>([]);
-    const [item, setItem] = useState<GameObject>({
-        position: { x: -100, y: -100 }, // Start off-screen
-        velocity: { x: 0, y: 0 },
-        size: ITEM_SIZE
-    });
+    const [, setTick] = useState(0); // Used to force re-renders for object positions
 
-    const resetGame = useCallback((width: number, height: number) => {
-        setPlayer({
+    const resetGame = useCallback(() => {
+        const gameArea = gameAreaRef.current;
+        if (!gameArea) return;
+        const { width, height } = gameArea.getBoundingClientRect();
+        
+        playerRef.current = {
             position: { x: (width - PLAYER_SIZE) / 2, y: (height - PLAYER_SIZE) / 2 },
             velocity: { x: 0, y: 0 },
             size: PLAYER_SIZE,
-        });
+        };
 
-        setEnemies(Array.from({ length: NUM_ENEMIES }).map(() => ({
+        enemiesRef.current = Array.from({ length: NUM_ENEMIES }).map(() => ({
             position: {
                 x: Math.random() * (width - ENEMY_SIZE),
                 y: Math.random() * (height - ENEMY_SIZE),
@@ -80,20 +78,20 @@ export default function SensorGamePage() {
                 y: (Math.random() * (ENEMY_SPEED_MAX - ENEMY_SPEED_MIN) + ENEMY_SPEED_MIN) * (Math.random() < 0.5 ? 1 : -1),
             },
             size: ENEMY_SIZE,
-        })));
+        }));
         
-        setItem({
+        itemRef.current = {
             position: { 
                 x: Math.random() * (width - ITEM_SIZE),
                 y: Math.random() * (height - ITEM_SIZE),
             },
             velocity: { x: 0, y: 0 },
             size: ITEM_SIZE,
-        });
+        };
 
         setScore(0);
         setTime(0);
-        gameTimeStartRef.current = 0;
+        gameTimeStartRef.current = Date.now();
     }, []);
 
     // --- Permissions and Initialization ---
@@ -135,6 +133,13 @@ export default function SensorGamePage() {
             }
         }
     };
+
+    const checkCollision = (obj1: GameObject, obj2: GameObject) => {
+        const dx = (obj1.position.x + obj1.size / 2) - (obj2.position.x + obj2.size / 2);
+        const dy = (obj1.position.y + obj1.size / 2) - (obj2.position.y + obj2.size / 2);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        return distance < (obj1.size / 2 + obj2.size / 2);
+    };
     
     // --- Game Loop ---
     const gameLoop = useCallback(() => {
@@ -142,73 +147,62 @@ export default function SensorGamePage() {
         if (!gameArea) return;
         const { width, height } = gameArea.getBoundingClientRect();
         
-        if (gameTimeStartRef.current > 0) {
-            setTime(Math.floor((Date.now() - gameTimeStartRef.current) / 1000));
-        }
+        // --- Update Time ---
+        setTime(Math.floor((Date.now() - gameTimeStartRef.current) / 1000));
 
-        setPlayer(p => {
-            let newX = p.position.x + p.velocity.x;
-            let newY = p.position.y + p.velocity.y;
-            if (newX < 0) newX = 0;
-            if (newX > width - p.size) newX = width - p.size;
-            if (newY < 0) newY = 0;
-            if (newY > height - p.size) newY = height - p.size;
-            return { ...p, position: { x: newX, y: newY } };
-        });
+        // --- Update Player Position ---
+        const player = playerRef.current;
+        let newPlayerX = player.position.x + player.velocity.x;
+        let newPlayerY = player.position.y + player.velocity.y;
+        if (newPlayerX < 0) newPlayerX = 0;
+        if (newPlayerX > width - player.size) newPlayerX = width - player.size;
+        if (newPlayerY < 0) newPlayerY = 0;
+        if (newPlayerY > height - player.size) newPlayerY = height - player.size;
+        player.position = { x: newPlayerX, y: newPlayerY };
 
-        setEnemies(e_arr => e_arr.map(e => {
+        // --- Update Enemies Position ---
+        const enemies = enemiesRef.current;
+        enemies.forEach(e => {
             let newX = e.position.x + e.velocity.x;
             let newY = e.position.y + e.velocity.y;
-            let newVelX = e.velocity.x;
-            let newVelY = e.velocity.y;
-            if (newX <= 0 || newX >= width - e.size) newVelX *= -1;
-            if (newY <= 0 || newY >= height - e.size) newVelY *= -1;
-            return { ...e, position: { x: newX, y: newY }, velocity: { x: newVelX, y: newVelY }};
-        }));
-        
-        setPlayer(p => {
-            const gameArea = gameAreaRef.current;
-            if (!gameArea) return p;
-            const { width, height } = gameArea.getBoundingClientRect();
-
-            if (checkCollision(p, item)) {
-                vibrate(50);
-                setScore(s => s + 1);
-                setItem(i => ({
-                    ...i,
-                    position: {
-                        x: Math.random() * (width - i.size),
-                        y: Math.random() * (height - i.size),
-                    }
-                }));
-            }
-
-            for (const enemy of enemies) {
-                if (checkCollision(p, enemy)) {
-                    vibrate([200, 50, 200]);
-                    setStatus('gameOver');
-                    return p;
-                }
-            }
-            return p;
+            if (newX <= 0 || newX >= width - e.size) e.velocity.x *= -1;
+            if (newY <= 0 || newY >= height - e.size) e.velocity.y *= -1;
+            e.position = { x: newX, y: newY };
         });
 
+        // --- Check Collisions ---
+        const item = itemRef.current;
+        if (checkCollision(player, item)) {
+            vibrate(50);
+            setScore(s => s + 1);
+            item.position = {
+                x: Math.random() * (width - item.size),
+                y: Math.random() * (height - item.size),
+            };
+        }
+
+        for (const enemy of enemies) {
+            if (checkCollision(player, enemy)) {
+                vibrate([200, 50, 200]);
+                setStatus('gameOver');
+                return;
+            }
+        }
+        
+        // Force a re-render to show updated positions
+        setTick(t => t + 1);
+
         animationFrameId.current = requestAnimationFrame(gameLoop);
-    }, [item, enemies]);
+    }, []);
     
-    // --- Effects ---
+    // --- Game State Effects ---
     useEffect(() => {
         if (status === 'playing') {
-            if (gameTimeStartRef.current === 0) {
-                 gameTimeStartRef.current = Date.now();
-            }
+            gameTimeStartRef.current = Date.now();
             animationFrameId.current = requestAnimationFrame(gameLoop);
         } else {
              if (animationFrameId.current) {
                 cancelAnimationFrame(animationFrameId.current);
-             }
-             if (status === 'gameOver') {
-                gameTimeStartRef.current = 0;
              }
         }
         
@@ -219,6 +213,7 @@ export default function SensorGamePage() {
         };
     }, [status, gameLoop]);
     
+    // --- Sensor Listener Effect ---
     useEffect(() => {
         if (permissionState !== 'granted' || status !== 'playing') return;
 
@@ -229,26 +224,19 @@ export default function SensorGamePage() {
             const vx = Math.max(-5, Math.min(5, gamma * SENSITIVITY));
             const vy = Math.max(-5, Math.min(5, beta * SENSITIVITY));
             
-            setPlayer(p => ({ ...p, velocity: { x: vx, y: vy } }));
+            playerRef.current.velocity = { x: vx, y: vy };
         };
 
         window.addEventListener('deviceorientation', handleOrientation);
         return () => window.removeEventListener('deviceorientation', handleOrientation);
     }, [permissionState, status]);
-
-    const checkCollision = (obj1: GameObject, obj2: GameObject) => {
-        const dx = (obj1.position.x + obj1.size / 2) - (obj2.position.x + obj2.size / 2);
-        const dy = (obj1.position.y + obj1.size / 2) - (obj2.position.y + obj2.size / 2);
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        return distance < (obj1.size / 2 + obj2.size / 2);
-    };
     
     const startGame = () => {
         const gameArea = gameAreaRef.current;
         if (gameArea) {
             const { width, height } = gameArea.getBoundingClientRect();
             if (width > 0 && height > 0) {
-                resetGame(width, height);
+                resetGame();
                 setStatus('playing');
             } else {
                 toast({ variant: 'destructive', title: 'Erro de Layout', description: 'Não foi possível iniciar o jogo. Tente novamente.' });
@@ -295,30 +283,32 @@ export default function SensorGamePage() {
                         <CardContent ref={gameAreaRef} className="p-0 h-full w-full relative">
                             {status !== 'permissions' && permissionState === 'granted' && (
                                 <>
+                                    {/* Player */}
                                     <div style={{
                                         position: 'absolute',
-                                        left: player.position.x,
-                                        top: player.position.y,
-                                        width: player.size,
-                                        height: player.size,
+                                        left: playerRef.current.position.x,
+                                        top: playerRef.current.position.y,
+                                        width: playerRef.current.size,
+                                        height: playerRef.current.size,
                                         backgroundColor: 'hsl(180, 100%, 50%)',
                                         borderRadius: '50%',
                                         boxShadow: '0 0 15px 5px hsl(180, 100%, 50%, 0.7)',
-                                        transition: 'left 0.05s linear, top 0.05s linear'
                                     }}/>
                                     
+                                    {/* Item */}
                                     <div style={{
                                         position: 'absolute',
-                                        left: item.position.x,
-                                        top: item.position.y,
-                                        width: item.size,
-                                        height: item.size,
+                                        left: itemRef.current.position.x,
+                                        top: itemRef.current.position.y,
+                                        width: itemRef.current.size,
+                                        height: itemRef.current.size,
                                         backgroundColor: 'hsl(50, 100%, 50%)',
                                         borderRadius: '50%',
                                         boxShadow: '0 0 15px 5px hsl(50, 100%, 50%, 0.7)',
                                     }}/>
 
-                                    {enemies.map((enemy, i) => (
+                                    {/* Enemies */}
+                                    {enemiesRef.current.map((enemy, i) => (
                                         <div key={i} style={{
                                             position: 'absolute',
                                             left: enemy.position.x,
@@ -328,7 +318,6 @@ export default function SensorGamePage() {
                                             backgroundColor: 'hsl(340, 100%, 50%)',
                                             borderRadius: '50%',
                                             boxShadow: '0 0 20px 8px hsl(340, 100%, 50%, 0.6)',
-                                            transition: 'left 0.05s linear, top 0.05s linear'
                                         }}/>
                                     ))}
                                 </>
