@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -260,7 +259,35 @@ export default function GradesManager() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="overflow-x-auto">
+                             {/* Mobile View */}
+                            <div className="space-y-4 sm:hidden">
+                                {sortedStudentsInClass.map((student) => (
+                                    <div key={student.id} className="p-4 border rounded-lg">
+                                        <p className="font-semibold mb-3">{student.nome}</p>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {(['etapa1', 'etapa2', 'etapa3', 'etapa4'] as const).map(etapa => (
+                                                <div key={etapa}>
+                                                    <label className="text-sm text-muted-foreground">{etapa.replace('etapa', 'Etapa ')}</label>
+                                                    <Input
+                                                        type="text"
+                                                        value={grades[student.id]?.[etapa] === null || grades[student.id]?.[etapa] === undefined ? '' : String(grades[student.id]?.[etapa]).replace('.', ',')}
+                                                        onChange={(e) => handleGradeChange(student.id, etapa, e.target.value)}
+                                                        className="w-full text-center mt-1"
+                                                        placeholder="-"
+                                                    />
+                                                </div>
+                                            ))}
+                                            <div>
+                                                 <label className="text-sm text-muted-foreground">Média Final</label>
+                                                 <p className="font-bold text-lg mt-1 h-10 flex items-center justify-center">{calculateAverage(student.id)}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                             {/* Desktop View */}
+                            <div className="overflow-x-auto hidden sm:block">
                                <Table>
                                     <TableHeader>
                                         <TableRow>
