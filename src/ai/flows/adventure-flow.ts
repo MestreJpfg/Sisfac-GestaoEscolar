@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Um fluxo Genkit para gerar histórias de aventura interativas.
@@ -9,6 +10,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const AdventureInputSchema = z.object({
   genre: z.string().describe('O género da aventura (por exemplo, Fantasia, Ficção Científica, Mistério).'),
@@ -34,6 +36,7 @@ const storyPrompt = ai.definePrompt({
     name: "storyPrompt",
     input: { schema: AdventureInputSchema },
     output: { schema: AdventureOutputSchema },
+    model: googleAI('gemini-pro'),
 
     prompt: `
         Você é um mestre de jogo a narrar uma aventura de texto interativa.
