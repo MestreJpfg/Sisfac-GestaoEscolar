@@ -66,7 +66,7 @@ export default function StudentReportCard({ boletim, isPrintMode = false, compac
           .replace(/_/g, ' ')
           .replace(/-/g, '/');
       
-      const formattedDisciplina = cleanedDisciplina.charAt(0).toUpperCase() + cleanedDisciplina.slice(1).toLowerCase();
+      const formattedDisciplina = cleanedDisciplina.charAt(0).toUpperCase() + cleanedDisciplina.slice(1);
 
       return {
         originalDisciplina: disciplina,

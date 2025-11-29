@@ -78,7 +78,7 @@ export default function StudentReportCardDialog({
         const media = notas.mediaFinal ?? (validGrades.length > 0 ? validGrades.reduce((a, b) => a + b, 0) / validGrades.length : null);
         
         const cleanedDisciplina = disciplina.replace(/_/g, ' ').replace(/-/g, '/');
-        const formattedDisciplina = cleanedDisciplina.charAt(0).toUpperCase() + cleanedDisciplina.slice(1).toLowerCase();
+        const formattedDisciplina = cleanedDisciplina.charAt(0).toUpperCase() + cleanedDisciplina.slice(1);
 
         return { disciplina: formattedDisciplina, media };
       })
