@@ -31,7 +31,6 @@ export async function generateAdventureStep(input: AdventureInput): Promise<Adve
   return generateAdventureStepFlow(input);
 }
 
-
 const storyPrompt = ai.definePrompt({
     name: "storyPrompt",
     input: { schema: AdventureInputSchema },
@@ -55,7 +54,6 @@ const storyPrompt = ai.definePrompt({
         Se a história tiver chegado a uma conclusão natural (boa ou má), defina 'isEnd' como true.
     `,
 });
-
 
 const generateAdventureStepFlow = ai.defineFlow(
   {
