@@ -360,7 +360,7 @@ export default function SensorGamePage() {
                             </Button>
                             <div className="flex items-center gap-2">
                                 <Smartphone className="h-6 w-6 text-cyan-400" />
-                                <h1 className="text-xl font-bold tracking-widest text-cyan-400 font-mono hidden sm:block">SENSOR RUSH</h1>
+                                <h1 className="text-xl font-bold tracking-widest text-cyan-400 font-mono hidden sm:block">BOLA MALUCA</h1>
                             </div>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -458,7 +458,7 @@ export default function SensorGamePage() {
                                 )}
                                 {status === 'ready' && (
                                     <div className="text-center font-mono space-y-4 p-4">
-                                        <h2 className="text-4xl font-bold text-cyan-400 tracking-widest">SENSOR RUSH</h2>
+                                        <h2 className="text-4xl font-bold text-cyan-400 tracking-widest">BOLA MALUCA</h2>
                                         <p className="text-purple-300">Incline o seu dispositivo para mover a esfera azul.<br/>Colete os orbes amarelos e evite os vermelhos!</p>
                                         <p className="text-lg text-white">RECORDE: <span className="font-bold text-yellow-300">{highScore}</span></p>
                                         <Button onClick={startGame} size="lg" className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold">
@@ -501,9 +501,5 @@ export default function SensorGamePage() {
         </AuthGuard>
     );
 }
-
-    
-
-    
 
     
