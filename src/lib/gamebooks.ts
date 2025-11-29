@@ -14,6 +14,8 @@ export interface Combat {
     enemy: string;
     skill: number;
     stamina: number;
+    can_flee?: boolean;
+    flee_to?: number | string;
     success: { to: number | string };
     failure: { to: number | string };
 }
@@ -189,6 +191,8 @@ export const gamebooks: Record<string, Gamebook> = {
                     enemy: "Dois Goblins",
                     skill: 5,
                     stamina: 8,
+                    can_flee: true,
+                    flee_to: 1,
                     success: { to: 25 },
                     failure: { to: 26 }
                 }
@@ -341,12 +345,14 @@ export const gamebooks: Record<string, Gamebook> = {
                 text: "Você corre para o controle e ativa o sistema de supressão de incêndios. Jatos de CO2 gelado enchem a sala. A criatura guincha, a sua carapaça estala e congela. Com um último espasmo, ela despedaça-se. Você sobreviveu e resolveu o mistério! FIM.",
             },
             11: {
-                text: "A sua Pistola Laser parece não fazer efeito na carapaça da criatura. Ela domina-o facilmente. FIM.",
+                text: "A criatura é rápida e letal. Prepare-se para lutar pela sua vida!",
                 event: "combat",
                 combat: {
                     enemy: "Criatura Alienígena",
                     skill: 10,
                     stamina: 15,
+                    can_flee: true,
+                    flee_to: 2,
                     success: { to: 16 },
                     failure: { to: 17 }
                 }
@@ -516,7 +522,7 @@ export const gamebooks: Record<string, Gamebook> = {
                 ]
             },
             15: {
-                text: "Você desvia-se e contra-ataca. O capanga não esperava uma luta. Você pode tentar subjugá-lo para obter informações ou fugir.",
+                text: "Você desvia-se e contra-ataca. O capanga não esperava uma luta. Prepare-se!",
                 event: 'combat',
                 combat: {
                     enemy: "Capanga de Lefty",
@@ -723,3 +729,5 @@ export const gamebooks: Record<string, Gamebook> = {
         }
     }
 };
+
+    
