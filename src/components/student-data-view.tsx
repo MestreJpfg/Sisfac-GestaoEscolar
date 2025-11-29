@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, limit } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown, AlertTriangle, Search, Loader2 } from 'lucide-react';
@@ -21,7 +21,7 @@ import { Label } from './ui/label';
 import StudentReportCardDialog from './student-report-card-dialog';
 import { useToast } from '@/hooks/use-toast';
 
-export default function StudentDataView({ allStudents }: { allStudents: any[] }) {
+export default function StudentDataView() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
@@ -40,30 +40,26 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
   const debouncedNome = useDebounce(filters.nome, 300);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name', direction: 'ascending' });
 
-  const hasActiveFilters = useMemo(() => {
-    return debouncedNome.trim().length > 0 || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
-  }, [debouncedNome, filters]);
-
+  // Main query to get all students. Filtering happens on the client side.
   const studentsQuery = useMemo(() => {
-    if (!firestore || !hasActiveFilters) return null;
-
-    let q = query(collection(firestore, 'users'), where('profileId', '==', 'Aluno'));
-
-    if (filters.ensino) q = query(q, where('ensino', '==', filters.ensino));
-    if (filters.serie) q = query(q, where('serie', '==', filters.serie));
-    if (filters.classe) q = query(q, where('classe', '==', filters.classe));
-    if (filters.turno) q = query(q, where('turno', '==', filters.turno));
-    if (filters.nee) q = query(q, where('nee', '==', true));
-    
-    // Client-side filtering will handle name search and sorting
-    return q;
-  }, [firestore, hasActiveFilters, filters]);
-
-  const { data: fetchedStudents, isLoading: isDataLoading } = useCollection(studentsQuery);
+    if (!firestore) return null;
+    return query(collection(firestore, 'users'), where('profileId', '==', 'Aluno'));
+  }, [firestore]);
+  
+  const { data: allStudents, isLoading: isDataLoading } = useCollection(studentsQuery);
 
   const filteredAndSortedStudents = useMemo(() => {
-    let students = hasActiveFilters ? (fetchedStudents || []) : allStudents;
+    if (!allStudents) return [];
     
+    let students = [...allStudents];
+    
+    // Client-side filtering
+    if (filters.ensino) students = students.filter(s => s.ensino === filters.ensino);
+    if (filters.serie) students = students.filter(s => s.serie === filters.serie);
+    if (filters.classe) students = students.filter(s => s.classe === filters.classe);
+    if (filters.turno) students = students.filter(s => s.turno === filters.turno);
+    if (filters.nee) students = students.filter(s => s.nee && s.nee.trim() !== '');
+
     if (debouncedNome.trim().length > 0) {
         const searchLower = debouncedNome.trim().toLowerCase();
         students = students.filter(student => student.name?.toLowerCase().includes(searchLower));
@@ -79,13 +75,14 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
     });
 
     return students;
-  }, [fetchedStudents, allStudents, hasActiveFilters, debouncedNome, sortConfig]);
+  }, [allStudents, filters, debouncedNome, sortConfig]);
 
   const uniqueFilterOptions = useMemo(() => {
+    const dataForOptions = allStudents || [];
     const getUniqueValues = (key: string, data: any[]) => 
       [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
-    let filteredData = allStudents || [];
+    let filteredData = dataForOptions;
     const ensinos = getUniqueValues('ensino', filteredData);
 
     if (filters.ensino) filteredData = filteredData.filter(s => s.ensino === filters.ensino);
@@ -156,7 +153,18 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
         description: "Os dados do aluno estão sendo atualizados na lista.",
     });
   };
+
+  const hasActiveFilters = debouncedNome.trim().length > 0 || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
   
+  if (isDataLoading) {
+     return (
+        <div className="flex flex-col items-center justify-center h-96 rounded-lg border-2 border-dashed border-border bg-card/50">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="mt-4 text-muted-foreground">A carregar dados dos alunos...</p>
+        </div>
+     );
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -244,22 +252,15 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {!isDataLoading && (
-          <p>
+        <p>
             {filteredAndSortedStudents.length > 0
               ? `${filteredAndSortedStudents.length} aluno(s) encontrado(s).`
-              : hasActiveFilters ? 'Nenhum aluno encontrado com os critérios fornecidos.' : ''
+              : hasActiveFilters ? 'Nenhum aluno encontrado com os critérios fornecidos.' : (allStudents?.length ? `${allStudents.length} alunos no total.` : '')
             }
-          </p>
-        )}
+        </p>
       </div>
       
-       {isDataLoading && hasActiveFilters ? (
-            <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="mt-4 text-muted-foreground">A buscar alunos...</p>
-            </div>
-        ) : filteredAndSortedStudents.length > 0 ? (
+       {filteredAndSortedStudents.length > 0 ? (
             <StudentTable
                 students={filteredAndSortedStudents}
                 onRowClick={handleStudentSelect}
