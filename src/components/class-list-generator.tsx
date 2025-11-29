@@ -4,7 +4,8 @@
 import { useState, useMemo } from 'react';
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
-import { ClipboardList, X, Loader2, Download, Filter } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import { ClipboardList, X, Loader2, Download, Filter, BookCheck } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -12,15 +13,24 @@ import { useToast } from '@/hooks/use-toast';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import ReportCardGrid from './report-card-grid';
 
 interface ClassListGeneratorProps {
   allStudents: any[];
 }
 
+// Helper function to chunk array
+const chunk = (arr: any[], size: number) =>
+  Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
+    arr.slice(i * size, i * size + size)
+  );
+
+
 export default function ClassListGenerator({ allStudents }: ClassListGeneratorProps) {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isDownloadingGrid, setIsDownloadingGrid] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [activeAccordion, setActiveAccordion] = useState<string>("item-1");
   
@@ -197,6 +207,67 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
     }
   };
 
+  const handleDownloadGrid = async () => {
+    if (students.length === 0) return;
+    setIsDownloadingGrid(true);
+
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    document.body.appendChild(container);
+
+    try {
+        const studentChunks = chunk(students, 4);
+        const pdf = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
+
+        for (let i = 0; i < studentChunks.length; i++) {
+            const chunk = studentChunks[i];
+
+            const elementToRender = document.createElement('div');
+            container.appendChild(elementToRender);
+            
+            const reactRoot = await import('react-dom/client').then(m => m.createRoot(elementToRender));
+            
+            await new Promise<void>(resolve => {
+                reactRoot.render(<ReportCardGrid students={chunk} />);
+                setTimeout(resolve, 500); 
+            });
+
+            const canvas = await html2canvas(elementToRender, {
+                scale: 2,
+                useCORS: true,
+            });
+
+            const imgData = canvas.toDataURL('image/jpeg', 0.95);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            
+            if (i > 0) {
+                pdf.addPage();
+            }
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+
+            reactRoot.unmount();
+            container.removeChild(elementToRender);
+        }
+        
+        const fileName = `Boletins_Grade_${filters.serie || 'Geral'}_${filters.classe || ''}.pdf`.replace(/ /g, '_');
+        pdf.save(fileName);
+
+    } catch (error) {
+        console.error("Error generating grid PDF:", error);
+        toast({
+            variant: "destructive",
+            title: "Erro ao Gerar PDF em Grade",
+            description: "Ocorreu um erro ao criar o ficheiro PDF.",
+        });
+    } finally {
+        document.body.removeChild(container);
+        setIsDownloadingGrid(false);
+    }
+  };
+
 
   const clearFiltersAndResults = () => {
     setFilters({ ensino: '', serie: '', turno: '', classe: '' });
@@ -297,10 +368,14 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                                 </TableBody>
                             </Table>
                         </ScrollArea>
-                        <div className="p-4 border-t mt-auto">
-                            <Button onClick={handleDownload} disabled={isDownloading} className="w-full">
+                        <div className="p-4 border-t mt-auto grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <Button onClick={handleDownload} disabled={isDownloading || isDownloadingGrid} variant="secondary">
                                 {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                                 {isDownloading ? 'A gerar PDF...' : 'Download da Lista'}
+                            </Button>
+                             <Button onClick={handleDownloadGrid} disabled={isDownloadingGrid || isDownloading}>
+                                {isDownloadingGrid ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BookCheck className="mr-2 h-4 w-4" />}
+                                {isDownloadingGrid ? 'A gerar Boletins...' : 'Download Boletins (Grade)'}
                             </Button>
                         </div>
                     </div>

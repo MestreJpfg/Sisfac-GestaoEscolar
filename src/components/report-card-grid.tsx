@@ -14,7 +14,7 @@ interface Boletim {
 }
 
 interface ReportCardGridProps {
-    students: any[];
+    students: (any | null)[];
 }
 
 const CompactReport = ({ student, boletim }: { student: any; boletim: Boletim }) => {
@@ -49,7 +49,7 @@ export default function ReportCardGrid({ students }: ReportCardGridProps) {
         <div className="bg-white p-4" style={{ width: '297mm', height: '210mm' }}>
             <div className="grid grid-cols-2 grid-rows-2 gap-4 h-full">
                 {filledStudents.map((student, index) => (
-                    <CompactReport key={index} student={student} boletim={student?.boletim || {}} />
+                    <CompactReport key={student?.id || index} student={student} boletim={student?.boletim || {}} />
                 ))}
             </div>
         </div>
