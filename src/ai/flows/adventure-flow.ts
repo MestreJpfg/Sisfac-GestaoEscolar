@@ -35,6 +35,7 @@ const storyPrompt = ai.definePrompt({
     name: "storyPrompt",
     input: { schema: AdventureInputSchema },
     output: { schema: AdventureOutputSchema },
+    model: googleAI.model('gemini-1.5-flash'), // CORREÇÃO: Modelo associado diretamente ao prompt.
     prompt: `
         Você é um mestre de jogo a narrar uma aventura de texto interativa.
         O género é: {{{genre}}}.
@@ -62,8 +63,8 @@ const generateAdventureStepFlow = ai.defineFlow(
     outputSchema: AdventureOutputSchema,
   },
   async (input) => {
-    
-    const { output } = await storyPrompt(input, { model: googleAI.model('gemini-1.5-flash') });
+    // CORREÇÃO: Chamada simplificada, o modelo já está no `storyPrompt`.
+    const { output } = await storyPrompt(input); 
 
     return output!;
   }
