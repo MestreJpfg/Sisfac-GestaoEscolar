@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, limit } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown, AlertTriangle, Search, Loader2 } from 'lucide-react';
@@ -38,7 +38,7 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
   });
 
   const debouncedNome = useDebounce(filters.nome, 300);
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: 'ascending' });
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name', direction: 'ascending' });
 
   const hasActiveFilters = useMemo(() => {
     return debouncedNome.trim().length > 0 || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
@@ -47,11 +47,7 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
   const studentsQuery = useMemo(() => {
     if (!firestore || !hasActiveFilters) return null;
 
-    let q = query(collection(firestore, 'alunos'));
-
-    // Para a busca por nome, o Firestore não suporta queries "LIKE" de forma nativa e eficiente para substrings.
-    // A abordagem aqui será filtrar no cliente APÓS a query inicial.
-    // Para otimizar, aplicamos os outros filtros primeiro.
+    let q = query(collection(firestore, 'users'), where('profileId', '==', 'Aluno'));
 
     if (filters.ensino) q = query(q, where('ensino', '==', filters.ensino));
     if (filters.serie) q = query(q, where('serie', '==', filters.serie));
@@ -59,26 +55,31 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
     if (filters.turno) q = query(q, where('turno', '==', filters.turno));
     if (filters.nee) q = query(q, where('nee', '==', true));
     
-    // A ordenação deve ser compatível com as queries 'where'.
-    // A ordenação principal é pelo nome.
-    q = query(q, orderBy(sortConfig.key, sortConfig.direction));
-
+    // Client-side filtering will handle name search and sorting
     return q;
-  }, [firestore, hasActiveFilters, filters, sortConfig]);
+  }, [firestore, hasActiveFilters, filters]);
 
   const { data: fetchedStudents, isLoading: isDataLoading } = useCollection(studentsQuery);
 
   const filteredAndSortedStudents = useMemo(() => {
-    let students = fetchedStudents || [];
+    let students = hasActiveFilters ? (fetchedStudents || []) : allStudents;
     
-    // Filtro de nome por substring no cliente
     if (debouncedNome.trim().length > 0) {
         const searchLower = debouncedNome.trim().toLowerCase();
-        students = students.filter(student => student.nome?.toLowerCase().includes(searchLower));
+        students = students.filter(student => student.name?.toLowerCase().includes(searchLower));
     }
     
+    // Client-side sorting
+    students.sort((a, b) => {
+      const aValue = a[sortConfig.key] || '';
+      const bValue = b[sortConfig.key] || '';
+      if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+      return 0;
+    });
+
     return students;
-  }, [fetchedStudents, debouncedNome]);
+  }, [fetchedStudents, allStudents, hasActiveFilters, debouncedNome, sortConfig]);
 
   const uniqueFilterOptions = useMemo(() => {
     const getUniqueValues = (key: string, data: any[]) => 
@@ -112,7 +113,6 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
     
     setFilters(prev => {
         const newFilters = { ...prev, [name]: newValue };
-        // Reset dependent filters when a parent filter changes
         if (name === 'ensino') {
             newFilters.serie = '';
             newFilters.classe = '';
@@ -244,22 +244,22 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {hasActiveFilters && !isDataLoading && (
+        {!isDataLoading && (
           <p>
             {filteredAndSortedStudents.length > 0
               ? `${filteredAndSortedStudents.length} aluno(s) encontrado(s).`
-              : 'Nenhum aluno encontrado com os critérios fornecidos.'
+              : hasActiveFilters ? 'Nenhum aluno encontrado com os critérios fornecidos.' : ''
             }
           </p>
         )}
       </div>
       
-       {isDataLoading ? (
+       {isDataLoading && hasActiveFilters ? (
             <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 <p className="mt-4 text-muted-foreground">A buscar alunos...</p>
             </div>
-        ) : hasActiveFilters ? (
+        ) : filteredAndSortedStudents.length > 0 ? (
             <StudentTable
                 students={filteredAndSortedStudents}
                 onRowClick={handleStudentSelect}
@@ -273,7 +273,7 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
                     <Search className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-medium text-foreground">Inicie uma Busca</h3>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Utilize a busca por nome ou os filtros avançados para encontrar os alunos.
+                        {hasActiveFilters ? "Nenhum aluno encontrado. Tente refinar os seus filtros." : "Utilize a busca por nome ou os filtros avançados para encontrar os alunos."}
                     </p>
                 </CardContent>
             </Card>

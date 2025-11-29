@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -57,7 +58,7 @@ service cloud.firestore {
     // Any authenticated user can READ another user's profile (needed for `hasPermission`).
     match /users/{userId} {
       allow read, list: if isSignedIn();
-      allow create, update: if isOwner(userId) || hasPermission('manage:users');
+      allow create, update: if isOwner(userId) || hasPermission('manage:users') || hasPermission('manage:students');
       allow delete: if hasPermission('manage:users');
     }
     
@@ -66,12 +67,6 @@ service cloud.firestore {
     match /profiles/{profileId} {
         allow read, list: if isSignedIn();
         allow write: if hasPermission('manage:profiles');
-    }
-
-    // Permissions for students.
-    match /alunos/{alunoId} {
-      allow read, list: if hasPermission('view:students') || hasPermission('manage:students');
-      allow write: if hasPermission('manage:students');
     }
 
     // Permissions for grades.

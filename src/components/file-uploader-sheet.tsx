@@ -43,7 +43,7 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
           .replace(/\s+/g, '_');
           
         if (h === 'nome_do_registro_civil' || h === 'nome_registro_civil' || h === 'nome_de_registro_civil') {
-            return 'nome';
+            return 'name'; // Changed from 'nome'
         }
         if (h === 'filiacao_1' || h === 'filiação_1') {
             return 'filiacao_1';
@@ -114,7 +114,8 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
 
       if (!student.rm) return null;
       student.rm = String(student.rm);
-      student.status = "ATIVO"; // Default status for uploaded students
+      student.status = "ATIVO"; 
+      student.profileId = "Aluno"; // Assign default profile
 
       return student;
     }).filter(Boolean);
@@ -139,17 +140,26 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
       return;
     }
   
-    const alunosCollectionPath = "alunos";
+    const usersCollectionPath = "users";
     const batch = writeBatch(firestore);
     
     normalizedStudents.forEach(student => {
       if (student.rm) {
-        const docRef = doc(firestore, alunosCollectionPath, student.rm);
-        batch.set(docRef, student, { merge: true });
+        // Use a consistent ID, e.g., 'student_' + rm to avoid collision with auth UIDs
+        const docId = `student_${student.rm}`;
+        const docRef = doc(firestore, usersCollectionPath, docId);
+        
+        const { rm, ...studentData } = student;
+        const finalData = {
+          uid: docId,
+          ...studentData,
+          rm: student.rm, // keep rm for data consistency
+        };
+        batch.set(docRef, finalData, { merge: true });
       }
     });
   
-    commitBatchNonBlocking(batch, alunosCollectionPath);
+    commitBatchNonBlocking(batch, usersCollectionPath);
 
     setTimeout(() => {
         toast({

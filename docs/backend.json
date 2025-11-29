@@ -172,10 +172,6 @@
       {
         "path": "/announcements/{announcementId}",
         "definition": { "schema": { "$ref": "#/entities/Announcement" } }
-      },
-       {
-        "path": "/alunos/{alunoId}",
-        "definition": { "schema": { "$ref": "#/entities/Aluno" } }
       }
     ]
   }

@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, getDocs, writeBatch, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, writeBatch, query, where } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useToast } from '@/hooks/use-toast';
 import FileUploaderSheet from './file-uploader-sheet';
@@ -39,8 +39,9 @@ export default function DatabaseManager() {
         toast({ title: "A eliminar dados...", description: "Por favor, aguarde." });
 
         try {
-            const studentsCollection = collection(firestore, 'alunos');
-            const snapshot = await getDocs(studentsCollection);
+            const studentsCollection = collection(firestore, 'users');
+            const q = query(studentsCollection, where('profileId', '==', 'Aluno'));
+            const snapshot = await getDocs(q);
             
             if (snapshot.empty) {
                 toast({ title: "Base de Dados Vazia", description: "Não há alunos para eliminar." });

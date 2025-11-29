@@ -9,7 +9,7 @@ import { UploadCloud, FileCheck2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { useFirestore } from "@/firebase";
-import { writeBatch, doc, getDoc, collection } from "firebase/firestore";
+import { writeBatch, doc, getDocs, collection, query, where } from "firebase/firestore";
 import { commitBatchNonBlocking } from "@/firebase/non-blocking-updates";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Label } from "./ui/label";
@@ -111,17 +111,25 @@ export default function GradesUploader() {
 
     const gradesData = data.slice(1);
     const batch = writeBatch(firestore);
-    const alunosCollectionRef = collection(firestore, 'alunos');
+    const usersCollectionRef = collection(firestore, 'users');
     let updatedCount = 0;
-    let createdCount = 0;
+    let notFoundCount = 0;
 
     for (const row of gradesData) {
         const rm = String(row[rmIndex]);
         if (!rm) continue;
 
-        const studentDocRef = doc(alunosCollectionRef, rm);
-        const studentDocSnap = await getDoc(studentDocRef);
+        const q = query(usersCollectionRef, where('rm', '==', rm), limit(1));
+        const studentSnapshot = await getDocs(q);
 
+        if (studentSnapshot.empty) {
+            notFoundCount++;
+            continue;
+        }
+        
+        const studentDoc = studentSnapshot.docs[0];
+        const studentDocRef = studentDoc.ref;
+        
         const gradeUpdate: { [key: string]: any } = {};
 
         headers.forEach((header, index) => {
@@ -141,45 +149,15 @@ export default function GradesUploader() {
             gradeUpdate[`boletim.${subject}.${etapa}`] = grade;
         });
         
-        if (studentDocSnap.exists()) {
-            batch.update(studentDocRef, gradeUpdate);
-            updatedCount++;
-        } else {
-            const studentName = nameIndex !== -1 ? row[nameIndex] : `Aluno ${rm}`;
-            const newStudentData: any = {
-                rm: rm,
-                nome: studentName || `Aluno ${rm}`,
-                status: 'NÃO LISTADO',
-                boletim: {}
-            };
-
-            headers.forEach((header, index) => {
-              if (index === rmIndex || index === nameIndex) return;
-              const subject = header;
-              const gradeValue = row[index];
-              let grade: number | null = null;
-              if (gradeValue !== null && gradeValue !== undefined && String(gradeValue).trim() !== '') {
-                  const numericGrade = Number(String(gradeValue).replace(',', '.'));
-                  if (!isNaN(numericGrade)) {
-                      grade = numericGrade;
-                  }
-              }
-
-              if (!newStudentData.boletim[subject]) {
-                  newStudentData.boletim[subject] = {};
-              }
-              newStudentData.boletim[subject][etapa] = grade;
-            });
-            batch.set(studentDocRef, newStudentData);
-            createdCount++;
-        }
+        batch.update(studentDocRef, gradeUpdate);
+        updatedCount++;
     }
 
-    commitBatchNonBlocking(batch, 'alunos');
+    commitBatchNonBlocking(batch, 'users');
 
     toast({
         title: "Processamento Concluído!",
-        description: `${updatedCount} alunos atualizados e ${createdCount} novos alunos adicionados com o status "Não Listado".`,
+        description: `${updatedCount} alunos atualizados. ${notFoundCount > 0 ? `${notFoundCount} alunos não encontrados (RM não corresponde).` : ''}`,
     });
   };
 
@@ -300,5 +278,3 @@ export default function GradesUploader() {
     </Card>
   );
 }
-
-    
