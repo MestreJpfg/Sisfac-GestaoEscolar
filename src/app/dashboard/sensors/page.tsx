@@ -25,6 +25,7 @@ const ENEMY_SPEED_BASE = 1;
 const ENEMY_SPEED_INCREMENT = 0.1;
 const SENSITIVITY = 0.5;
 const POWERUP_DURATION = 5000; // 5 seconds
+const POWERUP_SPAWN_SCORE_INTERVAL = 5;
 
 // --- Type Definitions ---
 interface Vector {
@@ -36,6 +37,11 @@ interface GameObject {
     position: Vector;
     velocity: Vector;
     size: number;
+    element?: HTMLDivElement | null;
+}
+
+interface PowerUpGameObject extends GameObject {
+    active: boolean;
 }
 
 type GameStatus = 'permissions' | 'ready' | 'playing' | 'gameOver';
@@ -45,14 +51,17 @@ export default function SensorGamePage() {
     const router = useRouter();
     const { toast } = useToast();
     
-    // --- Refs for Game Objects & Animation ---
+    // --- Refs for Game Objects, Elements & Animation ---
     const gameAreaRef = useRef<HTMLDivElement>(null);
     const animationFrameId = useRef<number>();
+    const lastTimeRef = useRef<number>(0);
     const gameTimeStartRef = useRef<number>(0);
+    
     const playerRef = useRef<GameObject>({ position: { x: -100, y: -100 }, velocity: { x: 0, y: 0 }, size: PLAYER_SIZE });
     const enemiesRef = useRef<GameObject[]>([]);
     const itemRef = useRef<GameObject>({ position: { x: -100, y: -100 }, velocity: { x: 0, y: 0 }, size: ITEM_SIZE });
-    const powerUpRef = useRef<GameObject & { active: boolean }>({ position: { x: -100, y: -100 }, velocity: { x: 0, y: 0 }, size: POWERUP_SIZE, active: false });
+    const powerUpRef = useRef<PowerUpGameObject>({ position: { x: -100, y: -100 }, velocity: { x: 0, y: 0 }, size: POWERUP_SIZE, active: false });
+
     const originalVelocitiesRef = useRef<Vector[]>([]);
     const isPowerUpActiveRef = useRef<boolean>(false);
     const powerUpTimeoutRef = useRef<NodeJS.Timeout>();
@@ -64,8 +73,24 @@ export default function SensorGamePage() {
     const [highScore, setHighScore] = useState(0);
     const [time, setTime] = useState(0);
     const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>('prompt');
-    const [renderTrigger, setRenderTrigger] = useState(0); // Used to force re-renders for UI elements
     const [isNewHighScore, setIsNewHighScore] = useState(false);
+
+    // Refs for DOM elements to avoid re-querying
+    const playerElementRef = useRef<HTMLDivElement>(null);
+    const itemElementRef = useRef<HTMLDivElement>(null);
+    const powerUpElementRef = useRef<HTMLDivElement>(null);
+    const enemyElementsRef = useRef<(HTMLDivElement | null)[]>([]);
+
+    useEffect(() => {
+        if (playerElementRef.current) playerRef.current.element = playerElementRef.current;
+        if (itemElementRef.current) itemRef.current.element = itemElementRef.current;
+        if (powerUpElementRef.current) powerUpRef.current.element = powerUpElementRef.current;
+        enemiesRef.current.forEach((enemy, i) => {
+            if (enemyElementsRef.current[i]) {
+                enemy.element = enemyElementsRef.current[i];
+            }
+        });
+    }, [status]); // Re-assign elements when status changes (and things re-render)
 
     // --- Load High Score ---
     useEffect(() => {
@@ -85,11 +110,8 @@ export default function SensorGamePage() {
         if (powerUpTimeoutRef.current) clearTimeout(powerUpTimeoutRef.current);
         isPowerUpActiveRef.current = false;
         
-        playerRef.current = {
-            position: { x: (width - PLAYER_SIZE) / 2, y: (height - PLAYER_SIZE) / 2 },
-            velocity: { x: 0, y: 0 },
-            size: PLAYER_SIZE,
-        };
+        playerRef.current.position = { x: (width - PLAYER_SIZE) / 2, y: (height - PLAYER_SIZE) / 2 };
+        playerRef.current.velocity = { x: 0, y: 0 };
 
         enemiesRef.current = Array.from({ length: NUM_ENEMIES }).map(() => {
             const speed = ENEMY_SPEED_BASE;
@@ -106,31 +128,23 @@ export default function SensorGamePage() {
             }
         });
         
-        itemRef.current = {
-            position: { 
-                x: Math.random() * (width - ITEM_SIZE),
-                y: Math.random() * (height - ITEM_SIZE),
-            },
-            velocity: { x: 0, y: 0 },
-            size: ITEM_SIZE,
+        itemRef.current.position = { 
+            x: Math.random() * (width - ITEM_SIZE),
+            y: Math.random() * (height - ITEM_SIZE),
         };
 
-        powerUpRef.current = {
-            ...powerUpRef.current,
-            position: { x: -100, y: -100 },
-            active: false
-        };
+        powerUpRef.current.position = { x: -100, y: -100 };
+        powerUpRef.current.active = false;
 
         setScore(0);
         setTime(0);
         gameTimeStartRef.current = Date.now();
-        setRenderTrigger(t => t + 1); // Trigger a render to show initial positions
+        lastTimeRef.current = Date.now();
     }, []);
 
     // --- Permissions and Initialization ---
      useEffect(() => {
         if (permissionState !== 'granted') return;
-
         const gameArea = gameAreaRef.current;
         if (!gameArea) return;
 
@@ -143,9 +157,7 @@ export default function SensorGamePage() {
                 requestAnimationFrame(checkLayoutReady);
             }
         };
-
         checkLayoutReady();
-
     }, [permissionState, resetGame]);
 
     const requestPermissions = async () => {
@@ -194,10 +206,14 @@ export default function SensorGamePage() {
         if (!gameArea || status !== 'playing') return;
         const { width, height } = gameArea.getBoundingClientRect();
         
-        // --- Update Time ---
-        setTime(Math.floor((Date.now() - gameTimeStartRef.current) / 1000));
-
-        // --- Update Player Position ---
+        // --- Time Update for UI ---
+        const now = Date.now();
+        if (now - lastTimeRef.current >= 1000) {
+            setTime(Math.floor((now - gameTimeStartRef.current) / 1000));
+            lastTimeRef.current = now;
+        }
+        
+        // --- Update Positions ---
         const player = playerRef.current;
         player.position.x += player.velocity.x;
         player.position.y += player.velocity.y;
@@ -206,7 +222,6 @@ export default function SensorGamePage() {
         if (player.position.y < 0) player.position.y = 0;
         if (player.position.y > height - player.size) player.position.y = height - player.size;
 
-        // --- Update Enemies Position ---
         const enemies = enemiesRef.current;
         enemies.forEach(e => {
             e.position.x += e.velocity.x;
@@ -220,9 +235,8 @@ export default function SensorGamePage() {
         if (checkCollision(player, item)) {
             vibrate(50);
             const newScore = score + 1;
-            setScore(newScore);
+            setScore(newScore); // Triggers re-render for score display
 
-            // Increase enemy speed
             enemies.forEach(e => {
                 const currentSpeed = Math.sqrt(e.velocity.x**2 + e.velocity.y**2);
                 const newSpeed = currentSpeed + ENEMY_SPEED_INCREMENT;
@@ -238,25 +252,20 @@ export default function SensorGamePage() {
                 y: Math.random() * (height - item.size),
             };
             
-            // Spawn power-up if one isn't already active (on screen or effect)
-            if (!powerUpRef.current.active && !isPowerUpActiveRef.current && newScore > 0 && newScore % 5 === 0) {
-                powerUpRef.current = {
-                    ...powerUpRef.current,
-                    position: {
-                        x: Math.random() * (width - POWERUP_SIZE),
-                        y: Math.random() * (height - POWERUP_SIZE),
-                    },
-                    active: true,
+            if (!powerUpRef.current.active && !isPowerUpActiveRef.current && newScore > 0 && newScore % POWERUP_SPAWN_SCORE_INTERVAL === 0) {
+                powerUpRef.current.position = {
+                    x: Math.random() * (width - POWERUP_SIZE),
+                    y: Math.random() * (height - POWERUP_SIZE),
                 };
+                powerUpRef.current.active = true;
             }
         }
         
-        // Power-up Collision
         const powerUp = powerUpRef.current;
         if (powerUp.active && checkCollision(player, powerUp)) {
             vibrate([100, 30, 100]);
             powerUp.active = false;
-            powerUp.position = { x: -100, y: -100 }; // Move off-screen
+            powerUp.position = { x: -100, y: -100 };
             
             if (!isPowerUpActiveRef.current) {
                 isPowerUpActiveRef.current = true;
@@ -276,23 +285,40 @@ export default function SensorGamePage() {
             }
         }
 
-
         for (const enemy of enemies) {
             if (checkCollision(player, enemy)) {
                 vibrate([200, 50, 200]);
                 if (powerUpTimeoutRef.current) clearTimeout(powerUpTimeoutRef.current);
                 isPowerUpActiveRef.current = false;
-                setStatus('gameOver');
+                setStatus('gameOver'); // Triggers re-render for game over screen
                 return;
             }
         }
         
-        // Force a re-render to show updated positions
-        setRenderTrigger(t => t + 1);
+        // --- Direct DOM Manipulation for Performance ---
+        if(player.element) {
+            player.element.style.transform = `translate3d(${player.position.x}px, ${player.position.y}px, 0)`;
+        }
+        if(item.element) {
+            item.element.style.transform = `translate3d(${item.position.x}px, ${item.position.y}px, 0)`;
+        }
+        if(powerUp.element) {
+            powerUp.element.style.transform = `translate3d(${powerUp.position.x}px, ${powerUp.position.y}px, 0)`;
+            powerUp.element.style.display = powerUp.active ? 'block' : 'none';
+        }
+        enemies.forEach(e => {
+            if (e.element) {
+                e.element.style.transform = `translate3d(${e.position.x}px, ${e.position.y}px, 0)`;
+                const isSlow = isPowerUpActiveRef.current;
+                e.element.style.backgroundColor = isSlow ? 'hsl(340, 50%, 70%)' : 'hsl(340, 100%, 50%)';
+                e.element.style.boxShadow = `0 0 20px 8px ${isSlow ? 'hsl(340, 50%, 70%, 0.6)' : 'hsl(340, 100%, 50%, 0.6)'}`;
+            }
+        });
+
 
         animationFrameId.current = requestAnimationFrame(gameLoop);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [status, score]);
+    }, [status, score]); // Re-create loop function only when status or score changes.
     
     // --- Game State Effects ---
     useEffect(() => {
@@ -388,57 +414,69 @@ export default function SensorGamePage() {
                             {status !== 'permissions' && permissionState === 'granted' && (
                                 <>
                                     {/* Player */}
-                                    <div style={{
-                                        position: 'absolute',
-                                        left: playerRef.current.position.x,
-                                        top: playerRef.current.position.y,
-                                        width: playerRef.current.size,
-                                        height: playerRef.current.size,
-                                        backgroundColor: 'hsl(180, 100%, 50%)',
-                                        borderRadius: '50%',
-                                        boxShadow: '0 0 15px 5px hsl(180, 100%, 50%, 0.7)',
-                                    }}/>
+                                    <div 
+                                        ref={playerElementRef}
+                                        style={{
+                                            position: 'absolute',
+                                            left: 0,
+                                            top: 0,
+                                            width: playerRef.current.size,
+                                            height: playerRef.current.size,
+                                            backgroundColor: 'hsl(180, 100%, 50%)',
+                                            borderRadius: '50%',
+                                            boxShadow: '0 0 15px 5px hsl(180, 100%, 50%, 0.7)',
+                                            willChange: 'transform'
+                                        }}/>
                                     
                                     {/* Item */}
-                                    <div style={{
-                                        position: 'absolute',
-                                        left: itemRef.current.position.x,
-                                        top: itemRef.current.position.y,
-                                        width: itemRef.current.size,
-                                        height: itemRef.current.size,
-                                        backgroundColor: 'hsl(50, 100%, 50%)',
-                                        borderRadius: '50%',
-                                        boxShadow: '0 0 15px 5px hsl(50, 100%, 50%, 0.7)',
-                                    }}/>
+                                    <div 
+                                        ref={itemElementRef}
+                                        style={{
+                                            position: 'absolute',
+                                            left: 0,
+                                            top: 0,
+                                            width: itemRef.current.size,
+                                            height: itemRef.current.size,
+                                            backgroundColor: 'hsl(50, 100%, 50%)',
+                                            borderRadius: '50%',
+                                            boxShadow: '0 0 15px 5px hsl(50, 100%, 50%, 0.7)',
+                                            willChange: 'transform'
+                                        }}/>
 
                                     {/* Power-up */}
-                                    {powerUpRef.current.active && (
-                                        <div style={{
+                                    <div
+                                        ref={powerUpElementRef}
+                                        style={{
                                             position: 'absolute',
-                                            left: powerUpRef.current.position.x,
-                                            top: powerUpRef.current.position.y,
+                                            left: 0,
+                                            top: 0,
+                                            display: 'none',
                                             width: powerUpRef.current.size,
                                             height: powerUpRef.current.size,
                                             backgroundColor: 'hsl(190, 100%, 50%)', // Cyan
                                             borderRadius: '50%',
                                             boxShadow: '0 0 20px 8px hsl(190, 100%, 50%, 0.7)',
-                                            animation: 'pulse 1.5s infinite'
+                                            animation: 'pulse 1.5s infinite',
+                                            willChange: 'transform'
                                         }}/>
-                                    )}
-
+                                    
                                     {/* Enemies */}
-                                    {enemiesRef.current.map((enemy, i) => (
-                                        <div key={i} style={{
-                                            position: 'absolute',
-                                            left: enemy.position.x,
-                                            top: enemy.position.y,
-                                            width: enemy.size,
-                                            height: enemy.size,
-                                            backgroundColor: isPowerUpActiveRef.current ? 'hsl(340, 50%, 70%)' : 'hsl(340, 100%, 50%)', // Lighter red when slow
-                                            borderRadius: '50%',
-                                            boxShadow: `0 0 20px 8px ${isPowerUpActiveRef.current ? 'hsl(340, 50%, 70%, 0.6)' : 'hsl(340, 100%, 50%, 0.6)'}`,
-                                            transition: 'background-color 0.3s, box-shadow 0.3s'
-                                        }}/>
+                                    {enemiesRef.current.map((_, i) => (
+                                        <div 
+                                            key={i} 
+                                            ref={el => enemyElementsRef.current[i] = el}
+                                            style={{
+                                                position: 'absolute',
+                                                left: 0,
+                                                top: 0,
+                                                width: ENEMY_SIZE,
+                                                height: ENEMY_SIZE,
+                                                backgroundColor: 'hsl(340, 100%, 50%)',
+                                                borderRadius: '50%',
+                                                boxShadow: `0 0 20px 8px hsl(340, 100%, 50%, 0.6)`,
+                                                transition: 'background-color 0.3s, box-shadow 0.3s',
+                                                willChange: 'transform'
+                                            }}/>
                                     ))}
                                 </>
                             )}
