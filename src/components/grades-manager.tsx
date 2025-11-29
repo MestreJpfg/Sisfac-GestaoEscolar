@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, where, orderBy, doc, writeBatch } from 'firebase/firestore';
+import { collection, query, where, doc, writeBatch } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -40,7 +40,7 @@ export default function GradesManager() {
     // Query for all students (for filter options)
     const studentsOptionsQuery = useMemo(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'alunos'));
+        return query(collection(firestore, 'users'), where('profileId', '==', 'Aluno'));
     }, [firestore]);
     const { data: allStudents, isLoading: isLoadingOptions } = useCollection(studentsOptionsQuery);
     
@@ -77,7 +77,7 @@ export default function GradesManager() {
     // Query for students in the selected class
     const studentsInClassQuery = useMemo(() => {
         if (!firestore || !isReadyToLoad) return null;
-        let q = query(collection(firestore, 'alunos'));
+        let q = query(collection(firestore, 'users'), where('profileId', '==', 'Aluno'));
         q = query(q, where('ensino', '==', filters.ensino));
         q = query(q, where('serie', '==', filters.serie));
         q = query(q, where('classe', '==', filters.classe));
@@ -87,7 +87,7 @@ export default function GradesManager() {
     const { data: studentsInClass, isLoading: isLoadingStudents } = useCollection(studentsInClassQuery);
 
     const sortedStudentsInClass = useMemo(() => {
-        return studentsInClass?.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR')) || [];
+        return studentsInClass?.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR')) || [];
     }, [studentsInClass]);
 
 
@@ -169,7 +169,7 @@ export default function GradesManager() {
             
             for (const student of sortedStudentsInClass) {
                 const studentId = student.id;
-                const studentDocRef = doc(firestore, 'alunos', studentId);
+                const studentDocRef = doc(firestore, 'users', studentId);
                 const studentGrades = grades[studentId];
                 if (!studentGrades) continue;
 
@@ -275,7 +275,7 @@ export default function GradesManager() {
                                     <TableBody>
                                         {sortedStudentsInClass.map((student) => (
                                             <TableRow key={student.id}>
-                                                <TableCell className="font-medium sticky left-0 bg-background z-10">{student.nome}</TableCell>
+                                                <TableCell className="font-medium sticky left-0 bg-background z-10">{student.name}</TableCell>
                                                 {(['etapa1', 'etapa2', 'etapa3', 'etapa4'] as const).map(etapa => (
                                                     <TableCell key={etapa} className="text-center">
                                                         <Input

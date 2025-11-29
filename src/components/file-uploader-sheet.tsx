@@ -43,7 +43,7 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
           .replace(/\s+/g, '_');
           
         if (h === 'nome_do_registro_civil' || h === 'nome_registro_civil' || h === 'nome_de_registro_civil') {
-            return 'name'; // Changed from 'nome'
+            return 'nome';
         }
         if (h === 'filiacao_1' || h === 'filiação_1') {
             return 'filiacao_1';
@@ -149,11 +149,11 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
         const docId = `student_${student.rm}`;
         const docRef = doc(firestore, usersCollectionPath, docId);
         
-        const { rm, ...studentData } = student;
         const finalData = {
+          ...student,
           uid: docId,
-          ...studentData,
-          rm: student.rm, // keep rm for data consistency
+          name: student.nome, // Ensure 'name' field is populated for consistency
+          email: `${student.rm}@escola.portal`, // Create a placeholder email
         };
         batch.set(docRef, finalData, { merge: true });
       }

@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Loader2, Search, Download } from 'lucide-react';
@@ -43,7 +43,7 @@ export default function MonthlyAttendanceReport() {
     // Student data for filters
     const studentsOptionsQuery = useMemo(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'alunos'));
+        return query(collection(firestore, 'users'), where('profileId', '==', 'Aluno'));
     }, [firestore]);
     const { data: allStudents } = useCollection(studentsOptionsQuery);
     
@@ -102,7 +102,7 @@ export default function MonthlyAttendanceReport() {
             (s.serie === filters.serie) &&
             (s.classe === filters.classe) &&
             (s.turno === filters.turno)
-        ).sort((a, b) => a.nome.localeCompare(b.nome));
+        ).sort((a, b) => a.name.localeCompare(b.name));
 
         if (studentsInClass.length === 0) {
             toast({ title: 'Nenhum aluno encontrado', description: 'Não há alunos que correspondam aos filtros selecionados.' });
@@ -151,7 +151,7 @@ export default function MonthlyAttendanceReport() {
 
             return {
                 studentId: student.id,
-                studentName: student.nome,
+                studentName: student.name,
                 absences,
                 total,
             };

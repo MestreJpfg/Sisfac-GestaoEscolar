@@ -97,7 +97,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
     if (filters.turno) studentsData = studentsData.filter(s => s.turno === filters.turno);
     if (filters.classe) studentsData = studentsData.filter(s => s.classe === filters.classe);
 
-    studentsData.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'));
+    studentsData.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'));
     setStudents(studentsData);
 
     if(studentsData.length > 0) {
@@ -142,7 +142,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
             const tableData = classStudents.map((student, index) => {
                 return [
                     index + 1,
-                    student.nome,
+                    student.name,
                     student.data_nascimento || '',
                     '' // Coluna de observações vazia
                 ];
@@ -362,7 +362,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                                     {students.map((student, index) => (
                                     <TableRow key={student.rm}>
                                         <TableCell className="text-center font-medium">{index + 1}</TableCell>
-                                        <TableCell>{student.nome}</TableCell>
+                                        <TableCell>{student.name}</TableCell>
                                     </TableRow>
                                     ))}
                                 </TableBody>

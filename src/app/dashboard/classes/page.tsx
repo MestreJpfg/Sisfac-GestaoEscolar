@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useFirestore } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -20,12 +20,9 @@ export default function ClassesPage() {
     const router = useRouter();
     const firestore = useFirestore();
 
-    // This query fetches all students to populate the filter options in the generator.
-    // This is acceptable for this feature as it's less frequently used than the main student list
-    // and provides a better UX for building the class list.
     const studentsQuery = useMemo(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'alunos'));
+        return query(collection(firestore, 'users'), where('profileId', '==', 'Aluno'));
     }, [firestore]);
 
     const { data: students, isLoading: isDataLoading } = useCollection(studentsQuery);

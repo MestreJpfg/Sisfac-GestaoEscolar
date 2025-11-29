@@ -9,7 +9,7 @@ import { UploadCloud, FileCheck2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { useFirestore } from "@/firebase";
-import { writeBatch, doc, getDocs, collection, query, where } from "firebase/firestore";
+import { writeBatch, doc, getDocs, collection, query, where, limit } from "firebase/firestore";
 import { commitBatchNonBlocking } from "@/firebase/non-blocking-updates";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Label } from "./ui/label";
@@ -119,16 +119,8 @@ export default function GradesUploader() {
         const rm = String(row[rmIndex]);
         if (!rm) continue;
 
-        const q = query(usersCollectionRef, where('rm', '==', rm), limit(1));
-        const studentSnapshot = await getDocs(q);
-
-        if (studentSnapshot.empty) {
-            notFoundCount++;
-            continue;
-        }
-        
-        const studentDoc = studentSnapshot.docs[0];
-        const studentDocRef = studentDoc.ref;
+        const studentId = `student_${rm}`;
+        const studentDocRef = doc(usersCollectionRef, studentId);
         
         const gradeUpdate: { [key: string]: any } = {};
 
