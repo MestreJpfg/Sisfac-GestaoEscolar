@@ -43,7 +43,7 @@ export default function AttendanceManager() {
     // Query to get all students for filter options
     const studentsOptionsQuery = useMemo(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'users'), where('profileId', '==', 'Aluno'));
+        return query(collection(firestore, 'alunos'));
     }, [firestore]);
     const { data: allStudents, isLoading: isLoadingOptions } = useCollection(studentsOptionsQuery);
     
@@ -81,7 +81,7 @@ export default function AttendanceManager() {
     // Query for students in the selected class
     const studentsInClassQuery = useMemo(() => {
         if (!firestore || !isClassSelected) return null;
-        let q = query(collection(firestore, 'users'), where('profileId', '==', 'Aluno'));
+        let q = query(collection(firestore, 'alunos'));
         q = query(q, where('ensino', '==', filters.ensino));
         q = query(q, where('serie', '==', filters.serie));
         q = query(q, where('classe', '==', filters.classe));
@@ -91,7 +91,7 @@ export default function AttendanceManager() {
     const { data: studentsInClass, isLoading: isLoadingStudents } = useCollection(studentsInClassQuery);
 
     const sortedStudentsInClass = useMemo(() => {
-        return studentsInClass?.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR')) || [];
+        return studentsInClass?.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR')) || [];
     }, [studentsInClass]);
 
 
@@ -271,7 +271,7 @@ export default function AttendanceManager() {
                             <div className="space-y-4">
                                 {sortedStudentsInClass.map((student) => (
                                     <div key={student.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-md hover:bg-muted/50 transition-colors">
-                                        <span className="font-medium mb-3 sm:mb-0">{student.name}</span>
+                                        <span className="font-medium mb-3 sm:mb-0">{student.nome}</span>
                                         <RadioGroup
                                             value={attendance.get(student.id) || 'Presente'}
                                             onValueChange={(value) => handleStatusChange(student.id, value as AttendanceStatus)}

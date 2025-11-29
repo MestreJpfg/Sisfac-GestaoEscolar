@@ -115,7 +115,6 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
       if (!student.rm) return null;
       student.rm = String(student.rm);
       student.status = "ATIVO"; 
-      student.profileId = "Aluno"; // Assign default profile
 
       return student;
     }).filter(Boolean);
@@ -140,26 +139,21 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
       return;
     }
   
-    const usersCollectionPath = "users";
+    const collectionPath = "alunos";
     const batch = writeBatch(firestore);
     
     normalizedStudents.forEach(student => {
       if (student.rm) {
-        // The document ID is now the student's RM directly
         const docId = student.rm;
-        const docRef = doc(firestore, usersCollectionPath, docId);
+        const docRef = doc(firestore, collectionPath, docId);
         
-        const finalData = {
-          ...student,
-          uid: docId, // uid is the same as the document ID
-          name: student.nome, // Ensure 'name' field is populated for consistency
-          email: `${student.rm}@escola.portal`, // Create a placeholder email
-        };
+        // Adiciona um ID ao próprio objeto para referência futura
+        const finalData = { ...student, id: docId }; 
         batch.set(docRef, finalData, { merge: true });
       }
     });
   
-    commitBatchNonBlocking(batch, usersCollectionPath);
+    commitBatchNonBlocking(batch, collectionPath);
 
     setTimeout(() => {
         toast({

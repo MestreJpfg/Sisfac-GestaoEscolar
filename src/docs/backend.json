@@ -4,11 +4,11 @@
     "User": {
       "title": "User",
       "type": "object",
-      "description": "Represents a user in the system, which can be an administrator, teacher, or student.",
+      "description": "Represents a user in the system, with an assigned profile and permissions.",
       "properties": {
         "uid": {
           "type": "string",
-          "description": "The unique identifier from Firebase Authentication for auth users, or a generated ID for student users."
+          "description": "The unique identifier from Firebase Authentication."
         },
         "name": {
           "type": "string",
@@ -17,11 +17,18 @@
         "email": {
           "type": "string",
           "format": "email",
-          "description": "The user's email address. Can be a placeholder for students."
+          "description": "The user's email address."
         },
         "profileId": {
           "type": "string",
-          "description": "The ID of the profile assigned to this user (e.g., 'Administrador', 'Aluno')."
+          "description": "The ID of the profile assigned to this user, linking to the 'profiles' collection."
+        },
+        "customPermissions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Specific individual permissions that override the profile's defaults."
         },
         "createdAt": {
           "type": "string",
@@ -30,33 +37,6 @@
         "photoURL": {
           "type": "string",
           "format": "uri"
-        },
-        "rm": {
-          "type": "string",
-          "description": "Registro do Aluno (Student ID), used as a unique key for students."
-        },
-        "ensino": { "type": "string" },
-        "serie": { "type": "string" },
-        "classe": { "type": "string" },
-        "turno": { "type": "string" },
-        "filiacao_1": { "type": "string" },
-        "filiacao_2": { "type": "string" },
-        "rg": { "type": "string" },
-        "nis": { "type": "string" },
-        "id_censo": { "type": "string" },
-        "cpf_aluno": { "type": "string" },
-        "cpffiliacao1": { "type": "string" },
-        "data_nascimento": { "type": "string", "format": "date" },
-        "endereco": { "type": "string" },
-        "telefones": { "type": "array", "items": { "type": "string" } },
-        "transporte_escolar": { "type": "boolean" },
-        "carteira_estudante": { "type": "boolean" },
-        "nee": { "type": ["string", "null"] },
-        "boletim": { "$ref": "#/entities/Boletim" },
-        "status": {
-            "type": "string",
-            "enum": ["ATIVO", "NÃO LISTADO"],
-            "description": "Status of the student record."
         },
         "position": {
             "type": "string",
@@ -82,6 +62,40 @@
       },
       "required": ["uid", "name", "email", "profileId"]
     },
+    "Aluno": {
+      "title": "Aluno",
+      "type": "object",
+      "description": "Represents a student in the system with all their academic and personal data.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique student identifier, typically the RM." },
+        "rm": { "type": "string", "description": "Registro do Aluno (Student ID)." },
+        "nome": { "type": "string", "description": "Student's full name." },
+        "ensino": { "type": "string" },
+        "serie": { "type": "string" },
+        "classe": { "type": "string" },
+        "turno": { "type": "string" },
+        "filiacao_1": { "type": "string" },
+        "filiacao_2": { "type": "string" },
+        "rg": { "type": "string" },
+        "nis": { "type": "string" },
+        "id_censo": { "type": "string" },
+        "cpf_aluno": { "type": "string" },
+        "cpffiliacao1": { "type": "string" },
+        "data_nascimento": { "type": "string", "format": "date" },
+        "endereco": { "type": "string" },
+        "telefones": { "type": "array", "items": { "type": "string" } },
+        "transporte_escolar": { "type": "boolean" },
+        "carteira_estudante": { "type": "boolean" },
+        "nee": { "type": ["string", "null"] },
+        "boletim": { "$ref": "#/entities/Boletim" },
+        "status": {
+            "type": "string",
+            "enum": ["ATIVO", "NÃO LISTADO"],
+            "description": "Status of the student record."
+        }
+      },
+       "required": ["id", "rm", "nome"]
+    },
     "Profile": {
       "title": "Profile",
       "type": "object",
@@ -105,20 +119,14 @@
           "items": {
             "type": "string",
             "enum": [
-                "view:students",
+                "manage:database",
                 "manage:students",
-                "view:users",
+                "view:students",
                 "manage:users",
-                "view:profiles",
-                "manage:profiles",
-                "view:grades",
                 "manage:grades",
-                "view:attendance",
                 "manage:attendance",
-                "view:announcements",
                 "manage:announcements",
-                "view:database",
-                "manage:database"
+                "manage:cadastros"
             ]
           },
           "description": "A list of permission keys granted to this profile."
@@ -173,7 +181,7 @@
       },
       "required": ["id", "title", "content", "targetAudience", "createdAt"]
     },
-    "Nota": {
+     "Nota": {
       "title": "Nota",
       "type": "object",
       "description": "Armazena as notas de um aluno para uma disciplina específica ao longo do ano.",
@@ -202,6 +210,10 @@
       {
         "path": "/users/{userId}",
         "definition": { "schema": { "$ref": "#/entities/User" } }
+      },
+      {
+        "path": "/alunos/{alunoId}",
+        "definition": { "schema": { "$ref": "#/entities/Aluno" } }
       },
       {
         "path": "/profiles/{profileId}",

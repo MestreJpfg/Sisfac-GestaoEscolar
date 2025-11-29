@@ -9,7 +9,7 @@ import { UploadCloud, FileCheck2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { useFirestore } from "@/firebase";
-import { writeBatch, doc, getDocs, collection, query, where, limit } from "firebase/firestore";
+import { writeBatch, doc } from "firebase/firestore";
 import { commitBatchNonBlocking } from "@/firebase/non-blocking-updates";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Label } from "./ui/label";
@@ -111,16 +111,14 @@ export default function GradesUploader() {
 
     const gradesData = data.slice(1);
     const batch = writeBatch(firestore);
-    const usersCollectionRef = collection(firestore, 'users');
+    const collectionRef = collection(firestore, 'alunos');
     let updatedCount = 0;
-    let notFoundCount = 0;
 
     for (const row of gradesData) {
         const rm = String(row[rmIndex]);
         if (!rm) continue;
 
-        const studentId = `student_${rm}`;
-        const studentDocRef = doc(usersCollectionRef, studentId);
+        const studentDocRef = doc(collectionRef, rm);
         
         const gradeUpdate: { [key: string]: any } = {};
 
@@ -145,11 +143,11 @@ export default function GradesUploader() {
         updatedCount++;
     }
 
-    commitBatchNonBlocking(batch, 'users');
+    commitBatchNonBlocking(batch, 'alunos');
 
     toast({
         title: "Processamento Concluído!",
-        description: `${updatedCount} alunos atualizados. ${notFoundCount > 0 ? `${notFoundCount} alunos não encontrados (RM não corresponde).` : ''}`,
+        description: `${updatedCount} alunos atualizados.`,
     });
   };
 

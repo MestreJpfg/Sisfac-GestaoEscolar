@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useFirestore } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -22,7 +22,7 @@ export default function ClassesPage() {
 
     const studentsQuery = useMemo(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'users'), where('profileId', '==', 'Aluno'));
+        return query(collection(firestore, 'alunos'));
     }, [firestore]);
 
     const { data: students, isLoading: isDataLoading } = useCollection(studentsQuery);

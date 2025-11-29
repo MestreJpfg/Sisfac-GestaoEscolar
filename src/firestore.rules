@@ -54,12 +54,20 @@ service cloud.firestore {
 
     // --- Collection Rules ---
 
-    // Users can update their own data, or if another user has 'manage:users' or 'manage:students'.
+    // Users can update their own data, or if another user has 'manage:users'.
     // Any authenticated user can READ another user's profile (needed for `hasPermission`).
     match /users/{userId} {
       allow read, list: if isSignedIn();
-      allow write: if isOwner(userId) || hasPermission('manage:users') || hasPermission('manage:students');
+      allow write: if isOwner(userId) || hasPermission('manage:users');
       allow delete: if hasPermission('manage:users');
+    }
+
+    // Rules for the new 'alunos' collection
+    match /alunos/{alunoId} {
+        allow read, list: if hasPermission('view:students');
+        allow write: if hasPermission('manage:students');
+        // Deletion might fall under 'manage:students' or a more specific 'manage:database'
+        allow delete: if hasPermission('manage:database') || hasPermission('manage:students');
     }
     
     // All authenticated users can read/list profiles.

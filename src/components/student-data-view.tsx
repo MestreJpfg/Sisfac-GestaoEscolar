@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown, AlertTriangle, Search, Loader2 } from 'lucide-react';
@@ -38,12 +38,12 @@ export default function StudentDataView() {
   });
 
   const debouncedNome = useDebounce(filters.nome, 300);
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name', direction: 'ascending' });
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: 'ascending' });
 
   // Main query to get all students. Filtering happens on the client side.
   const studentsQuery = useMemo(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'users'), where('profileId', '==', 'Aluno'));
+    return query(collection(firestore, 'alunos'));
   }, [firestore]);
   
   const { data: allStudents, isLoading: isDataLoading } = useCollection(studentsQuery);
@@ -62,7 +62,7 @@ export default function StudentDataView() {
 
     if (debouncedNome.trim().length > 0) {
         const searchLower = debouncedNome.trim().toLowerCase();
-        students = students.filter(student => student.name?.toLowerCase().includes(searchLower));
+        students = students.filter(student => student.nome?.toLowerCase().includes(searchLower));
     }
     
     // Client-side sorting

@@ -40,7 +40,7 @@ export default function GradesManager() {
     // Query for all students (for filter options)
     const studentsOptionsQuery = useMemo(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'users'), where('profileId', '==', 'Aluno'));
+        return query(collection(firestore, 'alunos'));
     }, [firestore]);
     const { data: allStudents, isLoading: isLoadingOptions } = useCollection(studentsOptionsQuery);
     
@@ -77,7 +77,7 @@ export default function GradesManager() {
     // Query for students in the selected class
     const studentsInClassQuery = useMemo(() => {
         if (!firestore || !isReadyToLoad) return null;
-        let q = query(collection(firestore, 'users'), where('profileId', '==', 'Aluno'));
+        let q = query(collection(firestore, 'alunos'));
         q = query(q, where('ensino', '==', filters.ensino));
         q = query(q, where('serie', '==', filters.serie));
         q = query(q, where('classe', '==', filters.classe));
@@ -87,7 +87,7 @@ export default function GradesManager() {
     const { data: studentsInClass, isLoading: isLoadingStudents } = useCollection(studentsInClassQuery);
 
     const sortedStudentsInClass = useMemo(() => {
-        return studentsInClass?.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR')) || [];
+        return studentsInClass?.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR')) || [];
     }, [studentsInClass]);
 
 
@@ -169,7 +169,7 @@ export default function GradesManager() {
             
             for (const student of sortedStudentsInClass) {
                 const studentId = student.id;
-                const studentDocRef = doc(firestore, 'users', studentId);
+                const studentDocRef = doc(firestore, 'alunos', studentId);
                 const studentGrades = grades[studentId];
                 if (!studentGrades) continue;
 
@@ -275,7 +275,7 @@ export default function GradesManager() {
                                     <TableBody>
                                         {sortedStudentsInClass.map((student) => (
                                             <TableRow key={student.id}>
-                                                <TableCell className="font-medium sticky left-0 bg-background z-10">{student.name}</TableCell>
+                                                <TableCell className="font-medium sticky left-0 bg-background z-10">{student.nome}</TableCell>
                                                 {(['etapa1', 'etapa2', 'etapa3', 'etapa4'] as const).map(etapa => (
                                                     <TableCell key={etapa} className="text-center">
                                                         <Input

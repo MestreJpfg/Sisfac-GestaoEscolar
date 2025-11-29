@@ -10,10 +10,10 @@ import { Button } from './ui/button';
 import { UserNav } from './user-nav';
 import AppFooter from './app-footer';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, where, getCountFromServer } from 'firebase/firestore';
+import { collection, query, getCountFromServer } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import FileUploaderSheet from './file-uploader-sheet';
-import { useMemo, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function StudentManager() {
   const firestore = useFirestore();
@@ -30,9 +30,8 @@ export default function StudentManager() {
       if (!firestore) return;
       setIsLoadingCount(true);
       try {
-        const studentsColl = collection(firestore, 'users');
-        const q = query(studentsColl, where('profileId', '==', 'Aluno'));
-        const snapshot = await getCountFromServer(q);
+        const studentsColl = collection(firestore, 'alunos');
+        const snapshot = await getCountFromServer(query(studentsColl));
         setStudentCount(snapshot.data().count);
       } catch (error) {
         console.error("Error fetching student count:", error);

@@ -94,7 +94,6 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
         const address = parseAddress(student.endereco);
         const defaultVals = {
             ...student,
-            nome: student.name, // Use 'name' from user object
             endereco_cep: address.cep,
             endereco_rua: address.rua,
             endereco_numero: address.numero,
@@ -163,7 +162,6 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
 
     const finalData = {
         ...uppercasedData,
-        name: uppercasedData.nome, // Save 'nome' as 'name'
         endereco: enderecoCompleto.toUpperCase() || null,
     };
     onSave(cleanData(finalData));

@@ -39,9 +39,8 @@ export default function DatabaseManager() {
         toast({ title: "A eliminar dados...", description: "Por favor, aguarde." });
 
         try {
-            const studentsCollection = collection(firestore, 'users');
-            const q = query(studentsCollection, where('profileId', '==', 'Aluno'));
-            const snapshot = await getDocs(q);
+            const studentsCollection = collection(firestore, 'alunos');
+            const snapshot = await getDocs(query(studentsCollection));
             
             if (snapshot.empty) {
                 toast({ title: "Base de Dados Vazia", description: "Não há alunos para eliminar." });
