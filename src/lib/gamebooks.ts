@@ -38,7 +38,7 @@ export const gamebooks: Record<string, Gamebook> = {
                 text: "O caminho estreito leva-o a uma pequena porta de madeira nos fundos da cidadela. Parece não estar trancada.",
                 choices: [
                     { text: "Abrir a porta cuidadosamente e entrar.", to: 4 },
-                    { text: "Voltar e procurar outra entrada.", to: 1 }
+                    { text: "Procurar por outra entrada, talvez uma passagem subterrânea.", to: 11 }
                 ]
             },
             3: {
@@ -80,6 +80,35 @@ export const gamebooks: Record<string, Gamebook> = {
             },
             10: {
                 text: "Você desvia-se das bolas de fogo, usando uma mesa como escudo. Balthazar ri, mas a sua distração permite que você o flanqueie e o ataque. Após uma batalha feroz, você derrota o feiticeiro. Vitória! FIM."
+            },
+            11: {
+                text: "Procurando ao longo da muralha, você encontra uma grade de esgoto solta. O cheiro é horrível, mas parece uma entrada segura. Você entra.",
+                choices: [
+                    { text: "Seguir pelo túnel escuro.", to: 12 }
+                ]
+            },
+            12: {
+                text: "O túnel leva ao calabouço da cidadela. As celas estão vazias, exceto por uma que contém um velho prisioneiro. Ele parece fraco, mas os seus olhos são lúcidos.",
+                choices: [
+                    { text: "Falar com o prisioneiro.", to: 13 },
+                    { text: "Ignorá-lo e procurar uma saída.", to: 14 }
+                ]
+            },
+            13: {
+                text: "O velho agradece por ter companhia. 'Balthazar teme apenas uma coisa', ele sussurra, 'o reflexo da sua própria magia. Use isso contra ele.' Ele aponta para um escudo espelhado pendurado na parede da sala dos guardas.",
+                choices: [
+                    { text: "Agradecer e pegar no escudo.", to: 15 },
+                    { text: "Achar que é um disparate e sair.", to: 14 }
+                ]
+            },
+            14: {
+                text: "Você encontra uma escada de pedra que sobe. Ao chegar ao topo, você sai diretamente para o grande salão de banquetes, bem em frente a Balthazar.",
+                choices: [
+                    { text: "Enfrentar o feiticeiro.", to: 6 }
+                ]
+            },
+            15: {
+                text: "Com o escudo espelhado em mãos, você sobe as escadas e entra no salão. Balthazar lança uma bola de fogo, mas você ergue o escudo. A magia ricocheteia e atinge o feiticeiro, que grita de dor e se desintegra. Você venceu! FIM."
             }
         }
     },
@@ -98,7 +127,8 @@ export const gamebooks: Record<string, Gamebook> = {
                 text: "A ponte está escura, exceto pelos monitores quebrados. No centro, o assento do capitão está virado de costas. Um terminal de computador ainda tem energia.",
                 choices: [
                     { text: "Verificar o terminal do computador.", to: 3 },
-                    { text: "Verificar o assento do capitão.", to: 4 }
+                    { text: "Verificar o assento do capitão.", to: 4 },
+                    { text: "Procurar por um interruptor de luz principal.", to: 8 }
                 ]
             },
             2: {
@@ -115,17 +145,41 @@ export const gamebooks: Record<string, Gamebook> = {
                 text: "Você vira a cadeira do capitão e encontra apenas um uniforme vazio e um monte de pó. Um arrepio percorre a sua espinha. De repente, uma criatura insectoide desce do teto! FIM.",
             },
             5: {
-                text: "O diário descreve uma criatura parasita que se esconde nos sistemas de ventilação e ataca alvos solitários. A última entrada diz: 'Vou para a baía de carga. A única fraqueza parece ser o frio extremo...'",
+                text: "O diário descreve uma criatura parasita que se esconde nos sistemas de ventilação e ataca alvos solitários. A última entrada diz: 'Vou para a baía de carga. A única fraqueza parece ser o frio extremo... A Dra. Evans na enfermaria estava a trabalhar num repelente.'",
                 choices: [
                     { text: "Ir para a baía de carga.", to: 7 },
-                    { text: "Esquecer isso e tentar chegar à ponte.", to: 1 }
+                    { text: "Ir para a enfermaria procurar o repelente.", to: 6 }
                 ]
             },
             6: {
-                text: "A enfermaria está coberta de uma substância alienígena pegajosa. Você pisa nela e fica preso enquanto uma forma emerge das sombras. FIM.",
+                text: "A enfermaria está coberta de uma substância alienígena pegajosa. Num armário, você encontra um spray com o rótulo 'Repelente X-01'. Ao pegá-lo, você ouve um barulho vindo da ventilação.",
+                choices: [
+                    { text: "Esperar e usar o spray.", to: 9 },
+                    { text: "Sair rapidamente e ir para a baía de carga.", to: 7 }
+                ]
             },
             7: {
-                text: "Na baía de carga, você encontra a criatura. Usando o seu conhecimento, você abre o portal externo, expondo a criatura ao vácuo gelado do espaço. Ela congela e estilhaça-se. Você sobreviveu e resolveu o mistério! FIM."
+                text: "Na baía de carga, você encontra a criatura a devorar os mantimentos. Ela nota a sua presença e avança.",
+                choices: [
+                    { text: "Abrir o portal externo para o vácuo.", to: 10 },
+                    { text: "Lutar com as suas ferramentas.", to: 11 }
+                ]
+            },
+            8: {
+                text: "Você encontra o painel de energia e restaura a iluminação principal. As luzes revelam uma enorme criatura adormecida num canto da ponte. Você acorda-a sem querer. FIM."
+            },
+            9: {
+                text: "A criatura salta da ventilação! Você usa o spray, e o monstro recua com um guincho, fugindo de volta para os dutos. Você está seguro por agora, e tem uma arma.",
+                choices: [
+                    { text: "Ir para a ponte, agora mais confiante.", to: 1 },
+                    { text: "Caçar a criatura na baía de carga.", to: 7 }
+                ]
+            },
+            10: {
+                text: "Você corre para o controle e abre o portal. O vácuo suga tudo para fora, incluindo a criatura, que congela e se estilhaça. Você consegue segurar-se e fechar a porta. Você sobreviveu e resolveu o mistério! FIM."
+            },
+            11: {
+                text: "As suas ferramentas são inúteis contra a carapaça da criatura. Ela domina-o facilmente. FIM."
             }
         }
     },
@@ -144,7 +198,8 @@ export const gamebooks: Record<string, Gamebook> = {
                 text: "A mansão está silenciosa, exceto pelo tique-taque de um relógio. O corpo já foi removido. Você encontra um cofre escondido atrás de um quadro, mas está trancado. Uma empregada assustada menciona que a viúva, Eleanor, parecia estranhamente calma.",
                 choices: [
                     { text: "Interrogar a viúva, Eleanor.", to: 3 },
-                    { text: "Tentar encontrar a combinação do cofre.", to: 4 }
+                    { text: "Tentar encontrar a combinação do cofre.", to: 4 },
+                    { text: "Subornar a empregada por mais informações.", to: 9 }
                 ]
             },
             2: {
@@ -162,7 +217,7 @@ export const gamebooks: Record<string, Gamebook> = {
                 ]
             },
             4: {
-                text: "Você procura por pistas e encontra a data de aniversário de casamento do casal marcada num calendário. Você tenta a combinação e o cofre abre! Dentro, encontra cartas de amor trocadas entre Eleanor e o rival de negócios de Davenport. É um caso de paixão e traição.",
+                text: "Você procura por pistas e encontra a data de aniversário de casamento do casal marcada num calendário. Você tenta a combinação e o cofre abre! Dentro, encontra cartas de amor trocadas entre Eleanor e o rival de negócios de Davenport.",
                 choices: [
                     { text: "Confrontar Eleanor com as cartas.", to: 8 }
                 ]
@@ -171,9 +226,10 @@ export const gamebooks: Record<string, Gamebook> = {
                 text: "'Lefty' Malone não gosta de perguntas. Ele e os seus capangas dão-lhe uma tareia e atiram-no para um beco. Você perde a noite e a pista. FIM.",
             },
             6: {
-                text: "Lola está nervosa. Ela admite que Davenport lhe prometeu uma vida melhor, mas nunca cumpriu. Ela diz que a última vez que o viu, ele estava a discutir ao telefone sobre 'cartas comprometedoras'.",
+                text: "Lola está nervosa. Ela admite que Davenport lhe prometeu uma vida melhor, mas nunca cumpriu. Ela diz que a última vez que o viu, ele estava a discutir ao telefone sobre 'cartas comprometedoras'. Ela menciona um encontro que ele teria num beco perto do clube.",
                 choices: [
-                    { text: "Perguntar onde poderiam estar essas cartas.", to: 1 },
+                    { text: "Perguntar onde poderiam estar essas cartas (ir à mansão).", to: 1 },
+                    { text: "Investigar o beco perto do clube.", to: 10 }
                 ]
             },
             7: {
@@ -181,6 +237,22 @@ export const gamebooks: Record<string, Gamebook> = {
             },
             8: {
                  text: "Confrontada com as provas, Eleanor confessa tudo. O seu amante, o rival de negócios, cometeu o crime para que pudessem ficar juntos e com a fortuna. Você resolveu o caso. FIM."
+            },
+            9: {
+                text: "Por alguns dólares, a empregada revela que viu o Sr. Davenport a esconder uma pequena chave de latão debaixo do tapete do escritório pouco antes de morrer. Você pega na chave.",
+                choices: [
+                    { text: "Procurar o que a chave abre.", to: 11 },
+                    { text: "Ignorar a chave e interrogar a viúva.", to: 3 }
+                ]
+            },
+            10: {
+                text: "No beco escuro, você encontra uma carteira de fósforos do 'Blue Note' com um número de telefone anotado. Antes que possa pensar, uma figura ataca-o das sombras. Você apaga. FIM.",
+            },
+            11: {
+                text: "A chave abre uma pequena gaveta na secretária de Davenport. Dentro, está uma apólice de seguro de vida em nome de Eleanor, mas com um beneficiário secreto: o seu amante. Você tem a prova de que precisava.",
+                choices: [
+                    { text: "Levar as provas à polícia.", to: 8 }
+                ]
             }
         }
     }
