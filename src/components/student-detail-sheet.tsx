@@ -100,7 +100,8 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
       return;
     }
     
-    const docRef = doc(firestore, 'alunos', student.rm);
+    // The student ID in the 'users' collection is just the RM
+    const docRef = doc(firestore, 'users', student.rm);
     
     setDocumentNonBlocking(docRef, updatedData, { merge: true });
 
@@ -520,5 +521,3 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     </>
   );
 }
-
-    

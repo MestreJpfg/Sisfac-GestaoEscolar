@@ -145,13 +145,13 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
     
     normalizedStudents.forEach(student => {
       if (student.rm) {
-        // Use a consistent ID, e.g., 'student_' + rm to avoid collision with auth UIDs
-        const docId = `student_${student.rm}`;
+        // The document ID is now the student's RM directly
+        const docId = student.rm;
         const docRef = doc(firestore, usersCollectionPath, docId);
         
         const finalData = {
           ...student,
-          uid: docId,
+          uid: docId, // uid is the same as the document ID
           name: student.nome, // Ensure 'name' field is populated for consistency
           email: `${student.rm}@escola.portal`, // Create a placeholder email
         };

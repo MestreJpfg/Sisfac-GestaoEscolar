@@ -33,13 +33,8 @@ service cloud.firestore {
       if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
         return true;
       }
-      
-      // 4. Check for individual custom permissions on the user document.
-      if ('customPermissions' in userData && permission in userData.customPermissions) {
-          return true;
-      }
 
-      // 5. Check for permissions granted by the user's profile.
+      // 4. Check for permissions granted by the user's profile.
       let profilePath = /databases/$(database)/documents/profiles/$(userData.profileId);
       if (exists(profilePath)) {
         let profileData = get(profilePath).data;
