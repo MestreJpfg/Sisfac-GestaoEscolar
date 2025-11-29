@@ -12,8 +12,13 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-
-type Grades = { [studentId: string]: number | null };
+type EtapaGrade = {
+    etapa1?: number | null;
+    etapa2?: number | null;
+    etapa3?: number | null;
+    etapa4?: number | null;
+};
+type Grades = { [studentId: string]: EtapaGrade };
 
 export default function GradesManager() {
     const firestore = useFirestore();
@@ -27,7 +32,6 @@ export default function GradesManager() {
         turno: '',
     });
     const [selectedDiscipline, setSelectedDiscipline] = useState('');
-    const [selectedEtapa, setSelectedEtapa] = useState('');
 
     // Data
     const [grades, setGrades] = useState<Grades>({});
@@ -67,8 +71,8 @@ export default function GradesManager() {
     }, [allStudents, filters]);
     
     const isReadyToLoad = useMemo(() => {
-        return filters.ensino && filters.serie && filters.classe && filters.turno && selectedDiscipline && selectedEtapa;
-    }, [filters, selectedDiscipline, selectedEtapa]);
+        return filters.ensino && filters.serie && filters.classe && filters.turno && selectedDiscipline;
+    }, [filters, selectedDiscipline]);
 
     // Query for students in the selected class
     const studentsInClassQuery = useMemo(() => {
@@ -87,17 +91,22 @@ export default function GradesManager() {
     }, [selectedDiscipline]);
 
     useEffect(() => {
-        if (studentsInClass && disciplineId && selectedEtapa) {
+        if (studentsInClass && disciplineId) {
             const newGrades: Grades = {};
             studentsInClass.forEach(student => {
-                const grade = student.boletim?.[disciplineId]?.[selectedEtapa];
-                newGrades[student.id] = grade === undefined ? null : grade;
+                const disciplineGrades = student.boletim?.[disciplineId];
+                newGrades[student.id] = {
+                    etapa1: disciplineGrades?.etapa1 ?? null,
+                    etapa2: disciplineGrades?.etapa2 ?? null,
+                    etapa3: disciplineGrades?.etapa3 ?? null,
+                    etapa4: disciplineGrades?.etapa4 ?? null,
+                };
             });
             setGrades(newGrades);
         } else {
             setGrades({});
         }
-    }, [studentsInClass, disciplineId, selectedEtapa]);
+    }, [studentsInClass, disciplineId]);
 
     const handleFilterChange = (name: string, value: string) => {
         const newValue = value === 'all' ? '' : value;
@@ -109,10 +118,9 @@ export default function GradesManager() {
             return newFilters;
         });
         setSelectedDiscipline('');
-        setSelectedEtapa('');
     };
 
-    const handleGradeChange = (studentId: string, value: string) => {
+    const handleGradeChange = (studentId: string, etapa: keyof EtapaGrade, value: string) => {
         const numericValue = value === '' ? null : parseFloat(value.replace(',', '.'));
         if (value !== '' && (isNaN(numericValue!) || numericValue! < 0 || numericValue! > 10)) {
             toast({
@@ -122,26 +130,32 @@ export default function GradesManager() {
             });
             return;
         }
-        setGrades(prev => ({ ...prev, [studentId]: numericValue }));
+        setGrades(prev => ({
+            ...prev,
+            [studentId]: {
+                ...prev[studentId],
+                [etapa]: numericValue,
+            }
+        }));
     };
     
-    const calculateAverageForStudent = (studentBoletim: any, disciplineKey: string, updatedGrades: Grades, studentId: string, currentEtapa: string) => {
-        const disciplineGrades = studentBoletim?.[disciplineKey] || {};
-        const tempGrades = {
-            ...disciplineGrades,
-            [currentEtapa]: updatedGrades[studentId],
-        };
+    const calculateAverage = (studentId: string): string => {
+        const studentGrades = grades[studentId];
+        if (!studentGrades) return '-';
 
-        const validGrades = ['etapa1', 'etapa2', 'etapa3', 'etapa4']
-            .map(etapa => tempGrades[etapa])
-            .filter((nota): nota is number => nota !== null && nota !== undefined && !isNaN(nota));
+        const validGrades = Object.values(studentGrades).filter(
+            (nota): nota is number => nota !== null && nota !== undefined && !isNaN(nota)
+        );
 
-        if (validGrades.length === 0) return null;
-        return validGrades.reduce((a, b) => a + b, 0) / validGrades.length;
+        if (validGrades.length === 0) return '-';
+
+        const average = validGrades.reduce((a, b) => a + b, 0) / validGrades.length;
+        return average.toFixed(1).replace('.', ',');
     };
 
+
     const handleSaveChanges = async () => {
-        if (!firestore || !studentsInClass || !disciplineId || !selectedEtapa || Object.keys(grades).length === 0) return;
+        if (!firestore || !studentsInClass || !disciplineId || Object.keys(grades).length === 0) return;
     
         setIsSaving(true);
         
@@ -151,17 +165,21 @@ export default function GradesManager() {
             for (const student of studentsInClass) {
                 const studentId = student.id;
                 const studentDocRef = doc(firestore, 'alunos', studentId);
-    
-                const newGrade = grades[studentId];
-                const newAverage = calculateAverageForStudent(student.boletim, disciplineId, grades, studentId, selectedEtapa);
+                const studentGrades = grades[studentId];
+                if (!studentGrades) continue;
 
-                const etapaFieldPath = `boletim.${disciplineId}.${selectedEtapa}`;
-                const mediaFieldPath = `boletim.${disciplineId}.mediaFinal`;
+                const validGrades = Object.values(studentGrades).filter((nota): nota is number => nota !== null && nota !== undefined && !isNaN(nota));
+                const average = validGrades.length > 0 ? validGrades.reduce((a, b) => a + b, 0) / validGrades.length : null;
+
+                const updatePayload: { [key: string]: any } = {
+                    [`boletim.${disciplineId}.etapa1`]: studentGrades.etapa1,
+                    [`boletim.${disciplineId}.etapa2`]: studentGrades.etapa2,
+                    [`boletim.${disciplineId}.etapa3`]: studentGrades.etapa3,
+                    [`boletim.${disciplineId}.etapa4`]: studentGrades.etapa4,
+                    [`boletim.${disciplineId}.mediaFinal`]: average,
+                };
     
-                batch.update(studentDocRef, { 
-                    [etapaFieldPath]: newGrade,
-                    [mediaFieldPath]: newAverage,
-                });
+                batch.update(studentDocRef, updatePayload);
             }
             
             await batch.commit();
@@ -181,25 +199,6 @@ export default function GradesManager() {
             setIsSaving(false);
         }
     };
-    
-    const calculateAverage = (student: any): string => {
-        if (!disciplineId) return '-';
-        const boletim = student.boletim;
-        if (!boletim || !boletim[disciplineId]) return '-';
-        
-        const validGrades = [
-            boletim[disciplineId].etapa1,
-            boletim[disciplineId].etapa2,
-            boletim[disciplineId].etapa3,
-            boletim[disciplineId].etapa4
-        ].filter((nota): nota is number => nota !== null && nota !== undefined && !isNaN(nota));
-
-        if (validGrades.length === 0) return '-';
-
-        const average = validGrades.reduce((a, b) => a + b, 0) / validGrades.length;
-        return average.toFixed(1).replace('.', ',');
-    };
-
 
     return (
         <div className="space-y-6">
@@ -214,7 +213,7 @@ export default function GradesManager() {
                             <Loader2 className="h-8 w-8 animate-spin text-primary" />
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                             <Select value={filters.ensino} onValueChange={(v) => handleFilterChange('ensino', v)}>
                                 <SelectTrigger><SelectValue placeholder="Ensino..." /></SelectTrigger>
                                 <SelectContent>{uniqueFilterOptions.ensinos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
@@ -239,15 +238,6 @@ export default function GradesManager() {
                                     )}
                                 </SelectContent>
                             </Select>
-                             <Select value={selectedEtapa} onValueChange={setSelectedEtapa} disabled={!selectedDiscipline}>
-                                <SelectTrigger><SelectValue placeholder="Etapa..." /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="etapa1">Etapa 1</SelectItem>
-                                    <SelectItem value="etapa2">Etapa 2</SelectItem>
-                                    <SelectItem value="etapa3">Etapa 3</SelectItem>
-                                    <SelectItem value="etapa4">Etapa 4</SelectItem>
-                                </SelectContent>
-                            </Select>
                         </div>
                     )}
                 </CardContent>
@@ -259,9 +249,9 @@ export default function GradesManager() {
                 ) : studentsInClass && studentsInClass.length > 0 ? (
                     <Card>
                         <CardHeader>
-                            <CardTitle>Lançamento de Notas</CardTitle>
+                            <CardTitle>Lançamento de Notas: <span className="text-primary">{selectedDiscipline}</span></CardTitle>
                             <CardDescription>
-                                Insira as notas para a disciplina de <strong>{selectedDiscipline}</strong> na <strong>{selectedEtapa.replace('etapa', 'Etapa ')}</strong>.
+                                Insira as notas para todas as etapas. A média final será calculada automaticamente.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -269,25 +259,30 @@ export default function GradesManager() {
                                <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="w-[40%]">Aluno</TableHead>
-                                            <TableHead className="text-center">Nota da Etapa</TableHead>
-                                            <TableHead className="text-center">Média Atual</TableHead>
+                                            <TableHead className="w-[30%] min-w-[200px] sticky left-0 bg-background z-10">Aluno</TableHead>
+                                            <TableHead className="text-center">Etapa 1</TableHead>
+                                            <TableHead className="text-center">Etapa 2</TableHead>
+                                            <TableHead className="text-center">Etapa 3</TableHead>
+                                            <TableHead className="text-center">Etapa 4</TableHead>
+                                            <TableHead className="text-center font-bold sticky right-0 bg-background z-10">Média Final</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {studentsInClass.map((student) => (
                                             <TableRow key={student.id}>
-                                                <TableCell className="font-medium">{student.nome}</TableCell>
-                                                <TableCell className="text-center">
-                                                    <Input
-                                                        type="text"
-                                                        value={grades[student.id] === null || grades[student.id] === undefined ? '' : String(grades[student.id]).replace('.', ',')}
-                                                        onChange={(e) => handleGradeChange(student.id, e.target.value)}
-                                                        className="w-24 mx-auto text-center"
-                                                        placeholder="-"
-                                                    />
-                                                </TableCell>
-                                                <TableCell className="text-center font-bold">{calculateAverage(student)}</TableCell>
+                                                <TableCell className="font-medium sticky left-0 bg-background z-10">{student.nome}</TableCell>
+                                                {(['etapa1', 'etapa2', 'etapa3', 'etapa4'] as const).map(etapa => (
+                                                    <TableCell key={etapa} className="text-center">
+                                                        <Input
+                                                            type="text"
+                                                            value={grades[student.id]?.[etapa] === null || grades[student.id]?.[etapa] === undefined ? '' : String(grades[student.id]?.[etapa]).replace('.', ',')}
+                                                            onChange={(e) => handleGradeChange(student.id, etapa, e.target.value)}
+                                                            className="w-20 mx-auto text-center"
+                                                            placeholder="-"
+                                                        />
+                                                    </TableCell>
+                                                ))}
+                                                <TableCell className="text-center font-bold sticky right-0 bg-background z-10">{calculateAverage(student.id)}</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
