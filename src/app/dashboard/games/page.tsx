@@ -6,7 +6,7 @@ import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
 import { UserNav } from '@/components/user-nav';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Gamepad2, Play } from 'lucide-react';
+import { ArrowLeft, Gamepad2, Play, BookOpen } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
@@ -16,8 +16,13 @@ const games = [
         title: "BOLA MALUCA",
         description: "Incline o seu dispositivo para mover a esfera azul. Colete os orbes amarelos e evite os vermelhos o máximo de tempo que conseguir!",
         href: "/dashboard/games/bola-maluca",
-        imageUrl: "/games/bola-maluca.png",
-        imageAlt: "Jogo Bola Maluca",
+        icon: <Gamepad2 className="w-16 h-16 text-muted-foreground" />,
+    },
+    {
+        title: "AVENTURAS FANTÁSTICAS",
+        description: "Embarque numa aventura interativa gerada por IA. As suas escolhas moldam a história. Que caminho irá seguir?",
+        href: "/dashboard/games/aventuras-fantasticas",
+        icon: <BookOpen className="w-16 h-16 text-muted-foreground" />,
     }
 ];
 
@@ -51,7 +56,7 @@ export default function GamesHubPage() {
                             {games.map((game) => (
                                 <Card key={game.title} className="flex flex-col overflow-hidden">
                                      <div className="aspect-video bg-muted flex items-center justify-center">
-                                         <Gamepad2 className="w-16 h-16 text-muted-foreground" />
+                                         {game.icon}
                                     </div>
                                     <CardHeader>
                                         <CardTitle>{game.title}</CardTitle>
