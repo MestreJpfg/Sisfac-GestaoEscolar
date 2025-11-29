@@ -53,9 +53,19 @@ export default function SensorGamePage() {
     // --- State for React Rendering ---
     const [status, setStatus] = useState<GameStatus>('permissions');
     const [score, setScore] = useState(0);
+    const [highScore, setHighScore] = useState(0);
     const [time, setTime] = useState(0);
     const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>('prompt');
     const [renderTrigger, setRenderTrigger] = useState(0); // Used to force re-renders for UI elements
+    const [isNewHighScore, setIsNewHighScore] = useState(false);
+
+    // --- Load High Score ---
+    useEffect(() => {
+        const savedHighScore = localStorage.getItem('sensorRushHighScore');
+        if (savedHighScore) {
+            setHighScore(parseInt(savedHighScore, 10));
+        }
+    }, []);
 
     const resetGame = useCallback(() => {
         const gameArea = gameAreaRef.current;
@@ -64,6 +74,7 @@ export default function SensorGamePage() {
         const { width, height } = gameArea.getBoundingClientRect();
         if (width === 0 || height === 0) return false;
         
+        setIsNewHighScore(false);
         playerRef.current = {
             position: { x: (width - PLAYER_SIZE) / 2, y: (height - PLAYER_SIZE) / 2 },
             velocity: { x: 0, y: 0 },
@@ -184,9 +195,13 @@ export default function SensorGamePage() {
 
             // Increase enemy speed
             enemies.forEach(e => {
-                const speedMultiplier = 1 + (newScore * ENEMY_SPEED_INCREMENT) / ENEMY_SPEED_BASE;
-                e.velocity.x *= speedMultiplier / (1 + ((newScore - 1) * ENEMY_SPEED_INCREMENT) / ENEMY_SPEED_BASE);
-                e.velocity.y *= speedMultiplier / (1 + ((newScore - 1) * ENEMY_SPEED_INCREMENT) / ENEMY_SPEED_BASE);
+                const currentSpeed = Math.sqrt(e.velocity.x**2 + e.velocity.y**2);
+                const newSpeed = currentSpeed + ENEMY_SPEED_INCREMENT;
+                const speedMultiplier = newSpeed / currentSpeed;
+                if (isFinite(speedMultiplier)) {
+                    e.velocity.x *= speedMultiplier;
+                    e.velocity.y *= speedMultiplier;
+                }
             });
 
             item.position = {
@@ -218,6 +233,13 @@ export default function SensorGamePage() {
              if (animationFrameId.current) {
                 cancelAnimationFrame(animationFrameId.current);
              }
+             if (status === 'gameOver') {
+                 if (score > highScore) {
+                    setIsNewHighScore(true);
+                    setHighScore(score);
+                    localStorage.setItem('sensorRushHighScore', String(score));
+                 }
+             }
         }
         
         return () => {
@@ -225,7 +247,7 @@ export default function SensorGamePage() {
                 cancelAnimationFrame(animationFrameId.current);
             }
         };
-    }, [status, gameLoop]);
+    }, [status, gameLoop, score, highScore]);
     
     // --- Sensor Listener Effect ---
     useEffect(() => {
@@ -349,6 +371,7 @@ export default function SensorGamePage() {
                                     <div className="text-center font-mono space-y-4 p-4">
                                         <h2 className="text-4xl font-bold text-cyan-400 tracking-widest">SENSOR RUSH</h2>
                                         <p className="text-purple-300">Incline o seu dispositivo para mover a esfera azul.<br/>Colete os orbes amarelos e evite os vermelhos!</p>
+                                        <p className="text-lg text-white">RECORDE: <span className="font-bold text-yellow-300">{highScore}</span></p>
                                         <Button onClick={startGame} size="lg" className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold">
                                             <Play className="mr-2 h-5 w-5" />
                                             Iniciar Jogo
@@ -358,8 +381,9 @@ export default function SensorGamePage() {
                                 {status === 'gameOver' && (
                                      <div className="text-center font-mono space-y-4 p-4">
                                         <h2 className="text-5xl font-bold text-red-500 tracking-widest">GAME OVER</h2>
+                                        {isNewHighScore && <p className="text-2xl font-bold text-yellow-400 animate-pulse">NOVO RECORDE!</p>}
                                         <p className="text-xl text-white">Score Final: <span className="font-bold text-yellow-300">{score}</span></p>
-                                         <p className="text-xl text-white">Tempo: <span className="font-bold">{time}s</span></p>
+                                        <p className="text-lg text-white">Recorde: <span className="font-bold text-yellow-300">{highScore}</span></p>
                                         <Button onClick={startGame} size="lg" className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold">
                                             <Repeat className="mr-2 h-5 w-5" />
                                             Tentar Novamente
