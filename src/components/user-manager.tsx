@@ -49,9 +49,9 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       baseQuery = query(usersCollection);
     }
     
-    // Use a consistent field for ordering that is guaranteed to exist.
-    // 'name' is a better candidate than 'createdAt'.
-    q = query(baseQuery, orderBy(sortConfig.key, sortConfig.direction));
+    // Not ordering by a specific field from the server to prevent inconsistent data errors.
+    // Sorting will be done on the client.
+    q = baseQuery;
     
     if (pageParam) {
       q = query(q, startAfter(pageParam));
@@ -64,7 +64,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
     const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
 
     return { data: usersData, lastDoc };
-  }, [firestore, filters.profileId, sortConfig]);
+  }, [firestore, filters.profileId]);
 
 
   const {
@@ -76,7 +76,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       error,
       refetch,
   } = useInfiniteQuery({
-      queryKey: ['users', filters.profileId, sortConfig],
+      queryKey: ['users', filters.profileId],
       queryFn: fetchUsers,
       initialPageParam: null,
       getNextPageParam: (lastPage) => {
@@ -86,7 +86,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
 
   const allUsers = useMemo(() => data?.pages.flatMap(page => page.data) ?? [], [data]);
 
-  const filteredUsers = useMemo(() => {
+  const filteredAndSortedUsers = useMemo(() => {
     let processedUsers = [...allUsers];
     const searchLower = debouncedSearch.toLowerCase().trim();
 
@@ -96,8 +96,22 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       );
     }
     
+    // Client-side sorting
+    processedUsers.sort((a, b) => {
+        const aValue = a[sortConfig.key] || '';
+        const bValue = b[sortConfig.key] || '';
+
+        if (aValue < bValue) {
+            return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+            return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+    });
+
     return processedUsers;
-  }, [allUsers, debouncedSearch]);
+  }, [allUsers, debouncedSearch, sortConfig]);
 
 
   const handleFilterChange = (name: string, value: string) => {
@@ -172,7 +186,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       </Card>
       
         <div className="text-sm text-muted-foreground h-5">
-           {filteredUsers.length > 0 && `A exibir ${filteredUsers.length} de ${allUsers.length} utilizador(es) carregados.`}
+           {filteredAndSortedUsers.length > 0 && `A exibir ${filteredAndSortedUsers.length} de ${allUsers.length} utilizador(es) carregados.`}
         </div>
 
         {isLoading ? (
@@ -192,7 +206,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
             </Card>
         ) : (
              <UserTable 
-                users={filteredUsers}
+                users={filteredAndSortedUsers}
                 profiles={allProfiles}
                 onEdit={handleEditUser} 
                 onSort={handleSort}

@@ -36,10 +36,19 @@ export default function AnnouncementsPage() {
 
     const announcementsQuery = useMemo(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'announcements'), orderBy('createdAt', 'desc'));
+        return query(collection(firestore, 'announcements'));
     }, [firestore]);
 
-    const { data: announcements, isLoading: isLoadingAnnouncements } = useCollection(announcementsQuery);
+    const { data: announcementsData, isLoading: isLoadingAnnouncements } = useCollection(announcementsQuery);
+
+    const announcements = useMemo(() => {
+        if (!announcementsData) return [];
+        return [...announcementsData].sort((a, b) => {
+            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return dateB - dateA;
+        });
+    }, [announcementsData]);
     
     const profilesQuery = useMemo(() => {
         if (!firestore) return null;
@@ -79,7 +88,7 @@ export default function AnnouncementsPage() {
             id: id,
             authorId: user.uid,
             authorName: user.displayName,
-            createdAt: announcementId ? editingAnnouncement.createdAt : new Date().toISOString(),
+            createdAt: announcementId && editingAnnouncement.createdAt ? editingAnnouncement.createdAt : new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         };
 
