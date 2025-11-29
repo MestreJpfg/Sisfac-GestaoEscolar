@@ -19,8 +19,8 @@ const PLAYER_SIZE = 30;
 const ENEMY_SIZE = 50;
 const ITEM_SIZE = 20;
 const NUM_ENEMIES = 3;
-const ENEMY_SPEED_MIN = 1;
-const ENEMY_SPEED_MAX = 2.5;
+const ENEMY_SPEED_BASE = 1;
+const ENEMY_SPEED_INCREMENT = 0.1; // How much speed increases per score point
 const SENSITIVITY = 0.5; // Player movement sensitivity
 
 // --- Type Definitions ---
@@ -55,12 +55,14 @@ export default function SensorGamePage() {
     const [score, setScore] = useState(0);
     const [time, setTime] = useState(0);
     const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>('prompt');
-    const [, setTick] = useState(0); // Used to force re-renders for object positions
+    const [renderTrigger, setRenderTrigger] = useState(0); // Used to force re-renders for UI elements
 
     const resetGame = useCallback(() => {
         const gameArea = gameAreaRef.current;
-        if (!gameArea) return;
+        if (!gameArea) return false;
+        
         const { width, height } = gameArea.getBoundingClientRect();
+        if (width === 0 || height === 0) return false;
         
         playerRef.current = {
             position: { x: (width - PLAYER_SIZE) / 2, y: (height - PLAYER_SIZE) / 2 },
@@ -68,17 +70,20 @@ export default function SensorGamePage() {
             size: PLAYER_SIZE,
         };
 
-        enemiesRef.current = Array.from({ length: NUM_ENEMIES }).map(() => ({
-            position: {
-                x: Math.random() * (width - ENEMY_SIZE),
-                y: Math.random() * (height - ENEMY_SIZE),
-            },
-            velocity: {
-                x: (Math.random() * (ENEMY_SPEED_MAX - ENEMY_SPEED_MIN) + ENEMY_SPEED_MIN) * (Math.random() < 0.5 ? 1 : -1),
-                y: (Math.random() * (ENEMY_SPEED_MAX - ENEMY_SPEED_MIN) + ENEMY_SPEED_MIN) * (Math.random() < 0.5 ? 1 : -1),
-            },
-            size: ENEMY_SIZE,
-        }));
+        enemiesRef.current = Array.from({ length: NUM_ENEMIES }).map(() => {
+            const speed = ENEMY_SPEED_BASE;
+            return {
+                position: {
+                    x: Math.random() * (width - ENEMY_SIZE),
+                    y: Math.random() * (height - ENEMY_SIZE),
+                },
+                velocity: {
+                    x: (Math.random() * speed + 0.5) * (Math.random() < 0.5 ? 1 : -1),
+                    y: (Math.random() * speed + 0.5) * (Math.random() < 0.5 ? 1 : -1),
+                },
+                size: ENEMY_SIZE,
+            }
+        });
         
         itemRef.current = {
             position: { 
@@ -92,6 +97,8 @@ export default function SensorGamePage() {
         setScore(0);
         setTime(0);
         gameTimeStartRef.current = Date.now();
+        setRenderTrigger(t => t + 1); // Trigger a render to show initial positions
+        return true;
     }, []);
 
     // --- Permissions and Initialization ---
@@ -144,7 +151,7 @@ export default function SensorGamePage() {
     // --- Game Loop ---
     const gameLoop = useCallback(() => {
         const gameArea = gameAreaRef.current;
-        if (!gameArea) return;
+        if (!gameArea || status !== 'playing') return;
         const { width, height } = gameArea.getBoundingClientRect();
         
         // --- Update Time ---
@@ -152,29 +159,36 @@ export default function SensorGamePage() {
 
         // --- Update Player Position ---
         const player = playerRef.current;
-        let newPlayerX = player.position.x + player.velocity.x;
-        let newPlayerY = player.position.y + player.velocity.y;
-        if (newPlayerX < 0) newPlayerX = 0;
-        if (newPlayerX > width - player.size) newPlayerX = width - player.size;
-        if (newPlayerY < 0) newPlayerY = 0;
-        if (newPlayerY > height - player.size) newPlayerY = height - player.size;
-        player.position = { x: newPlayerX, y: newPlayerY };
+        player.position.x += player.velocity.x;
+        player.position.y += player.velocity.y;
+        if (player.position.x < 0) player.position.x = 0;
+        if (player.position.x > width - player.size) player.position.x = width - player.size;
+        if (player.position.y < 0) player.position.y = 0;
+        if (player.position.y > height - player.size) player.position.y = height - player.size;
 
         // --- Update Enemies Position ---
         const enemies = enemiesRef.current;
         enemies.forEach(e => {
-            let newX = e.position.x + e.velocity.x;
-            let newY = e.position.y + e.velocity.y;
-            if (newX <= 0 || newX >= width - e.size) e.velocity.x *= -1;
-            if (newY <= 0 || newY >= height - e.size) e.velocity.y *= -1;
-            e.position = { x: newX, y: newY };
+            e.position.x += e.velocity.x;
+            e.position.y += e.velocity.y;
+            if (e.position.x <= 0 || e.position.x >= width - e.size) e.velocity.x *= -1;
+            if (e.position.y <= 0 || e.position.y >= height - e.size) e.velocity.y *= -1;
         });
 
         // --- Check Collisions ---
         const item = itemRef.current;
         if (checkCollision(player, item)) {
             vibrate(50);
-            setScore(s => s + 1);
+            const newScore = score + 1;
+            setScore(newScore);
+
+            // Increase enemy speed
+            enemies.forEach(e => {
+                const speedMultiplier = 1 + (newScore * ENEMY_SPEED_INCREMENT) / ENEMY_SPEED_BASE;
+                e.velocity.x *= speedMultiplier / (1 + ((newScore - 1) * ENEMY_SPEED_INCREMENT) / ENEMY_SPEED_BASE);
+                e.velocity.y *= speedMultiplier / (1 + ((newScore - 1) * ENEMY_SPEED_INCREMENT) / ENEMY_SPEED_BASE);
+            });
+
             item.position = {
                 x: Math.random() * (width - item.size),
                 y: Math.random() * (height - item.size),
@@ -190,15 +204,15 @@ export default function SensorGamePage() {
         }
         
         // Force a re-render to show updated positions
-        setTick(t => t + 1);
+        setRenderTrigger(t => t + 1);
 
         animationFrameId.current = requestAnimationFrame(gameLoop);
-    }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [status, score]);
     
     // --- Game State Effects ---
     useEffect(() => {
         if (status === 'playing') {
-            gameTimeStartRef.current = Date.now();
             animationFrameId.current = requestAnimationFrame(gameLoop);
         } else {
              if (animationFrameId.current) {
@@ -232,15 +246,10 @@ export default function SensorGamePage() {
     }, [permissionState, status]);
     
     const startGame = () => {
-        const gameArea = gameAreaRef.current;
-        if (gameArea) {
-            const { width, height } = gameArea.getBoundingClientRect();
-            if (width > 0 && height > 0) {
-                resetGame();
-                setStatus('playing');
-            } else {
-                toast({ variant: 'destructive', title: 'Erro de Layout', description: 'Não foi possível iniciar o jogo. Tente novamente.' });
-            }
+        if (resetGame()) {
+          setStatus('playing');
+        } else {
+          toast({ variant: 'destructive', title: 'Erro de Layout', description: 'Não foi possível iniciar o jogo. Tente novamente.' });
         }
     };
     
