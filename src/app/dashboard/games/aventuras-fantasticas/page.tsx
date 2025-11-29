@@ -70,7 +70,7 @@ export default function AventurasFantasticasPage() {
         if (!book) return;
         const node = book.nodes[nodeId];
         if (!node) {
-            console.error(`Node ${nodeId} not found!`);
+            console.error(`Node ${'${nodeId}'} not found!`);
             return;
         }
 
@@ -80,7 +80,7 @@ export default function AventurasFantasticasPage() {
         if (node.staminaChange) {
             currentStamina += node.staminaChange;
             setPlayerStats(prev => ({...prev, stamina: Math.max(0, prev.stamina + node.staminaChange!)}));
-            toast({ title: `${book.player_stats.stamina_name} alterada em ${node.staminaChange}!` });
+            toast({ title: `${'${book.player_stats.stamina_name}'} alterada em ${'${node.staminaChange}'}!` });
         }
         if (node.getItems) {
             setInventory(prev => [...new Set([...prev, ...node.getItems!])]);
@@ -104,7 +104,7 @@ export default function AventurasFantasticasPage() {
                 canFlee: node.combat.can_flee || false,
                 fleeTo: node.combat.flee_to || null
             });
-            setCombatLog([`Você encontra: ${node.combat.enemy}!`]);
+            setCombatLog([`Você encontra: ${'${node.combat.enemy}'}!`]);
             setGameState('combat');
         } else if (node.autoNavigate) {
              setTimeout(() => processNode(node.autoNavigate!.to, book), 500);
@@ -164,10 +164,10 @@ export default function AventurasFantasticasPage() {
         const enemyAttack = enemyRoll + currentCombat.enemy.skill;
 
         let winner: 'player' | 'enemy' | 'draw';
-        let newLog = [`Você rolou ${playerRoll} (Força de Ataque ${playerAttack})`, `O inimigo rolou ${enemyRoll} (Força de Ataque ${enemyAttack})`];
+        let newLog = [`Você rolou ${'${playerRoll}'} (Força de Ataque ${'${playerAttack}'})`, `O inimigo rolou ${'${enemyRoll}'} (Força de Ataque ${'${enemyAttack}'})`];
         
         let newEnemyStamina = currentCombat.enemy.stamina;
-        let newPlayerStamina = currentCombat.player.stamina;
+        let newPlayerStamina = playerStats.stamina;
 
         if (playerAttack > enemyAttack) {
             winner = 'player';
@@ -234,7 +234,7 @@ export default function AventurasFantasticasPage() {
              setPlayerStats(prev => ({...prev, stamina: newPlayerStamina }));
         }
 
-        setCombatLog(prev => [...prev, `Teste de Sorte... rolou ${totalRoll} (precisava de ${playerStats.luck}). ${logMessage}`]);
+        setCombatLog(prev => [...prev, `Teste de Sorte... rolou ${'${totalRoll}'} (precisava de ${'${playerStats.luck}'}). ${'${logMessage}'}`]);
         setCombatRoundResult(prev => prev ? ({ ...prev, isLucky: isSuccess }) : null);
 
         if (newEnemyStamina <= 0) {
@@ -252,11 +252,11 @@ export default function AventurasFantasticasPage() {
         setCombatRoundResult(null);
 
         if (playerWon) {
-             toast({ title: "Vitória!", description: `Você derrotou ${combatNode.enemy}!` });
+             toast({ title: "Vitória!", description: `Você derrotou ${'${combatNode.enemy}'}!` });
              processNode(combatNode.success.to);
         } else {
             setPlayerStats(prev => ({ ...prev, stamina: 0 }));
-            toast({ variant: 'destructive', title: "Derrota!", description: `Você foi derrotado por ${combatNode.enemy}!` });
+            toast({ variant: 'destructive', title: "Derrota!", description: `Você foi derrotado por ${'${combatNode.enemy}'}!` });
             processNode(combatNode.failure.to);
         }
     };
@@ -276,8 +276,8 @@ export default function AventurasFantasticasPage() {
         const resultText = isSuccess ? luckTest.success.text : luckTest.failure.text;
 
         toast({
-            title: `Teste de Sorte: ${isSuccess ? 'Sucesso!' : 'Falha!'}`,
-            description: `Você rolou ${totalRoll} (precisava de ${playerStats.luck} ou menos). ${resultText}`,
+            title: `Teste de Sorte: ${'${isSuccess ? \'Sucesso!\' : \'Falha!\'}'}`,
+            description: `Você rolou ${'${totalRoll}'} (precisava de ${'${playerStats.luck}'} ou menos). ${'${resultText}'}`,
         });
 
         setLuckTest(null);
@@ -532,7 +532,7 @@ function StatItem({ icon: Icon, label, value, maxValue, color }: { icon: React.E
     return (
         <div>
             <div className="flex justify-between items-center mb-1">
-                <p className="flex items-center gap-2 font-semibold"><Icon className={`h-5 w-5 ${color}`} />{label}</p>
+                <p className="flex items-center gap-2 font-semibold"><Icon className={`h-5 w-5 ${'${color}'}`} />{label}</p>
                 <p className="font-mono text-lg">{value} / {maxValue}</p>
             </div>
             <Progress value={percentage} indicatorClassName={
@@ -541,5 +541,7 @@ function StatItem({ icon: Icon, label, value, maxValue, color }: { icon: React.E
         </div>
     )
 }
+
+    
 
     
