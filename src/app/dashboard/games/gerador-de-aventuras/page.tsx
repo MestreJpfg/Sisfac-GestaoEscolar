@@ -18,6 +18,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { generateAdventureStep, type AdventureStep, type PlayerState } from '@/ai/flows/adventure-flow';
+import * as pdfjs from 'pdfjs-dist';
+
+// Configure o worker do pdf.js
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 
 type GameState = 'setup' | 'playing' | 'loading' | 'end';
@@ -67,20 +71,49 @@ export default function GeneratedAdventurePage() {
         }
     };
     
-    const handleFileUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
-        if (file.type.startsWith('text/')) {
-            const reader = new FileReader();
+        const reader = new FileReader();
+
+        if (file.type === 'application/pdf') {
+            reader.onload = async (e) => {
+                const arrayBuffer = e.target?.result as ArrayBuffer;
+                if (!arrayBuffer) return;
+
+                toast({ title: 'A processar PDF...', description: 'A extrair o texto do ficheiro.' });
+                try {
+                    const loadingTask = pdfjs.getDocument(new Uint8Array(arrayBuffer));
+                    const pdf = await loadingTask.promise;
+                    let fullText = '';
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const textContent = await page.getTextContent();
+                        const pageText = textContent.items.map(item => ('str' in item) ? item.str : '').join(' ');
+                        fullText += pageText + '\n\n';
+                    }
+                    setAdventurePrompt(fullText);
+                    toast({ title: 'PDF Carregado!', description: 'O conteúdo do ficheiro foi extraído para a área de texto.' });
+                } catch (error) {
+                    console.error('Error parsing PDF:', error);
+                    toast({ variant: 'destructive', title: 'Erro ao Ler PDF', description: 'Não foi possível extrair o texto deste PDF.' });
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        } else if (file.type.startsWith('text/')) {
             reader.onload = (e) => {
                 const text = e.target?.result as string;
                 setAdventurePrompt(text);
-                toast({ title: 'Ficheiro Carregado', description: 'O conteúdo do ficheiro foi carregado para a área de texto.' });
+                toast({ title: 'Ficheiro de Texto Carregado', description: 'O conteúdo do ficheiro foi carregado para a área de texto.' });
             };
             reader.readAsText(file);
         } else {
-            toast({ variant: 'destructive', title: 'Tipo de Ficheiro Inválido', description: 'Por favor, envie um ficheiro de texto (.txt, .md, etc.).' });
+            toast({ variant: 'destructive', title: 'Tipo de Ficheiro Inválido', description: 'Por favor, envie um ficheiro .pdf, .txt ou .md.' });
+        }
+         // Reset file input to allow re-uploading the same file
+        if (event.target) {
+            event.target.value = '';
         }
     };
 
@@ -170,7 +203,7 @@ export default function GeneratedAdventurePage() {
                         <Button variant="outline" size="lg" onClick={() => fileInputRef.current?.click()} className="w-full sm:w-auto">
                            <Upload className="mr-2 h-4 w-4" /> Importar de Ficheiro
                         </Button>
-                        <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept=".txt,.md" />
+                        <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept=".txt,.md,.pdf" />
                     </div>
                 </div>
             );
