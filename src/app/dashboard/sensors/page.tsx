@@ -64,8 +64,6 @@ export default function SensorGamePage() {
     });
 
     const resetGame = useCallback((width: number, height: number) => {
-        if (width === 0 || height === 0) return;
-
         setPlayer({
             position: { x: (width - PLAYER_SIZE) / 2, y: (height - PLAYER_SIZE) / 2 },
             velocity: { x: 0, y: 0 },
@@ -169,6 +167,10 @@ export default function SensorGamePage() {
         }));
         
         setPlayer(p => {
+            const gameArea = gameAreaRef.current;
+            if (!gameArea) return p;
+            const { width, height } = gameArea.getBoundingClientRect();
+
             if (checkCollision(p, item)) {
                 vibrate(50);
                 setScore(s => s + 1);
@@ -388,3 +390,4 @@ export default function SensorGamePage() {
         </AuthGuard>
     );
 }
+    
