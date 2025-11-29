@@ -64,16 +64,19 @@ export default function LoginPage() {
     const userDoc = await getDoc(userDocRef);
 
     if (userDoc.exists()) {
-        // User already exists, check if profile is complete
         const userData = userDoc.data();
+        
+        // If the user exists but is missing createdAt, add it.
+        if (!userData.createdAt) {
+            await setDoc(userDocRef, { createdAt: new Date().toISOString() }, { merge: true });
+        }
+        
         if (userData?.profileCompleted) {
             router.push('/dashboard');
         } else {
-            // This case handles users who signed up but didn't finish the profile page
             router.push('/profile'); 
         }
     } else {
-        // This is a new user (likely via Google Sign-In)
         const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',') || [];
         const isAdmin = user.email && adminEmails.includes(user.email);
 
@@ -85,11 +88,11 @@ export default function LoginPage() {
             customPermissions: [],
             createdAt: new Date().toISOString(),
             photoURL: user.photoURL || null,
-            profileCompleted: false, // New users MUST complete their profile
+            profileCompleted: false,
         };
     
         await setDoc(userDocRef, newUserData);
-        router.push('/profile'); // Always redirect new users to complete their profile
+        router.push('/profile');
     }
   };
   

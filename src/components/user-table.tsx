@@ -92,6 +92,7 @@ export default function UserTable({ users, profiles, onEdit, onSort, sortConfig,
     if (!dateString) return 'N/A';
     try {
         const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'Data inválida';
         return format(date, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
     } catch {
         return dateString;
