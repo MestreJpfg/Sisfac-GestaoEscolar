@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -18,10 +19,13 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 const PLAYER_SIZE = 30;
 const ENEMY_SIZE = 50;
 const ITEM_SIZE = 20;
+const POWERUP_SIZE = 25;
 const NUM_ENEMIES = 3;
 const ENEMY_SPEED_BASE = 1;
-const ENEMY_SPEED_INCREMENT = 0.1; // How much speed increases per score point
-const SENSITIVITY = 0.5; // Player movement sensitivity
+const ENEMY_SPEED_INCREMENT = 0.1;
+const SENSITIVITY = 0.5;
+const POWERUP_DURATION = 5000; // 5 seconds
+const POWERUP_SPAWN_CHANCE = 0.2; // 20% chance to spawn after collecting an item
 
 // --- Type Definitions ---
 interface Vector {
@@ -49,6 +53,11 @@ export default function SensorGamePage() {
     const playerRef = useRef<GameObject>({ position: { x: -100, y: -100 }, velocity: { x: 0, y: 0 }, size: PLAYER_SIZE });
     const enemiesRef = useRef<GameObject[]>([]);
     const itemRef = useRef<GameObject>({ position: { x: -100, y: -100 }, velocity: { x: 0, y: 0 }, size: ITEM_SIZE });
+    const powerUpRef = useRef<GameObject & { active: boolean }>({ position: { x: -100, y: -100 }, velocity: { x: 0, y: 0 }, size: POWERUP_SIZE, active: false });
+    const originalVelocitiesRef = useRef<Vector[]>([]);
+    const isPowerUpActiveRef = useRef<boolean>(false);
+    const powerUpTimeoutRef = useRef<NodeJS.Timeout>();
+
 
     // --- State for React Rendering ---
     const [status, setStatus] = useState<GameStatus>('permissions');
@@ -75,6 +84,9 @@ export default function SensorGamePage() {
         if (width === 0 || height === 0) return false;
         
         setIsNewHighScore(false);
+        if (powerUpTimeoutRef.current) clearTimeout(powerUpTimeoutRef.current);
+        isPowerUpActiveRef.current = false;
+        
         playerRef.current = {
             position: { x: (width - PLAYER_SIZE) / 2, y: (height - PLAYER_SIZE) / 2 },
             velocity: { x: 0, y: 0 },
@@ -103,6 +115,12 @@ export default function SensorGamePage() {
             },
             velocity: { x: 0, y: 0 },
             size: ITEM_SIZE,
+        };
+
+        powerUpRef.current = {
+            ...powerUpRef.current,
+            position: { x: -100, y: -100 },
+            active: false
         };
 
         setScore(0);
@@ -208,11 +226,50 @@ export default function SensorGamePage() {
                 x: Math.random() * (width - item.size),
                 y: Math.random() * (height - item.size),
             };
+
+            if (!powerUpRef.current.active && Math.random() < POWERUP_SPAWN_CHANCE) {
+                powerUpRef.current = {
+                    ...powerUpRef.current,
+                    position: {
+                        x: Math.random() * (width - POWERUP_SIZE),
+                        y: Math.random() * (height - POWERUP_SIZE),
+                    },
+                    active: true,
+                };
+            }
         }
+        
+        // Power-up Collision
+        const powerUp = powerUpRef.current;
+        if (powerUp.active && checkCollision(player, powerUp)) {
+            vibrate([100, 30, 100]);
+            powerUp.active = false;
+            powerUp.position = { x: -100, y: -100 }; // Move off-screen
+            
+            if (!isPowerUpActiveRef.current) {
+                isPowerUpActiveRef.current = true;
+                originalVelocitiesRef.current = enemies.map(e => ({ ...e.velocity }));
+                
+                enemies.forEach(e => {
+                    e.velocity.x *= 0.5;
+                    e.velocity.y *= 0.5;
+                });
+                
+                powerUpTimeoutRef.current = setTimeout(() => {
+                    enemies.forEach((e, i) => {
+                        e.velocity = originalVelocitiesRef.current[i];
+                    });
+                    isPowerUpActiveRef.current = false;
+                }, POWERUP_DURATION);
+            }
+        }
+
 
         for (const enemy of enemies) {
             if (checkCollision(player, enemy)) {
                 vibrate([200, 50, 200]);
+                if (powerUpTimeoutRef.current) clearTimeout(powerUpTimeoutRef.current);
+                isPowerUpActiveRef.current = false;
                 setStatus('gameOver');
                 return;
             }
@@ -245,6 +302,9 @@ export default function SensorGamePage() {
         return () => {
             if (animationFrameId.current) {
                 cancelAnimationFrame(animationFrameId.current);
+            }
+            if (powerUpTimeoutRef.current) {
+                clearTimeout(powerUpTimeoutRef.current);
             }
         };
     }, [status, gameLoop, score, highScore]);
@@ -338,6 +398,21 @@ export default function SensorGamePage() {
                                         boxShadow: '0 0 15px 5px hsl(50, 100%, 50%, 0.7)',
                                     }}/>
 
+                                    {/* Power-up */}
+                                    {powerUpRef.current.active && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            left: powerUpRef.current.position.x,
+                                            top: powerUpRef.current.position.y,
+                                            width: powerUpRef.current.size,
+                                            height: powerUpRef.current.size,
+                                            backgroundColor: 'hsl(190, 100%, 50%)', // Cyan
+                                            borderRadius: '50%',
+                                            boxShadow: '0 0 20px 8px hsl(190, 100%, 50%, 0.7)',
+                                            animation: 'pulse 1.5s infinite'
+                                        }}/>
+                                    )}
+
                                     {/* Enemies */}
                                     {enemiesRef.current.map((enemy, i) => (
                                         <div key={i} style={{
@@ -346,9 +421,10 @@ export default function SensorGamePage() {
                                             top: enemy.position.y,
                                             width: enemy.size,
                                             height: enemy.size,
-                                            backgroundColor: 'hsl(340, 100%, 50%)',
+                                            backgroundColor: isPowerUpActiveRef.current ? 'hsl(340, 50%, 70%)' : 'hsl(340, 100%, 50%)', // Lighter red when slow
                                             borderRadius: '50%',
-                                            boxShadow: '0 0 20px 8px hsl(340, 100%, 50%, 0.6)',
+                                            boxShadow: `0 0 20px 8px ${isPowerUpActiveRef.current ? 'hsl(340, 50%, 70%, 0.6)' : 'hsl(340, 100%, 50%, 0.6)'}`,
+                                            transition: 'background-color 0.3s, box-shadow 0.3s'
                                         }}/>
                                     ))}
                                 </>
@@ -412,4 +488,7 @@ export default function SensorGamePage() {
         </AuthGuard>
     );
 }
+
+    
+
     
