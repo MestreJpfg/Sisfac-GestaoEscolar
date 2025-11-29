@@ -105,8 +105,11 @@ export default function SensorGamePage() {
     // --- Permissions and Initialization ---
     useEffect(() => {
         if (permissionState === 'granted') {
-             resetGame();
-             setStatus('ready');
+             // Delay resetGame to ensure layout is stable
+             setTimeout(() => {
+                resetGame();
+                setStatus('ready');
+             }, 100);
         }
     }, [permissionState, resetGame]);
 
@@ -129,6 +132,16 @@ export default function SensorGamePage() {
         } catch (error) {
             setPermissionState('denied');
             toast({ variant: 'destructive', title: 'Erro ao pedir permissão.' });
+        }
+    };
+
+    const vibrate = (pattern: number | number[]) => {
+        if ('vibrate' in navigator) {
+            try {
+                navigator.vibrate(pattern);
+            } catch (error) {
+                console.warn("Vibration failed, possibly not supported in this context.", error);
+            }
         }
     };
     
@@ -172,6 +185,7 @@ export default function SensorGamePage() {
         setPlayer(p => {
             // Player vs Item
             if (checkCollision(p, item)) {
+                vibrate(50); // Short vibration for item collect
                 setScore(s => s + 1);
                 setItem(i => ({
                     ...i,
@@ -185,6 +199,7 @@ export default function SensorGamePage() {
             // Player vs Enemies
             for (const enemy of enemies) {
                 if (checkCollision(p, enemy)) {
+                    vibrate([200, 50, 200]); // Longer vibration for game over
                     setStatus('gameOver');
                     break;
                 }
@@ -198,7 +213,7 @@ export default function SensorGamePage() {
     // --- Effects ---
     useEffect(() => {
         if (status === 'playing') {
-            const startTime = Date.now() - (time * 1000);
+            const startTime = Date.now();
             const timer = setInterval(() => {
                 setTime(Math.floor((Date.now() - startTime) / 1000));
             }, 1000);
@@ -210,7 +225,7 @@ export default function SensorGamePage() {
                 clearInterval(timer);
             };
         }
-    }, [status, gameLoop, time]);
+    }, [status, gameLoop]);
     
     // Sensor listener effect
     useEffect(() => {
@@ -331,9 +346,9 @@ export default function SensorGamePage() {
                                 (status === 'playing') ? 'opacity-0 pointer-events-none' : 'opacity-100'
                             )}>
                                 {status === 'permissions' && (
-                                     <div className="text-center font-mono space-y-4">
+                                     <div className="text-center font-mono space-y-4 p-4">
                                         <h2 className="text-3xl font-bold text-cyan-400 tracking-widest">PERMISSÃO NECESSÁRIA</h2>
-                                        <p className="text-purple-300">O jogo necessita de acesso aos sensores de movimento do seu dispositivo.</p>
+                                        <p className="text-purple-300">O jogo necessita de acesso aos sensores de movimento do seu dispositivo para funcionar.</p>
                                         <Button onClick={requestPermissions} size="lg" variant="outline" className="text-yellow-300 border-yellow-300 hover:bg-yellow-300/10 hover:text-yellow-200">
                                             <Play className="mr-2 h-5 w-5" />
                                             Conceder Permissão
@@ -341,7 +356,7 @@ export default function SensorGamePage() {
                                     </div>
                                 )}
                                 {status === 'ready' && (
-                                    <div className="text-center font-mono space-y-4">
+                                    <div className="text-center font-mono space-y-4 p-4">
                                         <h2 className="text-4xl font-bold text-cyan-400 tracking-widest">SENSOR RUSH</h2>
                                         <p className="text-purple-300">Incline o seu dispositivo para mover a esfera azul.<br/>Colete os orbes amarelos e evite os vermelhos!</p>
                                         <Button onClick={startGame} size="lg" className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold">
@@ -351,7 +366,7 @@ export default function SensorGamePage() {
                                     </div>
                                 )}
                                 {status === 'gameOver' && (
-                                     <div className="text-center font-mono space-y-4">
+                                     <div className="text-center font-mono space-y-4 p-4">
                                         <h2 className="text-5xl font-bold text-red-500 tracking-widest">GAME OVER</h2>
                                         <p className="text-xl text-white">Score Final: <span className="font-bold text-yellow-300">{score}</span></p>
                                          <p className="text-xl text-white">Tempo: <span className="font-bold">{time}s</span></p>
@@ -371,7 +386,7 @@ export default function SensorGamePage() {
                         <AlertDialogHeader>
                             <AlertDialogTitle>Acesso aos Sensores Negado</AlertDialogTitle>
                             <AlertDialogDescription>
-                                O jogo não pode funcionar sem acesso aos sensores de movimento. Por favor, ative a permissão nas configurações do seu navegador para esta página.
+                                O jogo não pode funcionar sem acesso aos sensores de movimento. Por favor, ative a permissão nas configurações do seu navegador para esta página e atualize.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
