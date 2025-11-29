@@ -63,18 +63,15 @@ export default function SensorGamePage() {
         size: ITEM_SIZE
     });
 
-    // This is the key change. We now explicitly call resetGame only when it's safe.
     const resetGame = useCallback((width: number, height: number) => {
-        if (width === 0 || height === 0) return; // Do nothing if dimensions are not valid
+        if (width === 0 || height === 0) return;
 
-        // Reset player to center
         setPlayer({
             position: { x: (width - PLAYER_SIZE) / 2, y: (height - PLAYER_SIZE) / 2 },
             velocity: { x: 0, y: 0 },
             size: PLAYER_SIZE,
         });
 
-        // Reset enemies with random positions and velocities
         setEnemies(Array.from({ length: NUM_ENEMIES }).map(() => ({
             position: {
                 x: Math.random() * (width - ENEMY_SIZE),
@@ -87,7 +84,6 @@ export default function SensorGamePage() {
             size: ENEMY_SIZE,
         })));
         
-        // Reset item
         setItem({
             position: { 
                 x: Math.random() * (width - ITEM_SIZE),
@@ -105,20 +101,17 @@ export default function SensorGamePage() {
     // --- Permissions and Initialization ---
     useEffect(() => {
         if (permissionState === 'granted') {
-             // We now change status to 'ready', but DO NOT reset the game yet.
              setStatus('ready');
         }
     }, [permissionState]);
 
     const requestPermissions = async () => {
-        // For non-iOS devices or if API is not available
         if (typeof (DeviceOrientationEvent as any).requestPermission !== 'function') {
             setPermissionState('granted');
             toast({ title: 'Acesso automático aos sensores.' });
             return;
         }
 
-        // For iOS 13+
         try {
             const permission = await (DeviceOrientationEvent as any).requestPermission();
             if (permission === 'granted') {
@@ -155,39 +148,29 @@ export default function SensorGamePage() {
             setTime(Math.floor((Date.now() - gameTimeStartRef.current) / 1000));
         }
 
-        // Update player position
         setPlayer(p => {
             let newX = p.position.x + p.velocity.x;
             let newY = p.position.y + p.velocity.y;
-
-            // Wall collision for player
             if (newX < 0) newX = 0;
             if (newX > width - p.size) newX = width - p.size;
             if (newY < 0) newY = 0;
             if (newY > height - p.size) newY = height - p.size;
-            
             return { ...p, position: { x: newX, y: newY } };
         });
 
-        // Update enemy positions
         setEnemies(e_arr => e_arr.map(e => {
             let newX = e.position.x + e.velocity.x;
             let newY = e.position.y + e.velocity.y;
             let newVelX = e.velocity.x;
             let newVelY = e.velocity.y;
-
-            // Wall collision for enemies
             if (newX <= 0 || newX >= width - e.size) newVelX *= -1;
             if (newY <= 0 || newY >= height - e.size) newVelY *= -1;
-            
             return { ...e, position: { x: newX, y: newY }, velocity: { x: newVelX, y: newVelY }};
         }));
         
-        // Collision Detection
         setPlayer(p => {
-            // Player vs Item
             if (checkCollision(p, item)) {
-                vibrate(50); // Short vibration for item collect
+                vibrate(50);
                 setScore(s => s + 1);
                 setItem(i => ({
                     ...i,
@@ -198,12 +181,11 @@ export default function SensorGamePage() {
                 }));
             }
 
-            // Player vs Enemies
             for (const enemy of enemies) {
                 if (checkCollision(p, enemy)) {
-                    vibrate([200, 50, 200]); // Longer vibration for game over
+                    vibrate([200, 50, 200]);
                     setStatus('gameOver');
-                    return p; // Stop further checks after game over
+                    return p;
                 }
             }
             return p;
@@ -228,7 +210,6 @@ export default function SensorGamePage() {
              }
         }
         
-        // Cleanup on component unmount
         return () => {
             if (animationFrameId.current) {
                 cancelAnimationFrame(animationFrameId.current);
@@ -236,16 +217,13 @@ export default function SensorGamePage() {
         };
     }, [status, gameLoop]);
     
-    // Sensor listener effect
     useEffect(() => {
         if (permissionState !== 'granted' || status !== 'playing') return;
 
         const handleOrientation = (event: DeviceOrientationEvent) => {
-            const { beta, gamma } = event; // beta: front-back tilt, gamma: left-right tilt
+            const { beta, gamma } = event;
             if (beta === null || gamma === null) return;
             
-            // Map tilt to velocity
-            // Clamp values to prevent extreme speed
             const vx = Math.max(-5, Math.min(5, gamma * SENSITIVITY));
             const vy = Math.max(-5, Math.min(5, beta * SENSITIVITY));
             
@@ -263,16 +241,14 @@ export default function SensorGamePage() {
         return distance < (obj1.size / 2 + obj2.size / 2);
     };
     
-    // This is the new, robust way to start the game
     const startGame = () => {
         const gameArea = gameAreaRef.current;
         if (gameArea) {
             const { width, height } = gameArea.getBoundingClientRect();
             if (width > 0 && height > 0) {
-                resetGame(width, height); // Reset with correct dimensions
+                resetGame(width, height);
                 setStatus('playing');
             } else {
-                // This is a fallback, but shouldn't happen with the new logic
                 toast({ variant: 'destructive', title: 'Erro de Layout', description: 'Não foi possível iniciar o jogo. Tente novamente.' });
             }
         }
@@ -315,10 +291,8 @@ export default function SensorGamePage() {
                     
                     <Card className="w-full flex-1 bg-black/50 border-2 border-purple-500/50 shadow-2xl shadow-purple-500/20 overflow-hidden">
                         <CardContent ref={gameAreaRef} className="p-0 h-full w-full relative">
-                            {/* Game Objects */}
                             {status !== 'permissions' && permissionState === 'granted' && (
                                 <>
-                                    {/* Player */}
                                     <div style={{
                                         position: 'absolute',
                                         left: player.position.x,
@@ -331,7 +305,6 @@ export default function SensorGamePage() {
                                         transition: 'left 0.05s linear, top 0.05s linear'
                                     }}/>
                                     
-                                    {/* Item */}
                                     <div style={{
                                         position: 'absolute',
                                         left: item.position.x,
@@ -343,7 +316,6 @@ export default function SensorGamePage() {
                                         boxShadow: '0 0 15px 5px hsl(50, 100%, 50%, 0.7)',
                                     }}/>
 
-                                    {/* Enemies */}
                                     {enemies.map((enemy, i) => (
                                         <div key={i} style={{
                                             position: 'absolute',
@@ -360,7 +332,6 @@ export default function SensorGamePage() {
                                 </>
                             )}
                             
-                            {/* Game Overlays */}
                             <div className={cn("absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center transition-opacity duration-500",
                                 (status === 'playing') ? 'opacity-0 pointer-events-none' : 'opacity-100'
                             )}>
