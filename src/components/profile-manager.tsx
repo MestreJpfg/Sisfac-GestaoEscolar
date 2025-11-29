@@ -30,10 +30,18 @@ export default function ProfileManager() {
 
   const profilesQuery = useMemo(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'profiles'), orderBy('name'));
+    // Removido orderBy('name') para maior robustez contra dados inconsistentes.
+    // A ordenação pode ser feita no cliente se necessário, pois a lista de perfis é pequena.
+    return query(collection(firestore, 'profiles'));
   }, [firestore]);
 
-  const { data: profiles, isLoading: isProfilesLoading } = useCollection(profilesQuery);
+  const { data: profilesData, isLoading: isProfilesLoading } = useCollection(profilesQuery);
+
+  const profiles = useMemo(() => {
+    if (!profilesData) return [];
+    return [...profilesData].sort((a, b) => a.name.localeCompare(b.name));
+  }, [profilesData]);
+
 
   const handleEditProfile = (profile: any) => {
     setEditingProfile(profile);
