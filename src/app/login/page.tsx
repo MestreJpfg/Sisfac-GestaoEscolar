@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import Image from 'next/image';
 import AppFooter from '@/components/app-footer';
+import Link from 'next/link';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Por favor, insira um email válido.' }),
@@ -229,6 +230,12 @@ export default function LoginPage() {
                 {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
                 Entrar com Google
             </Button>
+             <p className="mt-6 text-center text-sm text-muted-foreground">
+                Não tem uma conta?{' '}
+                <Link href="/signup" className="font-semibold text-primary hover:underline">
+                Crie uma aqui
+                </Link>
+            </p>
             </CardContent>
         </Card>
         </main>

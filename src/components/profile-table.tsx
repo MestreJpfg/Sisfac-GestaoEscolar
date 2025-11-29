@@ -12,7 +12,7 @@ import {
 import { Card, CardContent } from "./ui/card";
 import { Shield, Search, Edit, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
-import { Badge, type BadgeProps } from "./ui/badge";
+import { Badge } from "./ui/badge";
 import { cn } from "@/lib/utils";
 
 

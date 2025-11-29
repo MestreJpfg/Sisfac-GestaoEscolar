@@ -15,7 +15,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
-import { Badge, type BadgeProps } from "./ui/badge";
+import { Badge } from "./ui/badge";
 import { cn } from "@/lib/utils";
 
 export interface SortConfig {
