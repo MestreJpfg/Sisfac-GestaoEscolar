@@ -124,9 +124,24 @@ export default function GradesManager() {
         }
         setGrades(prev => ({ ...prev, [studentId]: numericValue }));
     };
+    
+    const calculateAverageForStudent = (studentBoletim: any, disciplineKey: string, updatedGrades: Grades, studentId: string, currentEtapa: string) => {
+        const disciplineGrades = studentBoletim?.[disciplineKey] || {};
+        const tempGrades = {
+            ...disciplineGrades,
+            [currentEtapa]: updatedGrades[studentId],
+        };
+
+        const validGrades = ['etapa1', 'etapa2', 'etapa3', 'etapa4']
+            .map(etapa => tempGrades[etapa])
+            .filter((nota): nota is number => nota !== null && nota !== undefined && !isNaN(nota));
+
+        if (validGrades.length === 0) return null;
+        return validGrades.reduce((a, b) => a + b, 0) / validGrades.length;
+    };
 
     const handleSaveChanges = async () => {
-        if (!firestore || !studentsInClass || !disciplineId || Object.keys(grades).length === 0) return;
+        if (!firestore || !studentsInClass || !disciplineId || !selectedEtapa || Object.keys(grades).length === 0) return;
     
         setIsSaving(true);
         
@@ -135,18 +150,25 @@ export default function GradesManager() {
             
             for (const student of studentsInClass) {
                 const studentId = student.id;
-                const newGrade = grades[studentId];
                 const studentDocRef = doc(firestore, 'alunos', studentId);
-                const fieldPath = `boletim.${disciplineId}.${selectedEtapa}`;
     
-                batch.update(studentDocRef, { [fieldPath]: newGrade });
+                const newGrade = grades[studentId];
+                const newAverage = calculateAverageForStudent(student.boletim, disciplineId, grades, studentId, selectedEtapa);
+
+                const etapaFieldPath = `boletim.${disciplineId}.${selectedEtapa}`;
+                const mediaFieldPath = `boletim.${disciplineId}.mediaFinal`;
+    
+                batch.update(studentDocRef, { 
+                    [etapaFieldPath]: newGrade,
+                    [mediaFieldPath]: newAverage,
+                });
             }
             
             await batch.commit();
     
             toast({
                 title: "Notas Salvas!",
-                description: "As notas foram atualizadas com sucesso.",
+                description: "As notas e as médias foram atualizadas com sucesso.",
             });
         } catch (error) {
             console.error("Error saving grades:", error);
@@ -304,6 +326,8 @@ export default function GradesManager() {
         </div>
     );
 }
+    
+
     
 
     
