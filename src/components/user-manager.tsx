@@ -49,6 +49,8 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       baseQuery = query(usersCollection);
     }
     
+    // Use a consistent field for ordering that is guaranteed to exist.
+    // 'name' is a better candidate than 'createdAt'.
     q = query(baseQuery, orderBy(sortConfig.key, sortConfig.direction));
     
     if (pageParam) {

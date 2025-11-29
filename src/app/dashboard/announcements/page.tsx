@@ -119,6 +119,15 @@ export default function AnnouncementsPage() {
         return targetAudience.map(id => profileMap.get(id) || id);
     };
 
+    const formatAnnouncementDate = (dateString: string | undefined) => {
+        if (!dateString) return 'Data desconhecida';
+        try {
+            return format(new Date(dateString), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+        } catch {
+            return 'Data inválida';
+        }
+    }
+
     return (
         <AuthGuard>
             <div className="flex min-h-screen flex-col">
@@ -158,7 +167,7 @@ export default function AnnouncementsPage() {
                                             <div>
                                                 <CardTitle>{ann.title}</CardTitle>
                                                 <CardDescription className="text-xs mt-1">
-                                                    Publicado por {ann.authorName} em {format(new Date(ann.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                                    Publicado por {ann.authorName || 'Autor desconhecido'} em {formatAnnouncementDate(ann.createdAt)}
                                                 </CardDescription>
                                             </div>
                                             <div className="flex items-center gap-1">
@@ -227,4 +236,3 @@ export default function AnnouncementsPage() {
         </AuthGuard>
     );
 }
-

@@ -44,7 +44,7 @@ export default function DashboardPage() {
   
   const studentsQuery = useMemo(() => {
       if (!firestore) return null;
-      // Filtra alunos que não têm a propriedade 'serie' ou cujo valor é vazio/nulo
+      // Order by a consistently available field like 'nome'
       return query(collection(firestore, 'alunos'), orderBy('nome'));
   }, [firestore]);
   const { data: allStudents, isLoading: isLoadingAllStudents } = useCollection(studentsQuery);
