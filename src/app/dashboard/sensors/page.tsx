@@ -52,23 +52,21 @@ export default function SensorGamePage() {
     const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>('prompt');
     
     const [player, setPlayer] = useState<GameObject>({
-        position: { x: 0, y: 0 },
+        position: { x: -100, y: -100 }, // Start off-screen
         velocity: { x: 0, y: 0 },
         size: PLAYER_SIZE
     });
     const [enemies, setEnemies] = useState<GameObject[]>([]);
     const [item, setItem] = useState<GameObject>({
-        position: { x: 0, y: 0 },
+        position: { x: -100, y: -100 }, // Start off-screen
         velocity: { x: 0, y: 0 },
         size: ITEM_SIZE
     });
 
-    const resetGame = useCallback(() => {
-        const gameArea = gameAreaRef.current;
-        if (!gameArea || gameArea.clientWidth === 0) return;
+    // This is the key change. We now explicitly call resetGame only when it's safe.
+    const resetGame = useCallback((width: number, height: number) => {
+        if (width === 0 || height === 0) return; // Do nothing if dimensions are not valid
 
-        const { width, height } = gameArea.getBoundingClientRect();
-        
         // Reset player to center
         setPlayer({
             position: { x: (width - PLAYER_SIZE) / 2, y: (height - PLAYER_SIZE) / 2 },
@@ -107,11 +105,10 @@ export default function SensorGamePage() {
     // --- Permissions and Initialization ---
     useEffect(() => {
         if (permissionState === 'granted') {
-             // We don't reset the game here anymore. We wait for the user to click "Start".
-             // This ensures the layout is stable.
+             // We now change status to 'ready', but DO NOT reset the game yet.
              setStatus('ready');
         }
-    }, [permissionState, resetGame]);
+    }, [permissionState]);
 
     const requestPermissions = async () => {
         // For non-iOS devices or if API is not available
@@ -265,10 +262,20 @@ export default function SensorGamePage() {
         const distance = Math.sqrt(dx * dx + dy * dy);
         return distance < (obj1.size / 2 + obj2.size / 2);
     };
-
+    
+    // This is the new, robust way to start the game
     const startGame = () => {
-        resetGame();
-        setStatus('playing');
+        const gameArea = gameAreaRef.current;
+        if (gameArea) {
+            const { width, height } = gameArea.getBoundingClientRect();
+            if (width > 0 && height > 0) {
+                resetGame(width, height); // Reset with correct dimensions
+                setStatus('playing');
+            } else {
+                // This is a fallback, but shouldn't happen with the new logic
+                toast({ variant: 'destructive', title: 'Erro de Layout', description: 'Não foi possível iniciar o jogo. Tente novamente.' });
+            }
+        }
     };
     
     // --- Render ---
