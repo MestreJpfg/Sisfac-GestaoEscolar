@@ -1,10 +1,11 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
-import { useCollection } from '@/firebase/firestore/use-collection';
+import { collection, query, where, doc, getDocs, limit, orderBy, startAfter, Query, DocumentData } from 'firebase/firestore';
+import { useInfiniteQuery } from '@tanstack/react-query';
+
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown, AlertTriangle, Search, Loader2 } from 'lucide-react';
 import StudentDetailSheet from './student-detail-sheet';
@@ -20,6 +21,9 @@ import { Switch } from './ui/switch';
 import { Label } from './ui/label';
 import StudentReportCardDialog from './student-report-card-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useCollection } from '@/firebase/firestore/use-collection';
+
+const STUDENTS_PER_PAGE = 20;
 
 export default function StudentDataView() {
   const { toast } = useToast();
@@ -37,48 +41,21 @@ export default function StudentDataView() {
     nee: false,
   });
 
-  const debouncedNome = useDebounce(filters.nome, 300);
+  const debouncedNome = useDebounce(filters.nome, 400);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: 'ascending' });
 
-  // Main query to get all students. Filtering happens on the client side.
-  const studentsQuery = useMemo(() => {
+  // This query fetches ALL students, but only for populating the filter dropdowns.
+  // This is acceptable if the student count is in the low thousands.
+  // For very large datasets, this could be optimized further (e.g., separate collection for filter options).
+  const allStudentsForFiltersQuery = useMemo(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'alunos'));
   }, [firestore]);
-  
-  const { data: allStudents, isLoading: isDataLoading } = useCollection(studentsQuery);
+  const { data: allStudentsForFilters, isLoading: isLoadingFilters } = useCollection(allStudentsForFiltersQuery);
 
-  const filteredAndSortedStudents = useMemo(() => {
-    if (!allStudents) return [];
-    
-    let students = [...allStudents];
-    
-    // Client-side filtering
-    if (filters.ensino) students = students.filter(s => s.ensino === filters.ensino);
-    if (filters.serie) students = students.filter(s => s.serie === filters.serie);
-    if (filters.classe) students = students.filter(s => s.classe === filters.classe);
-    if (filters.turno) students = students.filter(s => s.turno === filters.turno);
-    if (filters.nee) students = students.filter(s => s.nee && s.nee.trim() !== '');
-
-    if (debouncedNome.trim().length > 0) {
-        const searchLower = debouncedNome.trim().toLowerCase();
-        students = students.filter(student => student.nome?.toLowerCase().includes(searchLower));
-    }
-    
-    // Client-side sorting
-    students.sort((a, b) => {
-      const aValue = a[sortConfig.key] || '';
-      const bValue = b[sortConfig.key] || '';
-      if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
-      return 0;
-    });
-
-    return students;
-  }, [allStudents, filters, debouncedNome, sortConfig]);
 
   const uniqueFilterOptions = useMemo(() => {
-    const dataForOptions = allStudents || [];
+    const dataForOptions = allStudentsForFilters || [];
     const getUniqueValues = (key: string, data: any[]) => 
       [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
@@ -95,8 +72,69 @@ export default function StudentDataView() {
     const turnos = getUniqueValues('turno', filteredData);
 
     return { ensinos, series, classes, turnos };
-  }, [allStudents, filters]);
+  }, [allStudentsForFilters, filters]);
 
+  const hasActiveFilters = debouncedNome.trim().length >= 3 || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
+
+  const fetchStudents = useCallback(async ({ pageParam = null }: { pageParam?: DocumentData | null }) => {
+    if (!firestore || !hasActiveFilters) return { data: [], lastDoc: null };
+
+    let q: Query<DocumentData, DocumentData>;
+    const studentsCollection = collection(firestore, 'alunos');
+    let queries = [];
+
+    // Apply filters
+    if (filters.ensino) queries.push(where('ensino', '==', filters.ensino));
+    if (filters.serie) queries.push(where('serie', '==', filters.serie));
+    if (filters.classe) queries.push(where('classe', '==', filters.classe));
+    if (filters.turno) queries.push(where('turno', '==', filters.turno));
+    if (filters.nee) queries.push(where('nee', '!=', null));
+    if (debouncedNome.trim().length >= 3) {
+      // Firestore doesn't support substring search. We filter by name on the client.
+    }
+    
+    q = query(studentsCollection, ...queries, orderBy(sortConfig.key, sortConfig.direction));
+    
+    if (pageParam) {
+      q = query(q, startAfter(pageParam));
+    }
+    
+    q = query(q, limit(STUDENTS_PER_PAGE));
+
+    const snapshot = await getDocs(q);
+    const studentsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+    const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+
+    return { data: studentsData, lastDoc };
+
+  }, [firestore, hasActiveFilters, filters, debouncedNome, sortConfig.key, sortConfig.direction]);
+
+  const {
+      data,
+      fetchNextPage,
+      hasNextPage,
+      isLoading,
+      isFetchingNextPage,
+      refetch,
+  } = useInfiniteQuery({
+      queryKey: ['students', filters, debouncedNome, sortConfig],
+      queryFn: fetchStudents,
+      enabled: hasActiveFilters, // Only run the query if there are active filters
+      initialPageParam: null,
+      getNextPageParam: (lastPage) => lastPage.lastDoc,
+  });
+
+  const allStudents = useMemo(() => {
+    let students = data?.pages.flatMap(page => page.data) ?? [];
+    const searchLower = debouncedNome.trim().toLowerCase();
+
+    // Client-side search for name, since Firestore doesn't support it well.
+    if (searchLower.length >= 3) {
+        students = students.filter(student => student.nome?.toLowerCase().includes(searchLower));
+    }
+
+    return students;
+  }, [data, debouncedNome]);
 
   const handleSort = (key: string) => {
     setSortConfig(prevConfig => ({
@@ -152,15 +190,15 @@ export default function StudentDataView() {
         title: "Atualização em andamento...",
         description: "Os dados do aluno estão sendo atualizados na lista.",
     });
+    // Let react-query handle re-fetching if necessary, or manually refetch.
+    refetch();
   };
-
-  const hasActiveFilters = debouncedNome.trim().length > 0 || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
   
-  if (isDataLoading) {
+  if (isLoadingFilters) {
      return (
         <div className="flex flex-col items-center justify-center h-96 rounded-lg border-2 border-dashed border-border bg-card/50">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="mt-4 text-muted-foreground">A carregar dados dos alunos...</p>
+            <p className="mt-4 text-muted-foreground">A carregar opções de filtro...</p>
         </div>
      );
   }
@@ -171,7 +209,7 @@ export default function StudentDataView() {
         <CardContent className="p-4 space-y-4">
           <Input
             name="nome"
-            placeholder="Buscar por nome..."
+            placeholder="Buscar por nome (mín. 3 caracteres)..."
             value={filters.nome}
             onChange={(e) => handleFilterChange('nome', e.target.value)}
           />
@@ -252,21 +290,31 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        <p>
-            {filteredAndSortedStudents.length > 0
-              ? `${filteredAndSortedStudents.length} aluno(s) encontrado(s).`
-              : hasActiveFilters ? 'Nenhum aluno encontrado com os critérios fornecidos.' : (allStudents?.length ? `${allStudents.length} alunos no total.` : '')
-            }
-        </p>
+        {hasActiveFilters && !isLoading && (
+            <p>
+                {allStudents.length > 0
+                  ? `${allStudents.length} aluno(s) encontrado(s).`
+                  : 'Nenhum aluno encontrado com os critérios fornecidos.'
+                }
+            </p>
+        )}
       </div>
       
-       {filteredAndSortedStudents.length > 0 ? (
+       {isLoading ? (
+            <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <p className="mt-4 text-muted-foreground">A buscar alunos...</p>
+            </div>
+        ) : hasActiveFilters ? (
             <StudentTable
-                students={filteredAndSortedStudents}
+                students={allStudents}
                 onRowClick={handleStudentSelect}
                 onReportCardClick={handleOpenReportCard}
                 onSort={handleSort}
                 sortConfig={sortConfig}
+                hasNextPage={hasNextPage}
+                isFetchingNextPage={isFetchingNextPage}
+                fetchNextPage={fetchNextPage}
             />
         ) : (
             <Card>
@@ -274,7 +322,7 @@ export default function StudentDataView() {
                     <Search className="mx-auto h-12 w-12 text-muted-foreground" />
                     <h3 className="mt-4 text-lg font-medium text-foreground">Inicie uma Busca</h3>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        {hasActiveFilters ? "Nenhum aluno encontrado. Tente refinar os seus filtros." : "Utilize a busca por nome ou os filtros avançados para encontrar os alunos."}
+                        Utilize a busca por nome ou os filtros avançados para encontrar os alunos.
                     </p>
                 </CardContent>
             </Card>

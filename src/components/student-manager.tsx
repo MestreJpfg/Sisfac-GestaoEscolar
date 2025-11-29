@@ -9,7 +9,6 @@ import { ThemeToggle } from './theme-toggle';
 import { Button } from './ui/button';
 import { UserNav } from './user-nav';
 import AppFooter from './app-footer';
-import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, getCountFromServer } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import FileUploaderSheet from './file-uploader-sheet';
@@ -23,6 +22,8 @@ export default function StudentManager() {
 
   const onUploadSuccess = () => {
     // The useCollection hook in StudentDataView will automatically update.
+    // For react-query, we would trigger a refetch here.
+    // Since StudentDataView will be refactored, we can handle it there.
   };
 
   useEffect(() => {

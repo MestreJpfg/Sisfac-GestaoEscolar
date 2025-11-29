@@ -2,8 +2,8 @@
 "use client";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent } from "./ui/card";
-import { BookUser, ArrowUpDown, BookCheck } from "lucide-react";
+import { Card, CardContent, CardFooter } from "./ui/card";
+import { BookUser, ArrowUpDown, BookCheck, Loader2 } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
@@ -19,9 +19,12 @@ interface StudentTableProps {
   onReportCardClick: (student: any) => void;
   onSort: (key: string) => void;
   sortConfig: SortConfig;
+  hasNextPage: boolean | undefined;
+  isFetchingNextPage: boolean;
+  fetchNextPage: () => void;
 }
 
-export default function StudentTable({ students, onRowClick, onReportCardClick, onSort, sortConfig }: StudentTableProps) {
+export default function StudentTable({ students, onRowClick, onReportCardClick, onSort, sortConfig, hasNextPage, isFetchingNextPage, fetchNextPage }: StudentTableProps) {
   
   const SortableHeader = ({ sortKey, children, className }: { sortKey: string, children: React.ReactNode, className?: string }) => {
     const isSorted = sortConfig.key === sortKey;
@@ -107,6 +110,20 @@ export default function StudentTable({ students, onRowClick, onReportCardClick, 
           </Table>
         </div>
       </CardContent>
+       {hasNextPage && (
+        <CardFooter className="pt-4 justify-center">
+          <Button
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            variant="secondary"
+          >
+            {isFetchingNextPage ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
+            Carregar Mais
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 }
