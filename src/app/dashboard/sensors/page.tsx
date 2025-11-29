@@ -77,10 +77,9 @@ export default function SensorGamePage() {
 
     const resetGame = useCallback(() => {
         const gameArea = gameAreaRef.current;
-        if (!gameArea) return false;
+        if (!gameArea) return;
         
         const { width, height } = gameArea.getBoundingClientRect();
-        if (width === 0 || height === 0) return false;
         
         setIsNewHighScore(false);
         if (powerUpTimeoutRef.current) clearTimeout(powerUpTimeoutRef.current);
@@ -126,15 +125,28 @@ export default function SensorGamePage() {
         setTime(0);
         gameTimeStartRef.current = Date.now();
         setRenderTrigger(t => t + 1); // Trigger a render to show initial positions
-        return true;
     }, []);
 
     // --- Permissions and Initialization ---
-    useEffect(() => {
-        if (permissionState === 'granted') {
-             setStatus('ready');
-        }
-    }, [permissionState]);
+     useEffect(() => {
+        if (permissionState !== 'granted') return;
+
+        const gameArea = gameAreaRef.current;
+        if (!gameArea) return;
+
+        const checkLayoutReady = () => {
+            const { width, height } = gameArea.getBoundingClientRect();
+            if (width > 0 && height > 0) {
+                resetGame();
+                setStatus('ready');
+            } else {
+                requestAnimationFrame(checkLayoutReady);
+            }
+        };
+
+        checkLayoutReady();
+
+    }, [permissionState, resetGame]);
 
     const requestPermissions = async () => {
         if (typeof (DeviceOrientationEvent as any).requestPermission !== 'function') {
@@ -225,8 +237,9 @@ export default function SensorGamePage() {
                 x: Math.random() * (width - item.size),
                 y: Math.random() * (height - item.size),
             };
-
-            if (!powerUpRef.current.active && newScore > 0 && newScore % 5 === 0) {
+            
+            // Spawn power-up if one isn't already active (on screen or effect)
+            if (!powerUpRef.current.active && !isPowerUpActiveRef.current && newScore > 0 && newScore % 5 === 0) {
                 powerUpRef.current = {
                     ...powerUpRef.current,
                     position: {
@@ -327,10 +340,11 @@ export default function SensorGamePage() {
     }, [permissionState, status]);
     
     const startGame = () => {
-        if (resetGame()) {
-          setStatus('playing');
+        if (gameAreaRef.current && gameAreaRef.current.getBoundingClientRect().width > 0) {
+            resetGame();
+            setStatus('playing');
         } else {
-          toast({ variant: 'destructive', title: 'Erro de Layout', description: 'Não foi possível iniciar o jogo. Tente novamente.' });
+            toast({ variant: 'destructive', title: 'Erro de Layout', description: 'Não foi possível iniciar o jogo. Tente novamente.' });
         }
     };
     
@@ -487,5 +501,7 @@ export default function SensorGamePage() {
         </AuthGuard>
     );
 }
+
+    
 
     
