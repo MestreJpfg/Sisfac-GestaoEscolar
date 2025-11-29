@@ -25,7 +25,6 @@ const ENEMY_SPEED_BASE = 1;
 const ENEMY_SPEED_INCREMENT = 0.1;
 const SENSITIVITY = 0.5;
 const POWERUP_DURATION = 5000; // 5 seconds
-const POWERUP_SPAWN_CHANCE = 0.2; // 20% chance to spawn after collecting an item
 
 // --- Type Definitions ---
 interface Vector {
@@ -227,7 +226,7 @@ export default function SensorGamePage() {
                 y: Math.random() * (height - item.size),
             };
 
-            if (!powerUpRef.current.active && Math.random() < POWERUP_SPAWN_CHANCE) {
+            if (!powerUpRef.current.active && newScore > 0 && newScore % 5 === 0) {
                 powerUpRef.current = {
                     ...powerUpRef.current,
                     position: {
@@ -488,9 +487,5 @@ export default function SensorGamePage() {
         </AuthGuard>
     );
 }
-
-    
-
-    
 
     
