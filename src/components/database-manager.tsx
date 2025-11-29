@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useFirestore } from '@/firebase';
 import { collection, getDocs, writeBatch, query, where } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
@@ -12,7 +12,10 @@ import DataExporter from './data-exporter';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
-import { Loader2, Upload, NotebookText, HardDriveDownload, Trash2 } from 'lucide-react';
+import { Loader2, Upload, NotebookText, HardDriveDownload, Trash2, Users, Shield } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import UserManager from './user-manager';
+import ProfileManager from './profile-manager';
 
 export default function DatabaseManager() {
     const firestore = useFirestore();
@@ -21,8 +24,6 @@ export default function DatabaseManager() {
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
     
     const onUploadSuccess = () => {
-        // The useCollection hook will automatically update the UI.
-        // We can add a toast message here if desired.
         toast({
             title: "Operação Concluída",
             description: "Os dados foram enviados para a base de dados.",
@@ -49,7 +50,6 @@ export default function DatabaseManager() {
                 return;
             }
 
-            // Firestore allows a maximum of 500 operations per batch
             const batchSize = 500;
             for (let i = 0; i < snapshot.docs.length; i += batchSize) {
                 const batch = writeBatch(firestore);
@@ -76,53 +76,82 @@ export default function DatabaseManager() {
         }
     };
 
+    const { data: profiles, isLoading: isLoadingProfiles } = useCollection(
+        firestore ? query(collection(firestore, 'profiles')) : null
+    );
+
 
     return (
        <>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <Card>
-                <CardHeader>
-                    <CardTitle className='flex items-center gap-2'><Upload /> Carregar Alunos</CardTitle>
-                    <CardDescription>Adicionar ou atualizar a lista principal de alunos a partir de um ficheiro (XLSX, CSV, JSON).</CardDescription>
-                </CardHeader>
-                <CardFooter>
-                    <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
-                </CardFooter>
-            </Card>
+        <Tabs defaultValue="import-export" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 max-w-xl mx-auto">
+            <TabsTrigger value="import-export">Importar/Exportar</TabsTrigger>
+            <TabsTrigger value="users"><Users className="w-4 h-4 mr-2" />Utilizadores</TabsTrigger>
+            <TabsTrigger value="profiles"><Shield className="w-4 h-4 mr-2" />Perfis</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="import-export" className="mt-6">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className='flex items-center gap-2'><Upload /> Carregar Alunos</CardTitle>
+                        <CardDescription>Adicionar ou atualizar a lista principal de alunos a partir de um ficheiro (XLSX, CSV, JSON).</CardDescription>
+                    </CardHeader>
+                    <CardFooter>
+                        <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
+                    </CardFooter>
+                </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle className='flex items-center gap-2'><NotebookText /> Carregar Notas</CardTitle>
-                    <CardDescription>Fazer o upload das notas dos alunos para uma etapa específica a partir de um ficheiro XLSX.</CardDescription>
-                </CardHeader>
-                <CardFooter>
-                    <GradesUploaderSheet />
-                </CardFooter>
-            </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className='flex items-center gap-2'><NotebookText /> Carregar Notas</CardTitle>
+                        <CardDescription>Fazer o upload das notas dos alunos para uma etapa específica a partir de um ficheiro XLSX.</CardDescription>
+                    </CardHeader>
+                    <CardFooter>
+                        <GradesUploaderSheet />
+                    </CardFooter>
+                </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle className='flex items-center gap-2'><HardDriveDownload /> Exportar Dados</CardTitle>
-                    <CardDescription>Fazer o download de todos os dados dos alunos, incluindo notas, num único ficheiro XLSX.</CardDescription>
-                </CardHeader>
-                <CardFooter>
-                    <DataExporter />
-                </CardFooter>
-            </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className='flex items-center gap-2'><HardDriveDownload /> Exportar Dados</CardTitle>
+                        <CardDescription>Fazer o download de todos os dados dos alunos, incluindo notas, num único ficheiro XLSX.</CardDescription>
+                    </CardHeader>
+                    <CardFooter>
+                        <DataExporter />
+                    </CardFooter>
+                </Card>
 
-            <Card className="border-destructive">
-                <CardHeader>
-                    <CardTitle className='flex items-center gap-2 text-destructive'><Trash2 /> Zona de Perigo</CardTitle>
-                    <CardDescription>Ações permanentes que não podem ser desfeitas. Use com extrema cautela.</CardDescription>
-                </CardHeader>
-                <CardFooter>
-                    <Button variant="destructive" onClick={() => setIsDeleteAlertOpen(true)} disabled={isDeleting}>
-                        {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                        Apagar Base de Dados de Alunos
-                    </Button>
-                </CardFooter>
-            </Card>
-        </div>
+                <Card className="border-destructive">
+                    <CardHeader>
+                        <CardTitle className='flex items-center gap-2 text-destructive'><Trash2 /> Zona de Perigo</CardTitle>
+                        <CardDescription>Ações permanentes que não podem ser desfeitas. Use com extrema cautela.</CardDescription>
+                    </CardHeader>
+                    <CardFooter>
+                        <Button variant="destructive" onClick={() => setIsDeleteAlertOpen(true)} disabled={isDeleting}>
+                            {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                            Apagar Base de Dados de Alunos
+                        </Button>
+                    </CardFooter>
+                </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="users" className="mt-6">
+            {isLoadingProfiles ? (
+                 <div className="flex h-64 w-full items-center justify-center">
+                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                 </div>
+            ) : (
+                <UserManager allProfiles={profiles || []} />
+            )}
+          </TabsContent>
+
+          <TabsContent value="profiles" className="mt-6">
+             <ProfileManager />
+          </TabsContent>
+
+        </Tabs>
 
         <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
             <AlertDialogContent>

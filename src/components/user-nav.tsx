@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User as UserIcon, Users } from "lucide-react";
+import { LogOut, User as UserIcon, Database } from "lucide-react";
 import Link from 'next/link';
 
 export function UserNav() {
@@ -74,7 +74,7 @@ export function UserNav() {
     return false;
   };
   
-  const canManageUsers = useMemo(() => hasPermission('manage:users'), [userProfile, profileDetails, isPermissionsLoading]);
+  const canManageDatabase = useMemo(() => hasPermission('manage:database'), [userProfile, profileDetails, isPermissionsLoading]);
 
   if (!user) {
     return null;
@@ -116,11 +116,11 @@ export function UserNav() {
               <span>Perfil</span>
             </DropdownMenuItem>
           </Link>
-          {canManageUsers && (
-            <Link href="/users" passHref>
+          {canManageDatabase && (
+            <Link href="/dashboard/database" passHref>
               <DropdownMenuItem>
-                <Users className="mr-2 h-4 w-4" />
-                <span>Gerir Utilizadores</span>
+                <Database className="mr-2 h-4 w-4" />
+                <span>Gestão da BD</span>
               </DropdownMenuItem>
             </Link>
           )}

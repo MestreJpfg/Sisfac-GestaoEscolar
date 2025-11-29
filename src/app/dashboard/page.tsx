@@ -44,7 +44,6 @@ export default function DashboardPage() {
   
   const studentsQuery = useMemo(() => {
       if (!firestore) return null;
-      // Order by a consistently available field like 'nome'
       return query(collection(firestore, 'alunos'));
   }, [firestore]);
   const { data: allStudents, isLoading: isLoadingAllStudents } = useCollection(studentsQuery);
@@ -58,7 +57,6 @@ export default function DashboardPage() {
       return true;
     }
     
-    // Check for "manage" permission which implies "view"
     if (permission.startsWith('view:')) {
         const managePermission = permission.replace('view:', 'manage:');
         if (profileDetails?.permissions?.includes(managePermission) || userProfile.customPermissions?.includes(managePermission)) {
@@ -79,10 +77,6 @@ export default function DashboardPage() {
   
   const canViewStudents = useMemo(() => hasPermission('view:students'), [userProfile, profileDetails, isPermissionsLoading]);
   const canManageStudents = useMemo(() => hasPermission('manage:students'), [userProfile, profileDetails, isPermissionsLoading]);
-  const canViewUsers = useMemo(() => hasPermission('view:users'), [userProfile, profileDetails, isPermissionsLoading]);
-  const canManageUsers = useMemo(() => hasPermission('manage:users'), [userProfile, profileDetails, isPermissionsLoading]);
-  const canViewProfiles = useMemo(() => hasPermission('view:profiles'), [userProfile, profileDetails, isPermissionsLoading]);
-  const canManageProfiles = useMemo(() => hasPermission('manage:profiles'), [userProfile, profileDetails, isPermissionsLoading]);
   const canViewAnnouncements = useMemo(() => hasPermission('view:announcements'), [userProfile, profileDetails, isPermissionsLoading]);
   const canManageAnnouncements = useMemo(() => hasPermission('manage:announcements'), [userProfile, profileDetails, isPermissionsLoading]);
   const canViewAttendance = useMemo(() => hasPermission('view:attendance'), [userProfile, profileDetails, isPermissionsLoading]);
@@ -110,37 +104,12 @@ export default function DashboardPage() {
             setStudentCount('N/A');
         }
 
-         try {
-            if (canViewUsers) {
-                const usersColl = collection(firestore, 'users');
-                const usersSnapshot = await getCountFromServer(query(usersColl));
-                setUserCount(usersSnapshot.data().count);
-            } else {
-                setUserCount(0);
-            }
-        } catch (e) {
-            console.error("Error fetching user count: ", e);
-            setUserCount('N/A');
-        }
-
-        try {
-            if (canViewProfiles) {
-              const profilesColl = collection(firestore, 'profiles');
-              const profilesSnapshot = await getCountFromServer(query(profilesColl));
-              setProfileCount(profilesSnapshot.data().count);
-            } else {
-              setProfileCount(0);
-            }
-        } catch (e) {
-            console.error("Error fetching profile count: ", e);
-            setProfileCount('N/A');
-        }
     };
 
     if (!isPermissionsLoading) {
       fetchCounts();
     }
-  }, [firestore, isPermissionsLoading, canViewStudents, canViewUsers, canViewProfiles]);
+  }, [firestore, isPermissionsLoading, canViewStudents]);
 
 
   const welcomeName = user?.displayName?.split(' ')[0] || 'Utilizador';
@@ -236,29 +205,9 @@ export default function DashboardPage() {
                               action={<Button onClick={() => router.push('/dashboard/announcements')}>Aceder</Button>}
                               />
                           )}
-                          {canViewUsers && (
-                              <StatCard
-                              title="Utilizadores"
-                              value={userCount}
-                              icon={UserCog}
-                              description="Total de contas no sistema"
-                              action={canManageUsers ? <Button onClick={() => router.push('/users')}>Gerir Utilizadores</Button> : undefined}
-                              />
-                          )}
-                          {canViewProfiles && (
-                            <>
-                              <StatCard
-                                title="Perfis e Permissões"
-                                value={profileCount}
-                                icon={Shield}
-                                description="Perfis de acesso no sistema"
-                                action={canManageProfiles ? <Button onClick={() => router.push('/profiles')}>Gerir Perfis</Button> : undefined}
-                              />
-                            </>
-                          )}
-                           {(canViewDatabase || canManageDatabase) && (
+                          {(canViewDatabase || canManageDatabase) && (
                             <StatCard
-                              title="Gestão da Base de Dados"
+                              title="Base de Dados"
                               value={"Ferramentas"}
                               icon={Database}
                               description="Importar, exportar e gerir dados"
