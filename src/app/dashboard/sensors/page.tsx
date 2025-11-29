@@ -64,13 +64,13 @@ export default function SensorGamePage() {
 
     const resetGame = useCallback(() => {
         const gameArea = gameAreaRef.current;
-        if (!gameArea) return;
+        if (!gameArea || gameArea.clientWidth === 0) return;
 
         const { width, height } = gameArea.getBoundingClientRect();
         
         // Reset player to center
         setPlayer({
-            position: { x: width / 2, y: height / 2 },
+            position: { x: (width - PLAYER_SIZE) / 2, y: (height - PLAYER_SIZE) / 2 },
             velocity: { x: 0, y: 0 },
             size: PLAYER_SIZE,
         });
@@ -114,12 +114,14 @@ export default function SensorGamePage() {
     }, [permissionState, resetGame]);
 
     const requestPermissions = async () => {
+        // For non-iOS devices or if API is not available
         if (typeof (DeviceOrientationEvent as any).requestPermission !== 'function') {
             setPermissionState('granted');
             toast({ title: 'Acesso automático aos sensores.' });
             return;
         }
 
+        // For iOS 13+
         try {
             const permission = await (DeviceOrientationEvent as any).requestPermission();
             if (permission === 'granted') {
@@ -130,6 +132,7 @@ export default function SensorGamePage() {
                 toast({ variant: 'destructive', title: 'Permissão negada.' });
             }
         } catch (error) {
+            console.error('Erro ao pedir permissão:', error);
             setPermissionState('denied');
             toast({ variant: 'destructive', title: 'Erro ao pedir permissão.' });
         }
@@ -147,8 +150,6 @@ export default function SensorGamePage() {
     
     // --- Game Loop ---
     const gameLoop = useCallback(() => {
-        if (status !== 'playing') return;
-
         const gameArea = gameAreaRef.current;
         if (!gameArea) return;
         const { width, height } = gameArea.getBoundingClientRect();
@@ -201,35 +202,50 @@ export default function SensorGamePage() {
                 if (checkCollision(p, enemy)) {
                     vibrate([200, 50, 200]); // Longer vibration for game over
                     setStatus('gameOver');
-                    break;
+                    return p; // Stop further checks after game over
                 }
             }
             return p;
         });
 
         animationFrameId.current = requestAnimationFrame(gameLoop);
-    }, [status, item, enemies]);
+    }, [item, enemies]);
     
     // --- Effects ---
     useEffect(() => {
+        let timer: NodeJS.Timeout | undefined;
+
         if (status === 'playing') {
             const startTime = Date.now();
-            const timer = setInterval(() => {
+            
+            timer = setInterval(() => {
                 setTime(Math.floor((Date.now() - startTime) / 1000));
             }, 1000);
-
+            
             animationFrameId.current = requestAnimationFrame(gameLoop);
             
             return () => {
-                if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
-                clearInterval(timer);
+                if (animationFrameId.current) {
+                    cancelAnimationFrame(animationFrameId.current);
+                }
+                if (timer) {
+                    clearInterval(timer);
+                }
             };
+        } else {
+            // Cleanup when not playing
+             if (animationFrameId.current) {
+                cancelAnimationFrame(animationFrameId.current);
+            }
+            if (timer) {
+                clearInterval(timer);
+            }
         }
     }, [status, gameLoop]);
     
     // Sensor listener effect
     useEffect(() => {
-        if (permissionState !== 'granted') return;
+        if (permissionState !== 'granted' || status !== 'playing') return;
 
         const handleOrientation = (event: DeviceOrientationEvent) => {
             const { beta, gamma } = event; // beta: front-back tilt, gamma: left-right tilt
@@ -245,7 +261,7 @@ export default function SensorGamePage() {
 
         window.addEventListener('deviceorientation', handleOrientation);
         return () => window.removeEventListener('deviceorientation', handleOrientation);
-    }, [permissionState]);
+    }, [permissionState, status]);
 
     const checkCollision = (obj1: GameObject, obj2: GameObject) => {
         const dx = (obj1.position.x + obj1.size / 2) - (obj2.position.x + obj2.size / 2);
@@ -297,7 +313,7 @@ export default function SensorGamePage() {
                     <Card className="w-full flex-1 bg-black/50 border-2 border-purple-500/50 shadow-2xl shadow-purple-500/20 overflow-hidden">
                         <CardContent ref={gameAreaRef} className="p-0 h-full w-full relative">
                             {/* Game Objects */}
-                            {status !== 'permissions' && status !== 'denied' && (
+                            {status !== 'permissions' && permissionState === 'granted' && (
                                 <>
                                     {/* Player */}
                                     <div style={{
@@ -398,3 +414,5 @@ export default function SensorGamePage() {
         </AuthGuard>
     );
 }
+
+    
