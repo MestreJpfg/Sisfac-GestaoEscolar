@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -84,14 +85,12 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
         // When auth state changes, it's a good idea to clear the query cache
         // to re-fetch data for the new user's permissions.
-        if (firebaseUser) {
-           queryClient.clear();
-        }
+        queryClient.invalidateQueries();
       },
       (error) => { // Auth listener error
         console.error("FirebaseProvider: onAuthStateChanged error:", error);
         setUserAuthState({ user: null, isUserLoading: false, userError: error });
-        queryClient.clear();
+        queryClient.invalidateQueries();
       }
     );
     return () => unsubscribe(); // Cleanup

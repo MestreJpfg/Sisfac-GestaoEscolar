@@ -40,12 +40,16 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
 
     let q: Query<DocumentData, DocumentData>;
     const usersCollection = collection(firestore, 'users');
+    
+    let baseQuery;
 
     if (filters.profileId && filters.profileId !== 'all') {
-      q = query(usersCollection, where('profileId', '==', filters.profileId), orderBy('name', 'asc'));
+      baseQuery = query(usersCollection, where('profileId', '==', filters.profileId));
     } else {
-      q = query(usersCollection, orderBy('name', 'asc'));
+      baseQuery = query(usersCollection);
     }
+    
+    q = query(baseQuery, orderBy(sortConfig.key, sortConfig.direction));
     
     if (pageParam) {
       q = query(q, startAfter(pageParam));
@@ -58,7 +62,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
     const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
 
     return { data: usersData, lastDoc };
-  }, [firestore, filters.profileId]);
+  }, [firestore, filters.profileId, sortConfig]);
 
 
   const {
@@ -68,8 +72,9 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       isLoading,
       isFetchingNextPage,
       error,
+      refetch,
   } = useInfiniteQuery({
-      queryKey: ['users', filters.profileId],
+      queryKey: ['users', filters.profileId, sortConfig],
       queryFn: fetchUsers,
       initialPageParam: null,
       getNextPageParam: (lastPage) => {
@@ -79,7 +84,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
 
   const allUsers = useMemo(() => data?.pages.flatMap(page => page.data) ?? [], [data]);
 
-  const filteredAndSortedUsers = useMemo(() => {
+  const filteredUsers = useMemo(() => {
     let processedUsers = [...allUsers];
     const searchLower = debouncedSearch.toLowerCase().trim();
 
@@ -88,20 +93,9 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
         (user.name?.toLowerCase().includes(searchLower) || user.email?.toLowerCase().includes(searchLower))
       );
     }
-
-    if (sortConfig.key) {
-        processedUsers.sort((a, b) => {
-            const aValue = a[sortConfig.key] || '';
-            const bValue = b[sortConfig.key] || '';
-
-            if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
-            if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
-            return 0;
-        });
-    }
     
     return processedUsers;
-  }, [allUsers, debouncedSearch, sortConfig]);
+  }, [allUsers, debouncedSearch]);
 
 
   const handleFilterChange = (name: string, value: string) => {
@@ -138,6 +132,9 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       description: `O perfil de ${updatedData.name || editingUser.name} foi atualizado com sucesso.`,
     });
     
+    // Optimistic update in UI
+    refetch();
+
     handleCloseDialog();
   };
 
@@ -173,7 +170,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       </Card>
       
         <div className="text-sm text-muted-foreground h-5">
-           {filteredAndSortedUsers.length > 0 && `A exibir ${filteredAndSortedUsers.length} de ${allUsers.length} utilizador(es) carregados.`}
+           {filteredUsers.length > 0 && `A exibir ${filteredUsers.length} de ${allUsers.length} utilizador(es) carregados.`}
         </div>
 
         {isLoading ? (
@@ -193,7 +190,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
             </Card>
         ) : (
              <UserTable 
-                users={filteredAndSortedUsers}
+                users={filteredUsers}
                 profiles={allProfiles}
                 onEdit={handleEditUser} 
                 onSort={handleSort}
