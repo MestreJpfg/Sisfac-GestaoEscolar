@@ -18,97 +18,97 @@ export interface Gamebook {
 export const gamebooks: Record<string, Gamebook> = {
     cidadelaDoCaos: {
         title: "A Cidadela do Caos",
-        description: "Aventure-se numa perigosa cidadela para derrotar um feiticeiro maligno.",
+        description: "Aventure-se na perigosa cidadela para derrotar o feiticeiro Balthus Dire.",
         nodes: {
             "start": {
-                text: "Você está diante dos portões imponentes da Cidadela do Caos, envolta por uma névoa sinistra. O seu objetivo: encontrar e derrotar o feiticeiro Balthazar. O portão principal está à sua frente, e um caminho estreito e escuro segue pela muralha à sua direita.",
+                text: "Você é um aprendiz de feiticeiro, enviado pelo Grande Mago de Yore. A sua missão: infiltrar-se na Cidadela do Caos e assassinar o terrível feiticeiro Balthus Dire antes que ele possa lançar o seu exército sobre o vale. A cidadela ergue-se sinistra à sua frente.\n\nComo seu mestre o instruiu, a melhor forma de entrar não é pelos portões. Você encontra uma saliência rochosa que o leva ao telhado.",
                 choices: [
-                    { text: "Tentar forçar o portão principal.", to: 1 },
-                    { text: "Seguir pelo caminho estreito à direita.", to: 2 }
+                    { text: "Subir ao telhado e procurar uma entrada.", to: 1 }
                 ]
             },
             1: {
-                text: "Você tenta forçar o pesado portão de ferro, mas ele não se move. O barulho atrai dois guardas orcs armados com machados que correm na sua direção!",
+                text: "No telhado, você encontra duas possíveis entradas: a chaminé da cozinha, de onde sai uma fumaça com cheiro de comida, e uma claraboia de vidro escuro que parece levar a um aposento mais silencioso.",
                 choices: [
-                    { text: "Lutar contra os orcs.", to: 3 },
-                    { text: "Tentar fugir pelo caminho estreito.", to: 2 }
+                    { text: "Descer pela chaminé da cozinha.", to: 2 },
+                    { text: "Tentar abrir a claraboia de vidro.", to: 3 }
                 ]
             },
             2: {
-                text: "O caminho estreito leva-o a uma pequena porta de madeira nos fundos da cidadela. Parece não estar trancada.",
+                text: "Você desce pela chaminé e aterrissa, coberto de fuligem, numa enorme lareira. A cozinha está movimentada. Um cozinheiro anão e vários goblins correm de um lado para o outro. Ninguém parece tê-lo notado ainda.",
                 choices: [
-                    { text: "Abrir a porta cuidadosamente e entrar.", to: 4 },
-                    { text: "Procurar por outra entrada, talvez uma passagem subterrânea.", to: 11 }
+                    { text: "Esconder-se nas sombras e esperar por uma oportunidade.", to: 4 },
+                    { text: "Tentar sair sorrateiramente pela porta dos fundos da cozinha.", to: 5 }
                 ]
             },
             3: {
-                text: "Você luta bravamente, mas os dois orcs são demasiado fortes. A sua aventura termina aqui. FIM.",
+                text: "A claraboia está trancada. Ao tentar forçá-la, o vidro estala e parte-se com um barulho enorme. Alarmados, guardas Goblins sobem ao telhado e cercam-no. A sua missão termina antes de começar. FIM.",
             },
             4: {
-                text: "Você entra na cozinha da cidadela. O lugar está vazio, mas uma grande panela borbulha sobre o fogo. Um cheiro delicioso enche o ar. Há uma porta à sua frente e uma escada que desce para uma adega.",
+                text: "Das sombras, você observa o caos da cozinha. O cozinheiro anão grita com os goblins, que se atrapalham com as panelas. Você vê uma porta que parece levar para uma despensa e outra, maior, que provavelmente leva ao interior da cidadela.",
                 choices: [
-                    { text: "Provar o ensopado na panela.", to: 5 },
-                    { text: "Ignorar a comida e seguir pela porta.", to: 6 },
-                    { text: "Descer para a adega.", to: 7 }
+                    { text: "Aproveitar a distração e correr para a porta maior.", to: 6 },
+                    { text: "Investigar a despensa primeiro.", to: 7 }
                 ]
             },
             5: {
-                text: "O ensopado é revigorante! Você recupera as suas forças. No entanto, o barulho de passos aproxima-se. Você esconde-se a tempo de ver o cozinheiro ogre entrar na cozinha. Ele não o vê.",
-                choices: [
-                    { text: "Atacar o ogre de surpresa.", to: 8 },
-                    { text: "Esperar que ele saia e seguir pela porta.", to: 6 }
-                ]
+                text: "A sua tentativa de ser sorrateiro falha. Um dos goblins vê-o e dá o alarme. O cozinheiro anão, furioso, atira-lhe um caldeirão de sopa a ferver. FIM.",
             },
             6: {
-                text: "Você entra num grande salão de banquetes. No trono, ao fundo, está sentado o feiticeiro Balthazar, que se levanta ao vê-lo. 'Tolo! Vieste morrer!', ele grita, enquanto bolas de fogo se formam nas suas mãos.",
+                text: "Você sai da cozinha e entra num corredor que leva a um pátio interior. Uma ponte estreita atravessa o pátio, ligando a sua localização a uma torre imponente. A ponte é guardada por duas estranhas criaturas verdes com um único olho, os Ganjees.",
                 choices: [
-                    { text: "Correr em direção a ele com a sua espada.", to: 9 },
-                    { text: "Procurar abrigo atrás de uma das mesas.", to: 10 }
+                    { text: "Tentar atravessar a ponte, enfrentando os Ganjees.", to: 8 },
+                    { text: "Procurar outro caminho pelo pátio.", to: 9 }
                 ]
             },
             7: {
-                text: "Você desce à adega escura e húmida. Entre os barris de vinho, encontra uma espada antiga e brilhante. Parece mágica! Com a nova arma em mãos, você sente-se mais confiante.",
+                text: "Na despensa, você encontra prateleiras com ingredientes exóticos. Entre eles, uma pequena garrafa com um líquido brilhante rotulada 'Poção da Invisibilidade'. Você pega-a.",
                 choices: [
-                    { text: "Voltar para a cozinha e seguir para o salão.", to: 6 }
+                    { text: "Beber a poção agora e seguir pela porta maior.", to: 10 }
                 ]
             },
             8: {
-                text: "O ataque surpresa não é suficiente. O ogre vira-se furiosamente e, com um único golpe do seu rolo de massa gigante, esmaga-o. FIM."
+                text: "Os Ganjees fixam o seu olhar em si. Você sente a sua mente a ser invadida, uma força psíquica que o paralisa. Incapaz de se mover, você é uma presa fácil para os guardas que se aproximam. FIM.",
             },
             9: {
-                text: "Você é rápido, mas o feiticeiro é mais. Uma bola de fogo atinge-o em cheio antes que consiga alcançá-lo. FIM."
+                text: "Ao explorar o pátio, você encontra uma entrada para o sistema de esgotos. O cheiro é horrível, mas parece ser um caminho não vigiado.",
+                choices: [
+                    { text: "Entrar nos esgotos.", to: 11 }
+                ]
             },
             10: {
-                text: "Você desvia-se das bolas de fogo, usando uma mesa como escudo. Balthazar ri, mas a sua distração permite que você o flanqueie e o ataque. Após uma batalha feroz, você derrota o feiticeiro. Vitória! FIM."
+                text: "Você bebe a poção e fica invisível. Você passa pela cozinha e atravessa a ponte, passando diretamente pelos Ganjees sem que eles o notem. Você chega à porta da torre e entra. A invisibilidade dissipa-se.",
+                choices: [
+                    { text: "Subir a escadaria da torre.", to: 12 }
+                ]
             },
             11: {
-                text: "Procurando ao longo da muralha, você encontra uma grade de esgoto solta. O cheiro é horrível, mas parece uma entrada segura. Você entra.",
+                text: "Os esgotos são um labirinto escuro. Após o que parecem horas, você encontra uma escada que sobe. Ao subir, você sai por uma grade no chão... diretamente para o aposento de Balthus Dire.",
                 choices: [
-                    { text: "Seguir pelo túnel escuro.", to: 12 }
+                    { text: "Enfrentar o feiticeiro de imediato.", to: 13 }
                 ]
             },
             12: {
-                text: "O túnel leva ao calabouço da cidadela. As celas estão vazias, exceto por uma que contém um velho prisioneiro. Ele parece fraco, mas os seus olhos são lúcidos.",
+                text: "No topo da torre, você encontra os aposentos de Balthus Dire. Ele está de costas para si, a observar uma bola de cristal. 'Eu estava à sua espera, pequeno aprendiz', diz ele sem se virar. Ele vira-se, e os seus olhos brilham com poder arcano.",
                 choices: [
-                    { text: "Falar com o prisioneiro.", to: 13 },
-                    { text: "Ignorá-lo e procurar uma saída.", to: 14 }
+                    { text: "Lançar um feitiço de ataque que o seu mestre lhe ensinou.", to: 13 },
+                    { text: "Atacar com a sua adaga.", to: 14 }
                 ]
             },
             13: {
-                text: "O velho agradece por ter companhia. 'Balthazar teme apenas uma coisa', ele sussurra, 'o reflexo da sua própria magia. Use isso contra ele.' Ele aponta para um escudo espelhado pendurado na parede da sala dos guardas.",
+                text: "Você prepara-se para atacar, mas lembra-se do aviso do seu mestre: a maior força de Balthus Dire é também a sua maior fraqueza. O feiticeiro deleita-se com a sua própria magia. A sala está cheia de espelhos e superfícies polidas.",
                 choices: [
-                    { text: "Agradecer e pegar no escudo.", to: 15 },
-                    { text: "Achar que é um disparate e sair.", to: 14 }
+                    { text: "Lançar um feitiço diretamente contra ele.", to: 15 },
+                    { text: "Lançar o feitiço contra um grande espelho ao lado dele.", to: 16 }
                 ]
             },
             14: {
-                text: "Você encontra uma escada de pedra que sobe. Ao chegar ao topo, você sai diretamente para o grande salão de banquetes, bem em frente a Balthazar.",
-                choices: [
-                    { text: "Enfrentar o feiticeiro.", to: 6 }
-                ]
+                text: "A sua adaga é inútil. Com um simples gesto, Balthus Dire congela-o no lugar e ri-se enquanto a sua energia vital é drenada. FIM.",
             },
             15: {
-                text: "Com o escudo espelhado em mãos, você sobe as escadas e entra no salão. Balthazar lança uma bola de fogo, mas você ergue o escudo. A magia ricocheteia e atinge o feiticeiro, que grita de dor e se desintegra. Você venceu! FIM."
+                text: "Balthus Dire absorve o seu feitiço com um sorriso, tornando-se ainda mais poderoso. 'Obrigado pelo presente', ele gargalha, antes de o desintegrar com um raio de energia negra. FIM.",
+            },
+            16: {
+                text: "O feitiço atinge o espelho. O reflexo da magia amplificada volta-se contra Balthus Dire, que não estava preparado. Ele grita enquanto é consumido pela sua própria energia. Você conseguiu! A Cidadela do Caos está livre. VITÓRIA!",
             }
         }
     },
@@ -124,18 +124,18 @@ export const gamebooks: Record<string, Gamebook> = {
                 ]
             },
             1: {
-                text: "A ponte está escura, exceto pelos monitores quebrados. No centro, o assento do capitão está virado de costas. Um terminal de computador ainda tem energia.",
+                text: "A ponte está escura, exceto pelos monitores quebrados. No centro, o assento do capitão está virado de costas. Um terminal de computador ainda tem energia. De um duto de ventilação, você ouve um leve som metálico.",
                 choices: [
                     { text: "Verificar o terminal do computador.", to: 3 },
-                    { text: "Verificar o assento do capitão.", to: 4 },
-                    { text: "Procurar por um interruptor de luz principal.", to: 8 }
+                    { text: "Aproximar-se do assento do capitão.", to: 4 },
+                    { text: "Investigar o barulho na ventilação.", to: 8 }
                 ]
             },
             2: {
                 text: "Os alojamentos estão em desordem. Parece que a tripulação saiu à pressa. Num dos beliches, você encontra um tablet com uma entrada de diário aberta.",
                 choices: [
                     { text: "Ler o diário.", to: 5 },
-                    { text: "Ignorar e seguir para a enfermaria.", to: 6 }
+                    { text: "Ignorar e seguir para a enfermaria, que fica ao lado.", to: 6 }
                 ]
             },
             3: {
@@ -152,7 +152,7 @@ export const gamebooks: Record<string, Gamebook> = {
                 ]
             },
             6: {
-                text: "A enfermaria está coberta de uma substância alienígena pegajosa. Num armário, você encontra um spray com o rótulo 'Repelente X-01'. Ao pegá-lo, você ouve um barulho vindo da ventilação.",
+                text: "A enfermaria está coberta de uma substância alienígena pegajosa. Num armário, você encontra um spray com o rótulo 'Repelente X-01'. Ao pegá-lo, você ouve um barulho vindo da ventilação acima de si.",
                 choices: [
                     { text: "Esperar e usar o spray.", to: 9 },
                     { text: "Sair rapidamente e ir para a baía de carga.", to: 7 }
@@ -166,7 +166,11 @@ export const gamebooks: Record<string, Gamebook> = {
                 ]
             },
             8: {
-                text: "Você encontra o painel de energia e restaura a iluminação principal. As luzes revelam uma enorme criatura adormecida num canto da ponte. Você acorda-a sem querer. FIM."
+                text: "Você aponta a sua lanterna para o duto de ventilação. Um pequeno robô de manutenção cai de lá, com uma das suas garras avariada. Ele emite um som amigável e parece querer segui-lo.",
+                choices: [
+                    { text: "Deixar o robô segui-lo.", to: 12 },
+                    { text: "Chutar o robô para longe e continuar sozinho.", to: 1 }
+                ]
             },
             9: {
                 text: "A criatura salta da ventilação! Você usa o spray, e o monstro recua com um guincho, fugindo de volta para os dutos. Você está seguro por agora, e tem uma arma.",
@@ -180,10 +184,17 @@ export const gamebooks: Record<string, Gamebook> = {
             },
             11: {
                 text: "As suas ferramentas são inúteis contra a carapaça da criatura. Ela domina-o facilmente. FIM."
+            },
+            12: {
+                text: "Você vai para a ponte, com o robô a segui-lo. Ao se aproximar do assento do capitão, a criatura desce do teto! Antes que ela o ataque, o pequeno robô emite uma descarga elétrica na criatura, atordoando-a por um momento.",
+                choices: [
+                    { text: "Aproveitar a chance para correr e verificar o terminal.", to: 3 },
+                    { text: "Fugir da ponte e ir para a baía de carga.", to: 7 }
+                ]
             }
         }
     },
-     detetiveNoir: {
+    detetiveNoir: {
         title: "O Detetive de Nova York",
         description: "Investigue um assassinato misterioso na chuvosa Nova York dos anos 40.",
         nodes: {
@@ -257,3 +268,5 @@ export const gamebooks: Record<string, Gamebook> = {
         }
     }
 };
+
+    
