@@ -19,8 +19,10 @@ export default function StudentManager() {
   const firestore = useFirestore();
   const router = useRouter();
 
-  // This query is for populating filter dropdowns.
-  // It needs all students to create accurate cascaded filters.
+  // Esta query serve agora para duas coisas:
+  // 1. Fornecer todos os dados para os filtros dinâmicos no StudentDataView.
+  // 2. Verificar se existe algum aluno na base de dados para decidir se mostra
+  //    o uploader como ação primária.
   const studentsOptionsQuery = useMemo(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'alunos'), orderBy('nome'));
@@ -29,7 +31,7 @@ export default function StudentManager() {
   const { data: allStudents, isLoading: isDataLoading } = useCollection(studentsOptionsQuery);
 
   const onUploadSuccess = () => {
-    // The useCollection hook will automatically update the UI.
+    // O hook useCollection irá atualizar automaticamente a UI.
   };
 
   const dataExists = allStudents && allStudents.length > 0;
@@ -66,6 +68,7 @@ export default function StudentManager() {
                   <p className="mt-4 text-muted-foreground">A carregar dados dos alunos...</p>
                 </div>
               ) : dataExists ? (
+                // Passa todos os alunos para que os filtros possam ser populados corretamente
                 <StudentDataView allStudents={allStudents || []} />
               ) : (
                 <div className="flex flex-col items-center justify-center h-96 rounded-lg border-2 border-dashed border-border bg-card/50">

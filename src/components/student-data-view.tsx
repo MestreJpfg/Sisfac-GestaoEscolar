@@ -44,47 +44,41 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
     return debouncedNome.trim().length > 0 || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
   }, [debouncedNome, filters]);
 
-  const filteredStudents = useMemo(() => {
-    if (!hasActiveFilters) {
-      return allStudents;
+  const studentsQuery = useMemo(() => {
+    if (!firestore || !hasActiveFilters) return null;
+
+    let q = query(collection(firestore, 'alunos'));
+
+    // Para a busca por nome, o Firestore não suporta queries "LIKE" de forma nativa e eficiente para substrings.
+    // A abordagem aqui será filtrar no cliente APÓS a query inicial.
+    // Para otimizar, aplicamos os outros filtros primeiro.
+
+    if (filters.ensino) q = query(q, where('ensino', '==', filters.ensino));
+    if (filters.serie) q = query(q, where('serie', '==', filters.serie));
+    if (filters.classe) q = query(q, where('classe', '==', filters.classe));
+    if (filters.turno) q = query(q, where('turno', '==', filters.turno));
+    if (filters.nee) q = query(q, where('nee', '==', true));
+    
+    // A ordenação deve ser compatível com as queries 'where'.
+    // A ordenação principal é pelo nome.
+    q = query(q, orderBy(sortConfig.key, sortConfig.direction));
+
+    return q;
+  }, [firestore, hasActiveFilters, filters, sortConfig]);
+
+  const { data: fetchedStudents, isLoading: isDataLoading } = useCollection(studentsQuery);
+
+  const filteredAndSortedStudents = useMemo(() => {
+    let students = fetchedStudents || [];
+    
+    // Filtro de nome por substring no cliente
+    if (debouncedNome.trim().length > 0) {
+        const searchLower = debouncedNome.trim().toLowerCase();
+        students = students.filter(student => student.nome?.toLowerCase().includes(searchLower));
     }
-
-    const searchLower = debouncedNome.trim().toLowerCase();
-
-    return allStudents.filter(student => {
-      const nameMatch = searchLower.length > 0 ? student.nome?.toLowerCase().includes(searchLower) : true;
-      const ensinoMatch = filters.ensino ? student.ensino === filters.ensino : true;
-      const serieMatch = filters.serie ? (filters.serie === 'N/A' ? !student.serie : student.serie === filters.serie) : true;
-      const classeMatch = filters.classe ? student.classe === filters.classe : true;
-      const turnoMatch = filters.turno ? student.turno === filters.turno : true;
-      const neeMatch = filters.nee ? student.nee === true : true;
-      
-      return nameMatch && ensinoMatch && serieMatch && classeMatch && turnoMatch && neeMatch;
-    });
-  }, [allStudents, debouncedNome, filters, hasActiveFilters]);
-
-
-  const sortedStudents = useMemo(() => {
-    const sorted = [...filteredStudents];
-
-    if (sortConfig.key) {
-        sorted.sort((a, b) => {
-            const aValue = a[sortConfig.key] || '';
-            const bValue = b[sortConfig.key] || '';
-
-            if (typeof aValue === 'string' && typeof bValue === 'string') {
-              const comparison = aValue.localeCompare(bValue, 'pt-BR', { numeric: true });
-              return sortConfig.direction === 'ascending' ? comparison : -comparison;
-            }
-            
-            if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
-            if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
-            return 0;
-        });
-    }
-
-    return sorted;
-  }, [filteredStudents, sortConfig]);
+    
+    return students;
+  }, [fetchedStudents, debouncedNome]);
 
   const uniqueFilterOptions = useMemo(() => {
     const getUniqueValues = (key: string, data: any[]) => 
@@ -250,19 +244,24 @@ export default function StudentDataView({ allStudents }: { allStudents: any[] })
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {hasActiveFilters && (
+        {hasActiveFilters && !isDataLoading && (
           <p>
-            {sortedStudents.length > 0
-              ? `${sortedStudents.length} aluno(s) encontrado(s).`
+            {filteredAndSortedStudents.length > 0
+              ? `${filteredAndSortedStudents.length} aluno(s) encontrado(s).`
               : 'Nenhum aluno encontrado com os critérios fornecidos.'
             }
           </p>
         )}
       </div>
-
-        {hasActiveFilters ? (
+      
+       {isDataLoading ? (
+            <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <p className="mt-4 text-muted-foreground">A buscar alunos...</p>
+            </div>
+        ) : hasActiveFilters ? (
             <StudentTable
-                students={sortedStudents}
+                students={filteredAndSortedStudents}
                 onRowClick={handleStudentSelect}
                 onReportCardClick={handleOpenReportCard}
                 onSort={handleSort}
