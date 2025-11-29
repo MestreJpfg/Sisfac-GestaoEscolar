@@ -258,11 +258,12 @@ export const gamebooks: Record<string, Gamebook> = {
                 text: "A sua pequena nave de exploração acopla-se à 'Astra', uma nave colonial desaparecida há uma década. O silêncio a bordo é total. As luzes de emergência piscam intermitentemente. A sua missão é descobrir o que aconteceu. Você está no hangar de acoplagem. Há uma porta para a ponte de comando e outra para os alojamentos da tripulação.",
                 choices: [
                     { text: "Ir para a ponte de comando.", to: 1, success: { to: 1 }, failure: { to: 1 } },
-                    { text: "Ir para os alojamentos.", to: 2, success: { to: 2 }, failure: { to: 2 } }
+                    { text: "Ir para os alojamentos da tripulação.", to: 2, success: { to: 2 }, failure: { to: 2 } },
+                    { text: "Verificar o seu equipamento.", to: 13, success: { to: 13 }, failure: { to: 13 } }
                 ]
             },
             1: {
-                text: "A ponte está escura, exceto pelos monitores quebrados. No centro, o assento do capitão está virado de costas. Um terminal de computador ainda tem energia. De um duto de ventilação, você ouve um leve som metálico.",
+                text: "A ponte está escura, exceto pelos monitores quebrados que lançam uma luz fantasmagórica. No centro, o assento do capitão está virado de costas. Um terminal de computador ainda tem energia. De um duto de ventilação, você ouve um leve som metálico arrastado.",
                 choices: [
                     { text: "Verificar o terminal do computador.", to: 3, success: { to: 3 }, failure: { to: 3 } },
                     { text: "Aproximar-se do assento do capitão.", to: 4, success: { to: 4 }, failure: { to: 4 } },
@@ -270,66 +271,127 @@ export const gamebooks: Record<string, Gamebook> = {
                 ]
             },
             2: {
-                text: "Os alojamentos estão em desordem. Parece que a tripulação saiu à pressa. Num dos beliches, você encontra um tablet com uma entrada de diário aberta.",
+                text: "Os alojamentos da tripulação estão numa desordem caótica, com pertences pessoais espalhados. Parece que todos saíram à pressa. Num dos beliches, você encontra um tablet pessoal com uma entrada de diário aberta.",
                 choices: [
                     { text: "Ler o diário.", to: 5, success: { to: 5 }, failure: { to: 5 } },
-                    { text: "Ignorar e seguir para a enfermaria, que fica ao lado.", to: 6, success: { to: 6 }, failure: { to: 6 } }
+                    { text: "Ignorar o tablet e seguir para a enfermaria, que fica ao lado.", to: 6, success: { to: 6 }, failure: { to: 6 } },
+                    { text: "Procurar nos cacifos por algo útil.", to: 14, success: { to: 14 }, failure: { to: 14 } }
                 ]
             },
             3: {
-                text: "O último registo da caixa-preta diz: '...criatura a bordo... sistema de suporte de vida a falhar... quarentena...'. O sistema de quarentena da nave foi ativado, trancando todas as portas. Você está preso na ponte. FIM.",
+                text: "O último registo da caixa-preta diz: '...criatura a bordo... sistema de suporte de vida a falhar... protocolo de quarentena iniciado...'. Antes que você possa reagir, portas de titânio fecham-se ruidosamente. Você está preso na ponte. Sem comida nem água, o seu destino está selado. FIM.",
             },
             4: {
-                text: "Você vira a cadeira do capitão e encontra apenas um uniforme vazio e um monte de pó. Um arrepio percorre a sua espinha. De repente, uma criatura insectoide desce do teto! FIM.",
+                text: "Você aproxima-se cautelosamente e vira a cadeira do capitão. Sobre ela, há apenas um uniforme vazio e uma fina camada de pó cinzento. Um arrepio percorre a sua espinha. De repente, uma criatura insectoide, rápida e mortal, desce do teto! É o fim para si. FIM.",
             },
             5: {
-                text: "O diário descreve uma criatura parasita que se esconde nos sistemas de ventilação e ataca alvos solitários. A última entrada diz: 'Vou para a baía de carga. A única fraqueza parece ser o frio extremo... A Dra. Evans na enfermaria estava a trabalhar num repelente.'",
+                text: "O diário é da Engenheira Chefe. Descreve uma criatura parasita que se esconde nos sistemas de ventilação e ataca alvos solitários. A última entrada diz: 'Vou para a baía de carga. A única fraqueza parece ser o frio extremo... A Dra. Evans na enfermaria estava a trabalhar num repelente sónico.'",
                 choices: [
                     { text: "Ir para a baía de carga.", to: 7, success: { to: 7 }, failure: { to: 7 } },
                     { text: "Ir para a enfermaria procurar o repelente.", to: 6, success: { to: 6 }, failure: { to: 6 } }
                 ]
             },
             6: {
-                text: "A enfermaria está coberta de uma substância alienígena pegajosa. Num armário, você encontra um spray com o rótulo 'Repelente X-01'. Ao pegá-lo, você ouve um barulho vindo da ventilação acima de si.",
-                getItems: ["Repelente X-01"],
+                text: "A enfermaria está coberta de uma substância alienígena pegajosa e translúcida. Num armário, você encontra um dispositivo com o rótulo 'Repelente Sónico X-01'. Ao pegá-lo, você ouve um barulho vindo da ventilação acima de si.",
+                getItems: ["Repelente Sónico"],
                 choices: [
-                    { text: "Esperar e usar o spray.", to: 9, success: { to: 9 }, failure: { to: 9 }, requires: { item: 'Repelente X-01' } },
+                    { text: "Esperar e usar o repelente.", to: 9, success: { to: 9 }, failure: { to: 9 }, requires: { item: 'Repelente Sónico' } },
                     { text: "Sair rapidamente e ir para a baía de carga.", to: 7, success: { to: 7 }, failure: { to: 7 } }
                 ]
             },
             7: {
-                text: "Na baía de carga, você encontra a criatura a devorar os mantimentos. Ela nota a sua presença e avança.",
+                text: "Na baía de carga, a temperatura é visivelmente mais baixa. Você encontra a criatura a devorar os mantimentos congelados. Ela nota a sua presença, solta um guincho agudo e avança na sua direção, com as suas garras a estalar.",
                 choices: [
-                    { text: "Abrir o portal externo para o vácuo.", to: 10, success: { to: 10 }, failure: { to: 10 } },
-                    { text: "Lutar com a sua Pistola Laser.", to: 11, success: { to: 11 }, failure: { to: 11 } }
+                    { text: "Ativar o sistema de supressão de incêndios de CO2.", to: 10, success: { to: 10 }, failure: { to: 10 } },
+                    { text: "Lutar com a sua Pistola Laser.", to: 11, success: { to: 11 }, failure: { to: 11 } },
+                    { text: "Usar o Repelente Sónico (se o tiver).", to: 15, success: { to: 15 }, failure: { to: 15 }, requires: { item: "Repelente Sónico" } }
                 ]
             },
             8: {
-                text: "Você aponta a sua lanterna para o duto de ventilação. Um pequeno robô de manutenção cai de lá, com uma das suas garras avariada. Ele emite um som amigável e parece querer segui-lo.",
+                text: "Você aponta a sua lanterna para o duto de ventilação. Um pequeno robô de manutenção cai de lá, com uma das suas garras avariada e a faiscar. Ele emite um som amigável, uma série de bipes, e parece querer segui-lo.",
                 choices: [
-                    { text: "Deixar o robô segui-lo.", to: 12, success: { to: 12 }, failure: { to: 12 } },
-                    { text: "Chutar o robô para longe e continuar sozinho.", to: 1, success: { to: 1 }, failure: { to: 1 } }
+                    { text: "Usar o seu Kit de Ferramentas para tentar consertar o robô.", to: 12, success: { to: 12 }, failure: { to: 12 }, requires: { item: "Kit de Ferramentas" } },
+                    { text: "Ignorar o robô e continuar a explorar a ponte.", to: 1, success: { to: 1 }, failure: { to: 1 } }
                 ]
             },
             9: {
-                text: "A criatura salta da ventilação! Você usa o spray, e o monstro recua com um guincho, fugindo de volta para os dutos. Você está seguro por agora, e tem uma arma.",
+                text: "A criatura salta da ventilação! Você ativa o repelente sónico. O som de alta frequência atordoa o monstro, que recua com um guincho, fugindo de volta para os dutos. Você está seguro por agora, e tem uma arma eficaz.",
                 choices: [
                     { text: "Ir para a ponte, agora mais confiante.", to: 1, success: { to: 1 }, failure: { to: 1 } },
                     { text: "Caçar a criatura na baía de carga.", to: 7, success: { to: 7 }, failure: { to: 7 } }
                 ]
             },
             10: {
-                text: "Você corre para o controle e abre o portal. O vácuo suga tudo para fora, incluindo a criatura, que congela e se estilhaça. Você consegue segurar-se e fechar a porta. Você sobreviveu e resolveu o mistério! FIM."
+                text: "Você corre para o controle e ativa o sistema de supressão de incêndios. Jatos de CO2 gelado enchem a sala. A criatura guincha, a sua carapaça estala e congela. Com um último espasmo, ela despedaça-se. Você sobreviveu e resolveu o mistério! FIM.",
             },
             11: {
-                text: "A sua Pistola Laser parece não fazer efeito na carapaça da criatura. Ela domina-o facilmente. FIM."
+                text: "A sua Pistola Laser parece não fazer efeito na carapaça da criatura. Ela domina-o facilmente. FIM.",
+                event: "combat",
+                combat: {
+                    enemy: "Criatura Alienígena",
+                    skill: 10,
+                    stamina: 15,
+                    success: { to: 16 },
+                    failure: { to: 17 }
+                }
             },
             12: {
-                text: "Você vai para a ponte, com o robô a segui-lo. Ao se aproximar do assento do capitão, a criatura desce do teto! Antes que ela o ataque, o pequeno robô emite uma descarga elétrica na criatura, atordoando-a por um momento.",
+                text: "Você usa o seu Kit de Ferramentas. TESTE A SUA SORTE. Se for sortudo, você conserta a garra do robô. Se for azarado, você só piora as coisas.",
+                event: "test_luck",
                 choices: [
-                    { text: "Aproveitar a chance para correr e verificar o terminal.", to: 3, success: { to: 3 }, failure: { to: 3 } },
-                    { text: "Fugir da ponte e ir para a baía de carga.", to: 7, success: { to: 7 }, failure: { to: 7 } }
+                    { 
+                        text: "Testar a Sorte",
+                        to: 0,
+                        success: { to: 18, text: "A garra volta a funcionar! O robô bipa alegremente e entrega-lhe um cartão de acesso que tinha guardado." },
+                        failure: { to: 19, text: "Um curto-circuito frita os circuitos do robô. Ele cai inerte no chão." }
+                    }
                 ]
+            },
+            13: {
+                text: "Você verifica o seu equipamento. Tem a sua Pistola Laser fiel, um Kit de Ferramentas multiusos e o seu fato de exploração. Está pronto para o que der e vier.",
+                choices: [
+                    { text: "Ir para a ponte de comando.", to: 1, success: { to: 1 }, failure: { to: 1 } },
+                    { text: "Ir para os alojamentos.", to: 2, success: { to: 2 }, failure: { to: 2 } }
+                ]
+            },
+            14: {
+                text: "Você vasculha os cacifos. A maioria está vazia, mas num deles você encontra uma barra de proteína de alta energia. Pode ser útil.",
+                staminaChange: 2,
+                getItems: ["Barra de Proteína"],
+                choices: [
+                    { text: "Agora, ler o diário no beliche.", to: 5, success: { to: 5 }, failure: { to: 5 } },
+                    { text: "Ir para a enfermaria.", to: 6, success: { to: 6 }, failure: { to: 6 } }
+                ]
+            },
+            15: {
+                text: "Você ativa o repelente sónico. A criatura, já enfraquecida pelo frio, fica completamente paralisada pelo som. Ela cai no chão, convulsionando. Você pode acabar com ela facilmente.",
+                choices: [
+                    { text: "Acabar com a criatura e garantir a segurança da nave.", to: 10, success: { to: 10 }, failure: { to: 10 } }
+                ]
+            },
+            16: {
+                text: "Apesar da sua ferocidade, a sua habilidade prevalece. O último tiro da sua pistola laser encontra uma fresta na carapaça da criatura, e ela cai sem vida. Você está ferido, mas vivo. VITÓRIA!",
+            },
+            17: {
+                text: "A criatura é demasiado rápida e forte. As suas garras rasgam o seu fato e a sua missão termina no chão frio da baía de carga. FIM.",
+            },
+            18: {
+                text: "O robô, agora com a sua garra funcional, entrega-lhe um cartão de acesso vermelho com o nível de segurança 'CAPITÃO'. Ele continua a segui-lo. O que faz agora?",
+                getItems: ["Cartão de Acesso Vermelho"],
+                choices: [
+                    { text: "Voltar para o terminal do computador na ponte.", to: 20, success: { to: 20 }, failure: { to: 20 } },
+                    { text: "Ir para os alojamentos.", to: 2, success: { to: 2 }, failure: { to: 2 } }
+                ]
+            },
+            19: {
+                text: "O robô está arruinado. Você perdeu tempo e uma potencial ajuda. Você continua a explorar a ponte.",
+                choices: [
+                    { text: "Verificar o terminal do computador.", to: 3, success: { to: 3 }, failure: { to: 3 } },
+                    { text: "Aproximar-se do assento do capitão.", to: 4, success: { to: 4 }, failure: { to: 4 } }
+                ]
+            },
+            20: {
+                text: "Com o Cartão de Acesso Vermelho, você acede a um nível mais profundo do terminal. Encontra os registos do Capitão. Ele descreve a purga da nave para conter a criatura, redirecionando o suporte de vida para a baía de carga, criando uma 'zona fria'. Ele sacrificou-se para dar a qualquer futuro explorador uma chance. Você encontra os controlos para reativar o sinal de socorro da nave. Com o mistério resolvido, a sua missão é um sucesso. FIM.",
             }
         }
     },
@@ -345,58 +407,61 @@ export const gamebooks: Record<string, Gamebook> = {
         spells: [],
         nodes: {
             "start": {
-                text: "Numa noite chuvosa de 1947, você está no seu escritório poeirento quando o telefone toca. É sobre o assassinato de um milionário, Miles Davenport. A polícia está sem pistas. Você pega na sua gabardina e no seu chapéu. Onde vai primeiro?",
+                text: "Numa noite chuvosa de 1947, o néon do seu escritório pisca sobre as poças da rua. Você é Jake Falcon, detetive particular. O telefone toca. É sobre o assassinato de um magnata, Miles Davenport. A polícia está a andar em círculos. Você pega na sua gabardina e no seu chapéu. Onde vai primeiro?",
                 choices: [
-                    { text: "Ir à mansão da vítima, a cena do crime.", to: 1, success: { to: 1 }, failure: { to: 1 } },
-                    { text: "Ir ao 'Blue Note', o clube de jazz que Davenport frequentava.", to: 2, success: { to: 2 }, failure: { to: 2 } }
+                    { text: "Ir à mansão Davenport, a cena do crime.", to: 1, success: { to: 1 }, failure: { to: 1 } },
+                    { text: "Ir ao 'The Blue Dahlia', o clube de jazz que Davenport frequentava.", to: 2, success: { to: 2 }, failure: { to: 2 } },
+                    { text: "Passar no seu informador, 'Slim', o vendedor de jornais.", to: 12, success: { to: 12 }, failure: { to: 12 } }
                 ]
             },
             1: {
-                text: "A mansão está silenciosa, exceto pelo tique-taque de um relógio. O corpo já foi removido. Você encontra um cofre escondido atrás de um quadro, mas está trancado. Uma empregada assustada menciona que a viúva, Eleanor, parecia estranhamente calma.",
+                text: "A mansão está silenciosa, exceto pelo tique-taque de um relógio de pêndulo. O corpo já foi removido. Você encontra um cofre escondido atrás de um quadro, mas está trancado. Uma empregada assustada, a limpar uma nódoa de vinho tinto, menciona que a viúva, a bela Eleanor, parecia estranhamente calma.",
                 choices: [
-                    { text: "Interrogar a viúva, Eleanor.", to: 3, success: { to: 3 }, failure: { to: 3 } },
+                    { text: "Interrogar a viúva, Eleanor Davenport.", to: 3, success: { to: 3 }, failure: { to: 3 } },
                     { text: "Tentar encontrar a combinação do cofre.", to: 4, success: { to: 4 }, failure: { to: 4 } },
                     { text: "Subornar a empregada por mais informações.", to: 9, success: { to: 9 }, failure: { to: 9 } }
                 ]
             },
             2: {
-                text: "No 'Blue Note', o fumo dos cigarros paira no ar. O barman diz-lhe que Davenport tinha uma dívida de jogo com um gangster local, 'Lefty' Malone. Ele também menciona que Davenport era visto frequentemente a discutir com uma cantora de femme fatale, Lola.",
+                text: "No 'The Blue Dahlia', o fumo dos cigarros dança com as notas melancólicas de um saxofone. O barman diz-lhe que Davenport tinha uma dívida de jogo pesada com um gangster local, 'Lefty' Malone. Ele também menciona que Davenport era visto frequentemente a discutir com a cantora femme fatale do clube, Lola Monroe.",
                 choices: [
                     { text: "Procurar por 'Lefty' Malone nos bastidores.", to: 5, success: { to: 5 }, failure: { to: 5 } },
-                    { text: "Falar com a cantora, Lola.", to: 6, success: { to: 6 }, failure: { to: 6 } }
+                    { text: "Falar com a cantora, Lola Monroe.", to: 6, success: { to: 6 }, failure: { to: 6 } }
                 ]
             },
             3: {
-                text: "Eleanor Davenport é fria como gelo. Ela alega que não sabe de nada e que estava no teatro na noite do crime. O álibi dela parece sólido, mas os seus olhos escondem algo.",
+                text: "Eleanor Davenport, vestida de preto de seda, é fria como gelo. Ela alega que não sabe de nada e que estava numa gala de caridade na noite do crime. O álibi dela parece sólido, mas os seus olhos escondem algo.",
                 choices: [
                     { text: "Pressioná-la sobre o cofre.", to: 7, success: { to: 7 }, failure: { to: 7 } },
                     { text: "Agradecer e sair para seguir outra pista.", to: 2, success: { to: 2 }, failure: { to: 2 } }
                 ]
             },
             4: {
-                text: "Você procura por pistas e encontra a data de aniversário de casamento do casal marcada num calendário. Você tenta a combinação e o cofre abre! Dentro, encontra cartas de amor trocadas entre Eleanor e o rival de negócios de Davenport.",
+                text: "Você procura por pistas e encontra, numa pequena agenda sobre a secretária, a data de aniversário de casamento do casal marcada com um coração. Você tenta a combinação '10-05-42' e o cofre abre! Dentro, encontra cartas de amor trocadas entre Eleanor e o rival de negócios de Davenport, Sterling.",
+                getItems: ["Cartas de Amor"],
                 choices: [
                     { text: "Confrontar Eleanor com as cartas.", to: 8, success: { to: 8 }, failure: { to: 8 } }
                 ]
             },
             5: {
-                text: "'Lefty' Malone não gosta de perguntas. Ele e os seus capangas dão-lhe uma tareia e atiram-no para um beco. Você perde a noite e a pista. FIM.",
+                text: "'Lefty' Malone não gosta de perguntas. Ele e os seus capangas dão-lhe uma tareia e atiram-no para um beco. Você perde a noite, um dente e a pista. Você acorda com a chuva a lavar-lhe o rosto. FIM.",
+                staminaChange: -5
             },
             6: {
-                text: "Lola está nervosa. Ela admite que Davenport lhe prometeu uma vida melhor, mas nunca cumpriu. Ela diz que a última vez que o viu, ele estava a discutir ao telefone sobre 'cartas comprometedoras'. Ela menciona um encontro que ele teria num beco perto do clube.",
+                text: "Lola Monroe está nervosa, ajeitando a sua luva de seda. Ela admite que Davenport lhe prometeu uma carreira em Hollywood, mas nunca cumpriu. 'A última vez que o vi', diz ela, 'ele estava a discutir ao telefone sobre umas 'cartas comprometedoras'. Mencionou um encontro num beco perto do clube para resolver o assunto.'",
                 choices: [
                     { text: "Perguntar onde poderiam estar essas cartas (ir à mansão).", to: 1, success: { to: 1 }, failure: { to: 1 } },
                     { text: "Investigar o beco perto do clube.", to: 10, success: { to: 10 }, failure: { to: 10 } }
                 ]
             },
             7: {
-                text: "Ao ser pressionada, Eleanor entra em pânico e confessa que o seu amante matou Davenport para ficarem com o dinheiro. O caso está resolvido, mas a chuva lá fora parece mais fria do que nunca. FIM.",
+                text: "Ao ser pressionada sobre o cofre sem provas, Eleanor fica indignada e chama a segurança. Eles acompanham-no educadamente até à saída. Você perdeu a sua chance com ela. FIM.",
             },
             8: {
-                 text: "Confrontada com as provas, Eleanor confessa tudo. O seu amante, o rival de negócios, cometeu o crime para que pudessem ficar juntos e com a fortuna. Você resolveu o caso. FIM."
+                 text: "Confrontada com as cartas, o rosto de Eleanor desfaz-se. Ela confessa que o seu amante, Sterling, assassinou Davenport para que pudessem ficar juntos e com a fortuna. Você acende um cigarro. Caso resolvido. FIM."
             },
             9: {
-                text: "Por alguns dólares, a empregada revela que viu o Sr. Davenport a esconder uma pequena chave de latão debaixo do tapete do escritório pouco antes de morrer. Você pega na chave.",
+                text: "Por alguns dólares, a empregada revela que viu o Sr. Davenport a esconder uma pequena chave de latão debaixo do tapete do escritório pouco antes de morrer. 'Ele parecia preocupado', ela sussurra. Você pega na chave.",
                 getItems: ["Chave de Latão"],
                 choices: [
                     { text: "Procurar o que a chave abre.", to: 11, success: { to: 11 }, failure: { to: 11 } },
@@ -404,14 +469,57 @@ export const gamebooks: Record<string, Gamebook> = {
                 ]
             },
             10: {
-                text: "No beco escuro, você encontra uma carteira de fósforos do 'Blue Note' com um número de telefone anotado. Antes que possa pensar, uma figura ataca-o das sombras. Você apaga. FIM.",
+                text: "No beco escuro e húmido, você encontra uma carteira de fósforos do 'The Blue Dahlia' com um número de telefone anotado. Antes que possa pensar no que significa, uma figura ataca-o das sombras. TESTE A SUA SORTE.",
+                event: 'test_luck',
+                choices: [
+                    {
+                        text: 'Tentar a sua Sorte!',
+                        to: 0,
+                        success: { to: 15, text: 'Você desvia-se no último segundo. O seu atacante era um dos capangas de Lefty Malone! Ele está surpreendido.' },
+                        failure: { to: 16, text: 'Um golpe na cabeça, e tudo fica preto. Você acorda sem a sua carteira e sem pistas. FIM.' }
+                    }
+                ]
             },
             11: {
-                text: "A chave abre uma pequena gaveta na secretária de Davenport. Dentro, está uma apólice de seguro de vida em nome de Eleanor, mas com um beneficiário secreto: o seu amante. Você tem a prova de que precisava.",
+                text: "A chave abre uma pequena gaveta na secretária de Davenport. Dentro, está uma apólice de seguro de vida em nome de Eleanor, mas com um beneficiário secreto: o seu rival de negócios, Sterling. É o motivo de que precisava.",
+                getItems: ["Apólice de Seguro"],
                 choices: [
-                    { text: "Levar as provas à polícia.", to: 8, success: { to: 8 }, failure: { to: 8 }, requires: {item: "Chave de Latão"} }
+                    { text: "Levar as provas à polícia.", to: 8, success: { to: 8 }, failure: { to: 8 }, requires: { item: "Apólice de Seguro" } }
                 ]
+            },
+            12: {
+                text: "'Slim' diz-lhe que Davenport andava a vender informações da sua própria empresa ao seu rival, Sterling. 'Coisa suja', diz Slim, 'Davenport estava a ser chantageado. Ouvi dizer que as provas estão num cofre na mansão.'",
+                choices: [
+                    { text: "Ir à mansão investigar o cofre.", to: 1, success: { to: 1 }, failure: { to: 1 } },
+                    { text: "Ir ao clube de jazz, talvez alguém lá saiba mais.", to: 2, success: { to: 2 }, failure: { to: 2 } }
+                ]
+            },
+            15: {
+                text: "Você desvia-se e contra-ataca. O capanga não esperava uma luta. Você pode tentar subjugá-lo para obter informações ou fugir.",
+                event: 'combat',
+                combat: {
+                    enemy: "Capanga de Lefty",
+                    skill: 6,
+                    stamina: 8,
+                    success: { to: 17 },
+                    failure: { to: 5 }
+                }
+            },
+            16: {
+                text: "O golpe atinge-o em cheio. Você acorda horas depois, encharcado e sem a sua carteira. A pista esfriou. FIM.",
+                staminaChange: -4,
+            },
+            17: {
+                text: "Após uma breve luta, você subjuga o capanga. Ele confessa que Lefty Malone mandou-o recuperar 'provas' que Davenport tinha contra ele, que estavam guardadas num cofre na sua mansão. O assassinato foi um acidente, uma luta que correu mal.",
+                choices: [
+                    { text: "Levar a confissão à polícia. Caso resolvido.", to: 18, success: { to: 18 }, failure: { to: 18 } }
+                ]
+            },
+            18: {
+                text: "Com a confissão do capanga, a polícia prende Lefty Malone. Não era um crime passional, mas um caso de chantagem que correu terrivelmente mal. Você acende um cigarro e observa a chuva a cair. Mais um caso encerrado. FIM.",
             }
         }
     }
 };
+
+    
