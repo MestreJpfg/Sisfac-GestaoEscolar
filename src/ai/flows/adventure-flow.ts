@@ -36,7 +36,7 @@ const storyPrompt = ai.definePrompt({
     name: "storyPrompt",
     input: { schema: AdventureInputSchema },
     output: { schema: AdventureOutputSchema },
-    model: googleAI.model('gemini-pro'),
+    model: googleAI.model('gemini-1.0-pro'),
 
     prompt: `
         Você é um mestre de jogo a narrar uma aventura de texto interativa.
