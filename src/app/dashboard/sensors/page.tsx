@@ -169,35 +169,36 @@ export default function SensorGamePage() {
         }));
         
         // Collision Detection
-        const p = player;
-        
-        // Player vs Item
-        if (checkCollision(p, item)) {
-            setScore(s => s + 1);
-            setItem(i => ({
-                ...i,
-                position: {
-                    x: Math.random() * (width - i.size),
-                    y: Math.random() * (height - i.size),
-                }
-            }));
-        }
-
-        // Player vs Enemies
-        for (const enemy of enemies) {
-            if (checkCollision(p, enemy)) {
-                setStatus('gameOver');
-                return;
+        setPlayer(p => {
+            // Player vs Item
+            if (checkCollision(p, item)) {
+                setScore(s => s + 1);
+                setItem(i => ({
+                    ...i,
+                    position: {
+                        x: Math.random() * (width - i.size),
+                        y: Math.random() * (height - i.size),
+                    }
+                }));
             }
-        }
+
+            // Player vs Enemies
+            for (const enemy of enemies) {
+                if (checkCollision(p, enemy)) {
+                    setStatus('gameOver');
+                    break;
+                }
+            }
+            return p;
+        });
 
         animationFrameId.current = requestAnimationFrame(gameLoop);
-    }, [status, player, enemies, item]);
+    }, [status, item, enemies]);
     
     // --- Effects ---
     useEffect(() => {
         if (status === 'playing') {
-            const startTime = Date.now();
+            const startTime = Date.now() - (time * 1000);
             const timer = setInterval(() => {
                 setTime(Math.floor((Date.now() - startTime) / 1000));
             }, 1000);
@@ -209,7 +210,7 @@ export default function SensorGamePage() {
                 clearInterval(timer);
             };
         }
-    }, [status, gameLoop]);
+    }, [status, gameLoop, time]);
     
     // Sensor listener effect
     useEffect(() => {
@@ -265,8 +266,8 @@ export default function SensorGamePage() {
                     </div>
                 </header>
 
-                <main className="flex-1 flex flex-col items-center justify-center p-4">
-                    <div className="w-full max-w-4xl flex justify-between items-center mb-4 font-mono px-2">
+                <main className="flex-1 flex flex-col p-4">
+                    <div className="w-full flex justify-between items-center mb-4 font-mono px-2">
                          <div className="flex items-center gap-2 text-lg">
                             <Trophy className="h-5 w-5 text-yellow-400" />
                             <span>Score:</span>
@@ -278,7 +279,7 @@ export default function SensorGamePage() {
                         </div>
                     </div>
                     
-                    <Card className="w-full max-w-4xl aspect-video bg-black/50 border-2 border-purple-500/50 shadow-2xl shadow-purple-500/20 overflow-hidden">
+                    <Card className="w-full flex-1 bg-black/50 border-2 border-purple-500/50 shadow-2xl shadow-purple-500/20 overflow-hidden">
                         <CardContent ref={gameAreaRef} className="p-0 h-full w-full relative">
                             {/* Game Objects */}
                             {status !== 'permissions' && status !== 'denied' && (
