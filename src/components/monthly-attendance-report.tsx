@@ -89,18 +89,18 @@ export default function MonthlyAttendanceReport() {
             toast({ variant: 'destructive', title: 'Dados não carregados', description: 'Aguarde o carregamento dos dados dos alunos.' });
             return;
         }
-        if (!filters.ensino && !filters.serie && !filters.classe && !filters.turno) {
-            toast({ variant: 'destructive', title: 'Filtros incompletos', description: 'Por favor, selecione pelo menos um filtro.' });
+        if (!filters.ensino || !filters.serie || !filters.classe || !filters.turno) {
+            toast({ variant: 'destructive', title: 'Filtros incompletos', description: 'Por favor, selecione todos os filtros da turma.' });
             return;
         }
         setIsLoading(true);
         setReportData([]);
 
         const studentsInClass = allStudents.filter(s => 
-            (!filters.ensino || s.ensino === filters.ensino) &&
-            (!filters.serie || s.serie === filters.serie) &&
-            (!filters.classe || s.classe === filters.classe) &&
-            (!filters.turno || s.turno === filters.turno)
+            (s.ensino === filters.ensino) &&
+            (s.serie === filters.serie) &&
+            (s.classe === filters.classe) &&
+            (s.turno === filters.turno)
         ).sort((a, b) => a.nome.localeCompare(b.nome));
 
         if (studentsInClass.length === 0) {
@@ -165,7 +165,7 @@ export default function MonthlyAttendanceReport() {
     
     const exportMonthlyPDF = () => {
         const doc = new jsPDF({ orientation: 'landscape' });
-        const title = `Relatório Mensal de Faltas - ${filters.serie || filters.ensino || ''}`;
+        const title = `Relatório Mensal de Faltas - ${filters.serie || filters.ensino || ''} ${filters.classe || ''}`;
         const subtitle = `${format(new Date(selectedYear, selectedMonth), 'MMMM yyyy', { locale: ptBR })}`;
 
         doc.setFontSize(16);
@@ -176,10 +176,7 @@ export default function MonthlyAttendanceReport() {
         const head: (string | { content: string, styles: any })[] = [{ content: 'Aluno', styles: { halign: 'left' } }];
         daysInMonth.forEach(day => {
             const dayNumber = format(day, 'd');
-            const dayOfWeek = format(day, 'E', { locale: ptBR })[0];
-            // Rotate header for sundays and saturdays
-            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
-            head.push({ content: dayNumber, styles: { halign: 'center', cellWidth: 6, fontStyle: isWeekend ? 'bold' : 'normal', textColor: isWeekend ? [255,0,0] : [0,0,0] } });
+            head.push({ content: dayNumber, styles: { halign: 'center', cellWidth: 6 } });
         });
         head.push({ content: 'Total', styles: { halign: 'center' } });
 
@@ -187,7 +184,7 @@ export default function MonthlyAttendanceReport() {
             const row: (string | { content: string, styles: any })[] = [{ content: record.studentName, styles: { halign: 'left', cellWidth: 'auto' } }];
             daysInMonth.forEach(day => {
                 const status = record.absences[day.getDate()];
-                row.push({ content: status || '', styles: { halign: 'center', textColor: status === 'F' ? [255,0,0] : [245, 160, 0] } });
+                row.push({ content: status || '', styles: { halign: 'center', textColor: status === 'F' ? [255,0,0] : (status === 'J' ? [245, 160, 0] : [0,0,0]) } });
             });
             row.push({ content: record.total > 0 ? String(record.total) : '', styles: { halign: 'center', fontStyle: 'bold' } });
             return row;
@@ -210,7 +207,7 @@ export default function MonthlyAttendanceReport() {
             }
         });
 
-        doc.save(`Relatorio_Mensal_${filters.serie || filters.ensino || 'geral'}.pdf`);
+        doc.save(`Relatorio_Mensal_${filters.serie || 'geral'}_${filters.classe || ''}.pdf`);
     };
 
     return (

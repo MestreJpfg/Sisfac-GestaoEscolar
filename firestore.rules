@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -77,19 +76,19 @@ service cloud.firestore {
 
     // Permissions for grades.
     match /grades/{gradeId} {
-       allow read: if isSignedIn();
+       allow read, list: if hasPermission('view:grades') || hasPermission('manage:grades');
        allow write: if hasPermission('manage:grades');
     }
 
     // Permissions for attendance.
     match /attendance/{attendanceId} {
-       allow read: if isSignedIn();
+       allow read, list: if hasPermission('view:attendance') || hasPermission('manage:attendance');
        allow write: if hasPermission('manage:attendance');
     }
     
     // Permissions for announcements.
     match /announcements/{announcementId} {
-      allow read, list: if isSignedIn();
+      allow read, list: if hasPermission('view:announcements') || hasPermission('manage:announcements');
       allow write: if hasPermission('manage:announcements');
     }
   }

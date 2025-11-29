@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -25,9 +26,22 @@ export default function AttendancePage() {
     }, [user, firestore]);
     const { data: userProfile } = useDoc(userDocRef);
 
-    // Simplified permission check: only show reports for admin profiles.
-    // This could be expanded to check for a specific 'view:attendance_reports' permission.
-    const canViewReports = userProfile?.profileId === 'Administrador' || userProfile?.profileId === 'Administrador(a)';
+    const profileDocRef = useMemoFirebase(() => {
+        if (!userProfile?.profileId || !firestore) return null;
+        return doc(firestore, 'profiles', userProfile.profileId);
+    }, [userProfile, firestore]);
+    const { data: profileDetails } = useDoc(profileDocRef);
+
+    const canViewReports = useMemo(() => {
+        if (!userProfile || !firestore) return false;
+        if (userProfile.profileId === 'Administrador' || userProfile.profileId === 'Administrador(a)') {
+            return true;
+        }
+        // Check for specific permission 'view:attendance' or the managing one 'manage:attendance'
+        const hasViewPermission = profileDetails?.permissions?.includes('view:attendance') || userProfile.customPermissions?.includes('view:attendance');
+        const hasManagePermission = profileDetails?.permissions?.includes('manage:attendance') || userProfile.customPermissions?.includes('manage:attendance');
+        return hasViewPermission || hasManagePermission;
+    }, [userProfile, profileDetails, firestore]);
     
     return (
         <AuthGuard>
