@@ -116,9 +116,9 @@ export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: 
                         <FormLabel>Cor do Perfil</FormLabel>
                         <FormControl>
                             <div className="flex items-center gap-2">
-                                <Input type="color" {...field} className="p-1 h-10 w-14 cursor-pointer" />
+                                <Input type="color" {...field} value={field.value ?? ''} className="p-1 h-10 w-14 cursor-pointer" />
                                 <Input 
-                                    value={field.value} 
+                                    value={field.value ?? ''} 
                                     onChange={field.onChange} 
                                     placeholder="#RRGGBB"
                                     className="flex-1"
@@ -136,7 +136,7 @@ export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: 
                       <FormItem>
                         <FormLabel>Descrição</FormLabel>
                         <FormControl>
-                          <Textarea {...field} placeholder="Descreva a responsabilidade deste perfil..." />
+                          <Textarea {...field} value={field.value ?? ''} placeholder="Descreva a responsabilidade deste perfil..." />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
