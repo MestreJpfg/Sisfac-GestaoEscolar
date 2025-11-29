@@ -278,8 +278,8 @@ export default function SensorGamePage() {
                     </div>
                 </header>
 
-                <main className="flex-1 flex flex-col p-4">
-                    <div className="w-full flex justify-between items-center mb-4 font-mono px-2">
+                <main className="flex-1 flex flex-col items-center justify-center p-4">
+                    <div className="w-full max-w-sm flex justify-between items-center mb-4 font-mono px-2">
                          <div className="flex items-center gap-2 text-lg">
                             <Trophy className="h-5 w-5 text-yellow-400" />
                             <span>Score:</span>
@@ -291,7 +291,7 @@ export default function SensorGamePage() {
                         </div>
                     </div>
                     
-                    <Card className="w-full flex-1 bg-black/50 border-2 border-purple-500/50 shadow-2xl shadow-purple-500/20 overflow-hidden">
+                    <Card className="w-full max-w-sm h-[600px] bg-black/50 border-2 border-purple-500/50 shadow-2xl shadow-purple-500/20 overflow-hidden">
                         <CardContent ref={gameAreaRef} className="p-0 h-full w-full relative">
                             {status !== 'permissions' && permissionState === 'granted' && (
                                 <>
