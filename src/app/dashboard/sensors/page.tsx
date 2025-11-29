@@ -201,16 +201,15 @@ export default function SensorGamePage() {
     };
     
     // --- Game Loop ---
-    const gameLoop = useCallback(() => {
+    const gameLoop = useCallback((currentTime: number) => {
         const gameArea = gameAreaRef.current;
         if (!gameArea || status !== 'playing') return;
         const { width, height } = gameArea.getBoundingClientRect();
         
         // --- Time Update for UI ---
-        const now = Date.now();
-        if (now - lastTimeRef.current >= 1000) {
-            setTime(Math.floor((now - gameTimeStartRef.current) / 1000));
-            lastTimeRef.current = now;
+        if (currentTime - lastTimeRef.current >= 1000) {
+            setTime(Math.floor((currentTime - gameTimeStartRef.current) / 1000));
+            lastTimeRef.current = currentTime;
         }
         
         // --- Update Positions ---
@@ -323,6 +322,8 @@ export default function SensorGamePage() {
     // --- Game State Effects ---
     useEffect(() => {
         if (status === 'playing') {
+            gameTimeStartRef.current = Date.now();
+            lastTimeRef.current = Date.now();
             animationFrameId.current = requestAnimationFrame(gameLoop);
         } else {
              if (animationFrameId.current) {
