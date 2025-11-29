@@ -65,7 +65,7 @@ const generateAdventureStepFlow = ai.defineFlow(
   },
   async (input) => {
     
-    const { output } = await storyPrompt(input, { model: 'gemini-1.5-flash-latest' });
+    const { output } = await storyPrompt(input, { model: googleAI.model('gemini-1.5-flash-latest') });
 
     return output!;
   }
