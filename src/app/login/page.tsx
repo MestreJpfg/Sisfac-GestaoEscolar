@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useAuth, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, type User, GoogleAuthProvider, signInWithPopup, fetchSignInMethodsForEmail } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -230,12 +229,6 @@ export default function LoginPage() {
                 {isGoogleLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GoogleIcon className="mr-2 h-4 w-4" />}
                 Entrar com Google
             </Button>
-            <p className="mt-6 text-center text-sm text-muted-foreground">
-                Não tem uma conta?{' '}
-                <Link href="/signup" className="font-semibold text-primary hover:underline">
-                Registre-se
-                </Link>
-            </p>
             </CardContent>
         </Card>
         </main>
