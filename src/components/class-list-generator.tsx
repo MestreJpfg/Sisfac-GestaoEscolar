@@ -97,7 +97,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
     if (filters.turno) studentsData = studentsData.filter(s => s.turno === filters.turno);
     if (filters.classe) studentsData = studentsData.filter(s => s.classe === filters.classe);
 
-    studentsData.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    studentsData.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'));
     setStudents(studentsData);
 
     if(studentsData.length > 0) {
@@ -389,5 +389,3 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
     </Card>
   );
 }
-
-    

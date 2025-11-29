@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useFirestore } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -25,7 +25,7 @@ export default function ClassesPage() {
     // and provides a better UX for building the class list.
     const studentsQuery = useMemo(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'alunos'), orderBy('nome'));
+        return query(collection(firestore, 'alunos'));
     }, [firestore]);
 
     const { data: students, isLoading: isDataLoading } = useCollection(studentsQuery);

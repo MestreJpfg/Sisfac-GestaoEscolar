@@ -43,7 +43,7 @@ export default function AttendanceManager() {
     // Query to get all students for filter options
     const studentsOptionsQuery = useMemo(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'alunos'), orderBy('nome'));
+        return query(collection(firestore, 'alunos'));
     }, [firestore]);
     const { data: allStudents, isLoading: isLoadingOptions } = useCollection(studentsOptionsQuery);
     
@@ -81,7 +81,7 @@ export default function AttendanceManager() {
     // Query for students in the selected class
     const studentsInClassQuery = useMemo(() => {
         if (!firestore || !isClassSelected) return null;
-        let q = query(collection(firestore, 'alunos'), orderBy('nome'));
+        let q = query(collection(firestore, 'alunos'));
         q = query(q, where('ensino', '==', filters.ensino));
         q = query(q, where('serie', '==', filters.serie));
         q = query(q, where('classe', '==', filters.classe));
@@ -90,6 +90,11 @@ export default function AttendanceManager() {
     }, [firestore, isClassSelected, filters]);
     const { data: studentsInClass, isLoading: isLoadingStudents } = useCollection(studentsInClassQuery);
 
+    const sortedStudentsInClass = useMemo(() => {
+        return studentsInClass?.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR')) || [];
+    }, [studentsInClass]);
+
+
     const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
         setAttendance(prev => new Map(prev).set(studentId, status));
     };
@@ -97,7 +102,7 @@ export default function AttendanceManager() {
     // Effect to fetch existing attendance for the selected date and class
     useEffect(() => {
         const fetchAttendance = async () => {
-            if (!firestore || !classId || !selectedDate || !studentsInClass) return;
+            if (!firestore || !classId || !selectedDate || !sortedStudentsInClass) return;
 
             const formattedDate = format(selectedDate, 'yyyy-MM-dd');
             const attendanceQuery = query(
@@ -114,13 +119,13 @@ export default function AttendanceManager() {
             });
             
             const newAttendance = new Map<string, AttendanceStatus>();
-            studentsInClass.forEach(student => {
+            sortedStudentsInClass.forEach(student => {
                 newAttendance.set(student.id, existingAttendance.get(student.id) || 'Presente');
             });
             setAttendance(newAttendance);
         };
         fetchAttendance();
-    }, [firestore, classId, selectedDate, studentsInClass]);
+    }, [firestore, classId, selectedDate, sortedStudentsInClass]);
 
     const handleFilterChange = (name: string, value: string) => {
         const newValue = value === 'all' ? '' : value;
@@ -245,7 +250,7 @@ export default function AttendanceManager() {
             {isClassSelected ? (
                 isLoadingStudents ? (
                     <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>
-                ) : studentsInClass && studentsInClass.length > 0 ? (
+                ) : sortedStudentsInClass && sortedStudentsInClass.length > 0 ? (
                     <Card>
                         <CardHeader>
                             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -264,7 +269,7 @@ export default function AttendanceManager() {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
-                                {studentsInClass.map((student) => (
+                                {sortedStudentsInClass.map((student) => (
                                     <div key={student.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-md hover:bg-muted/50 transition-colors">
                                         <span className="font-medium mb-3 sm:mb-0">{student.nome}</span>
                                         <RadioGroup
@@ -321,7 +326,3 @@ export default function AttendanceManager() {
         </div>
     );
 }
-
-    
-
-    

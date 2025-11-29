@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, doc, getCountFromServer, orderBy } from 'firebase/firestore';
+import { collection, query, doc, getCountFromServer } from 'firebase/firestore';
 import { Loader2, Users, UserCog, Shield, Database, ClipboardList, Megaphone, CalendarCheck, ArrowLeft, NotebookText, Smartphone } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
@@ -45,7 +45,7 @@ export default function DashboardPage() {
   const studentsQuery = useMemo(() => {
       if (!firestore) return null;
       // Order by a consistently available field like 'nome'
-      return query(collection(firestore, 'alunos'), orderBy('nome'));
+      return query(collection(firestore, 'alunos'));
   }, [firestore]);
   const { data: allStudents, isLoading: isLoadingAllStudents } = useCollection(studentsQuery);
 

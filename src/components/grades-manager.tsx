@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -39,7 +40,7 @@ export default function GradesManager() {
     // Query for all students (for filter options)
     const studentsOptionsQuery = useMemo(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'alunos'), orderBy('nome'));
+        return query(collection(firestore, 'alunos'));
     }, [firestore]);
     const { data: allStudents, isLoading: isLoadingOptions } = useCollection(studentsOptionsQuery);
     
@@ -76,7 +77,7 @@ export default function GradesManager() {
     // Query for students in the selected class
     const studentsInClassQuery = useMemo(() => {
         if (!firestore || !isReadyToLoad) return null;
-        let q = query(collection(firestore, 'alunos'), orderBy('nome'));
+        let q = query(collection(firestore, 'alunos'));
         q = query(q, where('ensino', '==', filters.ensino));
         q = query(q, where('serie', '==', filters.serie));
         q = query(q, where('classe', '==', filters.classe));
@@ -85,14 +86,19 @@ export default function GradesManager() {
     }, [firestore, isReadyToLoad, filters]);
     const { data: studentsInClass, isLoading: isLoadingStudents } = useCollection(studentsInClassQuery);
 
+    const sortedStudentsInClass = useMemo(() => {
+        return studentsInClass?.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR')) || [];
+    }, [studentsInClass]);
+
+
     const disciplineId = useMemo(() => {
         return selectedDiscipline.trim().replace(/\s+/g, '_').toLowerCase();
     }, [selectedDiscipline]);
 
     useEffect(() => {
-        if (studentsInClass && disciplineId) {
+        if (sortedStudentsInClass && disciplineId) {
             const newGrades: Grades = {};
-            studentsInClass.forEach(student => {
+            sortedStudentsInClass.forEach(student => {
                 const disciplineGrades = student.boletim?.[disciplineId];
                 newGrades[student.id] = {
                     etapa1: disciplineGrades?.etapa1 ?? null,
@@ -105,7 +111,7 @@ export default function GradesManager() {
         } else {
             setGrades({});
         }
-    }, [studentsInClass, disciplineId]);
+    }, [sortedStudentsInClass, disciplineId]);
 
     const handleFilterChange = (name: string, value: string) => {
         const newValue = value === 'all' ? '' : value;
@@ -154,14 +160,14 @@ export default function GradesManager() {
 
 
     const handleSaveChanges = async () => {
-        if (!firestore || !studentsInClass || !disciplineId || Object.keys(grades).length === 0) return;
+        if (!firestore || !sortedStudentsInClass || !disciplineId || Object.keys(grades).length === 0) return;
     
         setIsSaving(true);
         
         try {
             const batch = writeBatch(firestore);
             
-            for (const student of studentsInClass) {
+            for (const student of sortedStudentsInClass) {
                 const studentId = student.id;
                 const studentDocRef = doc(firestore, 'alunos', studentId);
                 const studentGrades = grades[studentId];
@@ -245,7 +251,7 @@ export default function GradesManager() {
             {isReadyToLoad ? (
                 isLoadingStudents ? (
                     <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>
-                ) : studentsInClass && studentsInClass.length > 0 ? (
+                ) : sortedStudentsInClass && sortedStudentsInClass.length > 0 ? (
                     <Card>
                         <CardHeader>
                             <CardTitle>Lançamento de Notas: <span className="text-primary">{selectedDiscipline}</span></CardTitle>
@@ -267,7 +273,7 @@ export default function GradesManager() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {studentsInClass.map((student) => (
+                                        {sortedStudentsInClass.map((student) => (
                                             <TableRow key={student.id}>
                                                 <TableCell className="font-medium sticky left-0 bg-background z-10">{student.nome}</TableCell>
                                                 {(['etapa1', 'etapa2', 'etapa3', 'etapa4'] as const).map(etapa => (

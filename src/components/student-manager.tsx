@@ -11,7 +11,7 @@ import { Button } from './ui/button';
 import { UserNav } from './user-nav';
 import AppFooter from './app-footer';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import FileUploaderSheet from './file-uploader-sheet';
 
@@ -25,7 +25,7 @@ export default function StudentManager() {
   //    o uploader como ação primária.
   const studentsOptionsQuery = useMemo(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'alunos'), orderBy('nome'));
+    return query(collection(firestore, 'alunos'));
   }, [firestore]);
 
   const { data: allStudents, isLoading: isDataLoading } = useCollection(studentsOptionsQuery);
