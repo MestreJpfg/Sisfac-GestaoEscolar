@@ -87,9 +87,6 @@ const storyPrompt = ai.definePrompt({
 
     Gere a próxima cena em JSON.
   `,
-  config: {
-    model: googleAI.model('gemini-1.5-flash'),
-  }
 });
 
 const generateAdventureStepFlow = ai.defineFlow(
@@ -99,7 +96,7 @@ const generateAdventureStepFlow = ai.defineFlow(
     outputSchema: AdventureStepSchema,
   },
   async (input) => {
-    const { output } = await storyPrompt(input);
+    const { output } = await storyPrompt(input, { model: googleAI.model('gemini-1.5-flash-latest') });
     return output!;
   }
 );
