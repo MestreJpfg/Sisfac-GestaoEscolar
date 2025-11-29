@@ -411,7 +411,19 @@ export default function SensorGamePage() {
                     </div>
                     
                     <Card className="w-full max-w-sm h-[600px] bg-black/50 border-2 border-purple-500/50 shadow-2xl shadow-purple-500/20 overflow-hidden">
-                        <CardContent ref={gameAreaRef} className="p-0 h-full w-full relative">
+                        <CardContent 
+                            ref={gameAreaRef} 
+                            className="p-0 h-full w-full relative bg-grid"
+                            style={{
+                                '--grid-color': 'hsl(260 100% 50% / 0.15)',
+                                '--grid-size': '30px',
+                                backgroundImage: `
+                                    linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+                                    linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px)
+                                `,
+                                backgroundSize: 'var(--grid-size) var(--grid-size)',
+                            } as React.CSSProperties}
+                        >
                             {status !== 'permissions' && permissionState === 'granted' && (
                                 <>
                                     {/* Player */}
@@ -457,9 +469,10 @@ export default function SensorGamePage() {
                                             backgroundColor: 'hsl(190, 100%, 50%)', // Cyan
                                             borderRadius: '50%',
                                             boxShadow: '0 0 20px 8px hsl(190, 100%, 50%, 0.7)',
-                                            animation: 'pulse 1.5s infinite',
                                             willChange: 'transform'
-                                        }}/>
+                                        }}
+                                        className="animate-pulse-strong"
+                                     />
                                     
                                     {/* Enemies */}
                                     {enemiesRef.current.map((_, i) => (
@@ -509,7 +522,7 @@ export default function SensorGamePage() {
                                 {status === 'gameOver' && (
                                      <div className="text-center font-mono space-y-4 p-4">
                                         <h2 className="text-5xl font-bold text-red-500 tracking-widest">GAME OVER</h2>
-                                        {isNewHighScore && <p className="text-2xl font-bold text-yellow-400 animate-pulse">NOVO RECORDE!</p>}
+                                        {isNewHighScore && <p className="text-2xl font-bold text-yellow-400 animate-pulse-strong">NOVO RECORDE!</p>}
                                         <p className="text-xl text-white">Score Final: <span className="font-bold text-yellow-300">{score}</span></p>
                                         <p className="text-lg text-white">Recorde: <span className="font-bold text-yellow-300">{highScore}</span></p>
                                         <Button onClick={startGame} size="lg" className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold">
