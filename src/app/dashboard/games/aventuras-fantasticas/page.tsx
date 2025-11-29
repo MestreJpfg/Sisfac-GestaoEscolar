@@ -7,7 +7,7 @@ import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
 import { UserNav } from '@/components/user-nav';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, BookOpen, Loader2, Sparkles, Swords, Space, Detective } from 'lucide-react';
+import { ArrowLeft, BookOpen, Loader2, Sparkles, Swords, Space, Search } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
 import { Card, CardContent } from '@/components/ui/card';
 import { gamebooks, type Gamebook, type StoryNode } from '@/lib/gamebooks';
@@ -88,7 +88,7 @@ export default function AventurasFantasticasPage() {
                             </Card>
                              <Card className="hover:border-primary transition-colors">
                                 <CardContent className="p-6 flex flex-col items-center justify-center text-center">
-                                    <Detective className="w-12 h-12 mb-4 text-primary" />
+                                    <Search className="w-12 h-12 mb-4 text-primary" />
                                     <h3 className="font-bold text-lg mb-2">Mistério/Noir</h3>
                                     <p className="text-sm text-muted-foreground mb-4">O Detetive de Nova York</p>
                                     <Button onClick={() => startGame('detetiveNoir')}>Escolher</Button>
