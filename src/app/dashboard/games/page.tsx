@@ -6,7 +6,7 @@ import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
 import { UserNav } from '@/components/user-nav';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Gamepad2, Play, BookOpen, Wind } from 'lucide-react';
+import { ArrowLeft, Gamepad2, Play, BookOpen, Wind, Sparkles } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
@@ -20,9 +20,15 @@ const games = [
     },
     {
         title: "AVENTURAS FANTÁSTICAS",
-        description: "Embarque numa aventura interativa gerada por IA. As suas escolhas moldam a história. Que caminho irá seguir?",
+        description: "Embarque numa aventura interativa com histórias pré-definidas. As suas escolhas moldam a história. Que caminho irá seguir?",
         href: "/dashboard/games/aventuras-fantasticas",
         icon: <BookOpen className="w-16 h-16 text-muted-foreground" />,
+    },
+    {
+        title: "GERADOR DE AVENTURAS (IA)",
+        description: "Crie a sua própria aventura! Descreva uma história ou envie um ficheiro e deixe a IA construir um mundo para si.",
+        href: "/dashboard/games/gerador-de-aventuras",
+        icon: <Sparkles className="w-16 h-16 text-muted-foreground" />,
     }
 ];
 
