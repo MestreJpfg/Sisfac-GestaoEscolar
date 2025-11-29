@@ -43,6 +43,7 @@ export default function SensorGamePage() {
     const { toast } = useToast();
     const gameAreaRef = useRef<HTMLDivElement>(null);
     const animationFrameId = useRef<number>();
+    const gameTimeStartRef = useRef<number>(0);
     
     // --- State Management ---
     const [status, setStatus] = useState<GameStatus>('permissions');
@@ -100,16 +101,15 @@ export default function SensorGamePage() {
 
         setScore(0);
         setTime(0);
+        gameTimeStartRef.current = 0;
     }, []);
 
     // --- Permissions and Initialization ---
     useEffect(() => {
         if (permissionState === 'granted') {
-             // Delay resetGame to ensure layout is stable
-             setTimeout(() => {
-                resetGame();
-                setStatus('ready');
-             }, 100);
+             // We don't reset the game here anymore. We wait for the user to click "Start".
+             // This ensures the layout is stable.
+             setStatus('ready');
         }
     }, [permissionState, resetGame]);
 
@@ -153,6 +153,10 @@ export default function SensorGamePage() {
         const gameArea = gameAreaRef.current;
         if (!gameArea) return;
         const { width, height } = gameArea.getBoundingClientRect();
+        
+        if (gameTimeStartRef.current > 0) {
+            setTime(Math.floor((Date.now() - gameTimeStartRef.current) / 1000));
+        }
 
         // Update player position
         setPlayer(p => {
@@ -213,34 +217,26 @@ export default function SensorGamePage() {
     
     // --- Effects ---
     useEffect(() => {
-        let timer: NodeJS.Timeout | undefined;
-
         if (status === 'playing') {
-            const startTime = Date.now();
-            
-            timer = setInterval(() => {
-                setTime(Math.floor((Date.now() - startTime) / 1000));
-            }, 1000);
-            
+            if (gameTimeStartRef.current === 0) {
+                 gameTimeStartRef.current = Date.now();
+            }
             animationFrameId.current = requestAnimationFrame(gameLoop);
-            
-            return () => {
-                if (animationFrameId.current) {
-                    cancelAnimationFrame(animationFrameId.current);
-                }
-                if (timer) {
-                    clearInterval(timer);
-                }
-            };
         } else {
-            // Cleanup when not playing
              if (animationFrameId.current) {
                 cancelAnimationFrame(animationFrameId.current);
-            }
-            if (timer) {
-                clearInterval(timer);
-            }
+             }
+             if (status === 'gameOver') {
+                gameTimeStartRef.current = 0;
+             }
         }
+        
+        // Cleanup on component unmount
+        return () => {
+            if (animationFrameId.current) {
+                cancelAnimationFrame(animationFrameId.current);
+            }
+        };
     }, [status, gameLoop]);
     
     // Sensor listener effect
@@ -414,5 +410,3 @@ export default function SensorGamePage() {
         </AuthGuard>
     );
 }
-
-    
