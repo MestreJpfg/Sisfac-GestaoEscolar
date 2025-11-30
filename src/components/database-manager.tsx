@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, getDocs, writeBatch, query, where } from 'firebase/firestore';
+import { collection, getDocs, writeBatch, query } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { useToast } from '@/hooks/use-toast';
 import FileUploaderSheet from './file-uploader-sheet';
@@ -12,8 +12,8 @@ import DataExporter from './data-exporter';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Loader2, Upload, NotebookText, HardDriveDownload, Trash2, Users, Shield } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UserManager from './user-manager';
 import ProfileManager from './profile-manager';
 
@@ -80,97 +80,105 @@ export default function DatabaseManager() {
         firestore ? query(collection(firestore, 'profiles')) : null
     );
 
-
     return (
-       <>
-        <Tabs defaultValue="import-export" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 max-w-xl mx-auto">
-            <TabsTrigger value="import-export">Importar/Exportar</TabsTrigger>
-            <TabsTrigger value="users"><Users className="w-4 h-4 mr-2" />Utilizadores</TabsTrigger>
-            <TabsTrigger value="profiles"><Shield className="w-4 h-4 mr-2" />Perfis</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="import-export" className="mt-6">
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className='flex items-center gap-2'><Upload /> Carregar Alunos</CardTitle>
-                        <CardDescription>Adicionar ou atualizar a lista principal de alunos a partir de um ficheiro (XLSX, CSV, JSON).</CardDescription>
-                    </CardHeader>
-                    <CardFooter>
-                        <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
-                    </CardFooter>
-                </Card>
+       <div className="space-y-6">
+            <Accordion type="multiple" defaultValue={['import-export']} className="w-full space-y-4">
+                <AccordionItem value="import-export">
+                    <AccordionTrigger className="text-lg font-semibold flex items-center gap-2 p-4 bg-card rounded-lg border">
+                        <Upload className="h-5 w-5" /> Importar & Exportar Dados
+                    </AccordionTrigger>
+                    <AccordionContent className="pt-4">
+                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className='flex items-center gap-2'><Upload /> Carregar Alunos</CardTitle>
+                                    <CardDescription>Adicionar ou atualizar a lista principal de alunos a partir de um ficheiro (XLSX, CSV, JSON).</CardDescription>
+                                </CardHeader>
+                                <CardFooter>
+                                    <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
+                                </CardFooter>
+                            </Card>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle className='flex items-center gap-2'><NotebookText /> Carregar Notas</CardTitle>
-                        <CardDescription>Fazer o upload das notas dos alunos para uma etapa específica a partir de um ficheiro XLSX.</CardDescription>
-                    </CardHeader>
-                    <CardFooter>
-                        <GradesUploaderSheet />
-                    </CardFooter>
-                </Card>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className='flex items-center gap-2'><NotebookText /> Carregar Notas</CardTitle>
+                                    <CardDescription>Fazer o upload das notas dos alunos para uma etapa específica a partir de um ficheiro XLSX.</CardDescription>
+                                </CardHeader>
+                                <CardFooter>
+                                    <GradesUploaderSheet />
+                                </CardFooter>
+                            </Card>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle className='flex items-center gap-2'><HardDriveDownload /> Exportar Dados</CardTitle>
-                        <CardDescription>Fazer o download de todos os dados dos alunos, incluindo notas, num único ficheiro XLSX.</CardDescription>
-                    </CardHeader>
-                    <CardFooter>
-                        <DataExporter />
-                    </CardFooter>
-                </Card>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className='flex items-center gap-2'><HardDriveDownload /> Exportar Dados</CardTitle>
+                                    <CardDescription>Fazer o download de todos os dados dos alunos, incluindo notas, num único ficheiro XLSX.</CardDescription>
+                                </CardHeader>
+                                <CardFooter>
+                                    <DataExporter />
+                                </CardFooter>
+                            </Card>
 
-                <Card className="border-destructive">
-                    <CardHeader>
-                        <CardTitle className='flex items-center gap-2 text-destructive'><Trash2 /> Zona de Perigo</CardTitle>
-                        <CardDescription>Ações permanentes que não podem ser desfeitas. Use com extrema cautela.</CardDescription>
-                    </CardHeader>
-                    <CardFooter>
-                        <Button variant="destructive" onClick={() => setIsDeleteAlertOpen(true)} disabled={isDeleting}>
-                            {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                            Apagar Base de Dados de Alunos
-                        </Button>
-                    </CardFooter>
-                </Card>
-            </div>
-          </TabsContent>
+                             <Card className="border-destructive">
+                                <CardHeader>
+                                    <CardTitle className='flex items-center gap-2 text-destructive'><Trash2 /> Zona de Perigo</CardTitle>
+                                    <CardDescription>Ações permanentes que não podem ser desfeitas. Use com extrema cautela.</CardDescription>
+                                </CardHeader>
+                                <CardFooter>
+                                    <Button variant="destructive" onClick={() => setIsDeleteAlertOpen(true)} disabled={isDeleting}>
+                                        {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                                        Apagar Base de Dados de Alunos
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
 
-          <TabsContent value="users" className="mt-6">
-            {isLoadingProfiles ? (
-                 <div className="flex h-64 w-full items-center justify-center">
-                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                 </div>
-            ) : (
-                <UserManager allProfiles={profiles || []} />
-            )}
-          </TabsContent>
+                 <AccordionItem value="users">
+                    <AccordionTrigger className="text-lg font-semibold flex items-center gap-2 p-4 bg-card rounded-lg border">
+                        <Users className="h-5 w-5" /> Gestão de Utilizadores
+                    </AccordionTrigger>
+                    <AccordionContent className="pt-4">
+                        {isLoadingProfiles ? (
+                            <div className="flex h-64 w-full items-center justify-center">
+                                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                            </div>
+                        ) : (
+                            <UserManager allProfiles={profiles || []} />
+                        )}
+                    </AccordionContent>
+                </AccordionItem>
 
-          <TabsContent value="profiles" className="mt-6">
-             <ProfileManager />
-          </TabsContent>
+                 <AccordionItem value="profiles">
+                    <AccordionTrigger className="text-lg font-semibold flex items-center gap-2 p-4 bg-card rounded-lg border">
+                        <Shield className="h-5 w-5" /> Gestão de Perfis de Permissão
+                    </AccordionTrigger>
+                    <AccordionContent className="pt-4">
+                        <ProfileManager />
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
 
-        </Tabs>
 
-        <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Esta ação não pode ser desfeita. Isto irá apagar permanentemente <strong className="text-destructive">TODOS</strong> os registos de alunos da base de dados.
-                        <br /><br />
-                        Tem a certeza que quer continuar?
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteAllStudents} className="bg-destructive hover:bg-destructive/90">
-                        Sim, apagar tudo
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-       </>
+            <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Tem a certeza absoluta?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta ação não pode ser desfeita. Isto irá apagar permanentemente <strong className="text-destructive">TODOS</strong> os registos de alunos da base de dados.
+                            <br /><br />
+                            Tem a certeza que quer continuar?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteAllStudents} className="bg-destructive hover:bg-destructive/90">
+                            Sim, apagar tudo
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+       </div>
     );
 }

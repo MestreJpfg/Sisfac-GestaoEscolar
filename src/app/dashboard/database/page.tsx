@@ -7,7 +7,7 @@ import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
 import { UserNav } from '@/components/user-nav';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Database } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
 import DatabaseManager from '@/components/database-manager';
 
@@ -28,7 +28,7 @@ export default function DatabasePage() {
                                 <ArrowLeft className="h-4 w-4" />
                             </Button>
                             <div className="flex items-center gap-2">
-                                <Image src="/logoyuri.png" alt="Logo" width={32} height={32} className="rounded-md" />
+                                <Database className="h-6 w-6 text-primary" />
                                 <h1 className="text-xl font-bold text-primary hidden sm:block">Gestão da Base de Dados</h1>
                             </div>
                         </div>
