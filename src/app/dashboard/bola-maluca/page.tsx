@@ -99,6 +99,20 @@ export default function BolaMalucaPage() {
             setHighScore(parseInt(savedHighScore, 10));
         }
     }, []);
+    
+    const endPowerUp = useCallback(() => {
+        if (!isPowerUpActiveRef.current) return;
+        enemiesRef.current.forEach((enemy, i) => {
+            if (originalVelocitiesRef.current[i]) {
+                enemy.velocity = originalVelocitiesRef.current[i];
+            }
+        });
+        isPowerUpActiveRef.current = false;
+        if (powerUpTimeoutRef.current) {
+            clearTimeout(powerUpTimeoutRef.current);
+            powerUpTimeoutRef.current = undefined;
+        }
+    }, []);
 
     const resetGame = useCallback(() => {
         const gameArea = gameAreaRef.current;
@@ -107,8 +121,7 @@ export default function BolaMalucaPage() {
         const { width, height } = gameArea.getBoundingClientRect();
         
         setIsNewHighScore(false);
-        if (powerUpTimeoutRef.current) clearTimeout(powerUpTimeoutRef.current);
-        isPowerUpActiveRef.current = false;
+        endPowerUp();
         
         playerRef.current.position = { x: (width - PLAYER_SIZE) / 2, y: (height - PLAYER_SIZE) / 2 };
         playerRef.current.velocity = { x: 0, y: 0 };
@@ -140,7 +153,7 @@ export default function BolaMalucaPage() {
         setTime(0);
         gameTimeStartRef.current = Date.now();
         lastTimeRef.current = Date.now();
-    }, []);
+    }, [endPowerUp]);
 
     // --- Permissions and Initialization ---
      useEffect(() => {
@@ -275,20 +288,14 @@ export default function BolaMalucaPage() {
                     e.velocity.y *= 0.5;
                 });
                 
-                powerUpTimeoutRef.current = setTimeout(() => {
-                    enemies.forEach((e, i) => {
-                        e.velocity = originalVelocitiesRef.current[i];
-                    });
-                    isPowerUpActiveRef.current = false;
-                }, POWERUP_DURATION);
+                powerUpTimeoutRef.current = setTimeout(endPowerUp, POWERUP_DURATION);
             }
         }
 
         for (const enemy of enemies) {
             if (checkCollision(player, enemy)) {
                 vibrate([200, 50, 200]);
-                if (powerUpTimeoutRef.current) clearTimeout(powerUpTimeoutRef.current);
-                isPowerUpActiveRef.current = false;
+                endPowerUp();
                 setStatus('gameOver'); // Triggers re-render for game over screen
                 return;
             }
@@ -317,7 +324,7 @@ export default function BolaMalucaPage() {
 
         animationFrameId.current = requestAnimationFrame(gameLoop);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [status, score]); // Re-create loop function only when status or score changes.
+    }, [status, score, endPowerUp]); // Re-create loop function only when status or score changes.
     
     // --- Game State Effects ---
     useEffect(() => {
@@ -553,3 +560,5 @@ export default function BolaMalucaPage() {
         </AuthGuard>
     );
 }
+
+    
