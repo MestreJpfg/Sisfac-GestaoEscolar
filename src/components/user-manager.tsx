@@ -1,10 +1,9 @@
 
-"use client";
+'use client';
 
-import { useState, useMemo, useCallback } from 'react';
-import { useFirestore } from '@/firebase';
-import { collection, query, where, doc, limit, orderBy, startAfter, getDocs, Query, DocumentData } from 'firebase/firestore';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useState, useMemo, useEffect } from 'react';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, doc } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import UserTable from './user-table';
 import UserEditDialog from './user-edit-dialog';
@@ -21,8 +20,6 @@ interface UserManagerProps {
   allProfiles: any[];
 }
 
-const USERS_PER_PAGE = 20;
-
 export default function UserManager({ allProfiles }: UserManagerProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -35,54 +32,23 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name', direction: 'ascending' });
   const debouncedSearch = useDebounce(filters.search, 400);
 
-  const fetchUsers = useCallback(async ({ pageParam = null }: { pageParam?: DocumentData | null }) => {
-    if (!firestore) return { data: [], lastDoc: null };
+  const usersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'users'));
+  }, [firestore]);
 
-    let q: Query<DocumentData, DocumentData>;
-    const usersCollection = collection(firestore, 'users');
-    
-    let baseQuery = query(usersCollection);
-
-    if (filters.profileId && filters.profileId !== 'all') {
-      baseQuery = query(baseQuery, where('profileId', '==', filters.profileId));
-    }
-    
-    q = baseQuery;
-    
-    if (pageParam) {
-      q = query(q, startAfter(pageParam));
-    }
-    
-    q = query(q, limit(USERS_PER_PAGE));
-
-    const snapshot = await getDocs(q);
-    const usersData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, uid: doc.id }));
-    const lastDoc = snapshot.docs.length === USERS_PER_PAGE ? snapshot.docs[snapshot.docs.length - 1] : null;
-
-    return { data: usersData, lastDoc };
-  }, [firestore, filters.profileId]);
-
-
-  const {
-      data,
-      fetchNextPage,
-      hasNextPage,
-      isLoading,
-      isFetchingNextPage,
-      refetch,
-  } = useInfiniteQuery({
-      queryKey: ['users', filters.profileId],
-      queryFn: fetchUsers,
-      initialPageParam: null,
-      getNextPageParam: (lastPage) => lastPage.lastDoc,
-  });
-
-  const allUsers = useMemo(() => data?.pages.flatMap(page => page.data) ?? [], [data]);
+  const { data: allUsers, isLoading, refetch } = useCollection(usersQuery);
 
   const filteredAndSortedUsers = useMemo(() => {
+    if (!allUsers) return [];
+
     let processedUsers = [...allUsers];
     const searchLower = debouncedSearch.toLowerCase().trim();
 
+    if (filters.profileId && filters.profileId !== 'all') {
+      processedUsers = processedUsers.filter(user => user.profileId === filters.profileId);
+    }
+    
     if (searchLower.length > 0) {
       processedUsers = processedUsers.filter(user => 
         (user.name?.toLowerCase().includes(searchLower) || user.email?.toLowerCase().includes(searchLower))
@@ -103,7 +69,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
     });
 
     return processedUsers;
-  }, [allUsers, debouncedSearch, sortConfig]);
+  }, [allUsers, debouncedSearch, filters.profileId, sortConfig]);
 
 
   const handleFilterChange = (name: string, value: string) => {
@@ -177,7 +143,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       </Card>
       
         <div className="text-sm text-muted-foreground h-5">
-           {allUsers.length > 0 && `A exibir ${filteredAndSortedUsers.length} de ${allUsers.length} utilizador(es) carregados.`}
+           {!isLoading && filteredAndSortedUsers.length > 0 && `A exibir ${filteredAndSortedUsers.length} utilizador(es).`}
         </div>
 
         {isLoading ? (
@@ -185,7 +151,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 <p className="mt-4 text-muted-foreground">A carregar utilizadores...</p>
             </div>
-        ) : allUsers.length === 0 ? (
+        ) : filteredAndSortedUsers.length === 0 ? (
              <Card>
                 <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
                     <Search className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -202,9 +168,6 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
                 onEdit={handleEditUser} 
                 onSort={handleSort}
                 sortConfig={sortConfig}
-                hasNextPage={hasNextPage}
-                isFetchingNextPage={isFetchingNextPage}
-                fetchNextPage={fetchNextPage}
             />
         )}
 
@@ -219,5 +182,3 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
     </div>
   );
 }
-
-    

@@ -29,9 +29,6 @@ interface UserTableProps {
   onEdit: (user: any) => void;
   onSort: (key: string) => void;
   sortConfig: SortConfig;
-  hasNextPage: boolean | undefined;
-  isFetchingNextPage: boolean;
-  fetchNextPage: () => void;
 }
 
 const getInitials = (name: string | null | undefined) => {
@@ -54,7 +51,7 @@ const isColorLight = (hexColor: string) => {
 };
 
 
-export default function UserTable({ users, profiles, onEdit, onSort, sortConfig, hasNextPage, isFetchingNextPage, fetchNextPage }: UserTableProps) {
+export default function UserTable({ users, profiles, onEdit, onSort, sortConfig }: UserTableProps) {
   
   const SortableHeader = ({ sortKey, children, className }: { sortKey: string, children: React.ReactNode, className?: string }) => {
     const isSorted = sortConfig.key === sortKey;
@@ -162,20 +159,6 @@ export default function UserTable({ users, profiles, onEdit, onSort, sortConfig,
           </Table>
         </div>
       </CardContent>
-       {hasNextPage && (
-        <CardFooter className="pt-4 justify-center">
-          <Button
-            onClick={() => fetchNextPage()}
-            disabled={isFetchingNextPage}
-            variant="secondary"
-          >
-            {isFetchingNextPage ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : null}
-            Carregar Mais
-          </Button>
-        </CardFooter>
-      )}
     </Card>
   );
 }
