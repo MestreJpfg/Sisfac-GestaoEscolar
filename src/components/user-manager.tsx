@@ -4,7 +4,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useFirestore } from '@/firebase';
 import { collection, query, where, doc, limit, orderBy, startAfter, getDocs, Query, DocumentData } from 'firebase/firestore';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import UserTable from './user-table';
 import UserEditDialog from './user-edit-dialog';
@@ -23,7 +23,11 @@ interface UserManagerProps {
 
 const USERS_PER_PAGE = 20;
 
-export default function UserManager({ allProfiles }: UserManagerProps) {
+// Create a new QueryClient instance
+const queryClient = new QueryClient();
+
+// The actual component logic
+function UserManagerComponent({ allProfiles }: UserManagerProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   
@@ -47,8 +51,6 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       baseQuery = query(baseQuery, where('profileId', '==', filters.profileId));
     }
     
-    // A ordenação é aplicada no cliente para evitar a necessidade de criar índices compostos complexos no Firestore
-    // para cada combinação de filtro e ordenação.
     q = baseQuery;
     
     if (pageParam) {
@@ -73,7 +75,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       isFetchingNextPage,
       refetch,
   } = useInfiniteQuery({
-      queryKey: ['users', filters.profileId, sortConfig],
+      queryKey: ['users', filters.profileId],
       queryFn: fetchUsers,
       initialPageParam: null,
       getNextPageParam: (lastPage) => lastPage.lastDoc,
@@ -220,4 +222,13 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       )}
     </div>
   );
+}
+
+// Wrapper component that provides the QueryClient
+export default function UserManager(props: UserManagerProps) {
+    return (
+        <QueryClientProvider client={queryClient}>
+            <UserManagerComponent {...props} />
+        </QueryClientProvider>
+    );
 }
