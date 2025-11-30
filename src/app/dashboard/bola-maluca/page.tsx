@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -19,12 +20,13 @@ const PLAYER_SIZE = 30;
 const ENEMY_SIZE = 50;
 const ITEM_SIZE = 20;
 const POWERUP_SIZE = 25;
-const NUM_ENEMIES = 3;
+const INITIAL_NUM_ENEMIES = 3;
 const ENEMY_SPEED_BASE = 1;
 const ENEMY_SPEED_INCREMENT = 0.1;
 const SENSITIVITY = 0.5;
 const POWERUP_DURATION = 5000; // 5 seconds
 const POWERUP_SPAWN_SCORE_INTERVAL = 5;
+const ENEMY_SPAWN_INTERVAL = 20000; // 20 seconds
 
 // --- Type Definitions ---
 interface Vector {
@@ -55,6 +57,7 @@ export default function BolaMalucaPage() {
     const animationFrameId = useRef<number>();
     const lastTimeRef = useRef<number>(0);
     const gameTimeStartRef = useRef<number>(0);
+    const lastEnemySpawnTimeRef = useRef<number>(0);
     
     const playerRef = useRef<GameObject>({ position: { x: -100, y: -100 }, velocity: { x: 0, y: 0 }, size: PLAYER_SIZE });
     const enemiesRef = useRef<GameObject[]>([]);
@@ -73,12 +76,18 @@ export default function BolaMalucaPage() {
     const [time, setTime] = useState(0);
     const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>('prompt');
     const [isNewHighScore, setIsNewHighScore] = useState(false);
+    const [numEnemies, setNumEnemies] = useState(INITIAL_NUM_ENEMIES);
+
 
     // Refs for DOM elements to avoid re-querying
     const playerElementRef = useRef<HTMLDivElement>(null);
     const itemElementRef = useRef<HTMLDivElement>(null);
     const powerUpElementRef = useRef<HTMLDivElement>(null);
     const enemyElementsRef = useRef<(HTMLDivElement | null)[]>([]);
+
+    useEffect(() => {
+        enemyElementsRef.current = enemyElementsRef.current.slice(0, numEnemies);
+     }, [numEnemies]);
 
     useEffect(() => {
         if (playerElementRef.current) playerRef.current.element = playerElementRef.current;
@@ -89,7 +98,7 @@ export default function BolaMalucaPage() {
                 enemy.element = enemyElementsRef.current[i];
             }
         });
-    }, [status]); // Re-assign elements when status changes (and things re-render)
+    }, [status, numEnemies]); // Re-assign elements when status/numEnemies changes
 
     // --- Load High Score ---
     useEffect(() => {
@@ -120,6 +129,28 @@ export default function BolaMalucaPage() {
         originalVelocitiesRef.current = [];
 
     }, []);
+    
+    const spawnEnemy = useCallback(() => {
+        const gameArea = gameAreaRef.current;
+        if (!gameArea) return;
+        const { width, height } = gameArea.getBoundingClientRect();
+        
+        const speed = ENEMY_SPEED_BASE;
+        const newEnemy: GameObject = {
+            position: {
+                x: Math.random() * (width - ENEMY_SIZE),
+                y: Math.random() * (height - ENEMY_SIZE),
+            },
+            velocity: {
+                x: (Math.random() * speed + 0.5) * (Math.random() < 0.5 ? 1 : -1),
+                y: (Math.random() * speed + 0.5) * (Math.random() < 0.5 ? 1 : -1),
+            },
+            size: ENEMY_SIZE,
+        };
+        enemiesRef.current.push(newEnemy);
+        setNumEnemies(prev => prev + 1);
+    }, []);
+
 
     const resetGame = useCallback((isStartingGame: boolean = false) => {
         const gameArea = gameAreaRef.current;
@@ -129,11 +160,12 @@ export default function BolaMalucaPage() {
         
         setIsNewHighScore(false);
         endPowerUp();
+        setNumEnemies(INITIAL_NUM_ENEMIES);
         
         playerRef.current.position = { x: (width - PLAYER_SIZE) / 2, y: (height - PLAYER_SIZE) / 2 };
         playerRef.current.velocity = { x: 0, y: 0 };
 
-        enemiesRef.current = Array.from({ length: NUM_ENEMIES }).map(() => {
+        enemiesRef.current = Array.from({ length: INITIAL_NUM_ENEMIES }).map(() => {
             const speed = ENEMY_SPEED_BASE;
             return {
                 position: {
@@ -160,7 +192,8 @@ export default function BolaMalucaPage() {
         setTime(0);
 
         if (isStartingGame) {
-            gameTimeStartRef.current = 0; // Reset only when starting a new game
+            gameTimeStartRef.current = 0;
+            lastEnemySpawnTimeRef.current = 0;
         }
     }, [endPowerUp]);
 
@@ -230,6 +263,13 @@ export default function BolaMalucaPage() {
 
         if (gameTimeStartRef.current === 0) {
             gameTimeStartRef.current = currentTime;
+            lastEnemySpawnTimeRef.current = currentTime;
+        }
+
+        // --- Spawn new enemy ---
+        if (currentTime - lastEnemySpawnTimeRef.current > ENEMY_SPAWN_INTERVAL) {
+            spawnEnemy();
+            lastEnemySpawnTimeRef.current = currentTime;
         }
         
         // --- Time Update for UI ---
@@ -338,7 +378,7 @@ export default function BolaMalucaPage() {
 
         animationFrameId.current = requestAnimationFrame(gameLoop);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [status, endPowerUp]); 
+    }, [status, endPowerUp, spawnEnemy]); 
     
     // --- Game State Effects ---
     useEffect(() => {
@@ -346,6 +386,7 @@ export default function BolaMalucaPage() {
             lastTimeRef.current = performance.now();
             if (gameTimeStartRef.current === 0) {
                  gameTimeStartRef.current = performance.now();
+                 lastEnemySpawnTimeRef.current = performance.now();
             }
             animationFrameId.current = requestAnimationFrame(gameLoop);
         } else {
@@ -499,7 +540,7 @@ export default function BolaMalucaPage() {
                                      />
                                     
                                     {/* Enemies */}
-                                    {Array.from({ length: NUM_ENEMIES }).map((_, i) => (
+                                    {Array.from({ length: numEnemies }).map((_, i) => (
                                         <div 
                                             key={i} 
                                             ref={el => enemyElementsRef.current[i] = el}
@@ -577,5 +618,3 @@ export default function BolaMalucaPage() {
         </AuthGuard>
     );
 }
-
-    
