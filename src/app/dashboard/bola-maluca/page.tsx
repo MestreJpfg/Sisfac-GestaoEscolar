@@ -38,11 +38,11 @@ interface GameObject {
     position: Vector;
     velocity: Vector;
     size: number;
-    element?: HTMLDivElement | null;
 }
 
 interface PowerUpGameObject extends GameObject {
     active: boolean;
+    color: string; // Adicionado para gerir a cor
 }
 
 type GameStatus = 'permissions' | 'ready' | 'playing' | 'gameOver';
@@ -59,11 +59,13 @@ export default function BolaMalucaPage() {
     const gameTimeStartRef = useRef<number>(0);
     const lastEnemySpawnTimeRef = useRef<number>(0);
     
+    // Refs for game state that changes every frame
     const playerRef = useRef<GameObject>({ position: { x: -100, y: -100 }, velocity: { x: 0, y: 0 }, size: PLAYER_SIZE });
     const enemiesRef = useRef<GameObject[]>([]);
     const itemRef = useRef<GameObject>({ position: { x: -100, y: -100 }, velocity: { x: 0, y: 0 }, size: ITEM_SIZE });
-    const powerUpRef = useRef<PowerUpGameObject>({ position: { x: -100, y: -100 }, velocity: { x: 0, y: 0 }, size: POWERUP_SIZE, active: false });
+    const powerUpRef = useRef<PowerUpGameObject>({ position: { x: -1000, y: -1000 }, velocity: { x: 0, y: 0 }, size: POWERUP_SIZE, active: false, color: 'hsl(190, 100%, 50%)' });
 
+    // Refs for managing power-up state
     const originalVelocitiesRef = useRef<Map<GameObject, Vector>>(new Map());
     const isPowerUpActiveRef = useRef<boolean>(false);
     const powerUpTimeoutRef = useRef<NodeJS.Timeout>();
@@ -77,28 +79,9 @@ export default function BolaMalucaPage() {
     const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>('prompt');
     const [isNewHighScore, setIsNewHighScore] = useState(false);
     const [numEnemies, setNumEnemies] = useState(INITIAL_NUM_ENEMIES);
+    // State to force re-renders for game visuals
+    const [renderTick, setRenderTick] = useState(0);
 
-
-    // Refs for DOM elements to avoid re-querying
-    const playerElementRef = useRef<HTMLDivElement>(null);
-    const itemElementRef = useRef<HTMLDivElement>(null);
-    const powerUpElementRef = useRef<HTMLDivElement>(null);
-    const enemyElementsRef = useRef<(HTMLDivElement | null)[]>([]);
-
-    useEffect(() => {
-        enemyElementsRef.current = enemyElementsRef.current.slice(0, numEnemies);
-     }, [numEnemies]);
-
-    useEffect(() => {
-        if (playerElementRef.current) playerRef.current.element = playerElementRef.current;
-        if (itemElementRef.current) itemRef.current.element = itemElementRef.current;
-        if (powerUpElementRef.current) powerUpRef.current.element = powerUpElementRef.current;
-        enemiesRef.current.forEach((enemy, i) => {
-            if (enemyElementsRef.current[i]) {
-                enemy.element = enemyElementsRef.current[i];
-            }
-        });
-    }, [status, numEnemies]); // Re-assign elements when status/numEnemies changes
 
     // --- Load High Score ---
     useEffect(() => {
@@ -110,15 +93,11 @@ export default function BolaMalucaPage() {
     
     const endPowerUp = useCallback(() => {
         if (!isPowerUpActiveRef.current) return;
-    
+        
         enemiesRef.current.forEach((enemy) => {
             const originalVelocity = originalVelocitiesRef.current.get(enemy);
             if (originalVelocity) {
                 enemy.velocity = originalVelocity;
-            }
-            if (enemy.element) {
-                enemy.element.style.backgroundColor = 'hsl(340, 100%, 50%)';
-                enemy.element.style.boxShadow = `0 0 20px 8px hsl(340, 100%, 50%, 0.6)`;
             }
         });
     
@@ -129,6 +108,8 @@ export default function BolaMalucaPage() {
             clearTimeout(powerUpTimeoutRef.current);
             powerUpTimeoutRef.current = undefined;
         }
+         // Force a re-render to update enemy colors
+        setRenderTick(tick => tick + 1);
     }, []);
     
     const spawnEnemy = useCallback(() => {
@@ -188,10 +169,6 @@ export default function BolaMalucaPage() {
 
         powerUpRef.current.position = { x: -1000, y: -1000 };
         powerUpRef.current.active = false;
-        if (powerUpRef.current.element) {
-            powerUpRef.current.element.style.display = 'none';
-        }
-
 
         setScore(0);
         setTime(0);
@@ -263,7 +240,10 @@ export default function BolaMalucaPage() {
     // --- Game Loop ---
     const gameLoop = useCallback((currentTime: number) => {
         const gameArea = gameAreaRef.current;
-        if (!gameArea || status !== 'playing') return;
+        if (!gameArea || status !== 'playing') {
+            if(animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
+            return;
+        }
         const { width, height } = gameArea.getBoundingClientRect();
 
         if (gameTimeStartRef.current === 0) {
@@ -347,10 +327,6 @@ export default function BolaMalucaPage() {
                     originalVelocitiesRef.current.set(e, { ...e.velocity });
                     e.velocity.x *= 0.5;
                     e.velocity.y *= 0.5;
-                    if(e.element){
-                        e.element.style.backgroundColor = 'hsl(340, 50%, 70%)';
-                        e.element.style.boxShadow = `0 0 20px 8px hsl(340, 50%, 70%, 0.6)`;
-                    }
                 });
                 
                 if (powerUpTimeoutRef.current) clearTimeout(powerUpTimeoutRef.current);
@@ -362,28 +338,12 @@ export default function BolaMalucaPage() {
             if (checkCollision(player, enemy)) {
                 vibrate([200, 50, 200]);
                 setStatus('gameOver'); 
-                return;
+                return; // Stop the loop immediately
             }
         }
         
-        // --- Direct DOM Manipulation for Performance ---
-        if(player.element) {
-            player.element.style.transform = `translate3d(${player.position.x}px, ${player.position.y}px, 0)`;
-        }
-        if(item.element) {
-            item.element.style.transform = `translate3d(${item.position.x}px, ${item.position.y}px, 0)`;
-        }
-        if(powerUp.element) {
-            powerUp.element.style.transform = `translate3d(${powerUp.position.x}px, ${powerUp.position.y}px, 0)`;
-            powerUp.element.style.display = powerUp.active ? 'block' : 'none';
-        }
-        enemies.forEach(e => {
-            if (e.element) {
-                e.element.style.transform = `translate3d(${e.position.x}px, ${e.position.y}px, 0)`;
-            }
-        });
-
-
+        // --- Schedule next frame ---
+        setRenderTick(tick => tick + 1); // This triggers a re-render to show updated positions
         animationFrameId.current = requestAnimationFrame(gameLoop);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [status, endPowerUp, spawnEnemy]); 
@@ -391,10 +351,6 @@ export default function BolaMalucaPage() {
     // --- Game State Effects ---
     useEffect(() => {
         if (status === 'playing') {
-            if (gameTimeStartRef.current === 0) {
-                 gameTimeStartRef.current = performance.now();
-                 lastEnemySpawnTimeRef.current = performance.now();
-            }
             animationFrameId.current = requestAnimationFrame(gameLoop);
         } else {
              if (animationFrameId.current) {
@@ -500,7 +456,6 @@ export default function BolaMalucaPage() {
                                 <>
                                     {/* Player */}
                                     <div 
-                                        ref={playerElementRef}
                                         style={{
                                             position: 'absolute',
                                             left: 0,
@@ -510,12 +465,12 @@ export default function BolaMalucaPage() {
                                             backgroundColor: 'hsl(180, 100%, 50%)',
                                             borderRadius: '50%',
                                             boxShadow: '0 0 15px 5px hsl(180, 100%, 50%, 0.7)',
-                                            willChange: 'transform'
+                                            willChange: 'transform',
+                                            transform: `translate3d(${playerRef.current.position.x}px, ${playerRef.current.position.y}px, 0)`
                                         }}/>
                                     
                                     {/* Item */}
                                     <div 
-                                        ref={itemElementRef}
                                         style={{
                                             position: 'absolute',
                                             left: 0,
@@ -525,45 +480,50 @@ export default function BolaMalucaPage() {
                                             backgroundColor: 'hsl(50, 100%, 50%)',
                                             borderRadius: '50%',
                                             boxShadow: '0 0 15px 5px hsl(50, 100%, 50%, 0.7)',
-                                            willChange: 'transform'
+                                            willChange: 'transform',
+                                            transform: `translate3d(${itemRef.current.position.x}px, ${itemRef.current.position.y}px, 0)`
                                         }}/>
 
                                     {/* Power-up */}
-                                    <div
-                                        ref={powerUpElementRef}
-                                        style={{
-                                            position: 'absolute',
-                                            left: 0,
-                                            top: 0,
-                                            display: 'none',
-                                            width: powerUpRef.current.size,
-                                            height: powerUpRef.current.size,
-                                            backgroundColor: 'hsl(190, 100%, 50%)', // Cyan
-                                            borderRadius: '50%',
-                                            boxShadow: '0 0 20px 8px hsl(190, 100%, 50%, 0.7)',
-                                            willChange: 'transform'
-                                        }}
-                                        className="animate-pulse-strong"
-                                     />
-                                    
-                                    {/* Enemies */}
-                                    {Array.from({ length: numEnemies }).map((_, i) => (
-                                        <div 
-                                            key={i} 
-                                            ref={el => enemyElementsRef.current[i] = el}
+                                    {powerUpRef.current.active && (
+                                        <div
                                             style={{
                                                 position: 'absolute',
                                                 left: 0,
                                                 top: 0,
-                                                width: ENEMY_SIZE,
-                                                height: ENEMY_SIZE,
-                                                backgroundColor: 'hsl(340, 100%, 50%)',
+                                                width: powerUpRef.current.size,
+                                                height: powerUpRef.current.size,
+                                                backgroundColor: powerUpRef.current.color,
                                                 borderRadius: '50%',
-                                                boxShadow: `0 0 20px 8px hsl(340, 100%, 50%, 0.6)`,
-                                                transition: 'background-color 0.3s, box-shadow 0.3s',
-                                                willChange: 'transform'
-                                            }}/>
-                                    ))}
+                                                boxShadow: `0 0 20px 8px ${powerUpRef.current.color}a`,
+                                                willChange: 'transform',
+                                                transform: `translate3d(${powerUpRef.current.position.x}px, ${powerUpRef.current.position.y}px, 0)`
+                                            }}
+                                            className="animate-pulse-strong"
+                                        />
+                                    )}
+                                    
+                                    {/* Enemies */}
+                                    {enemiesRef.current.map((enemy, i) => {
+                                        const enemyColor = isPowerUpActiveRef.current ? 'hsl(340, 50%, 70%)' : 'hsl(340, 100%, 50%)';
+                                        return (
+                                            <div 
+                                                key={i} 
+                                                style={{
+                                                    position: 'absolute',
+                                                    left: 0,
+                                                    top: 0,
+                                                    width: ENEMY_SIZE,
+                                                    height: ENEMY_SIZE,
+                                                    backgroundColor: enemyColor,
+                                                    borderRadius: '50%',
+                                                    boxShadow: `0 0 20px 8px ${enemyColor}99`,
+                                                    transition: 'background-color 0.3s, box-shadow 0.3s',
+                                                    willChange: 'transform',
+                                                    transform: `translate3d(${enemy.position.x}px, ${enemy.position.y}px, 0)`
+                                                }}/>
+                                        )
+                                    })}
                                 </>
                             )}
                             
@@ -625,5 +585,3 @@ export default function BolaMalucaPage() {
         </AuthGuard>
     );
 }
-
-    
