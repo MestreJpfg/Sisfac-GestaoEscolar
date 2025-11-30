@@ -60,7 +60,6 @@ export default function BolaMalucaPage() {
     const playerRef = useRef<GameObject>({ position: { x: -100, y: -100 }, velocity: { x: 0, y: 0 }, size: PLAYER_SIZE });
     const enemiesRef = useRef<GameObject[]>([]);
     const itemRef = useRef<GameObject>({ position: { x: -100, y: -100 }, velocity: { x: 0, y: 0 }, size: ITEM_SIZE });
-    const powerUpRef = useRef<PowerUpGameObject>({ position: { x: -1000, y: -1000 }, velocity: { x: 0, y: 0 }, size: POWERUP_SIZE, active: false, color: 'hsl(190, 100%, 50%)' });
     const originalVelocitiesRef = useRef<Map<GameObject, Vector>>(new Map());
     const gameTimeRef = useRef({ startTime: 0, lastTime: 0, lastEnemySpawnTime: 0 });
     const gameLoopRef = useRef<(currentTime: number) => void>();
@@ -73,6 +72,13 @@ export default function BolaMalucaPage() {
     const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>('prompt');
     const [isNewHighScore, setIsNewHighScore] = useState(false);
     const [isPowerUpActive, setIsPowerUpActive] = useState(false);
+    const [powerUp, setPowerUp] = useState<PowerUpGameObject>({
+        position: { x: -1000, y: -1000 },
+        velocity: { x: 0, y: 0 },
+        size: POWERUP_SIZE,
+        active: false,
+        color: 'hsl(190, 100%, 50%)',
+    });
     // State to force re-renders for game visuals when necessary
     const [, setRenderTick] = useState(0);
 
@@ -86,7 +92,7 @@ export default function BolaMalucaPage() {
 
     const endPowerUp = useCallback(() => {
         setIsPowerUpActive(false);
-        powerUpRef.current.active = false;
+        setPowerUp(prev => ({ ...prev, active: false }));
         enemiesRef.current.forEach((enemy) => {
             const originalVelocity = originalVelocitiesRef.current.get(enemy);
             if (originalVelocity) {
@@ -162,8 +168,7 @@ export default function BolaMalucaPage() {
             y: Math.random() * (height - ITEM_SIZE),
         };
 
-        powerUpRef.current.position = { x: -1000, y: -1000 };
-        powerUpRef.current.active = false;
+        setPowerUp(prev => ({ ...prev, position: { x: -1000, y: -1000 }, active: false }));
 
         setScore(0);
         setTime(0);
@@ -235,13 +240,10 @@ export default function BolaMalucaPage() {
         animationFrameId.current = requestAnimationFrame(gameLoopRef.current as FrameRequestCallback);
         
         const gameArea = gameAreaRef.current;
-        if (!gameArea) {
-            return;
-        }
+        if (!gameArea) return;
+        
         const { width, height } = gameArea.getBoundingClientRect();
-        
         const timeState = gameTimeRef.current;
-        
         if (timeState.startTime === 0) return;
 
         // --- Update Time ---
@@ -281,11 +283,14 @@ export default function BolaMalucaPage() {
             
             // Spawn power-up based on score
             if (!isPowerUpActive && newScore > 0 && newScore % POWERUP_SPAWN_SCORE_INTERVAL === 0) {
-                powerUpRef.current.position = {
-                    x: Math.random() * (width - POWERUP_SIZE),
-                    y: Math.random() * (height - POWERUP_SIZE),
-                };
-                powerUpRef.current.active = true;
+                setPowerUp(prev => ({
+                    ...prev,
+                    position: {
+                        x: Math.random() * (width - POWERUP_SIZE),
+                        y: Math.random() * (height - POWERUP_SIZE),
+                    },
+                    active: true,
+                }));
             }
 
             // Increase enemy speed only if power-up is not active
@@ -309,21 +314,25 @@ export default function BolaMalucaPage() {
         }
         
         // --- Handle Player-PowerUp Collision ---
-        if (powerUpRef.current.active && checkCollision(player, powerUpRef.current)) {
-            vibrate([100, 30, 100]);
-            powerUpRef.current.position = { x: -1000, y: -1000 };
-            
-            if (!isPowerUpActive) {
-                setIsPowerUpActive(true);
-                originalVelocitiesRef.current.clear();
+        setPowerUp(prevPowerUp => {
+            if (prevPowerUp.active && checkCollision(player, prevPowerUp)) {
+                vibrate([100, 30, 100]);
                 
-                enemiesRef.current.forEach(e => {
-                    originalVelocitiesRef.current.set(e, { ...e.velocity });
-                    e.velocity.x *= 0.5;
-                    e.velocity.y *= 0.5;
-                });
+                if (!isPowerUpActive) {
+                    setIsPowerUpActive(true);
+                    originalVelocitiesRef.current.clear();
+                    
+                    enemiesRef.current.forEach(e => {
+                        originalVelocitiesRef.current.set(e, { ...e.velocity });
+                        e.velocity.x *= 0.5;
+                        e.velocity.y *= 0.5;
+                    });
+                }
+                return { ...prevPowerUp, position: { x: -1000, y: -1000 }, active: false };
             }
-        }
+            return prevPowerUp;
+        });
+
 
         // --- Handle Player-Enemy Collision ---
         for (const enemy of enemiesRef.current) {
@@ -466,19 +475,19 @@ export default function BolaMalucaPage() {
                                         }}/>
 
                                     {/* Power-up */}
-                                    {powerUpRef.current.active && (
+                                    {powerUp.active && (
                                         <div
                                             style={{
                                                 position: 'absolute',
                                                 left: 0,
                                                 top: 0,
-                                                width: powerUpRef.current.size,
-                                                height: powerUpRef.current.size,
-                                                backgroundColor: powerUpRef.current.color,
+                                                width: powerUp.size,
+                                                height: powerUp.size,
+                                                backgroundColor: powerUp.color,
                                                 borderRadius: '50%',
-                                                boxShadow: `0 0 20px 8px ${powerUpRef.current.color}a`,
+                                                boxShadow: `0 0 20px 8px ${powerUp.color}a`,
                                                 willChange: 'transform',
-                                                transform: `translate3d(${powerUpRef.current.position.x}px, ${powerUpRef.current.position.y}px, 0)`
+                                                transform: `translate3d(${powerUp.position.x}px, ${powerUp.position.y}px, 0)`
                                             }}
                                             className="animate-pulse-strong"
                                         />
@@ -566,13 +575,5 @@ export default function BolaMalucaPage() {
         </AuthGuard>
     );
 }
-
-    
-
-    
-
-    
-
-    
 
     
