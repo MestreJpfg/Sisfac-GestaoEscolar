@@ -24,7 +24,9 @@ export interface Combat {
 export interface StoryNode {
     text: string;
     choices?: Choice[];
-    event?: 'test_luck' | 'combat' | 'auto';
+    event?: 'test_luck' | 'combat' | 'auto' | 'cast_spell';
+    spell_outcomes?: { [spellName: string]: { to: number | string, text?: string } };
+    default_spell_outcome?: { to: number | string, text?: string };
     combat?: Combat;
     getItems?: string[]; // Itens que o jogador obtém nesta secção
     loseItems?: string[]; // Itens que o jogador perde
@@ -126,7 +128,8 @@ export const gamebooks: Record<string, Gamebook> = {
                 text: "Você sai da cozinha e entra num corredor que leva a um pátio interior. Uma ponte estreita de pedra atravessa o pátio, ligando a sua localização a uma torre imponente no centro da cidadela. A ponte é guardada por duas estranhas criaturas humanoides verdes com um único olho no meio da testa. São os GANJEES, conhecidos pelos seus poderes mentais.",
                 choices: [
                     { text: "Tentar atravessar a ponte, enfrentando os Ganjees.", to: 8, success: { to: 8 }, failure: { to: 8 } },
-                    { text: "Procurar outro caminho pelo pátio.", to: 9, success: { to: 9 }, failure: { to: 9 } }
+                    { text: "Procurar outro caminho pelo pátio.", to: 9, success: { to: 9 }, failure: { to: 9 } },
+                    { text: "Tentar usar um feitiço.", to: 19, success: { to: 19 }, failure: { to: 19 }, type: 'spell' }
                 ]
             },
             7: {
@@ -143,7 +146,7 @@ export const gamebooks: Record<string, Gamebook> = {
                 text: "Ao explorar as bordas do pátio, você encontra uma pesada grade de ferro no chão. Um cheiro horrível emana dela. Parece ser a entrada para o sistema de esgotos da cidadela. Pode ser um caminho, mas certamente não será agradável.",
                 choices: [
                     { text: "Levantar a grade e entrar nos esgotos.", to: 11, success: { to: 11 }, failure: { to: 11 } },
-                    { text: "Voltar e tentar usar um feitiço nos Ganjees.", to: 19, success: { to: 19 }, failure: { to: 19 } }
+                    { text: "Voltar e tentar uma abordagem diferente com os Ganjees.", to: 6, success: { to: 6 }, failure: { to: 6 } }
                 ]
             },
             11: {
@@ -156,23 +159,28 @@ export const gamebooks: Record<string, Gamebook> = {
             12: {
                 text: "No topo da torre, você encontra os aposentos de Balthus Dire. Ele está de costas para si, a observar uma bola de cristal. 'Eu estava à sua espera, pequeno aprendiz', diz ele sem se virar. Ele vira-se, e os seus olhos brilham com poder arcano.",
                 choices: [
-                    { text: "Lançar o feitiço Bola de Fogo.", to: 13, success: { to: 13 }, failure: { to: 13 }, type: 'spell' },
                     { text: "Atacar com a sua espada.", to: 14, success: { to: 14 }, failure: { to: 14 } },
-                    { text: "Lançar o feitiço Fraqueza.", to: 22, success: { to: 22 }, failure: { to: 22 }, type: 'spell' }
+                    { text: "Usar a sua magia.", to: 13, success: { to: 13 }, failure: { to: 13 }, type: 'spell' }
                 ]
             },
             13: {
-                text: "Você lembra-se do aviso do seu mestre: a maior força de Balthus Dire é também a sua maior fraqueza. O feiticeiro deleita-se com a sua própria magia. A sala está cheia de espelhos e superfícies polidas. Onde você vai mirar?",
-                choices: [
-                    { text: "Lançar a Bola de Fogo diretamente contra ele.", to: 15, success: { to: 15 }, failure: { to: 15 } },
-                    { text: "Lançar a Bola de Fogo contra um grande espelho ao lado dele.", to: 16, success: { to: 16 }, failure: { to: 16 } }
-                ]
+                text: "Você lembra-se do aviso do seu mestre: a maior força de Balthus Dire é também a sua maior fraqueza. O feiticeiro deleita-se com a sua própria magia. A sala está cheia de espelhos e superfícies polidas. Que feitiço irá usar?",
+                event: "cast_spell",
+                spell_outcomes: {
+                    "Bola de Fogo": { to: 15, text: "Você prepara uma Bola de Fogo. Onde vai mirar?" },
+                    "Fraqueza": { to: 22, text: "Você tenta lançar Fraqueza, mas o poder de Balthus é esmagador. Ele ri e contra-ataca. FIM." },
+                },
+                default_spell_outcome: { to: 22, text: "O feitiço que você escolheu é inútil contra Balthus Dire. Ele derrota-o facilmente. FIM." }
             },
             14: {
                 text: "A sua espada é inútil. Com um simples gesto, Balthus Dire congela-o no lugar e ri-se enquanto a sua energia vital é drenada lentamente. \n\nFIM.",
             },
             15: {
-                text: "Balthus Dire absorve a sua Bola de Fogo com um sorriso, tornando-se ainda mais poderoso. 'Obrigado pelo presente', ele gargalha, antes de o desintegrar com um raio de energia negra. \n\nFIM.",
+                text: "Onde você vai mirar a sua Bola de Fogo?",
+                choices: [
+                    { text: "Lançar diretamente contra ele.", to: 31, success: { to: 31 }, failure: { to: 31 } },
+                    { text: "Lançar contra um grande espelho ao lado dele.", to: 16, success: { to: 16 }, failure: { to: 16 } }
+                ]
             },
             16: {
                 text: "A sua Bola de Fogo atinge o espelho. A magia refletida e amplificada volta-se contra Balthus Dire, que não estava preparado. Ele grita enquanto é consumido pela sua própria energia. Você conseguiu! A Cidadela do Caos está livre do seu tirano. \n\nVITÓRIA!",
@@ -198,12 +206,15 @@ export const gamebooks: Record<string, Gamebook> = {
                 }
             },
             19: {
-                text: "Você decide usar a sua magia contra os Ganjees. Qual feitiço você vai usar?",
-                choices: [
-                    { text: "Lançar Ilusão para criar uma distração.", to: 27, success: { to: 27 }, failure: { to: 27 }, type: 'spell' },
-                    { text: "Lançar Levitação para flutuar sobre eles.", to: 28, success: { to: 28 }, failure: { to: 28 }, type: 'spell' },
-                    { text: "Lançar Bola de Fogo contra a ponte.", to: 29, success: { to: 29 }, failure: { to: 29 }, type: 'spell' }
-                ]
+                text: "Você decide usar a sua magia contra os Ganjees. Eles são conhecidos pelo seu poder mental. Qual feitiço você vai usar?",
+                event: 'cast_spell',
+                spell_outcomes: {
+                    "Ilusão": { to: 27, text: "Você cria a ilusão de um grande dragão. Os Ganjees olham para cima, distraídos. Você corre pela ponte." },
+                    "Levitação": { to: 28, text: "Você começa a levitar, mas o ataque psíquico deles é demasiado forte. Você cai para a sua morte. FIM." },
+                    "Bola de Fogo": { to: 29, text: "A Bola de Fogo destrói a ponte, mas o barulho atrai todos os guardas. FIM." },
+                    "Escudo": { to: 32, text: "Você lança um escudo mágico. Ele brilha por um momento, absorvendo a onda psíquica inicial! Os Ganjees parecem confusos. Você tem uma chance de atravessar!" }
+                },
+                default_spell_outcome: { to: 8, text: "O feitiço não tem efeito. Os Ganjees paralisam a sua mente. FIM."}
             },
             20: {
                 text: "A secretária está coberta de mapas e pergaminhos. Numa gaveta trancada, você encontra um diário. Você força a fechadura e lê a última entrada de Balthus Dire: 'O meu poder está quase no auge. Apenas a reflexão da minha própria magia pode me ferir. Irei ao topo da Torre de Observação para iniciar o ritual final.'",
@@ -216,7 +227,7 @@ export const gamebooks: Record<string, Gamebook> = {
                 autoNavigate: { to: 12 }
             },
             22: {
-                text: "Você lança o feitiço Fraqueza. Balthus Dire ri. 'Um feitiço tão patético!'. Ele contra-ataca com uma força avassaladora. \n\nFIM.",
+                text: "O feitiço que você escolheu é inútil contra o poder esmagador de Balthus Dire. Ele derrota-o facilmente. \n\nFIM.",
             },
             23: {
                 text: "A porta está trancada. Você não consegue abri-la. Você deve encontrar outro caminho.",
@@ -241,7 +252,7 @@ export const gamebooks: Record<string, Gamebook> = {
                 text: "Os Goblins são mais fortes do que parecem. Eles o dominam com os seus números e armas brutas. A sua jornada termina aqui. \n\nFIM.",
             },
             27: {
-                text: "Você cria a ilusão de um grande dragão a sobrevoar a cidadela. Os Ganjees olham para cima, distraídos. Você aproveita a oportunidade para correr pela ponte e entrar na torre. O feitiço dissipa-se assim que você entra.",
+                text: "A ilusão funciona! Os Ganjees, momentaneamente distraídos pelo 'dragão', dão-lhe a abertura de que precisava. Você corre pela ponte e entra na torre em segurança.",
                 choices: [
                     { text: "Subir a escadaria da torre.", to: 12, success: { to: 12 }, failure: { to: 12 } }
                 ]
@@ -255,6 +266,15 @@ export const gamebooks: Record<string, Gamebook> = {
             30: {
                 text: "A passagem secreta leva-o a um corredor escuro. No final, você encontra uma pequena porta de madeira. Ao abri-la, você entra... nos aposentos de Balthus Dire. Ele não está lá.",
                 autoNavigate: { to: 11 }
+            },
+            31: {
+                text: "Balthus Dire absorve a sua Bola de Fogo com um sorriso, tornando-se ainda mais poderoso. 'Obrigado pelo presente', ele gargalha, antes de o desintegrar com um raio de energia negra. \n\nFIM.",
+            },
+            32: {
+                text: "O seu escudo mágico absorve o impacto do ataque mental! Os Ganjees recuam, surpreendidos. Você atravessa a ponte a correr e entra na torre.",
+                choices: [
+                    { text: "Subir a escadaria da torre.", to: 12, success: { to: 12 }, failure: { to: 12 } }
+                ]
             }
         }
     },

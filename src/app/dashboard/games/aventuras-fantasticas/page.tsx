@@ -18,7 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 
-type GameState = 'setup' | 'playing' | 'end' | 'combat' | 'test_luck';
+type GameState = 'setup' | 'playing' | 'end' | 'combat' | 'test_luck' | 'cast_spell';
 
 interface PlayerStats {
     skill: number;
@@ -64,6 +64,7 @@ export default function AventurasFantasticasPage() {
     const [combatLog, setCombatLog] = useState<string[]>([]);
     const [luckTest, setLuckTest] = useState<Choice | null>(null);
     const [hasTestedLuckThisRound, setHasTestedLuckThisRound] = useState(false);
+    const [spellContext, setSpellContext] = useState<StoryNode | null>(null);
 
 
     const processNode = useCallback((nodeId: string | number, book: Gamebook | null = selectedBook) => {
@@ -111,8 +112,10 @@ export default function AventurasFantasticasPage() {
         } else if (node.event === 'test_luck' && node.choices) {
             setLuckTest(node.choices[0]);
             setGameState('test_luck');
-        }
-        else if (!node.choices || node.choices.length === 0) {
+        } else if (node.event === 'cast_spell') {
+            setSpellContext(node);
+            setGameState('cast_spell');
+        } else if (!node.choices || node.choices.length === 0) {
             setGameState('end');
         } else {
             setGameState('playing');
@@ -143,8 +146,37 @@ export default function AventurasFantasticasPage() {
 
 
     const handleChoice = useCallback((choice: Choice) => {
-        processNode(choice.to);
-    }, [processNode]);
+        if (choice.type === 'spell') {
+            const node = selectedBook?.nodes[currentNodeId];
+            if(node) {
+                setSpellContext(node);
+                setGameState('cast_spell');
+            }
+        } else {
+            processNode(choice.to);
+        }
+    }, [processNode, selectedBook, currentNodeId]);
+
+    const handleSpellCast = (spellName: string) => {
+        if (!spellContext) return;
+        const outcome = spellContext.spell_outcomes?.[spellName] || spellContext.default_spell_outcome;
+        
+        if (outcome) {
+            toast({
+                title: 'Feitiço Lançado!',
+                description: outcome.text || `Você lança ${'${spellName}'}.`
+            });
+            processNode(outcome.to);
+        } else {
+             toast({
+                variant: 'destructive',
+                title: 'Falha Mágica',
+                description: 'Nada acontece...'
+            });
+            setGameState('playing');
+        }
+        setSpellContext(null);
+    }
     
     const handleFlee = () => {
         if (!currentCombat || !currentCombat.fleeTo || !selectedBook) return;
@@ -423,6 +455,34 @@ export default function AventurasFantasticasPage() {
                 </AlertDialog>
              )
         }
+        
+         if (gameState === 'cast_spell' && spellContext && selectedBook) {
+            return (
+                <div className="flex flex-col h-full animate-fade-in">
+                    <ScrollArea className="prose prose-lg dark:prose-invert max-w-none mb-6 whitespace-pre-wrap font-serif flex-grow pr-4">
+                        {spellContext.text}
+                    </ScrollArea>
+                    <div className="mt-auto space-y-3 pt-4 border-t">
+                         <p className="text-sm font-semibold text-center mb-2">Escolha um feitiço do seu grimório:</p>
+                        {selectedBook.spells.map((spell) => (
+                            <Button
+                                key={spell.name}
+                                variant="outline"
+                                className="w-full justify-start text-left h-auto py-3 gap-2 whitespace-normal"
+                                onClick={() => handleSpellCast(spell.name)}
+                            >
+                                <Wand2 className="h-4 w-4 text-purple-400 flex-shrink-0" />
+                                <div>
+                                    <p>{spell.name}</p>
+                                    <p className="text-xs text-muted-foreground">{spell.description}</p>
+                                </div>
+                            </Button>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
 
         if (!currentNode) return <div>Erro ao carregar a história.</div>;
         
