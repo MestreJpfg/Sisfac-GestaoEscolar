@@ -49,8 +49,6 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       baseQuery = query(usersCollection);
     }
     
-    // Not ordering by a specific field from the server to prevent inconsistent data errors.
-    // Sorting will be done on the client.
     q = baseQuery;
     
     if (pageParam) {
