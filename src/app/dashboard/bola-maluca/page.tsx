@@ -73,7 +73,7 @@ export default function BolaMalucaPage() {
     const [isNewHighScore, setIsNewHighScore] = useState(false);
     const [isPowerUpActive, setIsPowerUpActive] = useState(false);
     // State to force re-renders for game visuals when necessary
-    const [renderTick, setRenderTick] = useState(0);
+    const [, setRenderTick] = useState(0);
 
     // --- Load High Score ---
     useEffect(() => {
@@ -245,21 +245,19 @@ export default function BolaMalucaPage() {
         if (timeState.startTime === 0) {
             timeState.startTime = currentTime;
             timeState.lastEnemySpawnTime = currentTime;
-            timeState.lastTime = currentTime;
-        }
-
-        // --- Spawn new enemy ---
-        if (currentTime - timeState.lastEnemySpawnTime > ENEMY_SPAWN_INTERVAL) {
-            spawnEnemy();
-            timeState.lastEnemySpawnTime = currentTime;
         }
         
-        // --- Time Update for UI ---
         if (currentTime - timeState.lastTime >= 1000) {
             setTime(Math.floor((currentTime - timeState.startTime) / 1000));
             timeState.lastTime = currentTime;
         }
         
+        // --- Spawn new enemy ---
+        if (currentTime - timeState.lastEnemySpawnTime > ENEMY_SPAWN_INTERVAL) {
+            spawnEnemy();
+            timeState.lastEnemySpawnTime = currentTime;
+        }
+
         // --- Update Positions ---
         const player = playerRef.current;
         player.position.x += player.velocity.x;
@@ -340,6 +338,7 @@ export default function BolaMalucaPage() {
     // --- Game State Effects ---
     useEffect(() => {
         if (status === 'playing') {
+            gameTimeRef.current.lastTime = performance.now();
             animationFrameId.current = requestAnimationFrame(gameLoop);
         } else {
              if (animationFrameId.current) {
