@@ -114,7 +114,7 @@ export default function UserManager() {
     handleCloseDialog();
   };
 
-  const isLoading = isLoadingUsers || isLoadingProfiles;
+  const isLoading = isLoadingUsers;
 
   return (
     <div className="space-y-6">
@@ -127,9 +127,9 @@ export default function UserManager() {
             className="flex-1"
           />
           <div className="flex gap-2">
-            <Select value={filters.profileId} onValueChange={(value) => handleFilterChange('profileId', value)} disabled={isLoading}>
+            <Select value={filters.profileId} onValueChange={(value) => handleFilterChange('profileId', value)} disabled={isLoadingProfiles}>
               <SelectTrigger className="w-full sm:w-[240px]">
-                <SelectValue placeholder={isLoadingProfiles ? "A carregar..." : "Filtrar por perfil..."} />
+                <SelectValue placeholder={isLoadingProfiles ? "A carregar perfis..." : "Filtrar por perfil..."} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os Perfis</SelectItem>
