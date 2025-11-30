@@ -7,7 +7,7 @@ import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
 import { UserNav } from '@/components/user-nav';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Smartphone, Play, Repeat, Trophy } from 'lucide-react';
+import { ArrowLeft, Smartphone, Play, Repeat, Trophy, Gamepad2 } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -47,7 +47,7 @@ interface PowerUpGameObject extends GameObject {
 type GameStatus = 'permissions' | 'ready' | 'playing' | 'gameOver';
 
 // --- Main Game Component ---
-export default function SensorGamePage() {
+export default function BolaMalucaPage() {
     const router = useRouter();
     const { toast } = useToast();
     
@@ -296,21 +296,21 @@ export default function SensorGamePage() {
         
         // --- Direct DOM Manipulation for Performance ---
         if(player.element) {
-            player.element.style.transform = `translate3d(${'${player.position.x}'}px, ${'${player.position.y}'}px, 0)`;
+            player.element.style.transform = `translate3d(${player.position.x}px, ${player.position.y}px, 0)`;
         }
         if(item.element) {
-            item.element.style.transform = `translate3d(${'${item.position.x}'}px, ${'${item.position.y}'}px, 0)`;
+            item.element.style.transform = `translate3d(${item.position.x}px, ${item.position.y}px, 0)`;
         }
         if(powerUp.element) {
-            powerUp.element.style.transform = `translate3d(${'${powerUp.position.x}'}px, ${'${powerUp.position.y}'}px, 0)`;
+            powerUp.element.style.transform = `translate3d(${powerUp.position.x}px, ${powerUp.position.y}px, 0)`;
             powerUp.element.style.display = powerUp.active ? 'block' : 'none';
         }
         enemies.forEach(e => {
             if (e.element) {
-                e.element.style.transform = `translate3d(${'${e.position.x}'}px, ${'${e.position.y}'}px, 0)`;
+                e.element.style.transform = `translate3d(${e.position.x}px, ${e.position.y}px, 0)`;
                 const isSlow = isPowerUpActiveRef.current;
                 e.element.style.backgroundColor = isSlow ? 'hsl(340, 50%, 70%)' : 'hsl(340, 100%, 50%)';
-                e.element.style.boxShadow = `0 0 20px 8px ${'${isSlow ? \'hsl(340, 50%, 70%, 0.6)\' : \'hsl(340, 100%, 50%, 0.6)\'}'}`;
+                e.element.style.boxShadow = `0 0 20px 8px ${isSlow ? 'hsl(340, 50%, 70%, 0.6)' : 'hsl(340, 100%, 50%, 0.6)'}`;
             }
         });
 
@@ -382,11 +382,11 @@ export default function SensorGamePage() {
                 <header className="sticky top-0 z-40 w-full border-b border-purple-500/30 bg-gray-900/80 backdrop-blur">
                     <div className="container flex h-16 items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <Button variant="outline" size="icon" onClick={() => router.push('/dashboard')} className="border-purple-400/50 text-purple-400 hover:bg-purple-400/10 hover:text-purple-300">
+                            <Button variant="outline" size="icon" onClick={() => router.push('/dashboard/games')} className="border-purple-400/50 text-purple-400 hover:bg-purple-400/10 hover:text-purple-300">
                                 <ArrowLeft className="h-4 w-4" />
                             </Button>
                             <div className="flex items-center gap-2">
-                                <Smartphone className="h-6 w-6 text-cyan-400" />
+                                <Gamepad2 className="h-6 w-6 text-cyan-400" />
                                 <h1 className="text-xl font-bold tracking-widest text-cyan-400 font-mono hidden sm:block">BOLA MALUCA</h1>
                             </div>
                         </div>
@@ -545,7 +545,7 @@ export default function SensorGamePage() {
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                            <AlertDialogAction onClick={() => router.push('/dashboard')}>Voltar para a Dashboard</AlertDialogAction>
+                            <AlertDialogAction onClick={() => router.push('/dashboard/games')}>Voltar para a Central de Jogos</AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>

@@ -15,7 +15,7 @@ const games = [
     {
         title: "BOLA MALUCA",
         description: "Incline o seu dispositivo para mover a esfera azul. Colete os orbes amarelos e evite os vermelhos o máximo de tempo que conseguir!",
-        href: "/dashboard/games/bola-maluca",
+        href: "/dashboard/bola-maluca",
         icon: <Gamepad2 className="w-16 h-16 text-muted-foreground" />,
     },
     {
