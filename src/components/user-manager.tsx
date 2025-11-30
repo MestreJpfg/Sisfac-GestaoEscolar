@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, doc } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -16,11 +16,7 @@ import { X, Search, Loader2 } from 'lucide-react';
 import { useDebounce } from '@/hooks/use-debounce';
 import type { SortConfig } from './user-table';
 
-interface UserManagerProps {
-  allProfiles: any[];
-}
-
-export default function UserManager({ allProfiles }: UserManagerProps) {
+export default function UserManager() {
   const firestore = useFirestore();
   const { toast } = useToast();
   
@@ -37,7 +33,14 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
     return query(collection(firestore, 'users'));
   }, [firestore]);
 
-  const { data: allUsers, isLoading, refetch } = useCollection(usersQuery);
+  const { data: allUsers, isLoading: isLoadingUsers, refetch } = useCollection(usersQuery);
+
+  const profilesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'profiles'));
+  }, [firestore]);
+  const { data: allProfiles, isLoading: isLoadingProfiles } = useCollection(profilesQuery);
+
 
   const filteredAndSortedUsers = useMemo(() => {
     if (!allUsers) return [];
@@ -111,6 +114,8 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
     handleCloseDialog();
   };
 
+  const isLoading = isLoadingUsers || isLoadingProfiles;
+
   return (
     <div className="space-y-6">
        <Card>
@@ -122,13 +127,13 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
             className="flex-1"
           />
           <div className="flex gap-2">
-            <Select value={filters.profileId} onValueChange={(value) => handleFilterChange('profileId', value)}>
+            <Select value={filters.profileId} onValueChange={(value) => handleFilterChange('profileId', value)} disabled={isLoading}>
               <SelectTrigger className="w-full sm:w-[240px]">
-                <SelectValue placeholder="Filtrar por perfil..." />
+                <SelectValue placeholder={isLoadingProfiles ? "A carregar..." : "Filtrar por perfil..."} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os Perfis</SelectItem>
-                {allProfiles.map(profile => (
+                {allProfiles?.map(profile => (
                   <SelectItem key={profile.id} value={profile.id}>{profile.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -164,7 +169,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
         ) : (
              <UserTable 
                 users={filteredAndSortedUsers}
-                profiles={allProfiles}
+                profiles={allProfiles || []}
                 onEdit={handleEditUser} 
                 onSort={handleSort}
                 sortConfig={sortConfig}

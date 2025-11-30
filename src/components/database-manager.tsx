@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -73,14 +74,7 @@ export default function DatabaseManager() {
             setIsDeleteAlertOpen(false);
         }
     };
-
-    const profilesQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, 'profiles'));
-      }, [firestore]);
     
-    const { data: profiles, isLoading: isLoadingProfiles } = useCollection(profilesQuery);
-
     return (
        <div className="space-y-6">
             <Accordion type="multiple" defaultValue={['import-export']} className="w-full space-y-4">
@@ -141,13 +135,7 @@ export default function DatabaseManager() {
                         <Users className="h-5 w-5" /> Gestão de Utilizadores
                     </AccordionTrigger>
                     <AccordionContent className="pt-4">
-                        {isLoadingProfiles ? (
-                            <div className="flex h-64 w-full items-center justify-center">
-                                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                            </div>
-                        ) : (
-                            <UserManager allProfiles={profiles || []} />
-                        )}
+                        <UserManager />
                     </AccordionContent>
                 </AccordionItem>
 
@@ -156,13 +144,7 @@ export default function DatabaseManager() {
                         <Shield className="h-5 w-5" /> Gestão de Perfis de Permissão
                     </AccordionTrigger>
                     <AccordionContent className="pt-4">
-                        {isLoadingProfiles ? (
-                             <div className="flex h-64 w-full items-center justify-center">
-                                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                            </div>
-                        ) : (
-                            <ProfileManager initialProfiles={profiles || []} isLoading={isLoadingProfiles} />
-                        )}
+                        <ProfileManager />
                     </AccordionContent>
                 </AccordionItem>
             </Accordion>

@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
 import { Loader2, Plus } from 'lucide-react';
-import { useFirestore, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, doc, deleteDoc } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import ProfileTable from './profile-table';
@@ -11,19 +12,20 @@ import ProfileEditDialog from './profile-edit-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 
-
-interface ProfileManagerProps {
-    initialProfiles: any[];
-    isLoading: boolean;
-}
-
-export default function ProfileManager({ initialProfiles, isLoading }: ProfileManagerProps) {
+export default function ProfileManager() {
   const firestore = useFirestore();
   const { toast } = useToast();
   
   const [editingProfile, setEditingProfile] = useState<any | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [deletingProfile, setDeletingProfile] = useState<any | null>(null);
+
+  const profilesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'profiles'));
+  }, [firestore]);
+
+  const { data: initialProfiles, isLoading } = useCollection(profilesQuery);
 
   const profiles = useMemo(() => {
     if (!initialProfiles) return [];
