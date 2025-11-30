@@ -63,6 +63,7 @@ export default function BolaMalucaPage() {
     const powerUpRef = useRef<PowerUpGameObject>({ position: { x: -1000, y: -1000 }, velocity: { x: 0, y: 0 }, size: POWERUP_SIZE, active: false, color: 'hsl(190, 100%, 50%)' });
     const originalVelocitiesRef = useRef<Map<GameObject, Vector>>(new Map());
     const gameTimeRef = useRef({ startTime: 0, lastTime: 0, lastEnemySpawnTime: 0 });
+    const gameLoopRef = useRef<(currentTime: number) => void>();
 
     // --- State for React Rendering ---
     const [status, setStatus] = useState<GameStatus>('permissions');
@@ -230,8 +231,8 @@ export default function BolaMalucaPage() {
     };
     
     // --- Game Loop ---
-    const gameLoop = useCallback((currentTime: number) => {
-        animationFrameId.current = requestAnimationFrame(gameLoop);
+    gameLoopRef.current = (currentTime: number) => {
+        animationFrameId.current = requestAnimationFrame(gameLoopRef.current as FrameRequestCallback);
         
         const gameArea = gameAreaRef.current;
         if (!gameArea) {
@@ -310,7 +311,6 @@ export default function BolaMalucaPage() {
         // --- Handle Player-PowerUp Collision ---
         if (powerUpRef.current.active && checkCollision(player, powerUpRef.current)) {
             vibrate([100, 30, 100]);
-            powerUpRef.current.active = false;
             powerUpRef.current.position = { x: -1000, y: -1000 };
             
             if (!isPowerUpActive) {
@@ -335,12 +335,12 @@ export default function BolaMalucaPage() {
         }
         
         setRenderTick(tick => tick + 1); 
-    }, [score, isPowerUpActive, spawnEnemy, vibrate]); 
+    }; 
     
     // --- Game State Effects ---
     useEffect(() => {
         if (status === 'playing') {
-            animationFrameId.current = requestAnimationFrame(gameLoop);
+            animationFrameId.current = requestAnimationFrame(gameLoopRef.current as FrameRequestCallback);
         } else {
              if (animationFrameId.current) {
                 cancelAnimationFrame(animationFrameId.current);
@@ -360,7 +360,7 @@ export default function BolaMalucaPage() {
                 cancelAnimationFrame(animationFrameId.current);
             }
         };
-    }, [status, gameLoop, score, highScore, isPowerUpActive, endPowerUp]);
+    }, [status, score, highScore, isPowerUpActive, endPowerUp]);
     
     // --- Sensor Listener Effect ---
     useEffect(() => {
@@ -566,6 +566,8 @@ export default function BolaMalucaPage() {
         </AuthGuard>
     );
 }
+
+    
 
     
 
