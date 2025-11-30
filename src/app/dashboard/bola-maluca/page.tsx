@@ -275,8 +275,8 @@ export default function BolaMalucaPage() {
                 if (newScore % 5 === 0 && newScore > 0) {
                     setColorPowerUp({
                         position: {
-                            x: Math.random() * (width - ITEM_SIZE),
-                            y: Math.random() * (height - ITEM_SIZE),
+                            x: (width - ITEM_SIZE) / 2,
+                            y: (height - ITEM_SIZE) / 2,
                         },
                         size: ITEM_SIZE
                     });
@@ -560,5 +560,7 @@ export default function BolaMalucaPage() {
         </AuthGuard>
     );
 }
+
+    
 
     
