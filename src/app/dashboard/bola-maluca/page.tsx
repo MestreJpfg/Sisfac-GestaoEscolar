@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -6,12 +7,12 @@ import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
 import { UserNav } from '@/components/user-nav';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Smartphone, Play, Repeat, Trophy, Gamepad2 } from 'lucide-react';
+import { ArrowLeft, Play, Repeat, Trophy, Gamepad2 } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 
 // --- Game Configuration ---
@@ -191,29 +192,30 @@ export default function BolaMalucaPage() {
     }, [permissionState, resetGame]);
 
     const requestPermissions = async () => {
-        if (typeof (DeviceOrientationEvent as any).requestPermission !== 'function') {
+        // Handle iOS devices that require explicit permission for DeviceOrientationEvent
+        if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+            try {
+                const permission = await (DeviceOrientationEvent as any).requestPermission();
+                if (permission === 'granted') {
+                    setPermissionState('granted');
+                    toast({ title: 'Permissão concedida!', description: 'Prepare-se para jogar!' });
+                } else {
+                    setPermissionState('denied');
+                    toast({ variant: 'destructive', title: 'Permissão negada.' });
+                }
+            } catch (error) {
+                console.error('Erro ao pedir permissão:', error);
+                setPermissionState('denied');
+                toast({ variant: 'destructive', title: 'Erro ao pedir permissão.' });
+            }
+        } else {
+            // Non-iOS devices or environments where permission is not required
             setPermissionState('granted');
             toast({ title: 'Acesso automático aos sensores.' });
-            return;
-        }
-
-        try {
-            const permission = await (DeviceOrientationEvent as any).requestPermission();
-            if (permission === 'granted') {
-                setPermissionState('granted');
-                toast({ title: 'Permissão concedida!', description: 'Prepare-se para jogar!' });
-            } else {
-                setPermissionState('denied');
-                toast({ variant: 'destructive', title: 'Permissão negada.' });
-            }
-        } catch (error) {
-            console.error('Erro ao pedir permissão:', error);
-            setPermissionState('denied');
-            toast({ variant: 'destructive', title: 'Erro ao pedir permissão.' });
         }
     };
 
-    const vibrate = (pattern: number | number[]) => {
+    const vibrate = useCallback((pattern: number | number[]) => {
         if ('vibrate' in navigator) {
             try {
                 navigator.vibrate(pattern);
@@ -221,7 +223,7 @@ export default function BolaMalucaPage() {
                 console.warn("Vibration failed, possibly not supported in this context.", error);
             }
         }
-    };
+    }, []);
 
     const checkCollision = (obj1: GameObject, obj2: GameObject) => {
         const dx = (obj1.position.x + obj1.size / 2) - (obj2.position.x + obj2.size / 2);
@@ -242,6 +244,7 @@ export default function BolaMalucaPage() {
         
         const timeState = gameTimeRef.current;
         
+        // --- Update Time ---
         if (currentTime - timeState.lastTime >= 1000) {
             setTime(Math.floor((currentTime - timeState.startTime) / 1000));
             timeState.lastTime = currentTime;
@@ -253,7 +256,7 @@ export default function BolaMalucaPage() {
             timeState.lastEnemySpawnTime = currentTime;
         }
 
-        // --- Update Positions ---
+        // --- Update Player Position ---
         const player = playerRef.current;
         player.position.x += player.velocity.x;
         player.position.y += player.velocity.y;
@@ -262,6 +265,7 @@ export default function BolaMalucaPage() {
         if (player.position.y < 0) player.position.y = 0;
         if (player.position.y > height - player.size) player.position.y = height - player.size;
 
+        // --- Update Enemy Positions ---
         enemiesRef.current.forEach(e => {
             e.position.x += e.velocity.x;
             e.position.y += e.velocity.y;
@@ -269,12 +273,13 @@ export default function BolaMalucaPage() {
             if (e.position.y <= 0 || e.position.y >= height - e.size) e.velocity.y *= -1;
         });
 
-        // --- Check Collisions ---
+        // --- Handle Player-Item Collision ---
         if (checkCollision(player, itemRef.current)) {
             vibrate(50);
             setScore(prevScore => {
                 const newScore = prevScore + 1;
-                if (!powerUpRef.current.active && !isPowerUpActive && newScore > 0 && newScore % POWERUP_SPAWN_SCORE_INTERVAL === 0) {
+                // Spawn power-up based on score
+                if (!isPowerUpActive && !powerUpRef.current.active && newScore > 0 && newScore % POWERUP_SPAWN_SCORE_INTERVAL === 0) {
                     powerUpRef.current.position = {
                         x: Math.random() * (width - POWERUP_SIZE),
                         y: Math.random() * (height - POWERUP_SIZE),
@@ -283,23 +288,28 @@ export default function BolaMalucaPage() {
                 }
                 return newScore;
             });
+            
+            // Increase enemy speed only if power-up is not active
+            if (!isPowerUpActive) {
+                enemiesRef.current.forEach(e => {
+                    const currentSpeed = Math.sqrt(e.velocity.x**2 + e.velocity.y**2);
+                    const newSpeed = currentSpeed + ENEMY_SPEED_INCREMENT;
+                    const speedMultiplier = newSpeed / currentSpeed;
+                    if (isFinite(speedMultiplier)) {
+                        e.velocity.x *= speedMultiplier;
+                        e.velocity.y *= speedMultiplier;
+                    }
+                });
+            }
 
-            enemiesRef.current.forEach(e => {
-                const currentSpeed = Math.sqrt(e.velocity.x**2 + e.velocity.y**2);
-                const newSpeed = currentSpeed + ENEMY_SPEED_INCREMENT;
-                const speedMultiplier = newSpeed / currentSpeed;
-                if (isFinite(speedMultiplier)) {
-                    e.velocity.x *= speedMultiplier;
-                    e.velocity.y *= speedMultiplier;
-                }
-            });
-
+            // Respawn item
             itemRef.current.position = {
                 x: Math.random() * (width - itemRef.current.size),
                 y: Math.random() * (height - itemRef.current.size),
             };
         }
         
+        // --- Handle Player-PowerUp Collision ---
         const powerUp = powerUpRef.current;
         if (powerUp.active && checkCollision(player, powerUp)) {
             vibrate([100, 30, 100]);
@@ -318,31 +328,34 @@ export default function BolaMalucaPage() {
             }
         }
 
+        // --- Handle Player-Enemy Collision ---
         for (const enemy of enemiesRef.current) {
             if (checkCollision(player, enemy)) {
                 vibrate([200, 50, 200]);
                 setStatus('gameOver'); 
-                return; 
+                return; // Exit loop immediately on game over
             }
         }
         
-        setRenderTick(tick => tick + 1); 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [status, isPowerUpActive, spawnEnemy]); 
+        setRenderTick(tick => tick + 1); // Trigger re-render to update visuals
+    }, [status, isPowerUpActive, spawnEnemy, vibrate]); 
     
     // --- Game State Effects ---
     useEffect(() => {
         if (status === 'playing') {
-            gameTimeRef.current.startTime = performance.now();
-            gameTimeRef.current.lastTime = performance.now();
-            gameTimeRef.current.lastEnemySpawnTime = performance.now();
+            // Initialize game timers
+            const now = performance.now();
+            gameTimeRef.current.startTime = now;
+            gameTimeRef.current.lastTime = now;
+            gameTimeRef.current.lastEnemySpawnTime = now;
+            // Start the game loop
             animationFrameId.current = requestAnimationFrame(gameLoop);
         } else {
              if (animationFrameId.current) {
                 cancelAnimationFrame(animationFrameId.current);
              }
              if (status === 'gameOver') {
-                if (isPowerUpActive) endPowerUp();
+                if (isPowerUpActive) endPowerUp(); // Ensure power-up ends on game over
                  if (score > highScore) {
                     setIsNewHighScore(true);
                     setHighScore(score);
@@ -351,6 +364,7 @@ export default function BolaMalucaPage() {
              }
         }
         
+        // Cleanup function to cancel animation frame when component unmounts or status changes
         return () => {
             if (animationFrameId.current) {
                 cancelAnimationFrame(animationFrameId.current);
@@ -363,9 +377,10 @@ export default function BolaMalucaPage() {
         if (permissionState !== 'granted' || status !== 'playing') return;
 
         const handleOrientation = (event: DeviceOrientationEvent) => {
-            const { beta, gamma } = event;
+            const { beta, gamma } = event; // beta: front-back tilt, gamma: left-right tilt
             if (beta === null || gamma === null) return;
             
+            // Apply sensitivity and constraints to velocity
             const vx = Math.max(-5, Math.min(5, gamma * SENSITIVITY));
             const vy = Math.max(-5, Math.min(5, beta * SENSITIVITY));
             
@@ -420,7 +435,7 @@ export default function BolaMalucaPage() {
                         </div>
                     </div>
                     
-                    <Card className="w-full max-w-sm h-[600px] bg-black/50 border-2 border-purple-500/50 shadow-2xl shadow-purple-500/20 overflow-hidden">
+                    <Card className="w-full max-w-sm aspect-[9/16] bg-black/50 border-2 border-purple-500/50 shadow-2xl shadow-purple-500/20 overflow-hidden">
                         <CardContent 
                             ref={gameAreaRef} 
                             className="p-0 h-full w-full relative bg-grid"
@@ -515,7 +530,7 @@ export default function BolaMalucaPage() {
                                      <div className="text-center font-mono space-y-4 p-4">
                                         <h2 className="text-3xl font-bold text-cyan-400 tracking-widest">PERMISSÃO NECESSÁRIA</h2>
                                         <p className="text-purple-300">O jogo necessita de acesso aos sensores de movimento do seu dispositivo para funcionar.</p>
-                                        <Button onClick={requestPermissions} size="lg" variant="outline" className="text-yellow-300 border-yellow-300 hover:bg-yellow-300/10 hover:text-yellow-200">
+                                        <Button onClick={requestPermissions} size="lg" className="text-yellow-300 border-yellow-300 bg-yellow-300/10 hover:bg-yellow-300/20 hover:text-yellow-200">
                                             <Play className="mr-2 h-5 w-5" />
                                             Conceder Permissão
                                         </Button>
@@ -566,3 +581,5 @@ export default function BolaMalucaPage() {
         </AuthGuard>
     );
 }
+
+    
