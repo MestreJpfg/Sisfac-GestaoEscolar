@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -260,7 +259,17 @@ export default function BolaMalucaPage() {
         const item = itemRef.current;
         if (checkCollision(player, item)) {
             vibrate(50);
-            setScore(prevScore => prevScore + 1); 
+            setScore(prevScore => {
+                const newScore = prevScore + 1;
+                if (!powerUpRef.current.active && !isPowerUpActiveRef.current && newScore > 0 && newScore % POWERUP_SPAWN_SCORE_INTERVAL === 0) {
+                    powerUpRef.current.position = {
+                        x: Math.random() * (width - POWERUP_SIZE),
+                        y: Math.random() * (height - POWERUP_SIZE),
+                    };
+                    powerUpRef.current.active = true;
+                }
+                return newScore;
+            });
 
             enemies.forEach(e => {
                 const currentSpeed = Math.sqrt(e.velocity.x**2 + e.velocity.y**2);
@@ -276,14 +285,6 @@ export default function BolaMalucaPage() {
                 x: Math.random() * (width - item.size),
                 y: Math.random() * (height - item.size),
             };
-            
-            if (!powerUpRef.current.active && !isPowerUpActiveRef.current && (score + 1) > 0 && (score + 1) % POWERUP_SPAWN_SCORE_INTERVAL === 0) {
-                powerUpRef.current.position = {
-                    x: Math.random() * (width - POWERUP_SIZE),
-                    y: Math.random() * (height - POWERUP_SIZE),
-                };
-                powerUpRef.current.active = true;
-            }
         }
         
         const powerUp = powerUpRef.current;
@@ -337,7 +338,7 @@ export default function BolaMalucaPage() {
 
         animationFrameId.current = requestAnimationFrame(gameLoop);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [status, endPowerUp, score]); 
+    }, [status, endPowerUp]); 
     
     // --- Game State Effects ---
     useEffect(() => {
@@ -352,6 +353,7 @@ export default function BolaMalucaPage() {
                 cancelAnimationFrame(animationFrameId.current);
              }
              if (status === 'gameOver') {
+                endPowerUp(); // Ensure power-up ends on game over
                  if (score > highScore) {
                     setIsNewHighScore(true);
                     setHighScore(score);
@@ -368,7 +370,7 @@ export default function BolaMalucaPage() {
                 clearTimeout(powerUpTimeoutRef.current);
             }
         };
-    }, [status, gameLoop, score, highScore]);
+    }, [status, gameLoop, score, highScore, endPowerUp]);
     
     // --- Sensor Listener Effect ---
     useEffect(() => {
