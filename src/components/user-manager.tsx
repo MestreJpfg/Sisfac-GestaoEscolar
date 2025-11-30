@@ -4,7 +4,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useFirestore } from '@/firebase';
 import { collection, query, where, doc, limit, orderBy, startAfter, getDocs, Query, DocumentData } from 'firebase/firestore';
-import { useInfiniteQuery, QueryClientProvider, QueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import UserTable from './user-table';
 import UserEditDialog from './user-edit-dialog';
@@ -23,11 +23,7 @@ interface UserManagerProps {
 
 const USERS_PER_PAGE = 20;
 
-// Create a new QueryClient instance
-const queryClient = new QueryClient();
-
-// The actual component logic
-function UserManagerComponent({ allProfiles }: UserManagerProps) {
+export default function UserManager({ allProfiles }: UserManagerProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   
@@ -222,13 +218,4 @@ function UserManagerComponent({ allProfiles }: UserManagerProps) {
       )}
     </div>
   );
-}
-
-// Wrapper component that provides the QueryClient
-export default function UserManager(props: UserManagerProps) {
-    return (
-        <QueryClientProvider client={queryClient}>
-            <UserManagerComponent {...props} />
-        </QueryClientProvider>
-    );
 }
