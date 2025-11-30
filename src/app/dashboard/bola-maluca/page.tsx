@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -168,7 +167,7 @@ export default function BolaMalucaPage() {
         setTime(0);
 
         if (isStartingGame) {
-            gameTimeRef.current = { startTime: 0, lastTime: 0, lastEnemySpawnTime: 0 };
+            gameTimeRef.current = { startTime: performance.now(), lastTime: performance.now(), lastEnemySpawnTime: performance.now() };
         }
         setRenderTick(tick => tick + 1);
     }, [isPowerUpActive, endPowerUp]);
@@ -242,10 +241,6 @@ export default function BolaMalucaPage() {
         const { width, height } = gameArea.getBoundingClientRect();
         
         const timeState = gameTimeRef.current;
-        if (timeState.startTime === 0) {
-            timeState.startTime = currentTime;
-            timeState.lastEnemySpawnTime = currentTime;
-        }
         
         if (currentTime - timeState.lastTime >= 1000) {
             setTime(Math.floor((currentTime - timeState.startTime) / 1000));
@@ -338,7 +333,9 @@ export default function BolaMalucaPage() {
     // --- Game State Effects ---
     useEffect(() => {
         if (status === 'playing') {
+            gameTimeRef.current.startTime = performance.now();
             gameTimeRef.current.lastTime = performance.now();
+            gameTimeRef.current.lastEnemySpawnTime = performance.now();
             animationFrameId.current = requestAnimationFrame(gameLoop);
         } else {
              if (animationFrameId.current) {
@@ -569,5 +566,3 @@ export default function BolaMalucaPage() {
         </AuthGuard>
     );
 }
-
-    
