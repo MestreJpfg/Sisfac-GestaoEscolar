@@ -1,10 +1,10 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Loader2, Plus } from 'lucide-react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, deleteDoc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { collection, query, doc, deleteDoc, getDocs } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import ProfileTable from './profile-table';
 import { Button } from './ui/button';
@@ -20,17 +20,32 @@ export default function ProfileManager() {
   const [isNew, setIsNew] = useState(false);
   const [deletingProfile, setDeletingProfile] = useState<any | null>(null);
 
-  const profilesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'profiles'));
-  }, [firestore]);
+  const [profiles, setProfiles] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: initialProfiles, isLoading } = useCollection(profilesQuery);
-
-  const profiles = useMemo(() => {
-    if (!initialProfiles) return [];
-    return [...initialProfiles].sort((a, b) => a.name.localeCompare(b.name));
-  }, [initialProfiles]);
+  useEffect(() => {
+    const fetchProfiles = async () => {
+        if (!firestore) return;
+        setIsLoading(true);
+        try {
+            const profilesQuery = query(collection(firestore, 'profiles'));
+            const querySnapshot = await getDocs(profilesQuery);
+            const profilesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            profilesData.sort((a, b) => a.name.localeCompare(b.name));
+            setProfiles(profilesData);
+        } catch (error) {
+            console.error("Error fetching profiles:", error);
+            toast({
+                variant: "destructive",
+                title: "Erro ao Carregar Perfis",
+                description: "Não foi possível carregar a lista de perfis.",
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchProfiles();
+  }, [firestore, toast]);
 
 
   const handleEditProfile = (profile: any) => {
@@ -55,6 +70,8 @@ export default function ProfileManager() {
             title: "Perfil Eliminado",
             description: `O perfil "${deletingProfile.name}" foi eliminado com sucesso.`
         });
+         // Optimistic update
+        setProfiles(prev => prev.filter(p => p.id !== deletingProfile.id));
     } catch (error) {
         toast({
             variant: 'destructive',
@@ -76,13 +93,20 @@ export default function ProfileManager() {
 
     const id = profileId || doc(collection(firestore, 'profiles')).id;
     const docRef = doc(firestore, 'profiles', id);
+    const finalData = { id, ...updatedData };
     
-    setDocumentNonBlocking(docRef, { id, ...updatedData }, { merge: true });
+    setDocumentNonBlocking(docRef, finalData, { merge: true });
 
     toast({
       title: isNew ? "Perfil Criado" : "Perfil Atualizado",
       description: `O perfil "${updatedData.name}" foi salvo com sucesso.`,
     });
+
+    if (isNew) {
+        setProfiles(prev => [...prev, finalData].sort((a, b) => a.name.localeCompare(b.name)));
+    } else {
+        setProfiles(prev => prev.map(p => p.id === id ? finalData : p).sort((a, b) => a.name.localeCompare(b.name)));
+    }
     
     handleCloseDialog();
   };
@@ -100,7 +124,7 @@ export default function ProfileManager() {
             </div>
       ): (
           <ProfileTable 
-            profiles={profiles || []} 
+            profiles={profiles} 
             onEdit={handleEditProfile} 
             onDelete={handleDeleteRequest}
           />

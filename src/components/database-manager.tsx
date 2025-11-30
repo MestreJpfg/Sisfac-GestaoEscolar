@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { collection, getDocs, writeBatch, query } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import FileUploaderSheet from './file-uploader-sheet';

@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, doc } from 'firebase/firestore';
+import { useState, useMemo, useEffect } from 'react';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, doc, getDocs } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import UserTable from './user-table';
 import UserEditDialog from './user-edit-dialog';
@@ -28,18 +28,39 @@ export default function UserManager() {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name', direction: 'ascending' });
   const debouncedSearch = useDebounce(filters.search, 400);
 
-  const usersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'users'));
-  }, [firestore]);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [allProfiles, setAllProfiles] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: allUsers, isLoading: isLoadingUsers, refetch } = useCollection(usersQuery);
+  useEffect(() => {
+    const fetchData = async () => {
+        if (!firestore) return;
+        setIsLoading(true);
+        try {
+            const usersQuery = query(collection(firestore, 'users'));
+            const profilesQuery = query(collection(firestore, 'profiles'));
 
-  const profilesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'profiles'));
-  }, [firestore]);
-  const { data: allProfiles, isLoading: isLoadingProfiles } = useCollection(profilesQuery);
+            const [usersSnapshot, profilesSnapshot] = await Promise.all([
+                getDocs(usersQuery),
+                getDocs(profilesQuery)
+            ]);
+
+            setAllUsers(usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            setAllProfiles(profilesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+        } catch (error) {
+            console.error("Error fetching user/profile data:", error);
+            toast({
+                variant: "destructive",
+                title: "Erro ao Carregar Dados",
+                description: "Não foi possível carregar os dados dos utilizadores e perfis.",
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchData();
+  }, [firestore, toast]);
 
 
   const filteredAndSortedUsers = useMemo(() => {
@@ -109,12 +130,11 @@ export default function UserManager() {
       description: `O perfil de ${updatedData.name || editingUser.name} foi atualizado com sucesso.`,
     });
     
-    refetch();
+    // Optimistic update on the client
+    setAllUsers(prevUsers => prevUsers.map(u => u.uid === editingUser.uid ? { ...u, ...updatedData } : u));
 
     handleCloseDialog();
   };
-
-  const isLoading = isLoadingUsers;
 
   return (
     <div className="space-y-6">
@@ -127,9 +147,9 @@ export default function UserManager() {
             className="flex-1"
           />
           <div className="flex gap-2">
-            <Select value={filters.profileId} onValueChange={(value) => handleFilterChange('profileId', value)} disabled={isLoadingProfiles}>
+            <Select value={filters.profileId} onValueChange={(value) => handleFilterChange('profileId', value)} disabled={isLoading}>
               <SelectTrigger className="w-full sm:w-[240px]">
-                <SelectValue placeholder={isLoadingProfiles ? "A carregar perfis..." : "Filtrar por perfil..."} />
+                <SelectValue placeholder={isLoading ? "A carregar perfis..." : "Filtrar por perfil..."} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os Perfis</SelectItem>
