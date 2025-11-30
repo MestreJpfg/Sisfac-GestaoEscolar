@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Query,
   onSnapshot,
@@ -9,6 +9,7 @@ import {
   FirestoreError,
   QuerySnapshot,
   CollectionReference,
+  queryEqual,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -42,12 +43,12 @@ export interface InternalQuery extends Query<DocumentData> {
  * React hook to subscribe to a Firestore collection or query in real-time.
  * Handles nullable references/queries.
  * 
- * IMPORTANT! The inputted `targetRefOrQuery` MUST BE MEMOIZED with `useMemo`
- * to prevent infinite re-renders.
+ * IMPORTANT! The inputted `targetRefOrQuery` SHOULD BE MEMOIZED with `useMemo` or `useMemoFirebase`
+ * to prevent infinite re-renders. This hook attempts to mitigate non-memoized queries, but it is not foolproof.
  *  
  * @template T Optional type for document data. Defaults to any.
  * @param {CollectionReference<DocumentData> | Query<DocumentData> | null | undefined} targetRefOrQuery -
- * The memoized Firestore CollectionReference or Query. Waits if null/undefined.
+ * The Firestore CollectionReference or Query. Waits if null/undefined.
  * @returns {UseCollectionResult<T>} Object with data, isLoading, error.
  */
 export function useCollection<T = any>(
@@ -60,15 +61,19 @@ export function useCollection<T = any>(
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
+  // Use a ref to store the previous query to compare against the new one.
+  const prevQueryRef = useRef<Query<DocumentData> | CollectionReference<DocumentData> | null | undefined>(null);
+
   useEffect(() => {
-    // This check is crucial. If the query object isn't memoized, it will be a new
-    // object on every render, causing this useEffect to run infinitely.
-    if (targetRefOrQuery && !(targetRefOrQuery as any).__memo) {
-      console.warn(
-        'useCollection: The provided query/reference should be memoized with useMemo or useMemoFirebase to prevent performance issues.'
-      );
+    // Check if the new query is actually different from the previous one.
+    // This helps prevent re-subscribing if the parent component re-renders
+    // but the query itself hasn't changed.
+    if (targetRefOrQuery && prevQueryRef.current && queryEqual(targetRefOrQuery, prevQueryRef.current)) {
+      return;
     }
     
+    prevQueryRef.current = targetRefOrQuery;
+
     if (!targetRefOrQuery) {
       setIsLoading(true);
       setData(null);
@@ -76,7 +81,6 @@ export function useCollection<T = any>(
       return;
     }
     
-    // Reset state for new query
     setIsLoading(true);
     setError(null);
 
@@ -114,7 +118,7 @@ export function useCollection<T = any>(
     );
 
     return () => unsubscribe();
-  }, [targetRefOrQuery]);
+  }, [targetRefOrQuery]); // The effect re-runs if the query object itself changes.
 
   return { data, isLoading, error };
 }
