@@ -73,7 +73,7 @@ export default function BolaMalucaPage() {
     const [isNewHighScore, setIsNewHighScore] = useState(false);
     const [isPowerUpActive, setIsPowerUpActive] = useState(false);
     // State to force re-renders for game visuals when necessary
-    const [, setRenderTick] = useState(0);
+    const [renderTick, setRenderTick] = useState(0);
 
     // --- Load High Score ---
     useEffect(() => {
@@ -442,10 +442,6 @@ export default function BolaMalucaPage() {
                             style={{
                                 '--grid-color': 'hsl(260 100% 50% / 0.15)',
                                 '--grid-size': '30px',
-                                backgroundImage: `
-                                    linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
-                                    linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px)
-                                `,
                             } as React.CSSProperties}
                         >
                             {status !== 'permissions' && permissionState === 'granted' && (
@@ -581,5 +577,7 @@ export default function BolaMalucaPage() {
         </AuthGuard>
     );
 }
+
+    
 
     
