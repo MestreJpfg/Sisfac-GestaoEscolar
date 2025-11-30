@@ -62,7 +62,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
     const lastDoc = snapshot.docs.length === USERS_PER_PAGE ? snapshot.docs[snapshot.docs.length - 1] : null;
 
     return { data: usersData, lastDoc };
-  }, [firestore, filters.profileId]); // A dependência da função de busca é apenas o filtro de perfil.
+  }, [firestore, filters.profileId]);
 
 
   const {
@@ -73,7 +73,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       isFetchingNextPage,
       refetch,
   } = useInfiniteQuery({
-      queryKey: ['users', filters.profileId],
+      queryKey: ['users', filters.profileId, sortConfig],
       queryFn: fetchUsers,
       initialPageParam: null,
       getNextPageParam: (lastPage) => lastPage.lastDoc,
@@ -186,7 +186,7 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
             <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 <p className="mt-4 text-muted-foreground">A carregar utilizadores...</p>
-            </div>>
+            </div>
         ) : allUsers.length === 0 ? (
              <Card>
                 <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
