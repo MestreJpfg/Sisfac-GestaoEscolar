@@ -343,6 +343,9 @@ export default function BolaMalucaPage() {
     useEffect(() => {
         if (status === 'playing') {
             lastTimeRef.current = performance.now();
+            if (gameTimeStartRef.current === 0) {
+                 gameTimeStartRef.current = performance.now();
+            }
             animationFrameId.current = requestAnimationFrame(gameLoop);
         } else {
              if (animationFrameId.current) {
@@ -494,7 +497,7 @@ export default function BolaMalucaPage() {
                                      />
                                     
                                     {/* Enemies */}
-                                    {enemiesRef.current.map((_, i) => (
+                                    {Array.from({ length: NUM_ENEMIES }).map((_, i) => (
                                         <div 
                                             key={i} 
                                             ref={el => enemyElementsRef.current[i] = el}
