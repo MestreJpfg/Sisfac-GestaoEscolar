@@ -85,6 +85,7 @@ export default function BolaMalucaPage() {
 
     const endPowerUp = useCallback(() => {
         setIsPowerUpActive(false);
+        powerUpRef.current.active = false; // Ensure ref is also updated
         enemiesRef.current.forEach((enemy) => {
             const originalVelocity = originalVelocitiesRef.current.get(enemy);
             if (originalVelocity) {
@@ -92,7 +93,6 @@ export default function BolaMalucaPage() {
             }
         });
         originalVelocitiesRef.current.clear();
-        setRenderTick(tick => tick + 1); // Force re-render to update colors
     }, []);
 
     // Effect to manage the power-up timer
@@ -276,19 +276,19 @@ export default function BolaMalucaPage() {
         // --- Handle Player-Item Collision ---
         if (checkCollision(player, itemRef.current)) {
             vibrate(50);
-            setScore(prevScore => {
-                const newScore = prevScore + 1;
-                // Spawn power-up based on score
-                if (!isPowerUpActive && !powerUpRef.current.active && newScore > 0 && newScore % POWERUP_SPAWN_SCORE_INTERVAL === 0) {
-                    powerUpRef.current.position = {
-                        x: Math.random() * (width - POWERUP_SIZE),
-                        y: Math.random() * (height - POWERUP_SIZE),
-                    };
-                    powerUpRef.current.active = true;
-                }
-                return newScore;
-            });
+            const newScore = score + 1;
+            setScore(newScore);
             
+            // Spawn power-up based on score
+            if (!powerUpRef.current.active && newScore > 0 && newScore % POWERUP_SPAWN_SCORE_INTERVAL === 0) {
+                powerUpRef.current.position = {
+                    x: Math.random() * (width - POWERUP_SIZE),
+                    y: Math.random() * (height - POWERUP_SIZE),
+                };
+                powerUpRef.current.active = true;
+            }
+        
+
             // Increase enemy speed only if power-up is not active
             if (!isPowerUpActive) {
                 enemiesRef.current.forEach(e => {
@@ -337,8 +337,9 @@ export default function BolaMalucaPage() {
             }
         }
         
-        setRenderTick(tick => tick + 1); // Trigger re-render to update visuals
-    }, [status, isPowerUpActive, spawnEnemy, vibrate]); 
+        // Trigger re-render to update visuals - This is the cause of the loop
+        // setRenderTick(tick => tick + 1); 
+    }, [status, isPowerUpActive, spawnEnemy, vibrate, score]); 
     
     // --- Game State Effects ---
     useEffect(() => {
@@ -577,6 +578,8 @@ export default function BolaMalucaPage() {
         </AuthGuard>
     );
 }
+
+    
 
     
 
