@@ -92,7 +92,7 @@ export default function BolaMalucaPage() {
 
     const endPowerUp = useCallback(() => {
         setIsPowerUpActive(false);
-        setPowerUp(prev => ({ ...prev, active: false }));
+        // We don't need to deactivate the powerup in state here, as it's already visually gone.
         enemiesRef.current.forEach((enemy) => {
             const originalVelocity = originalVelocitiesRef.current.get(enemy);
             if (originalVelocity) {
@@ -237,6 +237,7 @@ export default function BolaMalucaPage() {
     
     // --- Game Loop ---
     gameLoopRef.current = (currentTime: number) => {
+        if (status !== 'playing') return;
         animationFrameId.current = requestAnimationFrame(gameLoopRef.current as FrameRequestCallback);
         
         const gameArea = gameAreaRef.current;
@@ -275,22 +276,24 @@ export default function BolaMalucaPage() {
             if (e.position.y <= 0 || e.position.y >= height - e.size) e.velocity.y *= -1;
         });
 
-        // --- Handle Player-Item Collision ---
+        // --- Collision Checks ---
+
+        // 1. Player-Item Collision
         if (checkCollision(player, itemRef.current)) {
             vibrate(50);
             const newScore = score + 1;
             setScore(newScore);
             
             // Spawn power-up based on score
-            if (!isPowerUpActive && newScore > 0 && newScore % POWERUP_SPAWN_SCORE_INTERVAL === 0) {
-                setPowerUp(prev => ({
-                    ...prev,
+            if (!isPowerUpActive && !powerUp.active && newScore > 0 && newScore % POWERUP_SPAWN_SCORE_INTERVAL === 0) {
+                setPowerUp({
+                    ...powerUp,
                     position: {
                         x: Math.random() * (width - POWERUP_SIZE),
                         y: Math.random() * (height - POWERUP_SIZE),
                     },
                     active: true,
-                }));
+                });
             }
 
             // Increase enemy speed only if power-up is not active
@@ -313,42 +316,41 @@ export default function BolaMalucaPage() {
             };
         }
         
-        // --- Handle Player-PowerUp Collision ---
-        setPowerUp(prevPowerUp => {
-            if (prevPowerUp.active && checkCollision(player, prevPowerUp)) {
-                vibrate([100, 30, 100]);
+        // 2. Player-PowerUp Collision
+        if (powerUp.active && checkCollision(player, powerUp)) {
+            vibrate([100, 30, 100]);
+            
+            // Make powerup disappear and activate the effect
+            setPowerUp(prev => ({ ...prev, active: false, position: { x: -1000, y: -1000 } }));
+
+            if (!isPowerUpActive) {
+                setIsPowerUpActive(true);
+                originalVelocitiesRef.current.clear();
                 
-                if (!isPowerUpActive) {
-                    setIsPowerUpActive(true);
-                    originalVelocitiesRef.current.clear();
-                    
-                    enemiesRef.current.forEach(e => {
-                        originalVelocitiesRef.current.set(e, { ...e.velocity });
-                        e.velocity.x *= 0.5;
-                        e.velocity.y *= 0.5;
-                    });
-                }
-                return { ...prevPowerUp, position: { x: -1000, y: -1000 }, active: false };
+                enemiesRef.current.forEach(e => {
+                    originalVelocitiesRef.current.set(e, { ...e.velocity });
+                    e.velocity.x *= 0.5;
+                    e.velocity.y *= 0.5;
+                });
             }
-            return prevPowerUp;
-        });
+        }
 
-
-        // --- Handle Player-Enemy Collision ---
+        // 3. Player-Enemy Collision (MUST BE LAST)
         for (const enemy of enemiesRef.current) {
             if (checkCollision(player, enemy)) {
                 vibrate([200, 50, 200]);
                 setStatus('gameOver'); 
-                return;
+                return; // Stop the loop immediately
             }
         }
         
-        setRenderTick(tick => tick + 1); 
+        setRenderTick(tick => tick + 1); // Trigger re-render to update visuals
     }; 
     
     // --- Game State Effects ---
     useEffect(() => {
         if (status === 'playing') {
+            gameTimeRef.current.startTime = performance.now()
             animationFrameId.current = requestAnimationFrame(gameLoopRef.current as FrameRequestCallback);
         } else {
              if (animationFrameId.current) {
