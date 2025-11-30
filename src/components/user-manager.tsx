@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from 'react';
-import { useFirestore, useMemoFirebase } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { collection, query, where, doc, limit, orderBy, startAfter, getDocs, Query, DocumentData } from 'firebase/firestore';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -41,14 +41,14 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
     let q: Query<DocumentData, DocumentData>;
     const usersCollection = collection(firestore, 'users');
     
-    let baseQuery;
+    let baseQuery = query(usersCollection);
 
     if (filters.profileId && filters.profileId !== 'all') {
-      baseQuery = query(usersCollection, where('profileId', '==', filters.profileId));
-    } else {
-      baseQuery = query(usersCollection);
+      baseQuery = query(baseQuery, where('profileId', '==', filters.profileId));
     }
     
+    // A ordenação é aplicada no cliente para evitar a necessidade de criar índices compostos complexos no Firestore
+    // para cada combinação de filtro e ordenação.
     q = baseQuery;
     
     if (pageParam) {
@@ -59,10 +59,10 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
 
     const snapshot = await getDocs(q);
     const usersData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, uid: doc.id }));
-    const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+    const lastDoc = snapshot.docs.length === USERS_PER_PAGE ? snapshot.docs[snapshot.docs.length - 1] : null;
 
     return { data: usersData, lastDoc };
-  }, [firestore, filters.profileId]);
+  }, [firestore, filters.profileId]); // A dependência da função de busca é apenas o filtro de perfil.
 
 
   const {
@@ -71,15 +71,12 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       hasNextPage,
       isLoading,
       isFetchingNextPage,
-      error,
       refetch,
   } = useInfiniteQuery({
       queryKey: ['users', filters.profileId],
       queryFn: fetchUsers,
       initialPageParam: null,
-      getNextPageParam: (lastPage) => {
-        return lastPage.lastDoc;
-      },
+      getNextPageParam: (lastPage) => lastPage.lastDoc,
   });
 
   const allUsers = useMemo(() => data?.pages.flatMap(page => page.data) ?? [], [data]);
@@ -94,7 +91,6 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       );
     }
     
-    // Client-side sorting
     processedUsers.sort((a, b) => {
         const aValue = a[sortConfig.key] || '';
         const bValue = b[sortConfig.key] || '';
@@ -146,7 +142,6 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       description: `O perfil de ${updatedData.name || editingUser.name} foi atualizado com sucesso.`,
     });
     
-    // Optimistic update in UI
     refetch();
 
     handleCloseDialog();
@@ -184,14 +179,14 @@ export default function UserManager({ allProfiles }: UserManagerProps) {
       </Card>
       
         <div className="text-sm text-muted-foreground h-5">
-           {filteredAndSortedUsers.length > 0 && `A exibir ${filteredAndSortedUsers.length} de ${allUsers.length} utilizador(es) carregados.`}
+           {allUsers.length > 0 && `A exibir ${filteredAndSortedUsers.length} de ${allUsers.length} utilizador(es) carregados.`}
         </div>
 
         {isLoading ? (
             <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 <p className="mt-4 text-muted-foreground">A carregar utilizadores...</p>
-            </div>
+            </div>>
         ) : allUsers.length === 0 ? (
              <Card>
                 <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
