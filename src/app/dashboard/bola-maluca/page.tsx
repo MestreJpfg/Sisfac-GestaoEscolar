@@ -221,7 +221,7 @@ export default function BolaMalucaPage() {
         
         // --- Time Update for UI ---
         if (currentTime - lastTimeRef.current >= 1000) {
-            setTime(Math.floor((currentTime - gameTimeStartRef.current) / 1000));
+            setTime(Math.floor((Date.now() - gameTimeStartRef.current) / 1000));
             lastTimeRef.current = currentTime;
         }
         
@@ -331,6 +331,7 @@ export default function BolaMalucaPage() {
         if (status === 'playing') {
             gameTimeStartRef.current = Date.now();
             lastTimeRef.current = Date.now();
+            setTime(0);
             animationFrameId.current = requestAnimationFrame(gameLoop);
         } else {
              if (animationFrameId.current) {
@@ -560,5 +561,7 @@ export default function BolaMalucaPage() {
         </AuthGuard>
     );
 }
+
+    
 
     
