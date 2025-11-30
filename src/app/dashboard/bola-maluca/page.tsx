@@ -21,9 +21,10 @@ const ENEMY_SIZE = 50;
 const ITEM_SIZE = 20;
 const INITIAL_NUM_ENEMIES = 3;
 const ENEMY_SPEED_BASE = 1;
-const ENEMY_SPEED_INCREMENT = 0.05; // Ajustado para uma progressão mais suave sem power-ups
+const ENEMY_SPEED_INCREMENT = 0.05;
 const SENSITIVITY = 0.5;
 const ENEMY_SPAWN_INTERVAL = 20000; // 20 seconds
+const COLOR_EFFECT_DURATION = 5000; // 5 seconds
 
 // --- Type Definitions ---
 type GameStatus = 'permissions' | 'ready' | 'playing' | 'gameOver';
@@ -38,6 +39,7 @@ interface Enemy {
     position: Vector;
     velocity: Vector;
     size: number;
+    color: string; // Add color property
 }
 
 interface Player {
@@ -76,6 +78,11 @@ export default function BolaMalucaPage() {
     const [isNewHighScore, setIsNewHighScore] = useState(false);
     const [enemies, setEnemies] = useState<Enemy[]>([]);
     
+    // New state for the color power-up
+    const [colorPowerUp, setColorPowerUp] = useState<Collectible | null>(null);
+    const [isColorEffectActive, setIsColorEffectActive] = useState(false);
+
+
     // --- Load High Score ---
     useEffect(() => {
         const savedHighScore = localStorage.getItem('bolaMalucaHighScore');
@@ -93,6 +100,12 @@ export default function BolaMalucaPage() {
             }
         }
     }, []);
+    
+    // Helper to get a random color for the effect
+    const getRandomHSLColor = () => {
+        const hue = Math.floor(Math.random() * 360);
+        return `hsl(${hue}, 100%, 50%)`;
+    };
 
     const spawnEnemy = useCallback(() => {
         const gameArea = gameAreaRef.current;
@@ -111,6 +124,7 @@ export default function BolaMalucaPage() {
                 y: (Math.random() * speed + 0.5) * (Math.random() < 0.5 ? 1 : -1),
             },
             size: ENEMY_SIZE,
+            color: 'hsl(340, 100%, 50%)', // Default enemy color
         };
         setEnemies(prev => [...prev, newEnemy]);
     }, []);
@@ -138,6 +152,7 @@ export default function BolaMalucaPage() {
                     y: (Math.random() * speed + 0.5) * (Math.random() < 0.5 ? 1 : -1),
                 },
                 size: ENEMY_SIZE,
+                color: 'hsl(340, 100%, 50%)',
             }
         }));
         
@@ -146,6 +161,8 @@ export default function BolaMalucaPage() {
             y: Math.random() * (height - ITEM_SIZE),
         };
 
+        setColorPowerUp(null);
+        setIsColorEffectActive(false);
         setScore(0);
         setTime(0);
 
@@ -209,6 +226,7 @@ export default function BolaMalucaPage() {
             if (!gameArea) return;
             const { width, height } = gameArea.getBoundingClientRect();
             const timeState = gameTimeRef.current;
+            const player = playerRef.current;
 
             // --- Update Time ---
             const currentTime = performance.now();
@@ -224,7 +242,6 @@ export default function BolaMalucaPage() {
             }
 
             // --- Update Player Position ---
-            const player = playerRef.current;
             player.position.x += player.velocity.x;
             player.position.y += player.velocity.y;
             if (player.position.x < 0) player.position.x = 0;
@@ -251,7 +268,19 @@ export default function BolaMalucaPage() {
             // 1. Player-Item Collision (Score)
             if (checkCollision(player, itemRef.current)) {
                 vibrate(50);
-                setScore(prevScore => prevScore + 1);
+                const newScore = score + 1;
+                setScore(newScore);
+
+                // Spawn color power-up every 5 points
+                if (newScore % 5 === 0 && newScore > 0) {
+                    setColorPowerUp({
+                        position: {
+                            x: Math.random() * (width - ITEM_SIZE),
+                            y: Math.random() * (height - ITEM_SIZE),
+                        },
+                        size: ITEM_SIZE
+                    });
+                }
                 
                 // Increase speed of all enemies
                 setEnemies(prevEnemies => prevEnemies.map(e => {
@@ -271,7 +300,30 @@ export default function BolaMalucaPage() {
                 };
             }
             
-            // 2. Player-Enemy Collision
+            // 2. Player-ColorPowerUp Collision
+            if (colorPowerUp && checkCollision(player, colorPowerUp)) {
+                vibrate(100);
+                setColorPowerUp(null); // Remove the power-up
+                setIsColorEffectActive(true); // Activate the effect
+
+                // Change enemy colors
+                setEnemies(prev => prev.map(enemy => ({
+                    ...enemy,
+                    color: getRandomHSLColor()
+                })));
+
+                // Set a timer to end the effect
+                setTimeout(() => {
+                    setIsColorEffectActive(false);
+                     // Revert colors back to default
+                    setEnemies(prev => prev.map(enemy => ({
+                        ...enemy,
+                        color: 'hsl(340, 100%, 50%)'
+                    })));
+                }, COLOR_EFFECT_DURATION);
+            }
+            
+            // 3. Player-Enemy Collision (Game Over)
             for (const enemy of enemies) {
                 if (checkCollision(player, enemy)) {
                     vibrate([200, 50, 200]);
@@ -282,7 +334,7 @@ export default function BolaMalucaPage() {
             
             animationFrameId.current = requestAnimationFrame(gameLoopRef.current as FrameRequestCallback);
         };
-    }, [status, enemies, spawnEnemy, vibrate]);
+    }, [status, score, enemies, colorPowerUp, spawnEnemy, vibrate]);
     
     // --- Game State Effects ---
     useEffect(() => {
@@ -410,6 +462,24 @@ export default function BolaMalucaPage() {
                                             willChange: 'transform',
                                             transform: `translate3d(${itemRef.current.position.x}px, ${itemRef.current.position.y}px, 0)`
                                         }}/>
+
+                                    {/* Color Power-up */}
+                                    {colorPowerUp && (
+                                         <div 
+                                            style={{
+                                                position: 'absolute',
+                                                left: 0,
+                                                top: 0,
+                                                width: colorPowerUp.size,
+                                                height: colorPowerUp.size,
+                                                backgroundColor: 'hsl(270, 100%, 60%)', // Purple
+                                                borderRadius: '50%',
+                                                boxShadow: '0 0 15px 5px hsl(270, 100%, 60%, 0.7)',
+                                                willChange: 'transform',
+                                                transform: `translate3d(${colorPowerUp.position.x}px, ${colorPowerUp.position.y}px, 0)`,
+                                                animation: 'pulse-strong 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                                            }}/>
+                                    )}
                                     
                                     {/* Enemies */}
                                     {enemies.map((enemy) => (
@@ -421,10 +491,11 @@ export default function BolaMalucaPage() {
                                                 top: 0,
                                                 width: enemy.size,
                                                 height: enemy.size,
-                                                backgroundColor: 'hsl(340, 100%, 50%)',
+                                                backgroundColor: enemy.color,
                                                 borderRadius: '50%',
-                                                boxShadow: '0 0 20px 8px hsl(340, 100%, 50%, 0.6)',
+                                                boxShadow: `0 0 20px 8px ${enemy.color}60`,
                                                 willChange: 'transform',
+                                                transition: 'background-color 0.3s ease',
                                                 transform: `translate3d(${enemy.position.x}px, ${enemy.position.y}px, 0)`
                                             }}/>
                                     ))}
