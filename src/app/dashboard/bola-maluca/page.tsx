@@ -102,16 +102,26 @@ export default function BolaMalucaPage() {
     
     const endPowerUp = useCallback(() => {
         if (!isPowerUpActiveRef.current) return;
+        
         enemiesRef.current.forEach((enemy, i) => {
+            // Restore original velocity if it exists
             if (originalVelocitiesRef.current[i]) {
                 enemy.velocity = originalVelocitiesRef.current[i];
             }
+            // Reset color via DOM element if it exists
+            if(enemy.element) {
+                enemy.element.style.backgroundColor = 'hsl(340, 100%, 50%)';
+                enemy.element.style.boxShadow = `0 0 20px 8px hsl(340, 100%, 50%, 0.6)`;
+            }
         });
+
         isPowerUpActiveRef.current = false;
         if (powerUpTimeoutRef.current) {
             clearTimeout(powerUpTimeoutRef.current);
             powerUpTimeoutRef.current = undefined;
         }
+        originalVelocitiesRef.current = [];
+
     }, []);
 
     const resetGame = useCallback(() => {
@@ -151,8 +161,7 @@ export default function BolaMalucaPage() {
 
         setScore(0);
         setTime(0);
-        gameTimeStartRef.current = Date.now();
-        lastTimeRef.current = Date.now();
+        lastTimeRef.current = 0;
     }, [endPowerUp]);
 
     // --- Permissions and Initialization ---
@@ -218,10 +227,14 @@ export default function BolaMalucaPage() {
         const gameArea = gameAreaRef.current;
         if (!gameArea || status !== 'playing') return;
         const { width, height } = gameArea.getBoundingClientRect();
+
+        if (gameTimeStartRef.current === 0) {
+            gameTimeStartRef.current = currentTime;
+        }
         
         // --- Time Update for UI ---
         if (currentTime - lastTimeRef.current >= 1000) {
-            setTime(Math.floor((Date.now() - gameTimeStartRef.current) / 1000));
+            setTime(Math.floor((currentTime - gameTimeStartRef.current) / 1000));
             lastTimeRef.current = currentTime;
         }
         
@@ -329,8 +342,8 @@ export default function BolaMalucaPage() {
     // --- Game State Effects ---
     useEffect(() => {
         if (status === 'playing') {
-            gameTimeStartRef.current = Date.now();
-            lastTimeRef.current = Date.now();
+            gameTimeStartRef.current = 0;
+            lastTimeRef.current = 0;
             setTime(0);
             animationFrameId.current = requestAnimationFrame(gameLoop);
         } else {
@@ -561,7 +574,5 @@ export default function BolaMalucaPage() {
         </AuthGuard>
     );
 }
-
-    
 
     
