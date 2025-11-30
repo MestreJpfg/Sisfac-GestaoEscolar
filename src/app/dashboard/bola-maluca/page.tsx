@@ -73,7 +73,7 @@ export default function BolaMalucaPage() {
     const [isNewHighScore, setIsNewHighScore] = useState(false);
     const [isPowerUpActive, setIsPowerUpActive] = useState(false);
     // State to force re-renders for game visuals when necessary
-    const [renderTick, setRenderTick] = useState(0);
+    const [, setRenderTick] = useState(0);
 
     // --- Load High Score ---
     useEffect(() => {
@@ -85,7 +85,7 @@ export default function BolaMalucaPage() {
 
     const endPowerUp = useCallback(() => {
         setIsPowerUpActive(false);
-        powerUpRef.current.active = false; // Ensure ref is also updated
+        powerUpRef.current.active = false;
         enemiesRef.current.forEach((enemy) => {
             const originalVelocity = originalVelocitiesRef.current.get(enemy);
             if (originalVelocity) {
@@ -192,7 +192,6 @@ export default function BolaMalucaPage() {
     }, [permissionState, resetGame]);
 
     const requestPermissions = async () => {
-        // Handle iOS devices that require explicit permission for DeviceOrientationEvent
         if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
             try {
                 const permission = await (DeviceOrientationEvent as any).requestPermission();
@@ -209,9 +208,7 @@ export default function BolaMalucaPage() {
                 toast({ variant: 'destructive', title: 'Erro ao pedir permissão.' });
             }
         } else {
-            // Non-iOS devices or environments where permission is not required
             setPermissionState('granted');
-            toast({ title: 'Acesso automático aos sensores.' });
         }
     };
 
@@ -237,13 +234,15 @@ export default function BolaMalucaPage() {
         animationFrameId.current = requestAnimationFrame(gameLoop);
         
         const gameArea = gameAreaRef.current;
-        if (!gameArea || status !== 'playing') {
+        if (!gameArea) {
             return;
         }
         const { width, height } = gameArea.getBoundingClientRect();
         
         const timeState = gameTimeRef.current;
         
+        if (timeState.startTime === 0) return;
+
         // --- Update Time ---
         if (currentTime - timeState.lastTime >= 1000) {
             setTime(Math.floor((currentTime - timeState.startTime) / 1000));
@@ -280,14 +279,13 @@ export default function BolaMalucaPage() {
             setScore(newScore);
             
             // Spawn power-up based on score
-            if (!powerUpRef.current.active && newScore > 0 && newScore % POWERUP_SPAWN_SCORE_INTERVAL === 0) {
+            if (!isPowerUpActive && newScore > 0 && newScore % POWERUP_SPAWN_SCORE_INTERVAL === 0) {
                 powerUpRef.current.position = {
                     x: Math.random() * (width - POWERUP_SIZE),
                     y: Math.random() * (height - POWERUP_SIZE),
                 };
                 powerUpRef.current.active = true;
             }
-        
 
             // Increase enemy speed only if power-up is not active
             if (!isPowerUpActive) {
@@ -310,11 +308,10 @@ export default function BolaMalucaPage() {
         }
         
         // --- Handle Player-PowerUp Collision ---
-        const powerUp = powerUpRef.current;
-        if (powerUp.active && checkCollision(player, powerUp)) {
+        if (powerUpRef.current.active && checkCollision(player, powerUpRef.current)) {
             vibrate([100, 30, 100]);
-            powerUp.active = false;
-            powerUp.position = { x: -1000, y: -1000 };
+            powerUpRef.current.active = false;
+            powerUpRef.current.position = { x: -1000, y: -1000 };
             
             if (!isPowerUpActive) {
                 setIsPowerUpActive(true);
@@ -333,30 +330,23 @@ export default function BolaMalucaPage() {
             if (checkCollision(player, enemy)) {
                 vibrate([200, 50, 200]);
                 setStatus('gameOver'); 
-                return; // Exit loop immediately on game over
+                return;
             }
         }
         
-        // Trigger re-render to update visuals - This is the cause of the loop
-        // setRenderTick(tick => tick + 1); 
-    }, [status, isPowerUpActive, spawnEnemy, vibrate, score]); 
+        setRenderTick(tick => tick + 1); 
+    }, [score, isPowerUpActive, spawnEnemy, vibrate]); 
     
     // --- Game State Effects ---
     useEffect(() => {
         if (status === 'playing') {
-            // Initialize game timers
-            const now = performance.now();
-            gameTimeRef.current.startTime = now;
-            gameTimeRef.current.lastTime = now;
-            gameTimeRef.current.lastEnemySpawnTime = now;
-            // Start the game loop
             animationFrameId.current = requestAnimationFrame(gameLoop);
         } else {
              if (animationFrameId.current) {
                 cancelAnimationFrame(animationFrameId.current);
              }
              if (status === 'gameOver') {
-                if (isPowerUpActive) endPowerUp(); // Ensure power-up ends on game over
+                if (isPowerUpActive) endPowerUp();
                  if (score > highScore) {
                     setIsNewHighScore(true);
                     setHighScore(score);
@@ -365,7 +355,6 @@ export default function BolaMalucaPage() {
              }
         }
         
-        // Cleanup function to cancel animation frame when component unmounts or status changes
         return () => {
             if (animationFrameId.current) {
                 cancelAnimationFrame(animationFrameId.current);
@@ -378,10 +367,9 @@ export default function BolaMalucaPage() {
         if (permissionState !== 'granted' || status !== 'playing') return;
 
         const handleOrientation = (event: DeviceOrientationEvent) => {
-            const { beta, gamma } = event; // beta: front-back tilt, gamma: left-right tilt
+            const { beta, gamma } = event;
             if (beta === null || gamma === null) return;
             
-            // Apply sensitivity and constraints to velocity
             const vx = Math.max(-5, Math.min(5, gamma * SENSITIVITY));
             const vy = Math.max(-5, Math.min(5, beta * SENSITIVITY));
             
@@ -578,6 +566,8 @@ export default function BolaMalucaPage() {
         </AuthGuard>
     );
 }
+
+    
 
     
 
