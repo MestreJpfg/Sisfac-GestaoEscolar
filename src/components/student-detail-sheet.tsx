@@ -29,7 +29,6 @@ import StudentReportCardDialog from "./student-report-card-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import ReportCardWithDeclaration from "./report-card-with-declaration";
 import ReportCardDetailed from "./report-card-detailed";
-import ReportCardCompact from "./report-card-compact";
 import ReportCardGrid from "./report-card-grid";
 
 const formatPhoneNumber = (phone: string): string => {
@@ -137,7 +136,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
             componentToRender = <ReportCardDetailed student={student} boletim={student.boletim || {}} />;
             break;
         case 'compact':
-             componentToRender = <ReportCardCompact student={student} boletim={student.boletim || {}} />;
+             componentToRender = <ReportCardGrid students={[student]} />;
              pdfOptions.orientation = 'l';
              break;
         case 'grid':
@@ -411,7 +410,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
           </ScrollArea>
           
           <SheetFooter className="mt-auto pt-4 border-t border-border/20">
-             <div className="flex items-center justify-center gap-2">
+             <div className="flex items-center justify-center gap-2 w-full">
               <TooltipProvider>
                  <Tooltip>
                     <TooltipTrigger asChild>

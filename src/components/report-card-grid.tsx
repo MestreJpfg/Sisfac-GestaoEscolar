@@ -42,20 +42,23 @@ const CompactReport = ({ student, boletim }: { student: any; boletim: Boletim })
 };
 
 export default function ReportCardGrid({ students }: ReportCardGridProps) {
-    const filledStudents = [...students];
-    while (filledStudents.length < 4) {
-        filledStudents.push(null);
-    }
+    const studentChunks = students.length === 1 ? [students] : [students.slice(0, 4)];
     
+    // Ensure the last chunk has 4 items, filling with null if necessary
+    const lastChunk = studentChunks[studentChunks.length - 1];
+    while (lastChunk.length < 4 && students.length > 1) {
+        lastChunk.push(null);
+    }
+
     return (
         <div className="bg-white p-4" style={{ width: '297mm', height: '210mm' }}>
-            <div className="grid grid-cols-2 grid-rows-2 gap-4 h-full">
-                {filledStudents.map((student, index) => (
-                    <CompactReport key={student?.id || index} student={student} boletim={student?.boletim || {}} />
-                ))}
-            </div>
+            {studentChunks.map((chunk, pageIndex) => (
+                 <div key={pageIndex} className="grid grid-cols-2 grid-rows-2 gap-4 h-full" style={{ breakAfter: 'page' }}>
+                    {chunk.map((student, index) => (
+                        <CompactReport key={student?.id || `empty-${index}`} student={student} boletim={student?.boletim || {}} />
+                    ))}
+                </div>
+            ))}
         </div>
     );
 }
-
-    
