@@ -95,4 +95,10 @@
   .container {
     @apply w-full;
   }
+  .bg-grid {
+    background-size: var(--grid-size, 30px) var(--grid-size, 30px);
+    background-image:
+        linear-gradient(to right, var(--grid-color, hsl(0 0% 100% / 0.15)) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-color, hsl(0 0% 100% / 0.15)) 1px, transparent 1px);
+  }
 }
