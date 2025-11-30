@@ -94,7 +94,7 @@ export default function BolaMalucaPage() {
 
     // --- Load High Score ---
     useEffect(() => {
-        const savedHighScore = localStorage.getItem('sensorRushHighScore');
+        const savedHighScore = localStorage.getItem('bolaMalucaHighScore');
         if (savedHighScore) {
             setHighScore(parseInt(savedHighScore, 10));
         }
@@ -104,11 +104,9 @@ export default function BolaMalucaPage() {
         if (!isPowerUpActiveRef.current) return;
         
         enemiesRef.current.forEach((enemy, i) => {
-            // Restore original velocity if it exists
             if (originalVelocitiesRef.current[i]) {
                 enemy.velocity = originalVelocitiesRef.current[i];
             }
-            // Reset color via DOM element if it exists
             if(enemy.element) {
                 enemy.element.style.backgroundColor = 'hsl(340, 100%, 50%)';
                 enemy.element.style.boxShadow = `0 0 20px 8px hsl(340, 100%, 50%, 0.6)`;
@@ -124,7 +122,7 @@ export default function BolaMalucaPage() {
 
     }, []);
 
-    const resetGame = useCallback(() => {
+    const resetGame = useCallback((isStartingGame: boolean = false) => {
         const gameArea = gameAreaRef.current;
         if (!gameArea) return;
         
@@ -161,7 +159,10 @@ export default function BolaMalucaPage() {
 
         setScore(0);
         setTime(0);
-        lastTimeRef.current = 0;
+
+        if (isStartingGame) {
+            gameTimeStartRef.current = 0; // Reset only when starting a new game
+        }
     }, [endPowerUp]);
 
     // --- Permissions and Initialization ---
@@ -259,8 +260,7 @@ export default function BolaMalucaPage() {
         const item = itemRef.current;
         if (checkCollision(player, item)) {
             vibrate(50);
-            const newScore = score + 1;
-            setScore(newScore); // Triggers re-render for score display
+            setScore(prevScore => prevScore + 1); 
 
             enemies.forEach(e => {
                 const currentSpeed = Math.sqrt(e.velocity.x**2 + e.velocity.y**2);
@@ -277,7 +277,7 @@ export default function BolaMalucaPage() {
                 y: Math.random() * (height - item.size),
             };
             
-            if (!powerUpRef.current.active && !isPowerUpActiveRef.current && newScore > 0 && newScore % POWERUP_SPAWN_SCORE_INTERVAL === 0) {
+            if (!powerUpRef.current.active && !isPowerUpActiveRef.current && (score + 1) > 0 && (score + 1) % POWERUP_SPAWN_SCORE_INTERVAL === 0) {
                 powerUpRef.current.position = {
                     x: Math.random() * (width - POWERUP_SIZE),
                     y: Math.random() * (height - POWERUP_SIZE),
@@ -309,7 +309,7 @@ export default function BolaMalucaPage() {
             if (checkCollision(player, enemy)) {
                 vibrate([200, 50, 200]);
                 endPowerUp();
-                setStatus('gameOver'); // Triggers re-render for game over screen
+                setStatus('gameOver'); 
                 return;
             }
         }
@@ -337,14 +337,12 @@ export default function BolaMalucaPage() {
 
         animationFrameId.current = requestAnimationFrame(gameLoop);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [status, score, endPowerUp]); // Re-create loop function only when status or score changes.
+    }, [status, endPowerUp, score]); 
     
     // --- Game State Effects ---
     useEffect(() => {
         if (status === 'playing') {
-            gameTimeStartRef.current = 0;
-            lastTimeRef.current = 0;
-            setTime(0);
+            lastTimeRef.current = performance.now();
             animationFrameId.current = requestAnimationFrame(gameLoop);
         } else {
              if (animationFrameId.current) {
@@ -354,7 +352,7 @@ export default function BolaMalucaPage() {
                  if (score > highScore) {
                     setIsNewHighScore(true);
                     setHighScore(score);
-                    localStorage.setItem('sensorRushHighScore', String(score));
+                    localStorage.setItem('bolaMalucaHighScore', String(score));
                  }
              }
         }
@@ -389,7 +387,7 @@ export default function BolaMalucaPage() {
     
     const startGame = () => {
         if (gameAreaRef.current && gameAreaRef.current.getBoundingClientRect().width > 0) {
-            resetGame();
+            resetGame(true);
             setStatus('playing');
         } else {
             toast({ variant: 'destructive', title: 'Erro de Layout', description: 'Não foi possível iniciar o jogo. Tente novamente.' });
