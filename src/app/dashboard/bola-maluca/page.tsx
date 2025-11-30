@@ -64,7 +64,7 @@ export default function BolaMalucaPage() {
     const itemRef = useRef<GameObject>({ position: { x: -100, y: -100 }, velocity: { x: 0, y: 0 }, size: ITEM_SIZE });
     const powerUpRef = useRef<PowerUpGameObject>({ position: { x: -100, y: -100 }, velocity: { x: 0, y: 0 }, size: POWERUP_SIZE, active: false });
 
-    const originalVelocitiesRef = useRef<Vector[]>([]);
+    const originalVelocitiesRef = useRef<Map<GameObject, Vector>>(new Map());
     const isPowerUpActiveRef = useRef<boolean>(false);
     const powerUpTimeoutRef = useRef<NodeJS.Timeout>();
 
@@ -110,24 +110,25 @@ export default function BolaMalucaPage() {
     
     const endPowerUp = useCallback(() => {
         if (!isPowerUpActiveRef.current) return;
-        
-        enemiesRef.current.forEach((enemy, i) => {
-            if (originalVelocitiesRef.current[i]) {
-                enemy.velocity = originalVelocitiesRef.current[i];
+    
+        enemiesRef.current.forEach((enemy) => {
+            const originalVelocity = originalVelocitiesRef.current.get(enemy);
+            if (originalVelocity) {
+                enemy.velocity = originalVelocity;
             }
-            if(enemy.element) {
+            if (enemy.element) {
                 enemy.element.style.backgroundColor = 'hsl(340, 100%, 50%)';
                 enemy.element.style.boxShadow = `0 0 20px 8px hsl(340, 100%, 50%, 0.6)`;
             }
         });
-
+    
         isPowerUpActiveRef.current = false;
+        originalVelocitiesRef.current.clear();
+        
         if (powerUpTimeoutRef.current) {
             clearTimeout(powerUpTimeoutRef.current);
             powerUpTimeoutRef.current = undefined;
         }
-        originalVelocitiesRef.current = [];
-
     }, []);
     
     const spawnEnemy = useCallback(() => {
@@ -185,8 +186,12 @@ export default function BolaMalucaPage() {
             y: Math.random() * (height - ITEM_SIZE),
         };
 
-        powerUpRef.current.position = { x: -100, y: -100 };
+        powerUpRef.current.position = { x: -1000, y: -1000 };
         powerUpRef.current.active = false;
+        if (powerUpRef.current.element) {
+            powerUpRef.current.element.style.display = 'none';
+        }
+
 
         setScore(0);
         setTime(0);
@@ -264,6 +269,7 @@ export default function BolaMalucaPage() {
         if (gameTimeStartRef.current === 0) {
             gameTimeStartRef.current = currentTime;
             lastEnemySpawnTimeRef.current = currentTime;
+            lastTimeRef.current = currentTime;
         }
 
         // --- Spawn new enemy ---
@@ -331,17 +337,23 @@ export default function BolaMalucaPage() {
         if (powerUp.active && checkCollision(player, powerUp)) {
             vibrate([100, 30, 100]);
             powerUp.active = false;
-            powerUp.position = { x: -100, y: -100 };
+            powerUp.position = { x: -1000, y: -1000 };
             
             if (!isPowerUpActiveRef.current) {
                 isPowerUpActiveRef.current = true;
-                originalVelocitiesRef.current = enemies.map(e => ({ ...e.velocity }));
+                originalVelocitiesRef.current.clear();
                 
                 enemies.forEach(e => {
+                    originalVelocitiesRef.current.set(e, { ...e.velocity });
                     e.velocity.x *= 0.5;
                     e.velocity.y *= 0.5;
+                    if(e.element){
+                        e.element.style.backgroundColor = 'hsl(340, 50%, 70%)';
+                        e.element.style.boxShadow = `0 0 20px 8px hsl(340, 50%, 70%, 0.6)`;
+                    }
                 });
                 
+                if (powerUpTimeoutRef.current) clearTimeout(powerUpTimeoutRef.current);
                 powerUpTimeoutRef.current = setTimeout(endPowerUp, POWERUP_DURATION);
             }
         }
@@ -349,7 +361,6 @@ export default function BolaMalucaPage() {
         for (const enemy of enemies) {
             if (checkCollision(player, enemy)) {
                 vibrate([200, 50, 200]);
-                endPowerUp();
                 setStatus('gameOver'); 
                 return;
             }
@@ -369,9 +380,6 @@ export default function BolaMalucaPage() {
         enemies.forEach(e => {
             if (e.element) {
                 e.element.style.transform = `translate3d(${e.position.x}px, ${e.position.y}px, 0)`;
-                const isSlow = isPowerUpActiveRef.current;
-                e.element.style.backgroundColor = isSlow ? 'hsl(340, 50%, 70%)' : 'hsl(340, 100%, 50%)';
-                e.element.style.boxShadow = `0 0 20px 8px ${isSlow ? 'hsl(340, 50%, 70%, 0.6)' : 'hsl(340, 100%, 50%, 0.6)'}`;
             }
         });
 
@@ -383,7 +391,6 @@ export default function BolaMalucaPage() {
     // --- Game State Effects ---
     useEffect(() => {
         if (status === 'playing') {
-            lastTimeRef.current = performance.now();
             if (gameTimeStartRef.current === 0) {
                  gameTimeStartRef.current = performance.now();
                  lastEnemySpawnTimeRef.current = performance.now();
@@ -618,3 +625,5 @@ export default function BolaMalucaPage() {
         </AuthGuard>
     );
 }
+
+    
