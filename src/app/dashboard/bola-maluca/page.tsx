@@ -71,17 +71,16 @@ export default function BolaMalucaPage() {
     const router = useRouter();
     const { toast } = useToast();
     
-    // --- Refs for Game Objects, Elements & Animation ---
+    // --- Refs for Game Elements & Animation ---
     const gameAreaRef = useRef<HTMLDivElement>(null);
     const animationFrameId = useRef<number>();
     
     // Refs for game state that changes every frame but shouldn't trigger re-renders
     const playerRef = useRef<Player>({ position: { x: -100, y: -100 }, velocity: { x: 0, y: 0 }, size: PLAYER_SIZE });
-    const gameObjectsRef = useRef<GameObject[]>([]); // Enemies and power-ups
     const itemRef = useRef<Collectible>({ position: { x: -100, y: -100 }, size: ITEM_SIZE });
-    const originalVelocitiesRef = useRef<Map<string, Vector>>(new Map()); // Use ID for map key
+    const originalVelocitiesRef = useRef<Map<string, Vector>>(new Map());
     const gameTimeRef = useRef({ startTime: 0, lastTime: 0, lastEnemySpawnTime: 0 });
-    const gameLoopRef = useRef<(currentTime: number) => void>();
+    const gameLoopRef = useRef<() => void>();
 
     // --- State for React Rendering ---
     const [status, setStatus] = useState<GameStatus>('permissions');
@@ -91,10 +90,8 @@ export default function BolaMalucaPage() {
     const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>('prompt');
     const [isNewHighScore, setIsNewHighScore] = useState(false);
     const [isPowerUpActive, setIsPowerUpActive] = useState(false);
+    const [gameObjects, setGameObjects] = useState<GameObject[]>([]);
     
-    // State to force re-renders for game visuals when necessary
-    const [, setRenderTick] = useState(0);
-
     // --- Load High Score ---
     useEffect(() => {
         const savedHighScore = localStorage.getItem('bolaMalucaHighScore');
@@ -115,14 +112,17 @@ export default function BolaMalucaPage() {
 
     const endPowerUp = useCallback(() => {
         setIsPowerUpActive(false);
-        gameObjectsRef.current.forEach((obj) => {
-            if (obj.type === 'enemy') {
-                const originalVelocity = originalVelocitiesRef.current.get(obj.id);
-                if (originalVelocity) {
-                    obj.velocity = originalVelocity;
+        setGameObjects(prevObjects => 
+            prevObjects.map(obj => {
+                if (obj.type === 'enemy') {
+                    const originalVelocity = originalVelocitiesRef.current.get(obj.id);
+                    if (originalVelocity) {
+                        return { ...obj, velocity: originalVelocity };
+                    }
                 }
-            }
-        });
+                return obj;
+            })
+        );
         originalVelocitiesRef.current.clear();
     }, []);
 
@@ -158,13 +158,12 @@ export default function BolaMalucaPage() {
             },
             size: ENEMY_SIZE,
         };
-        gameObjectsRef.current.push(newEnemy);
+        setGameObjects(prev => [...prev, newEnemy]);
     }, []);
 
-    const resetGame = useCallback((isStartingGame: boolean = false) => {
+    const resetGame = useCallback((isStartingGame: boolean) => {
         const gameArea = gameAreaRef.current;
         if (!gameArea) return;
-        
         const { width, height } = gameArea.getBoundingClientRect();
         
         setIsNewHighScore(false);
@@ -173,8 +172,7 @@ export default function BolaMalucaPage() {
         playerRef.current.position = { x: (width - PLAYER_SIZE) / 2, y: (height - PLAYER_SIZE) / 2 };
         playerRef.current.velocity = { x: 0, y: 0 };
 
-        // Reset game objects (enemies and power-ups)
-        gameObjectsRef.current = Array.from({ length: INITIAL_NUM_ENEMIES }).map((_, i) => {
+        setGameObjects(Array.from({ length: INITIAL_NUM_ENEMIES }).map((_, i) => {
             const speed = ENEMY_SPEED_BASE;
             return {
                 id: `enemy_initial_${i}`,
@@ -189,7 +187,7 @@ export default function BolaMalucaPage() {
                 },
                 size: ENEMY_SIZE,
             }
-        });
+        }));
         
         itemRef.current.position = { 
             x: Math.random() * (width - ITEM_SIZE),
@@ -202,7 +200,6 @@ export default function BolaMalucaPage() {
         if (isStartingGame) {
             gameTimeRef.current = { startTime: performance.now(), lastTime: performance.now(), lastEnemySpawnTime: performance.now() };
         }
-        setRenderTick(tick => tick + 1);
     }, [isPowerUpActive, endPowerUp]);
 
     // --- Permissions and Initialization ---
@@ -214,7 +211,7 @@ export default function BolaMalucaPage() {
         const checkLayoutReady = () => {
             const { width, height } = gameArea.getBoundingClientRect();
             if (width > 0 && height > 0) {
-                resetGame();
+                resetGame(false);
                 setStatus('ready');
             } else {
                 requestAnimationFrame(checkLayoutReady);
@@ -240,7 +237,6 @@ export default function BolaMalucaPage() {
                 toast({ variant: 'destructive', title: 'Erro ao pedir permissão.' });
             }
         } else {
-            // For devices that don't require permission (like Android)
             setPermissionState('granted');
         }
     };
@@ -253,140 +249,131 @@ export default function BolaMalucaPage() {
     };
     
     // --- Game Loop ---
-    gameLoopRef.current = (currentTime: number) => {
-        if (status !== 'playing') return;
-        animationFrameId.current = requestAnimationFrame(gameLoopRef.current as FrameRequestCallback);
+    useEffect(() => {
+        gameLoopRef.current = () => {
+            if (status !== 'playing') return;
         
-        const gameArea = gameAreaRef.current;
-        if (!gameArea) return;
-        
-        const { width, height } = gameArea.getBoundingClientRect();
-        const timeState = gameTimeRef.current;
-        if (timeState.startTime === 0) return;
+            const gameArea = gameAreaRef.current;
+            if (!gameArea) return;
+            const { width, height } = gameArea.getBoundingClientRect();
+            const timeState = gameTimeRef.current;
 
-        // --- Update Time ---
-        if (currentTime - timeState.lastTime >= 1000) {
-            setTime(Math.floor((currentTime - timeState.startTime) / 1000));
-            timeState.lastTime = currentTime;
-        }
-        
-        // --- Spawn new enemy ---
-        if (currentTime - timeState.lastEnemySpawnTime > ENEMY_SPAWN_INTERVAL) {
-            spawnEnemy();
-            timeState.lastEnemySpawnTime = currentTime;
-        }
-
-        // --- Update Player Position ---
-        const player = playerRef.current;
-        player.position.x += player.velocity.x;
-        player.position.y += player.velocity.y;
-        if (player.position.x < 0) player.position.x = 0;
-        if (player.position.x > width - player.size) player.position.x = width - player.size;
-        if (player.position.y < 0) player.position.y = 0;
-        if (player.position.y > height - player.size) player.position.y = height - player.size;
-
-        // --- Update Enemy and Power-up Positions ---
-        gameObjectsRef.current.forEach(obj => {
-            obj.position.x += obj.velocity.x;
-            obj.position.y += obj.velocity.y;
-            if (obj.position.x <= 0 || obj.position.x >= width - obj.size) obj.velocity.x *= -1;
-            if (obj.position.y <= 0 || obj.position.y >= height - obj.size) obj.velocity.y *= -1;
-        });
-
-        // --- Collision Checks ---
-
-        // 1. Player-Item Collision (Score)
-        if (checkCollision(player, itemRef.current)) {
-            vibrate(50);
-            const newScore = score + 1;
-            setScore(newScore);
+            // --- Update Time ---
+            const currentTime = performance.now();
+            if (currentTime - timeState.lastTime >= 1000) {
+                setTime(Math.floor((currentTime - timeState.startTime) / 1000));
+                timeState.lastTime = currentTime;
+            }
             
-            // Spawn power-up if score is a multiple of the interval and one isn't already active/spawned
-            const powerUpExists = gameObjectsRef.current.some(obj => obj.type === 'powerup');
-            if (!isPowerUpActive && !powerUpExists && newScore > 0 && newScore % POWERUP_SPAWN_SCORE_INTERVAL === 0) {
-                const newPowerUp: PowerUp = {
-                    id: `powerup_${Date.now()}`,
-                    type: 'powerup',
-                    position: {
-                        x: Math.random() * (width - POWERUP_SIZE),
-                        y: Math.random() * (height - POWERUP_SIZE),
-                    },
-                    velocity: { x: 0, y: 0 },
-                    size: POWERUP_SIZE,
+            // --- Spawn new enemy ---
+            if (currentTime - timeState.lastEnemySpawnTime > ENEMY_SPAWN_INTERVAL) {
+                spawnEnemy();
+                timeState.lastEnemySpawnTime = currentTime;
+            }
+
+            // --- Update Player Position ---
+            const player = playerRef.current;
+            player.position.x += player.velocity.x;
+            player.position.y += player.velocity.y;
+            if (player.position.x < 0) player.position.x = 0;
+            if (player.position.x > width - player.size) player.position.x = width - player.size;
+            if (player.position.y < 0) player.position.y = 0;
+            if (player.position.y > height - player.size) player.position.y = height - player.size;
+
+            // --- Update All GameObject Positions ---
+            setGameObjects(prevObjects => prevObjects.map(obj => {
+                const newPos = { 
+                    x: obj.position.x + obj.velocity.x,
+                    y: obj.position.y + obj.velocity.y
                 };
-                gameObjectsRef.current.push(newPowerUp);
-            }
+                const newVel = { ...obj.velocity };
 
-            // Increase enemy speed only if power-up is not active
-            if (!isPowerUpActive) {
-                gameObjectsRef.current.forEach(obj => {
-                    if (obj.type === 'enemy') {
-                        const currentSpeed = Math.sqrt(obj.velocity.x**2 + obj.velocity.y**2);
-                        const newSpeed = currentSpeed + ENEMY_SPEED_INCREMENT;
-                        const speedMultiplier = newSpeed / currentSpeed;
-                        if (isFinite(speedMultiplier)) {
-                            obj.velocity.x *= speedMultiplier;
-                            obj.velocity.y *= speedMultiplier;
+                if (newPos.x <= 0 || newPos.x >= width - obj.size) newVel.x *= -1;
+                if (newPos.y <= 0 || newPos.y >= height - obj.size) newVel.y *= -1;
+
+                return { ...obj, position: newPos, velocity: newVel };
+            }));
+
+            // --- Collision Checks ---
+
+            // 1. Player-Item Collision (Score)
+            if (checkCollision(player, itemRef.current)) {
+                vibrate(50);
+                const newScore = score + 1;
+                setScore(newScore);
+                
+                const powerUpExists = gameObjects.some(obj => obj.type === 'powerup');
+                if (!isPowerUpActive && !powerUpExists && newScore > 0 && newScore % POWERUP_SPAWN_SCORE_INTERVAL === 0) {
+                    const newPowerUp: PowerUp = {
+                        id: `powerup_${Date.now()}`,
+                        type: 'powerup',
+                        position: {
+                            x: Math.random() * (width - POWERUP_SIZE),
+                            y: Math.random() * (height - POWERUP_SIZE),
+                        },
+                        velocity: { x: 0, y: 0 },
+                        size: POWERUP_SIZE,
+                    };
+                    setGameObjects(prev => [...prev, newPowerUp]);
+                }
+
+                if (!isPowerUpActive) {
+                    setGameObjects(prevObjs => prevObjs.map(obj => {
+                        if (obj.type === 'enemy') {
+                            const currentSpeed = Math.sqrt(obj.velocity.x**2 + obj.velocity.y**2);
+                            const newSpeed = currentSpeed + ENEMY_SPEED_INCREMENT;
+                            const speedMultiplier = newSpeed / currentSpeed;
+                            if (isFinite(speedMultiplier)) {
+                                return {...obj, velocity: {x: obj.velocity.x * speedMultiplier, y: obj.velocity.y * speedMultiplier}};
+                            }
                         }
-                    }
-                });
+                        return obj;
+                    }));
+                }
+                
+                itemRef.current.position = {
+                    x: Math.random() * (width - itemRef.current.size),
+                    y: Math.random() * (height - itemRef.current.size),
+                };
+            }
+            
+            // 2. Player-GameObject Collision (Enemies and Power-ups)
+            let collidedObject: GameObject | undefined = undefined;
+            for (const obj of gameObjects) {
+                if (checkCollision(player, obj)) {
+                    collidedObject = obj;
+                    break;
+                }
             }
 
-            // Respawn item
-            itemRef.current.position = {
-                x: Math.random() * (width - itemRef.current.size),
-                y: Math.random() * (height - itemRef.current.size),
-            };
-        }
-        
-        // 2. Player-GameObject Collision (Enemies and Power-ups)
-        // Separate loops to avoid modifying array while iterating
-        const newGameObjects: GameObject[] = [];
-        let shouldEndGame = false;
-        
-        for (const obj of gameObjectsRef.current) {
-            if (checkCollision(player, obj)) {
-                if (obj.type === 'powerup') {
-                    // --- Power-up Collision ---
+            if (collidedObject) {
+                if (collidedObject.type === 'powerup') {
                     vibrate([100, 30, 100]);
                     if (!isPowerUpActive) {
                         setIsPowerUpActive(true);
                         originalVelocitiesRef.current.clear();
-                        gameObjectsRef.current.forEach(e => {
+                        setGameObjects(prevObjs => prevObjs.map(e => {
                             if (e.type === 'enemy') {
                                 originalVelocitiesRef.current.set(e.id, { ...e.velocity });
-                                e.velocity.x *= 0.5;
-                                e.velocity.y *= 0.5;
+                                return {...e, velocity: {x: e.velocity.x * 0.5, y: e.velocity.y * 0.5}};
                             }
-                        });
+                            return e;
+                        }));
                     }
-                    // Don't add power-up to newGameObjects, effectively removing it
-                } else if (obj.type === 'enemy') {
-                    // --- Enemy Collision ---
+                    setGameObjects(prevObjs => prevObjs.filter(obj => obj.id !== collidedObject!.id));
+                } else if (collidedObject.type === 'enemy') {
                     vibrate([200, 50, 200]);
-                    shouldEndGame = true;
-                    break; // Exit loop immediately on enemy collision
+                    setStatus('gameOver'); 
                 }
-            } else {
-                newGameObjects.push(obj); // Keep object if no collision
             }
-        }
-
-        if (shouldEndGame) {
-            setStatus('gameOver'); 
-            return; // Stop the loop immediately
-        }
-        
-        // Update the main game objects ref with the filtered list
-        gameObjectsRef.current = newGameObjects;
-
-        setRenderTick(tick => tick + 1); // Trigger re-render to update visuals
-    }; 
+            
+            animationFrameId.current = requestAnimationFrame(gameLoopRef.current as FrameRequestCallback);
+        };
+    }, [status, gameObjects, isPowerUpActive, score, spawnEnemy, vibrate, endPowerUp]);
     
     // --- Game State Effects ---
     useEffect(() => {
         if (status === 'playing') {
-            gameTimeRef.current.startTime = performance.now();
             animationFrameId.current = requestAnimationFrame(gameLoopRef.current as FrameRequestCallback);
         } else {
              if (animationFrameId.current) {
@@ -513,48 +500,36 @@ export default function BolaMalucaPage() {
                                         }}/>
                                     
                                     {/* Game Objects (Enemies and Power-ups) */}
-                                    {gameObjectsRef.current.map((obj) => {
+                                    {gameObjects.map((obj) => {
+                                        let color, boxShadow, animationClass;
                                         if (obj.type === 'enemy') {
-                                            const enemyColor = isPowerUpActive ? 'hsl(340, 50%, 70%)' : 'hsl(340, 100%, 50%)';
-                                            return (
-                                                <div 
-                                                    key={obj.id} 
-                                                    style={{
-                                                        position: 'absolute',
-                                                        left: 0,
-                                                        top: 0,
-                                                        width: obj.size,
-                                                        height: obj.size,
-                                                        backgroundColor: enemyColor,
-                                                        borderRadius: '50%',
-                                                        boxShadow: `0 0 20px 8px ${enemyColor}99`,
-                                                        transition: 'background-color 0.3s, box-shadow 0.3s',
-                                                        willChange: 'transform',
-                                                        transform: `translate3d(${obj.position.x}px, ${obj.position.y}px, 0)`
-                                                    }}/>
-                                            );
+                                            color = isPowerUpActive ? 'hsl(340, 50%, 70%)' : 'hsl(340, 100%, 50%)';
+                                            boxShadow = `0 0 20px 8px ${color}99`;
+                                            animationClass = '';
+                                        } else { // Power-up
+                                            color = 'hsl(190, 100%, 50%)';
+                                            boxShadow = `0 0 20px 8px hsl(190, 100%, 50%)a`;
+                                            animationClass = "animate-pulse-strong";
                                         }
-                                        if (obj.type === 'powerup') {
-                                            return (
-                                                <div
-                                                    key={obj.id}
-                                                    style={{
-                                                        position: 'absolute',
-                                                        left: 0,
-                                                        top: 0,
-                                                        width: obj.size,
-                                                        height: obj.size,
-                                                        backgroundColor: 'hsl(190, 100%, 50%)',
-                                                        borderRadius: '50%',
-                                                        boxShadow: `0 0 20px 8px hsl(190, 100%, 50%)a`,
-                                                        willChange: 'transform',
-                                                        transform: `translate3d(${obj.position.x}px, ${obj.position.y}px, 0)`
-                                                    }}
-                                                    className="animate-pulse-strong"
-                                                />
-                                            );
-                                        }
-                                        return null;
+
+                                        return (
+                                            <div 
+                                                key={obj.id} 
+                                                className={animationClass}
+                                                style={{
+                                                    position: 'absolute',
+                                                    left: 0,
+                                                    top: 0,
+                                                    width: obj.size,
+                                                    height: obj.size,
+                                                    backgroundColor: color,
+                                                    borderRadius: '50%',
+                                                    boxShadow: boxShadow,
+                                                    transition: 'background-color 0.3s, box-shadow 0.3s',
+                                                    willChange: 'transform',
+                                                    transform: `translate3d(${obj.position.x}px, ${obj.position.y}px, 0)`
+                                                }}/>
+                                        );
                                     })}
                                 </>
                             )}
@@ -617,3 +592,5 @@ export default function BolaMalucaPage() {
         </AuthGuard>
     );
 }
+
+    
