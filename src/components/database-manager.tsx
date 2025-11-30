@@ -1,10 +1,8 @@
-
 'use client';
 
 import { useState } from 'react';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, getDocs, writeBatch, query } from 'firebase/firestore';
-import { useCollection } from '@/firebase/firestore/use-collection';
 import { useToast } from '@/hooks/use-toast';
 import FileUploaderSheet from './file-uploader-sheet';
 import GradesUploaderSheet from './grades-uploader-sheet';
@@ -76,9 +74,12 @@ export default function DatabaseManager() {
         }
     };
 
-    const { data: profiles, isLoading: isLoadingProfiles } = useCollection(
-        firestore ? query(collection(firestore, 'profiles')) : null
-    );
+    const profilesQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'profiles'));
+      }, [firestore]);
+    
+    const { data: profiles, isLoading: isLoadingProfiles } = useCollection(profilesQuery);
 
     return (
        <div className="space-y-6">
@@ -155,7 +156,13 @@ export default function DatabaseManager() {
                         <Shield className="h-5 w-5" /> Gestão de Perfis de Permissão
                     </AccordionTrigger>
                     <AccordionContent className="pt-4">
-                        <ProfileManager />
+                        {isLoadingProfiles ? (
+                             <div className="flex h-64 w-full items-center justify-center">
+                                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                            </div>
+                        ) : (
+                            <ProfileManager initialProfiles={profiles || []} isLoading={isLoadingProfiles} />
+                        )}
                     </AccordionContent>
                 </AccordionItem>
             </Accordion>

@@ -1,10 +1,8 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
 import { Loader2, Plus } from 'lucide-react';
 import { useFirestore, useMemoFirebase } from '@/firebase';
-import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, doc, deleteDoc } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import ProfileTable from './profile-table';
@@ -14,7 +12,12 @@ import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 
 
-export default function ProfileManager() {
+interface ProfileManagerProps {
+    initialProfiles: any[];
+    isLoading: boolean;
+}
+
+export default function ProfileManager({ initialProfiles, isLoading }: ProfileManagerProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   
@@ -22,17 +25,10 @@ export default function ProfileManager() {
   const [isNew, setIsNew] = useState(false);
   const [deletingProfile, setDeletingProfile] = useState<any | null>(null);
 
-  const profilesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'profiles'));
-  }, [firestore]);
-
-  const { data: profilesData, isLoading: isProfilesLoading } = useCollection(profilesQuery);
-
   const profiles = useMemo(() => {
-    if (!profilesData) return [];
-    return [...profilesData].sort((a, b) => a.name.localeCompare(b.name));
-  }, [profilesData]);
+    if (!initialProfiles) return [];
+    return [...initialProfiles].sort((a, b) => a.name.localeCompare(b.name));
+  }, [initialProfiles]);
 
 
   const handleEditProfile = (profile: any) => {
@@ -96,7 +92,7 @@ export default function ProfileManager() {
             <Plus className="mr-2 h-4 w-4" /> Novo Perfil
         </Button>
       </div>
-      {isProfilesLoading ? (
+      {isLoading ? (
             <div className="flex h-64 w-full items-center justify-center">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
             </div>
