@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useFirestore, useCollection } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, writeBatch } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -37,7 +38,7 @@ export default function GradesManager() {
     const [isSaving, setIsSaving] = useState(false);
 
     // Query for all students (for filter options)
-    const studentsOptionsQuery = useMemo(() => {
+    const studentsOptionsQuery = useMemoFirebase(() => {
         if (!firestore) return null;
         return query(collection(firestore, 'alunos'));
     }, [firestore]);
@@ -74,7 +75,7 @@ export default function GradesManager() {
     }, [filters, selectedDiscipline]);
 
     // Query for students in the selected class
-    const studentsInClassQuery = useMemo(() => {
+    const studentsInClassQuery = useMemoFirebase(() => {
         if (!firestore || !isReadyToLoad) return null;
         let q = query(collection(firestore, 'alunos'));
         q = query(q, where('ensino', '==', filters.ensino));
@@ -82,7 +83,7 @@ export default function GradesManager() {
         q = query(q, where('classe', '==', filters.classe));
         q = query(q, where('turno', '==', filters.turno));
         return q;
-    }, [firestore, isReadyToLoad, filters]);
+    }, [firestore, isReadyToLoad, filters.ensino, filters.serie, filters.classe, filters.turno]);
     const { data: studentsInClass, isLoading: isLoadingStudents } = useCollection(studentsInClassQuery);
 
     const sortedStudentsInClass = useMemo(() => {

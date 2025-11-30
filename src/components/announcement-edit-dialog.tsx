@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useFirestore } from "@/firebase";
+import { useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, query } from "firebase/firestore";
 import { useCollection } from "@/firebase/firestore/use-collection";
 import { MultiSelect } from "./multi-select";
@@ -34,7 +34,7 @@ interface AnnouncementEditDialogProps {
 export default function AnnouncementEditDialog({ isOpen, onClose, announcement, onSave }: AnnouncementEditDialogProps) {
   const firestore = useFirestore();
 
-  const profilesQuery = useMemo(() => {
+  const profilesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     // Removido orderBy('name') para evitar erros de asserção interna do Firestore.
     // A ordenação será feita no cliente.

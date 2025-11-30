@@ -4,7 +4,7 @@
 import { useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import AuthGuard from "@/components/auth-guard";
@@ -20,7 +20,7 @@ export default function ClassesPage() {
     const router = useRouter();
     const firestore = useFirestore();
 
-    const studentsQuery = useMemo(() => {
+    const studentsQuery = useMemoFirebase(() => {
         if (!firestore) return null;
         return query(collection(firestore, 'alunos'));
     }, [firestore]);

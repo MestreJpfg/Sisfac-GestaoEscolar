@@ -42,7 +42,7 @@ export default function DashboardPage() {
 
   const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
   
-  const studentsQuery = useMemo(() => {
+  const studentsQuery = useMemoFirebase(() => {
       if (!firestore) return null;
       return query(collection(firestore, 'alunos'));
   }, [firestore]);
@@ -270,5 +270,3 @@ export default function DashboardPage() {
     </AuthGuard>
   );
 }
-
-    

@@ -4,7 +4,7 @@
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Loader2, ArrowLeft, Plus } from 'lucide-react';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { collection, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -28,7 +28,7 @@ export default function ProfileManager() {
   const [isNew, setIsNew] = useState(false);
   const [deletingProfile, setDeletingProfile] = useState<any | null>(null);
 
-  const profilesQuery = useMemo(() => {
+  const profilesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     // Removido orderBy('name') para maior robustez contra dados inconsistentes.
     // A ordenação pode ser feita no cliente se necessário, pois a lista de perfis é pequena.

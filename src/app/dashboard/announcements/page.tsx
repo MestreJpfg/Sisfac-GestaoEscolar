@@ -4,7 +4,7 @@
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { collection, doc, query, orderBy } from 'firebase/firestore';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import { format } from 'date-fns';
@@ -34,7 +34,7 @@ export default function AnnouncementsPage() {
     const [deletingAnnouncement, setDeletingAnnouncement] = useState<any | null>(null);
     const [isNew, setIsNew] = useState(false);
 
-    const announcementsQuery = useMemo(() => {
+    const announcementsQuery = useMemoFirebase(() => {
         if (!firestore) return null;
         return query(collection(firestore, 'announcements'));
     }, [firestore]);
@@ -50,7 +50,7 @@ export default function AnnouncementsPage() {
         });
     }, [announcementsData]);
     
-    const profilesQuery = useMemo(() => {
+    const profilesQuery = useMemoFirebase(() => {
         if (!firestore) return null;
         return query(collection(firestore, 'profiles'));
     }, [firestore]);

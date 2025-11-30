@@ -4,7 +4,7 @@
 import { useState, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { useFirestore, useCollection } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -41,7 +41,7 @@ export default function MonthlyAttendanceReport() {
     const { toast } = useToast();
     
     // Student data for filters
-    const studentsOptionsQuery = useMemo(() => {
+    const studentsOptionsQuery = useMemoFirebase(() => {
         if (!firestore) return null;
         return query(collection(firestore, 'users'), where('profileId', '==', 'Aluno'));
     }, [firestore]);

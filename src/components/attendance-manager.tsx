@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useFirestore, useCollection } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, writeBatch, getDocs } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -41,7 +41,7 @@ export default function AttendanceManager() {
     const [isSaving, setIsSaving] = useState(false);
 
     // Query to get all students for filter options
-    const studentsOptionsQuery = useMemo(() => {
+    const studentsOptionsQuery = useMemoFirebase(() => {
         if (!firestore) return null;
         return query(collection(firestore, 'alunos'));
     }, [firestore]);
@@ -79,7 +79,7 @@ export default function AttendanceManager() {
     }, [isClassSelected, filters]);
 
     // Query for students in the selected class
-    const studentsInClassQuery = useMemo(() => {
+    const studentsInClassQuery = useMemoFirebase(() => {
         if (!firestore || !isClassSelected) return null;
         let q = query(collection(firestore, 'alunos'));
         q = query(q, where('ensino', '==', filters.ensino));
@@ -87,7 +87,7 @@ export default function AttendanceManager() {
         q = query(q, where('classe', '==', filters.classe));
         q = query(q, where('turno', '==', filters.turno));
         return q;
-    }, [firestore, isClassSelected, filters]);
+    }, [firestore, isClassSelected, filters.ensino, filters.serie, filters.classe, filters.turno]);
     const { data: studentsInClass, isLoading: isLoadingStudents } = useCollection(studentsInClassQuery);
 
     const sortedStudentsInClass = useMemo(() => {
@@ -102,7 +102,7 @@ export default function AttendanceManager() {
     // Effect to fetch existing attendance for the selected date and class
     useEffect(() => {
         const fetchAttendance = async () => {
-            if (!firestore || !classId || !selectedDate || !sortedStudentsInClass) return;
+            if (!firestore || !classId || !selectedDate || !sortedStudentsInClass || sortedStudentsInClass.length === 0) return;
 
             const formattedDate = format(selectedDate, 'yyyy-MM-dd');
             const attendanceQuery = query(

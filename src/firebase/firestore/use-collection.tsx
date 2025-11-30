@@ -61,6 +61,14 @@ export function useCollection<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
+    // This check is crucial. If the query object isn't memoized, it will be a new
+    // object on every render, causing this useEffect to run infinitely.
+    if (targetRefOrQuery && !(targetRefOrQuery as any).__memo) {
+      console.warn(
+        'useCollection: The provided query/reference should be memoized with useMemo or useMemoFirebase to prevent performance issues.'
+      );
+    }
+    
     if (!targetRefOrQuery) {
       setIsLoading(true);
       setData(null);

@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { useFirestore, useCollection } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 
 import StudentTable from './student-table';
@@ -42,7 +43,7 @@ export default function StudentDataView() {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: 'ascending' });
   
   // This query fetches ALL students. It's used for populating filter dropdowns and for the main data view.
-  const studentsQuery = useMemo(() => {
+  const studentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'alunos'));
   }, [firestore]);
