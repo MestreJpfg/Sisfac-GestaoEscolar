@@ -8,7 +8,6 @@ import { Toaster } from "@/components/ui/toaster";
 import GoogleAnalytics from '@/components/google-analytics';
 import { ThemeProvider } from '@/components/theme-provider';
 import { FirebaseClientProvider } from '@/firebase';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'; // Importado
 
 const inter = Inter({
   subsets: ['latin'],
@@ -29,9 +28,6 @@ const poppins = Poppins({
 //   manifest: '/manifest.webmanifest'
 // };
 
-// Criar uma instância do QueryClient
-const queryClient = new QueryClient();
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -49,19 +45,17 @@ export default function RootLayout({
         )}
       </head>
       <body className="font-body antialiased">
-        <QueryClientProvider client={queryClient}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <FirebaseClientProvider>
-              {children}
-            </FirebaseClientProvider>
-            <Toaster />
-          </ThemeProvider>
-        </QueryClientProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <FirebaseClientProvider>
+            {children}
+          </FirebaseClientProvider>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );
