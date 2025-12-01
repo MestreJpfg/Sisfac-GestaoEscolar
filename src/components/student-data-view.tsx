@@ -1,9 +1,8 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown } from 'lucide-react';
@@ -40,35 +39,30 @@ export default function StudentDataView() {
   const debouncedNome = useDebounce(filters.nome, 300);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: 'ascending' });
 
-  const studentsQuery = useMemoFirebase(() => {
+  // Query to get all students for filtering and options
+  const allStudentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'alunos'));
   }, [firestore]);
+  const { data: allStudents, isLoading: isLoadingAllStudents } = useCollection(allStudentsQuery);
 
-  const { data: studentsData, isLoading: isLoadingAllStudents } = useCollection(studentsQuery);
 
   const { filteredAndSortedStudents, uniqueFilterOptions } = useMemo(() => {
-    if (!studentsData) {
+    if (!allStudents) {
       return { filteredAndSortedStudents: [], uniqueFilterOptions: { ensinos: [], series: [], classes: [], turnos: [] } };
     }
 
+    // Generate filter options from all students data
     const getUniqueValues = (key: string, data: any[]) =>
       [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
-    const ensinos = getUniqueValues('ensino', studentsData);
-    let seriesData = studentsData;
-    if (filters.ensino) seriesData = seriesData.filter(s => s.ensino === filters.ensino);
-    const series = getUniqueValues('serie', seriesData);
+    const ensinos = getUniqueValues('ensino', allStudents);
+    const series = getUniqueValues('serie', allStudents);
+    const classes = getUniqueValues('classe', allStudents);
+    const turnos = getUniqueValues('turno', allStudents);
     
-    let classesData = seriesData;
-    if(filters.serie) classesData = classesData.filter(s => s.serie === filters.serie);
-    const classes = getUniqueValues('classe', classesData);
-
-    let turnosData = classesData;
-    if(filters.classe) turnosData = turnosData.filter(s => s.classe === filters.classe);
-    const turnos = getUniqueValues('turno', turnosData);
-
-    let filteredStudents = studentsData;
+    // Filter students based on active filters
+    let filteredStudents = allStudents;
     const searchLower = debouncedNome.trim().toLowerCase();
 
     if (searchLower) {
@@ -90,6 +84,7 @@ export default function StudentDataView() {
         filteredStudents = filteredStudents.filter(student => student.nee && student.nee.trim() !== '');
     }
 
+    // Sort the filtered students
     const sortedStudents = [...filteredStudents].sort((a, b) => {
       const aValue = a[sortConfig.key] || '';
       const bValue = b[sortConfig.key] || '';
@@ -106,7 +101,7 @@ export default function StudentDataView() {
       filteredAndSortedStudents: sortedStudents,
       uniqueFilterOptions: { ensinos, series, classes, turnos }
     };
-  }, [studentsData, debouncedNome, filters, sortConfig]);
+  }, [allStudents, debouncedNome, filters, sortConfig]);
 
   const handleSort = (key: string) => {
     setSortConfig(prevConfig => ({
@@ -117,21 +112,7 @@ export default function StudentDataView() {
 
   const handleFilterChange = (name: string, value: string | boolean) => {
     const newValue = typeof value === 'string' && value === 'all' ? '' : value;
-    
-    setFilters(prev => {
-        const newFilters = { ...prev, [name]: newValue };
-        if (name === 'ensino') {
-            newFilters.serie = '';
-            newFilters.classe = '';
-            newFilters.turno = '';
-        } else if (name === 'serie') {
-            newFilters.classe = '';
-            newFilters.turno = '';
-        } else if (name === 'classe') {
-            newFilters.turno = '';
-        }
-        return newFilters;
-    });
+    setFilters(prev => ({ ...prev, [name]: newValue }));
   };
 
   const clearFilters = () => {
@@ -162,7 +143,7 @@ export default function StudentDataView() {
   };
 
   const handleStudentUpdate = () => {
-    // A atualização será refletida automaticamente pelo useCollection
+    // The update will be reflected automatically by the useCollection hook
     toast({
         title: "Atualização em andamento...",
         description: "Os dados do aluno estão sendo atualizados na lista.",
@@ -199,7 +180,7 @@ export default function StudentDataView() {
                       {uniqueFilterOptions.ensinos.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Select value={filters.serie || ''} onValueChange={(value) => handleFilterChange('serie', value)} disabled={!filters.ensino}>
+                  <Select value={filters.serie || ''} onValueChange={(value) => handleFilterChange('serie', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filtrar por série..." />
                     </SelectTrigger>
@@ -209,7 +190,7 @@ export default function StudentDataView() {
                       <SelectItem value="N/A">Não Definida</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Select value={filters.classe || ''} onValueChange={(value) => handleFilterChange('classe', value)} disabled={!filters.serie}>
+                  <Select value={filters.classe || ''} onValueChange={(value) => handleFilterChange('classe', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filtrar por classe..." />
                     </SelectTrigger>
@@ -218,7 +199,7 @@ export default function StudentDataView() {
                       {uniqueFilterOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Select value={filters.turno || ''} onValueChange={(value) => handleFilterChange('turno', value)} disabled={!filters.classe}>
+                  <Select value={filters.turno || ''} onValueChange={(value) => handleFilterChange('turno', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filtrar por turno..." />
                     </SelectTrigger>
@@ -256,7 +237,7 @@ export default function StudentDataView() {
       
       <div className="text-sm text-muted-foreground h-5">
         {!isLoadingAllStudents && hasActiveFilters && filteredAndSortedStudents.length > 0 &&
-          `A exibir ${filteredAndSortedStudents.length} de ${studentsData?.length || 0} alunos.`
+          `A exibir ${filteredAndSortedStudents.length} de ${allStudents?.length || 0} alunos.`
         }
       </div>
       
