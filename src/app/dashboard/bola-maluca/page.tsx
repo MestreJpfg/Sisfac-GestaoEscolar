@@ -368,7 +368,7 @@ export default function BolaMalucaPage() {
                 cancelAnimationFrame(animationFrameId.current);
             }
         };
-    }, [status, score, highScore, gameObjects, spawnEnemy, spawnPowerUp, vibrate, isPowerUpActive, resetGame]);
+    }, [status, score, highScore, gameObjects, spawnEnemy, spawnPowerUp, vibrate, isPowerUpActive]);
     
     // --- Sensor Listener Effect ---
     useEffect(() => {
@@ -477,7 +477,7 @@ export default function BolaMalucaPage() {
                                         }}/>
 
                                     {/* Game Objects (Enemies and Power-ups) */}
-                                    {gameObjects.map((obj) => (
+                                    {status === 'playing' && gameObjects.map((obj) => (
                                         <div 
                                             key={obj.id} 
                                             style={{
@@ -556,3 +556,5 @@ export default function BolaMalucaPage() {
         </AuthGuard>
     );
 }
+
+    
