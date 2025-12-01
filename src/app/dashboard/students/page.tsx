@@ -1,3 +1,4 @@
+
 'use client';
 
 import AuthGuard from "@/components/auth-guard";
@@ -54,3 +55,4 @@ export default function StudentsPage() {
     </AuthGuard>
   );
 }
+
