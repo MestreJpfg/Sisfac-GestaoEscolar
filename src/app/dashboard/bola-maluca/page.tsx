@@ -325,26 +325,27 @@ export default function BolaMalucaPage() {
             }
             
             // 2. Player-Game Object Collision (Enemies and Power-ups)
-            for (const obj of gameObjects) {
-                if (checkCollision(player, obj)) {
-                    if (obj.type === 'powerup') {
-                        vibrate(100);
-                        setIsPowerUpActive(true);
-                        setTimeout(() => setIsPowerUpActive(false), POWERUP_EFFECT_DURATION);
-                        // Remove the collected power-up
-                        setGameObjects(prev => prev.filter(o => o.id !== obj.id));
-                        // Continue the loop to check other collisions in the same frame
-                        continue; 
-                    }
-                    
-                    if (obj.type === 'enemy') {
-                        vibrate([200, 50, 200]);
-                        setStatus('gameOver');
-                        return; // Exit loop immediately on game over
+            setGameObjects(prevObjects => {
+                for (const obj of prevObjects) {
+                    if (checkCollision(player, obj)) {
+                        if (obj.type === 'powerup') {
+                            vibrate(100);
+                            setIsPowerUpActive(true);
+                            setTimeout(() => setIsPowerUpActive(false), POWERUP_EFFECT_DURATION);
+                            // Return a new array without the collected power-up
+                            return prevObjects.filter(o => o.id !== obj.id);
+                        }
+                        
+                        if (obj.type === 'enemy') {
+                            vibrate([200, 50, 200]);
+                            setStatus('gameOver');
+                            return prevObjects; // Exit loop immediately on game over
+                        }
                     }
                 }
-            }
-            
+                return prevObjects; // Return original array if no collision
+            });
+
             animationFrameId.current = requestAnimationFrame(gameLoop);
         };
 
@@ -368,7 +369,7 @@ export default function BolaMalucaPage() {
                 cancelAnimationFrame(animationFrameId.current);
             }
         };
-    }, [status, score, highScore, gameObjects, spawnEnemy, spawnPowerUp, vibrate, isPowerUpActive]);
+    }, [status, score, highScore, spawnEnemy, spawnPowerUp, vibrate, isPowerUpActive]);
     
     // --- Sensor Listener Effect ---
     useEffect(() => {
