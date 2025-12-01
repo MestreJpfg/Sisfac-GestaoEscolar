@@ -93,7 +93,7 @@
 
 @layer components {
   .container {
-    @apply w-full;
+    @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
   .bg-grid {
     background-size: var(--grid-size, 30px) var(--grid-size, 30px);
