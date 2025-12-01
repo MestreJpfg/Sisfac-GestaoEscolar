@@ -87,12 +87,7 @@
         "transporte_escolar": { "type": "boolean" },
         "carteira_estudante": { "type": "boolean" },
         "nee": { "type": ["string", "null"] },
-        "boletim": { "$ref": "#/entities/Boletim" },
-        "status": {
-            "type": "string",
-            "enum": ["ATIVO", "NÃO LISTADO"],
-            "description": "Status of the student record."
-        }
+        "boletim": { "$ref": "#/entities/Boletim" }
       },
        "required": ["id", "rm", "nome"]
     },
