@@ -438,7 +438,8 @@ export default function BolaMalucaPage() {
                                             borderRadius: '50%',
                                             boxShadow: '0 0 15px 5px hsl(180, 100%, 50%, 0.7)',
                                             willChange: 'transform',
-                                            transform: `translate3d(${playerRef.current.position.x}px, ${playerRef.current.position.y}px, 0)`
+                                            transform: `translate3d(${playerRef.current.position.x}px, ${playerRef.current.position.y}px, 0)`,
+                                            display: status === 'playing' ? 'block' : 'none'
                                         }}/>
                                     
                                     {/* Item */}
@@ -454,7 +455,8 @@ export default function BolaMalucaPage() {
                                             borderRadius: '50%',
                                             boxShadow: '0 0 15px 5px hsl(50, 100%, 50%, 0.7)',
                                             willChange: 'transform',
-                                            transform: `translate3d(${itemRef.current.position.x}px, ${itemRef.current.position.y}px, 0)`
+                                            transform: `translate3d(${itemRef.current.position.x}px, ${itemRef.current.position.y}px, 0)`,
+                                            display: status === 'playing' ? 'block' : 'none'
                                         }}/>
                                         
                                     {/* Power Up */}
@@ -471,7 +473,8 @@ export default function BolaMalucaPage() {
                                             boxShadow: '0 0 20px 8px hsl(270, 100%, 60%)',
                                             animation: 'pulse-strong 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                                             willChange: 'transform',
-                                            transform: `translate3d(${powerUpRef.current.position.x}px, ${powerUpRef.current.position.y}px, 0)`
+                                            transform: `translate3d(${powerUpRef.current.position.x}px, ${powerUpRef.current.position.y}px, 0)`,
+                                            display: status === 'playing' ? 'block' : 'none'
                                         }}/>
 
                                     {/* Enemies */}
