@@ -53,10 +53,12 @@ export default function DashboardPage() {
   const hasPermission = (permission: string) => {
     if (isPermissionsLoading || !userProfile || !firestore) return false;
     
+    // Admin override check
     if (userProfile.profileId === 'Administrador' || userProfile.profileId === 'Administrador(a)') {
       return true;
     }
     
+    // If checking for a 'view' permission, also check for the corresponding 'manage' permission
     if (permission.startsWith('view:')) {
         const managePermission = permission.replace('view:', 'manage:');
         if (profileDetails?.permissions?.includes(managePermission) || userProfile.customPermissions?.includes(managePermission)) {
@@ -64,10 +66,12 @@ export default function DashboardPage() {
         }
     }
     
+    // Check profile permissions
     if (profileDetails?.permissions?.includes(permission)) {
       return true;
     }
     
+    // Check user-specific custom permissions
     if (userProfile.customPermissions?.includes(permission)) {
       return true;
     }
