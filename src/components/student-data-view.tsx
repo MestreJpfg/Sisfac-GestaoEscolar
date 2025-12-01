@@ -1,8 +1,9 @@
+
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown } from 'lucide-react';
@@ -39,61 +40,54 @@ export default function StudentDataView() {
   const debouncedNome = useDebounce(filters.nome, 300);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: 'ascending' });
 
-  // Query otimizada para popular os filtros.
-  const allStudentsForFiltersQuery = useMemoFirebase(() => {
+  // Query otimizada para popular os filtros, carregando todos os alunos.
+  const allStudentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'alunos'));
   }, [firestore]);
-  const { data: allStudentsForFilters, isLoading: isLoadingAllStudents } = useCollection(allStudentsForFiltersQuery);
+  const { data: allStudents, isLoading: isLoadingAllStudents } = useCollection(allStudentsQuery);
   
   // Memoize as opções de filtro para evitar recálculos.
   const uniqueFilterOptions = useMemo(() => {
-    if (!allStudentsForFilters) return { ensinos: [], series: [], classes: [], turnos: [] };
+    if (!allStudents) return { ensinos: [], series: [], classes: [], turnos: [] };
     const getUniqueValues = (key: string, data: any[]) =>
       [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
-    const ensinos = getUniqueValues('ensino', allStudentsForFilters);
-    const series = getUniqueValues('serie', allStudentsForFilters);
-    const classes = getUniqueValues('classe', allStudentsForFilters);
-    const turnos = getUniqueValues('turno', allStudentsForFilters);
+    const ensinos = getUniqueValues('ensino', allStudents);
+    const series = getUniqueValues('serie', allStudents);
+    const classes = getUniqueValues('classe', allStudents);
+    const turnos = getUniqueValues('turno', allStudents);
     return { ensinos, series, classes, turnos };
-  }, [allStudentsForFilters]);
+  }, [allStudents]);
   
-  // Determina se uma busca deve ser feita.
-  const isSearchActive = useMemo(() => {
-    return debouncedNome.trim().length >= 3 || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
-  }, [debouncedNome, filters]);
-
-  // Query para buscar os alunos a serem exibidos na tabela, só é ativada se uma busca estiver ativa.
-  const studentsQuery = useMemoFirebase(() => {
-    if (!firestore || !isSearchActive) return null;
-    
-    let q = query(collection(firestore, 'alunos'));
-
-    if (filters.ensino) q = query(q, where('ensino', '==', filters.ensino));
-    if (filters.serie) q = query(q, where('serie', '==', filters.serie));
-    if (filters.classe) q = query(q, where('classe', '==', filters.classe));
-    if (filters.turno) q = query(q, where('turno', '==', filters.turno));
-    if (filters.nee) q = query(q, where('nee', '!=', null));
-    
-    return q;
-  }, [firestore, isSearchActive, filters]);
-
-  const { data: studentsData, isLoading: isLoadingStudents } = useCollection(studentsQuery);
-
   const filteredAndSortedStudents = useMemo(() => {
-    if (!isSearchActive || !studentsData) return [];
+    if (!allStudents) return [];
 
-    let filtered = studentsData;
+    let filtered = [...allStudents];
 
-    // Filtro de nome do lado do cliente, pois o Firestore não suporta 'contains'.
+    // Aplicar filtros
     const searchLower = debouncedNome.trim().toLowerCase();
     if (searchLower.length >= 3) {
       filtered = filtered.filter(student => student.nome?.toLowerCase().includes(searchLower));
     }
+    if (filters.ensino) {
+      filtered = filtered.filter(student => student.ensino === filters.ensino);
+    }
+    if (filters.serie) {
+      filtered = filtered.filter(student => student.serie === filters.serie);
+    }
+    if (filters.classe) {
+      filtered = filtered.filter(student => student.classe === filters.classe);
+    }
+    if (filters.turno) {
+      filtered = filtered.filter(student => student.turno === filters.turno);
+    }
+    if (filters.nee) {
+        filtered = filtered.filter(student => student.nee && student.nee.trim() !== '');
+    }
     
     // Ordenação
-    return [...filtered].sort((a, b) => {
+    return filtered.sort((a, b) => {
       const aValue = a[sortConfig.key] || '';
       const bValue = b[sortConfig.key] || '';
       if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
@@ -101,7 +95,7 @@ export default function StudentDataView() {
       return 0;
     });
 
-  }, [studentsData, debouncedNome, sortConfig, isSearchActive]);
+  }, [allStudents, debouncedNome, filters, sortConfig]);
 
   const handleSort = (key: string) => {
     setSortConfig(prevConfig => ({
@@ -145,13 +139,17 @@ export default function StudentDataView() {
     });
   };
   
+  const isAnyFilterActive = useMemo(() => {
+    return debouncedNome.trim().length > 0 || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
+  }, [debouncedNome, filters]);
+
   return (
     <div className="space-y-6">
       <Card>
         <CardContent className="p-4 space-y-4">
           <Input
             name="nome"
-            placeholder="Buscar por nome do aluno (mín. 3 caracteres)..."
+            placeholder="Buscar por nome do aluno..."
             value={filters.nome}
             onChange={(e) => handleFilterChange('nome', e.target.value)}
           />
@@ -216,7 +214,7 @@ export default function StudentDataView() {
                 </Label>
               </div>
               
-              {isSearchActive && (
+              {isAnyFilterActive && (
                 <div className="flex items-center justify-end mt-4">
                   <Button variant="ghost" size="sm" onClick={clearFilters} className="text-destructive hover:text-destructive">
                     <X className="w-4 h-4 mr-2" />
@@ -231,8 +229,8 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {isSearchActive && !isLoadingStudents && filteredAndSortedStudents.length > 0 &&
-          `A exibir ${filteredAndSortedStudents.length} aluno(s).`
+        {!isLoadingAllStudents && isAnyFilterActive &&
+          `A exibir ${filteredAndSortedStudents.length} de ${allStudents?.length || 0} aluno(s).`
         }
       </div>
       
@@ -242,8 +240,8 @@ export default function StudentDataView() {
             onReportCardClick={handleOpenReportCard}
             onSort={handleSort}
             sortConfig={sortConfig}
-            isLoading={isLoadingStudents}
-            isSearchActive={isSearchActive}
+            isLoading={isLoadingAllStudents}
+            isSearchActive={isAnyFilterActive}
         />
       
       <StudentDetailSheet
@@ -264,4 +262,6 @@ export default function StudentDataView() {
     </div>
   );
 }
+    
+
     
