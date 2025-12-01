@@ -1,12 +1,12 @@
 
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 
 import StudentTable from './student-table';
-import { Filter, X, ChevronDown, AlertTriangle, Search, Loader2 } from 'lucide-react';
+import { Filter, X, ChevronDown, Search, Loader2 } from 'lucide-react';
 import StudentDetailSheet from './student-detail-sheet';
 import { Input } from './ui/input';
 import { Card, CardContent } from './ui/card';
@@ -27,9 +27,7 @@ export default function StudentDataView() {
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [reportCardStudent, setReportCardStudent] = useState<any | null>(null);
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
-
-
+  
   const [filters, setFilters] = useState({
     nome: '',
     ensino: '',
@@ -41,17 +39,53 @@ export default function StudentDataView() {
 
   const debouncedNome = useDebounce(filters.nome, 400);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: 'ascending' });
-  
-  // This query fetches ALL students. It's used for populating filter dropdowns.
-  const allStudentsQuery = useMemoFirebase(() => {
+
+  // Query to get all students for filter options. This can be slow and should be optimized if performance is an issue.
+  const allStudentsForOptionsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'alunos'));
   }, [firestore]);
-  const { data: allStudentsData, isLoading: isLoadingAllStudents, refetch } = useCollection(allStudentsQuery);
+  const { data: allStudentsDataForOptions, isLoading: isLoadingOptions } = useCollection(allStudentsForOptionsQuery);
+
+
+  const hasActiveFilters = useMemo(() => {
+    return filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee || debouncedNome.length >= 3;
+  }, [filters, debouncedNome]);
+
+  const studentsQuery = useMemoFirebase(() => {
+    if (!firestore || !hasActiveFilters) return null;
+
+    let q = query(collection(firestore, 'alunos'));
+
+    if (filters.ensino) {
+      q = query(q, where('ensino', '==', filters.ensino));
+    }
+    if (filters.serie) {
+      q = query(q, where('serie', '==', filters.serie));
+    }
+    if (filters.classe) {
+      q = query(q, where('classe', '==', filters.classe));
+    }
+    if (filters.turno) {
+      q = query(q, where('turno', '==', filters.turno));
+    }
+    if (filters.nee) {
+        q = query(q, where('nee', '!=', null));
+    }
+    if (debouncedNome.length >= 3) {
+      // Firestore does not support partial string matching. We have to filter this on the client.
+      // Or use a more complex solution like Algolia/Elasticsearch.
+    }
+    
+    return q;
+  }, [firestore, hasActiveFilters, debouncedNome, filters]);
+
+  const { data: studentsData, isLoading: isLoadingStudents, refetch } = useCollection(studentsQuery);
+
 
   const uniqueFilterOptions = useMemo(() => {
-    const dataForOptions = allStudentsData || [];
-    const getUniqueValues = (key: string, data: any[]) => 
+    const dataForOptions = allStudentsDataForOptions || [];
+    const getUniqueValues = (key: string, data: any[]) =>
       [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
     let filteredData = dataForOptions;
@@ -62,43 +96,24 @@ export default function StudentDataView() {
 
     if (filters.serie) filteredData = filteredData.filter(s => s.serie === filters.serie);
     const classes = getUniqueValues('classe', filteredData);
-    
+
     if(filters.classe) filteredData = filteredData.filter(s => s.classe === filters.classe);
     const turnos = getUniqueValues('turno', filteredData);
 
     return { ensinos, series, classes, turnos };
-  }, [allStudentsData, filters]);
+  }, [allStudentsDataForOptions, filters]);
   
-  const hasActiveFilters = useMemo(() => {
-    return filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee || debouncedNome.length >= 3;
-  }, [filters, debouncedNome]);
-
 
   const filteredAndSortedStudents = useMemo(() => {
-    if (!allStudentsData || !hasSearched || !hasActiveFilters) {
+    if (!studentsData) {
         return [];
     }
 
-    let filteredStudents = allStudentsData;
+    let filteredStudents = studentsData;
     const searchLower = debouncedNome.trim().toLowerCase();
 
     if (searchLower.length >= 3) {
       filteredStudents = filteredStudents.filter(student => student.nome?.toLowerCase().includes(searchLower));
-    }
-    if (filters.ensino) {
-      filteredStudents = filteredStudents.filter(student => student.ensino === filters.ensino);
-    }
-    if (filters.serie) {
-      filteredStudents = filteredStudents.filter(student => student.serie === filters.serie);
-    }
-    if (filters.classe) {
-      filteredStudents = filteredStudents.filter(student => student.classe === filters.classe);
-    }
-    if (filters.turno) {
-      filteredStudents = filteredStudents.filter(student => student.turno === filters.turno);
-    }
-    if (filters.nee) {
-      filteredStudents = filteredStudents.filter(student => !!student.nee);
     }
 
     const sortedStudents = [...filteredStudents].sort((a, b) => {
@@ -114,7 +129,7 @@ export default function StudentDataView() {
     });
 
     return sortedStudents;
-  }, [allStudentsData, debouncedNome, filters, sortConfig, hasActiveFilters, hasSearched]);
+  }, [studentsData, debouncedNome, sortConfig]);
 
   const handleSort = (key: string) => {
     setSortConfig(prevConfig => ({
@@ -140,7 +155,6 @@ export default function StudentDataView() {
         }
         return newFilters;
     });
-    setHasSearched(true);
   };
 
   const clearFilters = () => {
@@ -152,7 +166,6 @@ export default function StudentDataView() {
       turno: '',
       nee: false,
     });
-    setHasSearched(false);
   };
 
   const handleStudentSelect = (student: any) => {
@@ -242,7 +255,6 @@ export default function StudentDataView() {
                   onCheckedChange={(checked) => handleFilterChange('nee', checked)}
                 />
                 <Label htmlFor="nee-filter" className="flex items-center cursor-pointer">
-                  <AlertTriangle className="w-4 h-4 mr-2 text-destructive" />
                   Mostrar apenas alunos com NEE
                 </Label>
               </div>
@@ -262,7 +274,7 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {hasSearched && hasActiveFilters && !isLoadingAllStudents && (
+        {hasActiveFilters && !isLoadingStudents && (
             <p>
                 {filteredAndSortedStudents.length > 0
                   ? `A exibir ${filteredAndSortedStudents.length} aluno(s) encontrado(s).`
@@ -278,8 +290,8 @@ export default function StudentDataView() {
             onReportCardClick={handleOpenReportCard}
             onSort={handleSort}
             sortConfig={sortConfig}
-            hasSearched={hasSearched}
-            isLoading={isLoadingAllStudents}
+            hasSearched={hasActiveFilters}
+            isLoading={isLoadingStudents}
         />
       
       <StudentDetailSheet
@@ -300,3 +312,5 @@ export default function StudentDataView() {
     </div>
   );
 }
+
+    
