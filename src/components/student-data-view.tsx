@@ -40,11 +40,11 @@ export default function StudentDataView() {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: 'ascending' });
 
   // Query otimizada para popular os filtros.
-  const allStudentsQuery = useMemoFirebase(() => {
+  const allStudentsForFiltersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'alunos'));
   }, [firestore]);
-  const { data: allStudentsForFilters, isLoading: isLoadingAllStudents } = useCollection(allStudentsQuery);
+  const { data: allStudentsForFilters, isLoading: isLoadingAllStudents } = useCollection(allStudentsForFiltersQuery);
   
   // Memoize as opções de filtro para evitar recálculos.
   const uniqueFilterOptions = useMemo(() => {
@@ -70,10 +70,6 @@ export default function StudentDataView() {
     
     let q = query(collection(firestore, 'alunos'));
 
-    if (debouncedNome.trim().length >= 3) {
-      // Firestore não suporta busca de substring nativamente. Isso irá filtrar no cliente.
-      // O ideal seria usar um serviço de busca como Algolia.
-    }
     if (filters.ensino) q = query(q, where('ensino', '==', filters.ensino));
     if (filters.serie) q = query(q, where('serie', '==', filters.serie));
     if (filters.classe) q = query(q, where('classe', '==', filters.classe));
@@ -81,12 +77,12 @@ export default function StudentDataView() {
     if (filters.nee) q = query(q, where('nee', '!=', null));
     
     return q;
-  }, [firestore, isSearchActive, debouncedNome, filters]);
+  }, [firestore, isSearchActive, filters]);
 
   const { data: studentsData, isLoading: isLoadingStudents } = useCollection(studentsQuery);
 
   const filteredAndSortedStudents = useMemo(() => {
-    if (!studentsData) return [];
+    if (!isSearchActive || !studentsData) return [];
 
     let filtered = studentsData;
 
@@ -105,7 +101,7 @@ export default function StudentDataView() {
       return 0;
     });
 
-  }, [studentsData, debouncedNome, sortConfig]);
+  }, [studentsData, debouncedNome, sortConfig, isSearchActive]);
 
   const handleSort = (key: string) => {
     setSortConfig(prevConfig => ({
@@ -170,7 +166,7 @@ export default function StudentDataView() {
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-4 pt-4 data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <Select value={filters.ensino || ''} onValueChange={(value) => handleFilterChange('ensino', value)}>
+                  <Select value={filters.ensino || ''} onValueChange={(value) => handleFilterChange('ensino', value)} disabled={isLoadingAllStudents}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filtrar por ensino..." />
                     </SelectTrigger>
@@ -179,7 +175,7 @@ export default function StudentDataView() {
                       {uniqueFilterOptions.ensinos.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Select value={filters.serie || ''} onValueChange={(value) => handleFilterChange('serie', value)}>
+                  <Select value={filters.serie || ''} onValueChange={(value) => handleFilterChange('serie', value)} disabled={isLoadingAllStudents}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filtrar por série..." />
                     </SelectTrigger>
@@ -189,7 +185,7 @@ export default function StudentDataView() {
                       <SelectItem value="N/A">Não Definida</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Select value={filters.classe || ''} onValueChange={(value) => handleFilterChange('classe', value)}>
+                  <Select value={filters.classe || ''} onValueChange={(value) => handleFilterChange('classe', value)} disabled={isLoadingAllStudents}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filtrar por classe..." />
                     </SelectTrigger>
@@ -198,7 +194,7 @@ export default function StudentDataView() {
                       {uniqueFilterOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Select value={filters.turno || ''} onValueChange={(value) => handleFilterChange('turno', value)}>
+                  <Select value={filters.turno || ''} onValueChange={(value) => handleFilterChange('turno', value)} disabled={isLoadingAllStudents}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filtrar por turno..." />
                     </SelectTrigger>
@@ -268,3 +264,4 @@ export default function StudentDataView() {
     </div>
   );
 }
+    
