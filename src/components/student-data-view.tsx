@@ -291,7 +291,7 @@ export default function StudentDataView() {
             onSort={handleSort}
             sortConfig={sortConfig}
             hasSearched={hasActiveFilters}
-            isLoading={isLoadingStudents}
+            isLoading={hasActiveFilters && isLoadingStudents}
         />
       
       <StudentDetailSheet
