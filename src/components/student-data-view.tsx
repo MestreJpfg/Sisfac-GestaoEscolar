@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, getCountFromServer } from 'firebase/firestore';
 
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown } from 'lucide-react';
@@ -20,6 +20,8 @@ import { Switch } from './ui/switch';
 import { Label } from './ui/label';
 import StudentReportCardDialog from './student-report-card-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
+
 
 export default function StudentDataView() {
   const { toast } = useToast();
@@ -39,6 +41,7 @@ export default function StudentDataView() {
 
   const debouncedNome = useDebounce(filters.nome, 300);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: 'ascending' });
+  const [totalStudentsCount, setTotalStudentsCount] = useState<number | null>(null);
 
   // Query otimizada para popular APENAS os filtros.
   const allStudentsForFiltersQuery = useMemoFirebase(() => {
@@ -84,6 +87,18 @@ export default function StudentDataView() {
   }, [firestore, isAnyFilterActive, filters.ensino, filters.serie, filters.classe, filters.turno, filters.nee]);
 
   const { data: studentsData, isLoading: isLoadingStudents } = useCollection(studentsQuery);
+  
+   useEffect(() => {
+    const fetchTotalCount = async () => {
+      if (firestore) {
+        const studentsColl = collection(firestore, 'alunos');
+        const snapshot = await getCountFromServer(studentsColl);
+        setTotalStudentsCount(snapshot.data().count);
+      }
+    };
+    fetchTotalCount();
+  }, [firestore]);
+
 
   const filteredAndSortedStudents = useMemo(() => {
     if (!studentsData) return [];
@@ -147,9 +162,7 @@ export default function StudentDataView() {
         description: "Os dados do aluno estão sendo atualizados na lista.",
     });
   };
-  
-  const totalStudentsCount = useMemo(() => allStudentsForFilters?.length || 0, [allStudentsForFilters]);
-  
+    
   return (
     <div className="space-y-6">
       <Card>
@@ -173,7 +186,7 @@ export default function StudentDataView() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <Select value={filters.ensino || ''} onValueChange={(value) => handleFilterChange('ensino', value)} disabled={isLoadingAllStudents}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Filtrar por ensino..." />
+                      <SelectValue placeholder={isLoadingAllStudents ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por ensino..."} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os ensinos</SelectItem>
@@ -182,7 +195,7 @@ export default function StudentDataView() {
                   </Select>
                   <Select value={filters.serie || ''} onValueChange={(value) => handleFilterChange('serie', value)} disabled={isLoadingAllStudents}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Filtrar por série..." />
+                       <SelectValue placeholder={isLoadingAllStudents ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por série..."} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as séries</SelectItem>
@@ -191,7 +204,7 @@ export default function StudentDataView() {
                   </Select>
                   <Select value={filters.classe || ''} onValueChange={(value) => handleFilterChange('classe', value)} disabled={isLoadingAllStudents}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Filtrar por classe..." />
+                       <SelectValue placeholder={isLoadingAllStudents ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por classe..."} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as classes</SelectItem>
@@ -200,7 +213,7 @@ export default function StudentDataView() {
                   </Select>
                   <Select value={filters.turno || ''} onValueChange={(value) => handleFilterChange('turno', value)} disabled={isLoadingAllStudents}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Filtrar por turno..." />
+                       <SelectValue placeholder={isLoadingAllStudents ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por turno..."} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os turnos</SelectItem>
@@ -235,7 +248,7 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {isAnyFilterActive && !isLoadingStudents &&
+        {isAnyFilterActive && !isLoadingStudents && totalStudentsCount !== null &&
           `A exibir ${filteredAndSortedStudents.length} de ${totalStudentsCount} aluno(s).`
         }
       </div>
@@ -267,6 +280,5 @@ export default function StudentDataView() {
       )}
     </div>
   );
-}
 
     
