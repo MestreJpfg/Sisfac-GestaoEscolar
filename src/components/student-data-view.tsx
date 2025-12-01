@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown, AlertTriangle, Search, Loader2 } from 'lucide-react';
@@ -42,12 +42,12 @@ export default function StudentDataView() {
   const debouncedNome = useDebounce(filters.nome, 400);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: 'ascending' });
   
-  // This query fetches ALL students. It's used for populating filter dropdowns and for the main data view.
-  const studentsQuery = useMemoFirebase(() => {
+  // This query fetches ALL students. It's used for populating filter dropdowns.
+  const allStudentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'alunos'));
   }, [firestore]);
-  const { data: allStudentsData, isLoading: isLoadingStudents, refetch } = useCollection(studentsQuery);
+  const { data: allStudentsData, isLoading: isLoadingAllStudents, refetch } = useCollection(allStudentsQuery);
 
   const uniqueFilterOptions = useMemo(() => {
     const dataForOptions = allStudentsData || [];
@@ -75,7 +75,8 @@ export default function StudentDataView() {
 
 
   const filteredAndSortedStudents = useMemo(() => {
-    if (!allStudentsData || !hasActiveFilters) {
+    // CRITICAL CHANGE: Only filter and return students if a search has been initiated.
+    if (!allStudentsData || !hasSearched || !hasActiveFilters) {
         return [];
     }
 
@@ -116,7 +117,7 @@ export default function StudentDataView() {
     });
 
     return sortedStudents;
-  }, [allStudentsData, debouncedNome, filters, sortConfig, hasActiveFilters]);
+  }, [allStudentsData, debouncedNome, filters, sortConfig, hasActiveFilters, hasSearched]);
 
   const handleSort = (key: string) => {
     setSortConfig(prevConfig => ({
@@ -264,7 +265,7 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {!isLoadingStudents && hasActiveFilters && (
+        {hasSearched && hasActiveFilters && (
             <p>
                 {filteredAndSortedStudents.length > 0
                   ? `A exibir ${filteredAndSortedStudents.length} aluno(s) encontrado(s).`
@@ -274,10 +275,10 @@ export default function StudentDataView() {
         )}
       </div>
       
-       {isLoadingStudents ? (
+       {isLoadingAllStudents ? (
             <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="mt-4 text-muted-foreground">A carregar alunos...</p>
+                <p className="mt-4 text-muted-foreground">Aguardando busca...</p>
             </div>
         ) : (
             <StudentTable
