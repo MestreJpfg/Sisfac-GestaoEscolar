@@ -19,11 +19,11 @@ interface StudentTableProps {
   onReportCardClick: (student: any) => void;
   onSort: (key: string) => void;
   sortConfig: SortConfig;
-  hasSearched: boolean;
   isLoading: boolean;
+  hasActiveFilters: boolean;
 }
 
-export default function StudentTable({ students, onRowClick, onReportCardClick, onSort, sortConfig, hasSearched, isLoading }: StudentTableProps) {
+export default function StudentTable({ students, onRowClick, onReportCardClick, onSort, sortConfig, isLoading, hasActiveFilters }: StudentTableProps) {
   
   const SortableHeader = ({ sortKey, children, className }: { sortKey: string, children: React.ReactNode, className?: string }) => {
     const isSorted = sortConfig.key === sortKey;
@@ -43,94 +43,89 @@ export default function StudentTable({ students, onRowClick, onReportCardClick, 
     );
   }
 
-  if (isLoading) {
+  const renderContent = () => {
+    if (isLoading) {
+       return (
+        <Card>
+          <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
+              <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
+              <h3 className="mt-4 text-lg font-medium text-foreground">
+                A carregar dados dos alunos...
+              </h3>
+          </CardContent>
+        </Card>
+      );
+    }
+    
+    if (students.length === 0) {
+      return (
+        <Card>
+          <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
+              <BookUser className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-medium text-foreground">
+                {hasActiveFilters ? "Nenhum aluno encontrado" : "Aguardando busca"}
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                  {hasActiveFilters ? "Não foram encontrados alunos com os filtros selecionados." : "Utilize a busca ou os filtros para encontrar os alunos."}
+              </p>
+          </CardContent>
+        </Card>
+      );
+    }
+
     return (
-      <Card>
-        <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
-            <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
-            <h3 className="mt-4 text-lg font-medium text-foreground">
-              A carregar...
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-                A buscar os dados dos alunos.
-            </p>
+        <Card>
+        <CardContent className="p-0">
+            <div className="overflow-x-auto relative">
+            <Table>
+                <TableHeader>
+                <TableRow>
+                    <SortableHeader sortKey="nome">Nome</SortableHeader>
+                    <SortableHeader sortKey="serie" className="hidden sm:table-cell text-center">Série</SortableHeader>
+                    <SortableHeader sortKey="classe" className="hidden md:table-cell text-center">Classe</SortableHeader>
+                    <SortableHeader sortKey="turno" className="hidden lg:table-cell text-center">Turno</SortableHeader>
+                    <TableHead className="text-center">Boletim</TableHead>
+                    <SortableHeader sortKey="rm" className="hidden lg:table-cell text-center">RM</SortableHeader>
+                    <SortableHeader sortKey="nee" className="text-center">NEE</SortableHeader>
+                </TableRow>
+                </TableHeader>
+                <TableBody>
+                {students.map((student) => {
+                    const hasBoletim = student.boletim && Object.keys(student.boletim).length > 0;
+                    return (
+                    <TableRow key={student.id} onClick={() => onRowClick(student)} className="cursor-pointer hover:bg-muted/50">
+                        <TableCell className="font-medium text-left whitespace-nowrap">{student.nome || <span className="text-muted-foreground italic">Sem nome</span>}</TableCell>
+                        <TableCell className="text-center whitespace-nowrap hidden sm:table-cell">{student.serie}</TableCell>
+                        <TableCell className="text-center whitespace-nowrap hidden md:table-cell">{student.classe}</TableCell>
+                        <TableCell className="text-center whitespace-nowrap hidden lg:table-cell">{student.turno}</TableCell>
+                        <TableCell className="text-center">
+                        <Button 
+                            variant="ghost" 
+                            size="icon"
+                            disabled={!hasBoletim}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onReportCardClick(student);
+                            }}
+                            className="h-8 w-8"
+                            >
+                            <BookCheck className="h-4 w-4" />
+                        </Button>
+                        </TableCell>
+                        <TableCell className="text-center whitespace-nowrap hidden lg:table-cell">{student.rm}</TableCell>
+                        <TableCell className="text-center whitespace-nowrap">
+                        {student.nee ? <Badge variant="destructive">SIM</Badge> : <Badge variant="secondary">NÃO</Badge>}
+                        </TableCell>
+                    </TableRow>
+                    );
+                })}
+                </TableBody>
+            </Table>
+            </div>
         </CardContent>
-      </Card>
-    )
-  }
-
-  if (students.length === 0) {
-    const message = hasSearched 
-      ? "Nenhum aluno encontrado com os critérios fornecidos." 
-      : "Utilize a busca ou os filtros para encontrar os alunos.";
-
-    return (
-       <Card>
-        <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
-            <BookUser className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-medium text-foreground">
-              {hasSearched ? "Nenhum aluno encontrado" : "Aguardando busca"}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-                {message}
-            </p>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  const handleReportCardClick = (e: React.MouseEvent, student: any) => {
-    e.stopPropagation();
-    onReportCardClick(student);
+        </Card>
+    );
   };
 
-  return (
-    <Card>
-      <CardContent className="p-0">
-        <div className="overflow-x-auto relative">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <SortableHeader sortKey="nome">Nome</SortableHeader>
-                <SortableHeader sortKey="serie" className="hidden sm:table-cell text-center">Série</SortableHeader>
-                <SortableHeader sortKey="classe" className="hidden md:table-cell text-center">Classe</SortableHeader>
-                <SortableHeader sortKey="turno" className="hidden lg:table-cell text-center">Turno</SortableHeader>
-                <TableHead className="text-center">Boletim</TableHead>
-                <SortableHeader sortKey="rm" className="hidden lg:table-cell text-center">RM</SortableHeader>
-                <SortableHeader sortKey="nee" className="text-center">NEE</SortableHeader>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {students.map((student) => {
-                const hasBoletim = student.boletim && Object.keys(student.boletim).length > 0;
-                return (
-                  <TableRow key={student.id} onClick={() => onRowClick(student)} className="cursor-pointer hover:bg-muted/50">
-                    <TableCell className="font-medium text-left whitespace-nowrap">{student.nome || <span className="text-muted-foreground italic">Sem nome</span>}</TableCell>
-                    <TableCell className="text-center whitespace-nowrap hidden sm:table-cell">{student.serie}</TableCell>
-                    <TableCell className="text-center whitespace-nowrap hidden md:table-cell">{student.classe}</TableCell>
-                    <TableCell className="text-center whitespace-nowrap hidden lg:table-cell">{student.turno}</TableCell>
-                    <TableCell className="text-center">
-                       <Button 
-                          variant="ghost" 
-                          size="icon"
-                          disabled={!hasBoletim}
-                          onClick={(e) => handleReportCardClick(e, student)}
-                          className="h-8 w-8"
-                        >
-                          <BookCheck className="h-4 w-4" />
-                       </Button>
-                    </TableCell>
-                    <TableCell className="text-center whitespace-nowrap hidden lg:table-cell">{student.rm}</TableCell>
-                    <TableCell className="text-center whitespace-nowrap">
-                      {student.nee ? <Badge variant="destructive">SIM</Badge> : <Badge variant="secondary">NÃO</Badge>}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  return renderContent();
 }

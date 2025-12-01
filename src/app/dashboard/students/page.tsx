@@ -44,8 +44,8 @@ export default function StudentsPage() {
             </div>
             </header>
 
-            <main className="flex-1">
-                <div className="container py-8">
+            <main className="flex-1 py-8">
+                <div className="container">
                   <StudentDataView />
                 </div>
             </main>

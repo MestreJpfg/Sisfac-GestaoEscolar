@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -42,7 +43,7 @@ export default function MonthlyAttendanceReport() {
     // Student data for filters
     const studentsOptionsQuery = useMemoFirebase(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'users'), where('profileId', '==', 'Aluno'));
+        return query(collection(firestore, 'alunos'));
     }, [firestore]);
     const { data: allStudents } = useCollection(studentsOptionsQuery);
     
@@ -101,7 +102,7 @@ export default function MonthlyAttendanceReport() {
             (s.serie === filters.serie) &&
             (s.classe === filters.classe) &&
             (s.turno === filters.turno)
-        ).sort((a, b) => a.name.localeCompare(b.name));
+        ).sort((a, b) => a.nome.localeCompare(b.nome));
 
         if (studentsInClass.length === 0) {
             toast({ title: 'Nenhum aluno encontrado', description: 'Não há alunos que correspondam aos filtros selecionados.' });
@@ -150,7 +151,7 @@ export default function MonthlyAttendanceReport() {
 
             return {
                 studentId: student.id,
-                studentName: student.name,
+                studentName: student.nome,
                 absences,
                 total,
             };
