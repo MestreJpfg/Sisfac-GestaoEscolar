@@ -62,6 +62,35 @@
       },
       "required": ["uid", "name", "email", "profileId"]
     },
+    "Aluno": {
+      "title": "Aluno",
+      "type": "object",
+      "description": "Represents a student in the system with all their academic and personal data.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique student identifier, typically the RM." },
+        "rm": { "type": "string", "description": "Registro do Aluno (Student ID)." },
+        "nome": { "type": "string", "description": "Student's full name." },
+        "ensino": { "type": "string" },
+        "serie": { "type": "string" },
+        "classe": { "type": "string" },
+        "turno": { "type": "string" },
+        "filiacao_1": { "type": "string" },
+        "filiacao_2": { "type": "string" },
+        "rg": { "type": "string" },
+        "nis": { "type": "string" },
+        "id_censo": { "type": "string" },
+        "cpf_aluno": { "type": "string" },
+        "cpffiliacao1": { "type": "string" },
+        "data_nascimento": { "type": "string", "format": "date" },
+        "endereco": { "type": "string" },
+        "telefones": { "type": "array", "items": { "type": "string" } },
+        "transporte_escolar": { "type": "boolean" },
+        "carteira_estudante": { "type": "boolean" },
+        "nee": { "type": ["string", "null"] },
+        "boletim": { "$ref": "#/entities/Boletim" }
+      },
+       "required": ["id", "rm", "nome"]
+    },
     "Profile": {
       "title": "Profile",
       "type": "object",
@@ -146,6 +175,26 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "title", "content", "targetAudience", "createdAt"]
+    },
+     "Nota": {
+      "title": "Nota",
+      "type": "object",
+      "description": "Armazena as notas de um aluno para uma disciplina específica ao longo do ano.",
+      "properties": {
+        "etapa1": { "type": ["number", "null"], "description": "Nota da Etapa 1." },
+        "etapa2": { "type": ["number", "null"], "description": "Nota da Etapa 2." },
+        "etapa3": { "type": ["number", "null"], "description": "Nota da Etapa 3." },
+        "etapa4": { "type": ["number", "null"], "description": "Nota da Etapa 4." },
+        "mediaFinal": { "type": ["number", "null"], "description": "Média final da disciplina." }
+      }
+    },
+    "Boletim": {
+      "title": "Boletim",
+      "type": "object",
+      "description": "Um mapa de disciplinas e suas respectivas notas para um aluno.",
+      "additionalProperties": {
+        "$ref": "#/entities/Nota"
+      }
     }
   },
   "auth": {
@@ -156,6 +205,10 @@
       {
         "path": "/users/{userId}",
         "definition": { "schema": { "$ref": "#/entities/User" } }
+      },
+      {
+        "path": "/alunos/{alunoId}",
+        "definition": { "schema": { "$ref": "#/entities/Aluno" } }
       },
       {
         "path": "/profiles/{profileId}",
