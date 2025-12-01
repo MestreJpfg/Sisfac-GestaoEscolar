@@ -219,15 +219,15 @@ export default function AttendanceManager() {
                                 <SelectTrigger><SelectValue placeholder="Ensino..." /></SelectTrigger>
                                 <SelectContent>{uniqueFilterOptions.ensinos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                             </Select>
-                            <Select value={filters.serie} onValueChange={(v) => handleFilterChange('serie', v)} disabled={!filters.ensino || uniqueFilterOptions.series.length === 0}>
+                            <Select value={filters.serie} onValueChange={(v) => handleFilterChange('serie', v)} disabled={!filters.ensino}>
                                 <SelectTrigger><SelectValue placeholder="Série..." /></SelectTrigger>
                                 <SelectContent>{uniqueFilterOptions.series.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                             </Select>
-                            <Select value={filters.classe} onValueChange={(v) => handleFilterChange('classe', v)} disabled={!filters.serie || uniqueFilterOptions.classes.length === 0}>
+                            <Select value={filters.classe} onValueChange={(v) => handleFilterChange('classe', v)} disabled={!filters.serie}>
                                 <SelectTrigger><SelectValue placeholder="Classe..." /></SelectTrigger>
                                 <SelectContent>{uniqueFilterOptions.classes.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                             </Select>
-                            <Select value={filters.turno} onValueChange={(v) => handleFilterChange('turno', v)} disabled={!filters.classe || uniqueFilterOptions.turnos.length === 0}>
+                            <Select value={filters.turno} onValueChange={(v) => handleFilterChange('turno', v)} disabled={!filters.classe}>
                                 <SelectTrigger><SelectValue placeholder="Turno..." /></SelectTrigger>
                                 <SelectContent>{uniqueFilterOptions.turnos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                             </Select>

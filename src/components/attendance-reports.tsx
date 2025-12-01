@@ -47,7 +47,7 @@ export default function AttendanceReports() {
     // Student data for filters
     const studentsOptionsQuery = useMemoFirebase(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'users'), where('profileId', '==', 'Aluno'));
+        return query(collection(firestore, 'alunos'));
     }, [firestore]);
     const { data: allStudents, isLoading: isLoadingStudentsOptions } = useCollection(studentsOptionsQuery);
     
@@ -69,7 +69,7 @@ export default function AttendanceReports() {
 
     const studentMap = useMemo(() => {
         if (!allStudents) return new Map();
-        return new Map(allStudents.map(s => [s.id, s.name]));
+        return new Map(allStudents.map(s => [s.id, s.nome]));
     }, [allStudents]);
 
     // Common filter logic
@@ -191,7 +191,7 @@ export default function AttendanceReports() {
         }
         const searchLower = debouncedSearch.toLowerCase();
         setSearchedStudents(
-            allStudents?.filter(s => s.name.toLowerCase().includes(searchLower)).slice(0, 5) || []
+            allStudents?.filter(s => s.nome.toLowerCase().includes(searchLower)).slice(0, 5) || []
         );
     }, [debouncedSearch, allStudents]);
 
@@ -267,7 +267,7 @@ export default function AttendanceReports() {
                         <Card className="absolute z-10 w-full mt-1">
                             <CardContent className="p-2">
                                 {searchedStudents.map(s => (
-                                    <div key={s.id} onClick={() => { setSelectedStudent(s); setIndividualSearch(s.name); setSearchedStudents([]); }} className="p-2 hover:bg-muted rounded-md cursor-pointer">{s.name}</div>
+                                    <div key={s.id} onClick={() => { setSelectedStudent(s); setIndividualSearch(s.nome); setSearchedStudents([]); }} className="p-2 hover:bg-muted rounded-md cursor-pointer">{s.nome}</div>
                                 ))}
                             </CardContent>
                         </Card>
@@ -288,8 +288,8 @@ export default function AttendanceReports() {
                 </Button>
                 {individualReportData.length > 0 && (
                      <div className="pt-4 space-y-2">
-                        <h3 className="font-semibold">{selectedStudent.name} - Faltas: {individualReportData.length}</h3>
-                        <Button onClick={() => exportToPDF(individualReportData, `Relatório de Faltas - ${selectedStudent.name}`, [['Data', 'Status']], individualReportData.map(r => [format(new Date(r.date), 'dd/MM/yyyy', { locale: ptBR }), r.status]))} variant="outline"><Download className="mr-2 h-4 w-4"/>Exportar PDF</Button>
+                        <h3 className="font-semibold">{selectedStudent.nome} - Faltas: {individualReportData.length}</h3>
+                        <Button onClick={() => exportToPDF(individualReportData, `Relatório de Faltas - ${selectedStudent.nome}`, [['Data', 'Status']], individualReportData.map(r => [format(new Date(r.date), 'dd/MM/yyyy', { locale: ptBR }), r.status]))} variant="outline"><Download className="mr-2 h-4 w-4"/>Exportar PDF</Button>
                         <Table>
                             <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
                             <TableBody>{individualReportData.map(r => <TableRow key={r.id}><TableCell>{format(new Date(r.date + 'T00:00:00-03:00'), 'dd/MM/yyyy', { locale: ptBR })}</TableCell><TableCell>{r.status}</TableCell></TableRow>)}</TableBody>

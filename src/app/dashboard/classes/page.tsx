@@ -1,31 +1,17 @@
 
 'use client';
 
-import { useMemo } from 'react';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
-import { useCollection } from '@/firebase/firestore/use-collection';
 import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
 import { UserNav } from '@/components/user-nav';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ClipboardList, Loader2 } from 'lucide-react';
+import { ArrowLeft, ClipboardList } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
 import ClassListGenerator from '@/components/class-list-generator';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 export default function ClassesPage() {
     const router = useRouter();
-    const firestore = useFirestore();
-
-    const studentsQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, 'alunos'));
-    }, [firestore]);
-
-    const { data: students, isLoading: isDataLoading } = useCollection(studentsQuery);
 
     return (
         <AuthGuard>
@@ -52,14 +38,7 @@ export default function ClassesPage() {
 
                 <main className="flex-1 py-8">
                     <div className="container max-w-4xl">
-                        {isDataLoading ? (
-                            <div className="flex flex-col items-center gap-4 text-center">
-                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                <p className="text-muted-foreground">A carregar dados dos alunos...</p>
-                            </div>
-                        ) : (
-                           <ClassListGenerator allStudents={students || []} />
-                        )}
+                       <ClassListGenerator />
                     </div>
                 </main>
                 <AppFooter />

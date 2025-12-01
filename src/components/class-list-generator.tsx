@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
@@ -14,10 +14,9 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import ReportCardGrid from './report-card-grid';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query } from 'firebase/firestore';
 
-interface ClassListGeneratorProps {
-  allStudents: any[];
-}
 
 // Helper function to chunk array
 const chunk = (arr: any[], size: number) =>
@@ -26,8 +25,10 @@ const chunk = (arr: any[], size: number) =>
   );
 
 
-export default function ClassListGenerator({ allStudents }: ClassListGeneratorProps) {
+export default function ClassListGenerator() {
   const { toast } = useToast();
+  const firestore = useFirestore();
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDownloadingGrid, setIsDownloadingGrid] = useState(false);
@@ -40,6 +41,13 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
     turno: '',
     classe: '',
   });
+
+  const allStudentsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'alunos'));
+  }, [firestore]);
+  const { data: allStudents, isLoading: isLoadingAllStudents } = useCollection(allStudentsQuery);
+
 
   const uniqueOptions = useMemo(() => {
     if (!allStudents) return { ensinos: [], series: [], turnos: [], classes: [] };
@@ -84,10 +92,17 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
   };
 
   const handleGenerateList = async () => {
+    if (!allStudents) {
+        toast({
+            variant: "destructive",
+            title: "Dados não carregados",
+            description: "Aguarde o carregamento dos dados dos alunos.",
+        });
+        return;
+    }
     setIsGenerating(true);
     setStudents([]);
     
-    // Pequeno delay para feedback visual
     await new Promise(resolve => setTimeout(resolve, 300));
 
     let studentsData = allStudents;
@@ -101,7 +116,7 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
     setStudents(studentsData);
 
     if(studentsData.length > 0) {
-      setActiveAccordion(""); // Collapse accordion on successful generation
+      setActiveAccordion(""); 
     } else {
       toast({
         variant: "destructive",
@@ -161,7 +176,6 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                 head: [['Nº', 'Nome do Aluno', 'Data de Nasc.', 'Observações']],
                 body: tableData,
                 didDrawPage: (data) => {
-                    // Header
                     doc.setFontSize(10);
                     doc.setFont('helvetica', 'bold');
                     doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
@@ -170,7 +184,6 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                     doc.setFont('helvetica', 'normal');
                     doc.text(title, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
 
-                    // Footer
                     doc.setFontSize(7);
                     doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, data.settings.margin.left, doc.internal.pageSize.getHeight() - 5);
                     const pageNum = doc.internal.getNumberOfPages();
@@ -277,6 +290,17 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
 
   const isAnyFilterSelected = filters.ensino || filters.serie || filters.turno || filters.classe;
 
+  if (isLoadingAllStudents) {
+    return (
+        <Card className="w-full">
+            <CardContent className="flex flex-col items-center justify-center p-6 h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="mt-4 text-muted-foreground">A carregar dados dos alunos...</p>
+            </CardContent>
+        </Card>
+    );
+  }
+
   return (
     <Card className="w-full">
         <CardHeader>
@@ -303,21 +327,21 @@ export default function ClassListGenerator({ allStudents }: ClassListGeneratorPr
                                     {uniqueOptions.ensinos.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                            <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)} disabled={!filters.ensino && uniqueOptions.series.length === 0}>
+                            <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)} disabled={!filters.ensino}>
                                 <SelectTrigger><SelectValue placeholder="Filtrar por Série..." /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todas as Séries</SelectItem>
                                     {uniqueOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                            <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)} disabled={!filters.serie && uniqueOptions.turnos.length === 0}>
+                            <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)} disabled={!filters.serie}>
                                 <SelectTrigger><SelectValue placeholder="Filtrar por Turno..." /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todos os Turnos</SelectItem>
                                     {uniqueOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                            <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)} disabled={!filters.turno && uniqueOptions.classes.length === 0}>
+                            <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)} disabled={!filters.turno}>
                                 <SelectTrigger><SelectValue placeholder="Filtrar por Classe..." /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todas as Classes</SelectItem>
