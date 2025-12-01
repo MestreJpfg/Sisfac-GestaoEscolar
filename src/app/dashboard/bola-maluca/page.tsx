@@ -81,7 +81,7 @@ export default function BolaMalucaPage() {
     const [enemies, setEnemies] = useState<Enemy[]>([]);
     
     // New state for the color power-up logic
-    const [colorPowerUp, setColorPowerUp] = useState<Collectible | null>(null);
+    const [isPowerUpVisible, setIsPowerUpVisible] = useState(false);
     const [isColorEffectActive, setIsColorEffectActive] = useState(false);
 
 
@@ -162,7 +162,7 @@ export default function BolaMalucaPage() {
             y: Math.random() * (height - ITEM_SIZE),
         };
 
-        setColorPowerUp(null);
+        setIsPowerUpVisible(false);
         setIsColorEffectActive(false);
         setScore(0);
         setTime(0);
@@ -273,9 +273,11 @@ export default function BolaMalucaPage() {
             
             // --- Update Power-Up Position ---
             if (powerUpDivRef.current) {
-                if (colorPowerUp) {
+                if (isPowerUpVisible) {
+                    const powerUpX = (width - ITEM_SIZE) / 2;
+                    const powerUpY = (height - ITEM_SIZE) / 2;
                     powerUpDivRef.current.style.display = 'block';
-                    powerUpDivRef.current.style.transform = `translate3d(${colorPowerUp.position.x}px, ${colorPowerUp.position.y}px, 0)`;
+                    powerUpDivRef.current.style.transform = `translate3d(${powerUpX}px, ${powerUpY}px, 0)`;
                 } else {
                     powerUpDivRef.current.style.display = 'none';
                 }
@@ -291,13 +293,7 @@ export default function BolaMalucaPage() {
                 setScore(newScore);
 
                 if (newScore % 5 === 0 && newScore > 0) {
-                    setColorPowerUp({
-                        position: {
-                            x: (width - ITEM_SIZE) / 2,
-                            y: (height - ITEM_SIZE) / 2,
-                        },
-                        size: ITEM_SIZE
-                    });
+                    setIsPowerUpVisible(true);
                 }
                 
                 setEnemies(prevEnemies => prevEnemies.map(e => {
@@ -317,23 +313,30 @@ export default function BolaMalucaPage() {
             }
             
             // 2. Player-ColorPowerUp Collision
-            if (colorPowerUp && checkCollision(player, colorPowerUp)) {
-                vibrate(100);
-                setColorPowerUp(null); 
-                setIsColorEffectActive(true);
+            if (isPowerUpVisible) {
+                const powerUpCollectible: Collectible = {
+                    position: { x: (width - ITEM_SIZE) / 2, y: (height - ITEM_SIZE) / 2 },
+                    size: ITEM_SIZE
+                };
 
-                setEnemies(prev => prev.map(enemy => ({
-                    ...enemy,
-                    color: getRandomHSLColor()
-                })));
+                if (checkCollision(player, powerUpCollectible)) {
+                    vibrate(100);
+                    setIsPowerUpVisible(false); 
+                    setIsColorEffectActive(true);
 
-                setTimeout(() => {
-                    setIsColorEffectActive(false);
                     setEnemies(prev => prev.map(enemy => ({
                         ...enemy,
-                        color: 'hsl(340, 100%, 50%)'
+                        color: getRandomHSLColor()
                     })));
-                }, COLOR_EFFECT_DURATION);
+
+                    setTimeout(() => {
+                        setIsColorEffectActive(false);
+                        setEnemies(prev => prev.map(enemy => ({
+                            ...enemy,
+                            color: 'hsl(340, 100%, 50%)'
+                        })));
+                    }, COLOR_EFFECT_DURATION);
+                }
             }
             
             // 3. Player-Enemy Collision (Game Over)
@@ -368,7 +371,7 @@ export default function BolaMalucaPage() {
                 cancelAnimationFrame(animationFrameId.current);
             }
         };
-    }, [status, score, highScore, enemies, colorPowerUp, spawnEnemy, vibrate]); // Rerun loop setup when status changes
+    }, [status, score, highScore, enemies, isPowerUpVisible, spawnEnemy, vibrate]);
     
     // --- Sensor Listener Effect ---
     useEffect(() => {
