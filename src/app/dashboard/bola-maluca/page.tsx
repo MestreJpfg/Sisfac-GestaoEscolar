@@ -39,7 +39,7 @@ interface Enemy {
     position: Vector;
     velocity: Vector;
     size: number;
-    color: string; // Add color property
+    color: string;
 }
 
 interface Player {
@@ -62,12 +62,14 @@ export default function BolaMalucaPage() {
     // --- Refs for Game Elements & Animation ---
     const gameAreaRef = useRef<HTMLDivElement>(null);
     const animationFrameId = useRef<number>();
+    const playerDivRef = useRef<HTMLDivElement>(null);
+    const itemDivRef = useRef<HTMLDivElement>(null);
+    const powerUpDivRef = useRef<HTMLDivElement>(null); // Ref for the power-up visual element
     
     // Refs for game state that changes every frame but shouldn't trigger re-renders
     const playerRef = useRef<Player>({ position: { x: -100, y: -100 }, velocity: { x: 0, y: 0 }, size: PLAYER_SIZE });
     const itemRef = useRef<Collectible>({ position: { x: -100, y: -100 }, size: ITEM_SIZE });
     const gameTimeRef = useRef({ startTime: 0, lastTime: 0, lastEnemySpawnTime: 0 });
-    const gameLoopRef = useRef<() => void>();
 
     // --- State for React Rendering ---
     const [status, setStatus] = useState<GameStatus>('permissions');
@@ -78,7 +80,7 @@ export default function BolaMalucaPage() {
     const [isNewHighScore, setIsNewHighScore] = useState(false);
     const [enemies, setEnemies] = useState<Enemy[]>([]);
     
-    // New state for the color power-up
+    // New state for the color power-up logic
     const [colorPowerUp, setColorPowerUp] = useState<Collectible | null>(null);
     const [isColorEffectActive, setIsColorEffectActive] = useState(false);
 
@@ -101,7 +103,6 @@ export default function BolaMalucaPage() {
         }
     }, []);
     
-    // Helper to get a random color for the effect
     const getRandomHSLColor = () => {
         const hue = Math.floor(Math.random() * 360);
         return `hsl(${hue}, 100%, 50%)`;
@@ -124,7 +125,7 @@ export default function BolaMalucaPage() {
                 y: (Math.random() * speed + 0.5) * (Math.random() < 0.5 ? 1 : -1),
             },
             size: ENEMY_SIZE,
-            color: 'hsl(340, 100%, 50%)', // Default enemy color
+            color: 'hsl(340, 100%, 50%)',
         };
         setEnemies(prev => [...prev, newEnemy]);
     }, []);
@@ -171,7 +172,6 @@ export default function BolaMalucaPage() {
         }
     }, []);
 
-    // --- Permissions and Initialization ---
      useEffect(() => {
         if (permissionState !== 'granted') return;
         const gameArea = gameAreaRef.current;
@@ -219,7 +219,7 @@ export default function BolaMalucaPage() {
     
     // --- Game Loop ---
     useEffect(() => {
-        gameLoopRef.current = () => {
+        const gameLoop = () => {
             if (status !== 'playing') return;
         
             const gameArea = gameAreaRef.current;
@@ -248,6 +248,9 @@ export default function BolaMalucaPage() {
             if (player.position.x > width - player.size) player.position.x = width - player.size;
             if (player.position.y < 0) player.position.y = 0;
             if (player.position.y > height - player.size) player.position.y = height - player.size;
+            if (playerDivRef.current) {
+                playerDivRef.current.style.transform = `translate3d(${player.position.x}px, ${player.position.y}px, 0)`;
+            }
 
             // --- Update All Enemy Positions ---
             setEnemies(prevEnemies => prevEnemies.map(enemy => {
@@ -263,6 +266,22 @@ export default function BolaMalucaPage() {
                 return { ...enemy, position: newPos, velocity: newVel };
             }));
 
+            // --- Update Item Position (it's static, but let's update its visual) ---
+            if (itemDivRef.current) {
+                itemDivRef.current.style.transform = `translate3d(${itemRef.current.position.x}px, ${itemRef.current.position.y}px, 0)`;
+            }
+            
+            // --- Update Power-Up Position ---
+            if (powerUpDivRef.current) {
+                if (colorPowerUp) {
+                    powerUpDivRef.current.style.display = 'block';
+                    powerUpDivRef.current.style.transform = `translate3d(${colorPowerUp.position.x}px, ${colorPowerUp.position.y}px, 0)`;
+                } else {
+                    powerUpDivRef.current.style.display = 'none';
+                }
+            }
+
+
             // --- Collision Checks ---
 
             // 1. Player-Item Collision (Score)
@@ -271,7 +290,6 @@ export default function BolaMalucaPage() {
                 const newScore = score + 1;
                 setScore(newScore);
 
-                // Spawn color power-up every 5 points
                 if (newScore % 5 === 0 && newScore > 0) {
                     setColorPowerUp({
                         position: {
@@ -282,7 +300,6 @@ export default function BolaMalucaPage() {
                     });
                 }
                 
-                // Increase speed of all enemies
                 setEnemies(prevEnemies => prevEnemies.map(e => {
                     const currentSpeed = Math.sqrt(e.velocity.x**2 + e.velocity.y**2);
                     const newSpeed = currentSpeed + ENEMY_SPEED_INCREMENT;
@@ -293,7 +310,6 @@ export default function BolaMalucaPage() {
                     return e;
                 }));
                 
-                // Respawn item
                 itemRef.current.position = {
                     x: Math.random() * (width - itemRef.current.size),
                     y: Math.random() * (height - itemRef.current.size),
@@ -303,19 +319,16 @@ export default function BolaMalucaPage() {
             // 2. Player-ColorPowerUp Collision
             if (colorPowerUp && checkCollision(player, colorPowerUp)) {
                 vibrate(100);
-                setColorPowerUp(null); // Remove the power-up
-                setIsColorEffectActive(true); // Activate the effect
+                setColorPowerUp(null); 
+                setIsColorEffectActive(true);
 
-                // Change enemy colors
                 setEnemies(prev => prev.map(enemy => ({
                     ...enemy,
                     color: getRandomHSLColor()
                 })));
 
-                // Set a timer to end the effect
                 setTimeout(() => {
                     setIsColorEffectActive(false);
-                     // Revert colors back to default
                     setEnemies(prev => prev.map(enemy => ({
                         ...enemy,
                         color: 'hsl(340, 100%, 50%)'
@@ -328,18 +341,15 @@ export default function BolaMalucaPage() {
                 if (checkCollision(player, enemy)) {
                     vibrate([200, 50, 200]);
                     setStatus('gameOver');
-                    return; // Exit loop immediately on game over
+                    return;
                 }
             }
             
-            animationFrameId.current = requestAnimationFrame(gameLoopRef.current as FrameRequestCallback);
+            animationFrameId.current = requestAnimationFrame(gameLoop);
         };
-    }, [status, score, enemies, colorPowerUp, spawnEnemy, vibrate]);
-    
-    // --- Game State Effects ---
-    useEffect(() => {
+
         if (status === 'playing') {
-            animationFrameId.current = requestAnimationFrame(gameLoopRef.current as FrameRequestCallback);
+            animationFrameId.current = requestAnimationFrame(gameLoop);
         } else {
              if (animationFrameId.current) {
                 cancelAnimationFrame(animationFrameId.current);
@@ -358,7 +368,7 @@ export default function BolaMalucaPage() {
                 cancelAnimationFrame(animationFrameId.current);
             }
         };
-    }, [status, score, highScore]);
+    }, [status, score, highScore, enemies, colorPowerUp, spawnEnemy, vibrate]); // Rerun loop setup when status changes
     
     // --- Sensor Listener Effect ---
     useEffect(() => {
@@ -387,7 +397,6 @@ export default function BolaMalucaPage() {
         }
     };
     
-    // --- Render ---
     return (
         <AuthGuard>
             <div className="flex min-h-screen flex-col bg-gray-900 text-gray-100">
@@ -435,6 +444,7 @@ export default function BolaMalucaPage() {
                                 <>
                                     {/* Player */}
                                     <div 
+                                        ref={playerDivRef}
                                         style={{
                                             position: 'absolute',
                                             left: 0,
@@ -444,12 +454,12 @@ export default function BolaMalucaPage() {
                                             backgroundColor: 'hsl(180, 100%, 50%)',
                                             borderRadius: '50%',
                                             boxShadow: '0 0 15px 5px hsl(180, 100%, 50%, 0.7)',
-                                            willChange: 'transform',
-                                            transform: `translate3d(${playerRef.current.position.x}px, ${playerRef.current.position.y}px, 0)`
+                                            willChange: 'transform'
                                         }}/>
                                     
                                     {/* Item */}
-                                    <div 
+                                    <div
+                                        ref={itemDivRef}
                                         style={{
                                             position: 'absolute',
                                             left: 0,
@@ -459,27 +469,25 @@ export default function BolaMalucaPage() {
                                             backgroundColor: 'hsl(50, 100%, 50%)',
                                             borderRadius: '50%',
                                             boxShadow: '0 0 15px 5px hsl(50, 100%, 50%, 0.7)',
-                                            willChange: 'transform',
-                                            transform: `translate3d(${itemRef.current.position.x}px, ${itemRef.current.position.y}px, 0)`
+                                            willChange: 'transform'
                                         }}/>
 
                                     {/* Color Power-up */}
-                                    {colorPowerUp && (
-                                         <div 
-                                            style={{
-                                                position: 'absolute',
-                                                left: 0,
-                                                top: 0,
-                                                width: colorPowerUp.size,
-                                                height: colorPowerUp.size,
-                                                backgroundColor: 'hsl(270, 100%, 60%)', // Purple
-                                                borderRadius: '50%',
-                                                boxShadow: '0 0 15px 5px hsl(270, 100%, 60%, 0.7)',
-                                                willChange: 'transform',
-                                                transform: `translate3d(${colorPowerUp.position.x}px, ${colorPowerUp.position.y}px, 0)`,
-                                                animation: 'pulse-strong 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-                                            }}/>
-                                    )}
+                                     <div 
+                                        ref={powerUpDivRef}
+                                        style={{
+                                            position: 'absolute',
+                                            display: 'none',
+                                            left: 0,
+                                            top: 0,
+                                            width: ITEM_SIZE,
+                                            height: ITEM_SIZE,
+                                            backgroundColor: 'hsl(270, 100%, 60%)', // Purple
+                                            borderRadius: '50%',
+                                            boxShadow: '0 0 15px 5px hsl(270, 100%, 60%, 0.7)',
+                                            willChange: 'transform',
+                                            animation: 'pulse-strong 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                                        }}/>
                                     
                                     {/* Enemies */}
                                     {enemies.map((enemy) => (
@@ -560,7 +568,3 @@ export default function BolaMalucaPage() {
         </AuthGuard>
     );
 }
-
-    
-
-    
