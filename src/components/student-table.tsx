@@ -20,10 +20,10 @@ interface StudentTableProps {
   onSort: (key: string) => void;
   sortConfig: SortConfig;
   isLoading: boolean;
-  hasActiveFilters: boolean;
+  isSearchActive: boolean;
 }
 
-export default function StudentTable({ students, onRowClick, onReportCardClick, onSort, sortConfig, isLoading, hasActiveFilters }: StudentTableProps) {
+export default function StudentTable({ students, onRowClick, onReportCardClick, onSort, sortConfig, isLoading, isSearchActive }: StudentTableProps) {
   
   const SortableHeader = ({ sortKey, children, className }: { sortKey: string, children: React.ReactNode, className?: string }) => {
     const isSorted = sortConfig.key === sortKey;
@@ -50,7 +50,7 @@ export default function StudentTable({ students, onRowClick, onReportCardClick, 
           <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
               <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
               <h3 className="mt-4 text-lg font-medium text-foreground">
-                A carregar dados dos alunos...
+                A buscar alunos...
               </h3>
           </CardContent>
         </Card>
@@ -63,10 +63,10 @@ export default function StudentTable({ students, onRowClick, onReportCardClick, 
           <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
               <BookUser className="mx-auto h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-medium text-foreground">
-                {hasActiveFilters ? "Nenhum aluno encontrado" : "Aguardando busca"}
+                {isSearchActive ? "Nenhum aluno encontrado" : "Aguardando busca"}
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                  {hasActiveFilters ? "Não foram encontrados alunos com os filtros selecionados." : "Utilize a busca ou os filtros para encontrar os alunos."}
+                  {isSearchActive ? "Não foram encontrados alunos com os filtros selecionados." : "Utilize a busca ou os filtros para encontrar os alunos."}
               </p>
           </CardContent>
         </Card>
