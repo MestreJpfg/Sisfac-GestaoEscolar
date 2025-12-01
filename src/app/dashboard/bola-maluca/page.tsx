@@ -181,18 +181,17 @@ export default function BolaMalucaPage() {
 
      useEffect(() => {
         if (permissionState !== 'granted') return;
-        const gameArea = gameAreaRef.current;
-        if (!gameArea) return;
-
+        
         const checkLayoutReady = () => {
-            const { width, height } = gameArea.getBoundingClientRect();
-            if (width > 0 && height > 0) {
-                resetGame(false);
-                setStatus('ready');
-            } else {
-                requestAnimationFrame(checkLayoutReady);
+            const gameArea = gameAreaRef.current;
+            if (!gameArea || gameArea.getBoundingClientRect().width === 0) {
+                 requestAnimationFrame(checkLayoutReady);
+                 return;
             }
+            resetGame(false);
+            setStatus('ready');
         };
+
         checkLayoutReady();
     }, [permissionState, resetGame]);
 
@@ -556,5 +555,3 @@ export default function BolaMalucaPage() {
         </AuthGuard>
     );
 }
-
-    
