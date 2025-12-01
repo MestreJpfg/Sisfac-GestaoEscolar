@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown } from 'lucide-react';
@@ -40,50 +40,59 @@ export default function StudentDataView() {
   const debouncedNome = useDebounce(filters.nome, 300);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: 'ascending' });
 
-  // Query otimizada para popular os filtros, carregando todos os alunos.
-  const allStudentsQuery = useMemoFirebase(() => {
+  // Query otimizada para popular APENAS os filtros.
+  const allStudentsForFiltersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'alunos'));
   }, [firestore]);
-  const { data: allStudents, isLoading: isLoadingAllStudents } = useCollection(allStudentsQuery);
-  
+  const { data: allStudentsForFilters, isLoading: isLoadingAllStudents } = useCollection(allStudentsForFiltersQuery);
+
   // Memoize as opções de filtro para evitar recálculos.
   const uniqueFilterOptions = useMemo(() => {
-    if (!allStudents) return { ensinos: [], series: [], classes: [], turnos: [] };
-    const getUniqueValues = (key: string, data: any[]) =>
+    const data = allStudentsForFilters || [];
+    const getUniqueValues = (key: string) =>
       [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
-    const ensinos = getUniqueValues('ensino', allStudents);
-    const series = getUniqueValues('serie', allStudents);
-    const classes = getUniqueValues('classe', allStudents);
-    const turnos = getUniqueValues('turno', allStudents);
+    const ensinos = getUniqueValues('ensino');
+    const series = getUniqueValues('serie');
+    const classes = getUniqueValues('classe');
+    const turnos = getUniqueValues('turno');
     return { ensinos, series, classes, turnos };
-  }, [allStudents]);
+  }, [allStudentsForFilters]);
   
+  const isAnyFilterActive = useMemo(() => {
+    return debouncedNome.trim().length >= 3 || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
+  }, [debouncedNome, filters]);
+
+  // Query principal que busca os alunos para a tabela, baseada nos filtros
+  const studentsQuery = useMemoFirebase(() => {
+    if (!firestore || !isAnyFilterActive) return null;
+
+    let q = query(collection(firestore, 'alunos'));
+
+    if (filters.ensino) q = query(q, where('ensino', '==', filters.ensino));
+    if (filters.serie) q = query(q, where('serie', '==', filters.serie));
+    if (filters.classe) q = query(q, where('classe', '==', filters.classe));
+    if (filters.turno) q = query(q, where('turno', '==', filters.turno));
+    if (filters.nee) q = query(q, where('nee', '!=', null));
+    
+    // A busca por nome não pode ser combinada com outras queries de range/inequality no Firestore
+    // por isso é aplicada no cliente após o resultado dos outros filtros.
+    // Se a busca por nome fosse a única, poderíamos usar where('nome', '>=', search).
+
+    return q;
+  }, [firestore, isAnyFilterActive, filters.ensino, filters.serie, filters.classe, filters.turno, filters.nee]);
+
+  const { data: studentsData, isLoading: isLoadingStudents } = useCollection(studentsQuery);
+
   const filteredAndSortedStudents = useMemo(() => {
-    if (!allStudents) return [];
+    if (!studentsData) return [];
 
-    let filtered = [...allStudents];
-
-    // Aplicar filtros
+    let filtered = [...studentsData];
     const searchLower = debouncedNome.trim().toLowerCase();
+
     if (searchLower.length >= 3) {
       filtered = filtered.filter(student => student.nome?.toLowerCase().includes(searchLower));
-    }
-    if (filters.ensino) {
-      filtered = filtered.filter(student => student.ensino === filters.ensino);
-    }
-    if (filters.serie) {
-      filtered = filtered.filter(student => student.serie === filters.serie);
-    }
-    if (filters.classe) {
-      filtered = filtered.filter(student => student.classe === filters.classe);
-    }
-    if (filters.turno) {
-      filtered = filtered.filter(student => student.turno === filters.turno);
-    }
-    if (filters.nee) {
-        filtered = filtered.filter(student => student.nee && student.nee.trim() !== '');
     }
     
     // Ordenação
@@ -95,7 +104,7 @@ export default function StudentDataView() {
       return 0;
     });
 
-  }, [allStudents, debouncedNome, filters, sortConfig]);
+  }, [studentsData, debouncedNome, sortConfig]);
 
   const handleSort = (key: string) => {
     setSortConfig(prevConfig => ({
@@ -139,17 +148,15 @@ export default function StudentDataView() {
     });
   };
   
-  const isAnyFilterActive = useMemo(() => {
-    return debouncedNome.trim().length > 0 || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
-  }, [debouncedNome, filters]);
-
+  const totalStudentsCount = useMemo(() => allStudentsForFilters?.length || 0, [allStudentsForFilters]);
+  
   return (
     <div className="space-y-6">
       <Card>
         <CardContent className="p-4 space-y-4">
           <Input
             name="nome"
-            placeholder="Buscar por nome do aluno..."
+            placeholder="Buscar por nome do aluno (mínimo 3 caracteres)..."
             value={filters.nome}
             onChange={(e) => handleFilterChange('nome', e.target.value)}
           />
@@ -180,7 +187,6 @@ export default function StudentDataView() {
                     <SelectContent>
                       <SelectItem value="all">Todas as séries</SelectItem>
                       {uniqueFilterOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                      <SelectItem value="N/A">Não Definida</SelectItem>
                     </SelectContent>
                   </Select>
                   <Select value={filters.classe || ''} onValueChange={(value) => handleFilterChange('classe', value)} disabled={isLoadingAllStudents}>
@@ -229,8 +235,8 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {!isLoadingAllStudents && isAnyFilterActive &&
-          `A exibir ${filteredAndSortedStudents.length} de ${allStudents?.length || 0} aluno(s).`
+        {isAnyFilterActive && !isLoadingStudents &&
+          `A exibir ${filteredAndSortedStudents.length} de ${totalStudentsCount} aluno(s).`
         }
       </div>
       
@@ -240,7 +246,7 @@ export default function StudentDataView() {
             onReportCardClick={handleOpenReportCard}
             onSort={handleSort}
             sortConfig={sortConfig}
-            isLoading={isLoadingAllStudents}
+            isLoading={isLoadingStudents}
             isSearchActive={isAnyFilterActive}
         />
       
@@ -262,6 +268,5 @@ export default function StudentDataView() {
     </div>
   );
 }
-    
 
     
