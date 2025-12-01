@@ -272,8 +272,7 @@ export default function BolaMalucaPage() {
             // 1. Player-Item Collision (Score)
             if (checkCollision(player, itemRef.current)) {
                 vibrate(50);
-                const newScore = score + 1;
-                setScore(newScore);
+                setScore(prevScore => prevScore + 1);
 
                 setEnemies(prevEnemies => prevEnemies.map(enemy => {
                     const currentSpeed = Math.sqrt(enemy.velocity.x**2 + enemy.velocity.y**2);
@@ -292,7 +291,7 @@ export default function BolaMalucaPage() {
             }
             
             // 2. Player-PowerUp Collision
-            if (score > 0 && score % 5 === 0 && checkCollision(player, powerUpRef.current)) {
+            if (checkCollision(player, powerUpRef.current)) {
                  vibrate(100);
                  setIsPowerUpActive(true);
                  setTimeout(() => {
@@ -367,8 +366,6 @@ export default function BolaMalucaPage() {
         }
     };
     
-    const shouldShowPowerUp = score > 0 && score % 5 === 0;
-
     return (
         <AuthGuard>
             <div className="flex min-h-screen flex-col bg-gray-900 text-gray-100">
@@ -450,7 +447,6 @@ export default function BolaMalucaPage() {
                                             position: 'absolute',
                                             left: 0,
                                             top: 0,
-                                            display: shouldShowPowerUp ? 'block' : 'none',
                                             width: powerUpRef.current.size,
                                             height: powerUpRef.current.size,
                                             backgroundColor: 'hsl(270, 100%, 60%)',
@@ -540,5 +536,7 @@ export default function BolaMalucaPage() {
         </AuthGuard>
     );
 }
+
+    
 
     
