@@ -66,8 +66,14 @@ export default function BolaMalucaPage() {
     
     // Refs for game state that changes every frame but shouldn't trigger re-renders
     const playerRef = useRef<Player>({ position: { x: -100, y: -100 }, velocity: { x: 0, y: 0 }, size: PLAYER_SIZE });
+    const playerDivRef = useRef<HTMLDivElement>(null);
+
     const itemRef = useRef<Collectible>({ position: { x: -100, y: -100 }, size: ITEM_SIZE });
+    const itemDivRef = useRef<HTMLDivElement>(null);
+
     const powerUpRef = useRef<Collectible>({ position: { x: -100, y: -100 }, size: POWERUP_SIZE });
+    const powerUpDivRef = useRef<HTMLDivElement>(null);
+    
     const gameTimeRef = useRef({ startTime: 0, lastTime: 0, lastEnemySpawnTime: 0 });
 
     // --- State for React Rendering ---
@@ -228,6 +234,9 @@ export default function BolaMalucaPage() {
             const { width, height } = gameArea.getBoundingClientRect();
             const timeState = gameTimeRef.current;
             const player = playerRef.current;
+            const playerDiv = playerDivRef.current;
+            const itemDiv = itemDivRef.current;
+            const powerUpDiv = powerUpDivRef.current;
 
             // --- Update Time ---
             const currentTime = performance.now();
@@ -250,6 +259,11 @@ export default function BolaMalucaPage() {
             if (player.position.y < 0) player.position.y = 0;
             if (player.position.y > height - player.size) player.position.y = height - player.size;
             
+             // Force visual update for refs
+            if (playerDiv) playerDiv.style.transform = `translate3d(${player.position.x}px, ${player.position.y}px, 0)`;
+            if (itemDiv) itemDiv.style.transform = `translate3d(${itemRef.current.position.x}px, ${itemRef.current.position.y}px, 0)`;
+            if (powerUpDiv) powerUpDiv.style.transform = `translate3d(${powerUpRef.current.position.x}px, ${powerUpRef.current.position.y}px, 0)`;
+
 
             // --- Update All Enemy Positions ---
             setEnemies(prevEnemies => prevEnemies.map(enemy => {
@@ -413,6 +427,7 @@ export default function BolaMalucaPage() {
                                 <>
                                     {/* Player */}
                                     <div 
+                                        ref={playerDivRef}
                                         style={{
                                             position: 'absolute',
                                             left: 0,
@@ -428,6 +443,7 @@ export default function BolaMalucaPage() {
                                     
                                     {/* Item */}
                                     <div
+                                        ref={itemDivRef}
                                         style={{
                                             position: 'absolute',
                                             left: 0,
@@ -443,6 +459,7 @@ export default function BolaMalucaPage() {
                                         
                                     {/* Power Up */}
                                     <div
+                                        ref={powerUpDivRef}
                                         style={{
                                             position: 'absolute',
                                             left: 0,
@@ -536,7 +553,3 @@ export default function BolaMalucaPage() {
         </AuthGuard>
     );
 }
-
-    
-
-    
