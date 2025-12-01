@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, collectionGroup } from 'firebase/firestore';
 
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown, Search, Loader2 } from 'lucide-react';
@@ -312,5 +312,3 @@ export default function StudentDataView() {
     </div>
   );
 }
-
-    
