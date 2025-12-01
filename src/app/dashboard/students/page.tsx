@@ -12,7 +12,6 @@ import FileUploaderSheet from '@/components/file-uploader-sheet';
 import Image from 'next/image';
 import { ArrowLeft } from 'lucide-react';
 
-
 export default function StudentsPage() {
   const router = useRouter();
 
