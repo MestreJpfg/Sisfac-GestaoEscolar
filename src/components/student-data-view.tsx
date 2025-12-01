@@ -75,7 +75,6 @@ export default function StudentDataView() {
 
 
   const filteredAndSortedStudents = useMemo(() => {
-    // CRITICAL CHANGE: Only filter and return students if a search has been initiated.
     if (!allStudentsData || !hasSearched || !hasActiveFilters) {
         return [];
     }
@@ -83,7 +82,6 @@ export default function StudentDataView() {
     let filteredStudents = allStudentsData;
     const searchLower = debouncedNome.trim().toLowerCase();
 
-    // Apply filters
     if (searchLower.length >= 3) {
       filteredStudents = filteredStudents.filter(student => student.nome?.toLowerCase().includes(searchLower));
     }
@@ -103,7 +101,6 @@ export default function StudentDataView() {
       filteredStudents = filteredStudents.filter(student => !!student.nee);
     }
 
-    // Apply sorting
     const sortedStudents = [...filteredStudents].sort((a, b) => {
       const aValue = a[sortConfig.key] || '';
       const bValue = b[sortConfig.key] || '';
@@ -265,7 +262,7 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {hasSearched && hasActiveFilters && (
+        {hasSearched && hasActiveFilters && !isLoadingAllStudents && (
             <p>
                 {filteredAndSortedStudents.length > 0
                   ? `A exibir ${filteredAndSortedStudents.length} aluno(s) encontrado(s).`
@@ -275,21 +272,15 @@ export default function StudentDataView() {
         )}
       </div>
       
-       {isLoadingAllStudents ? (
-            <div className="flex flex-col items-center justify-center h-64 rounded-lg border-2 border-dashed border-border bg-card/50">
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="mt-4 text-muted-foreground">Aguardando busca...</p>
-            </div>
-        ) : (
-            <StudentTable
-                students={filteredAndSortedStudents}
-                onRowClick={handleStudentSelect}
-                onReportCardClick={handleOpenReportCard}
-                onSort={handleSort}
-                sortConfig={sortConfig}
-                hasSearched={hasSearched}
-            />
-        )}
+        <StudentTable
+            students={filteredAndSortedStudents}
+            onRowClick={handleStudentSelect}
+            onReportCardClick={handleOpenReportCard}
+            onSort={handleSort}
+            sortConfig={sortConfig}
+            hasSearched={hasSearched}
+            isLoading={isLoadingAllStudents}
+        />
       
       <StudentDetailSheet
         student={selectedStudent}

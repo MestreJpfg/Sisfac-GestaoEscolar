@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -19,9 +20,10 @@ interface StudentTableProps {
   onSort: (key: string) => void;
   sortConfig: SortConfig;
   hasSearched: boolean;
+  isLoading: boolean;
 }
 
-export default function StudentTable({ students, onRowClick, onReportCardClick, onSort, sortConfig, hasSearched }: StudentTableProps) {
+export default function StudentTable({ students, onRowClick, onReportCardClick, onSort, sortConfig, hasSearched, isLoading }: StudentTableProps) {
   
   const SortableHeader = ({ sortKey, children, className }: { sortKey: string, children: React.ReactNode, className?: string }) => {
     const isSorted = sortConfig.key === sortKey;
@@ -39,6 +41,22 @@ export default function StudentTable({ students, onRowClick, onReportCardClick, 
             </Button>
         </TableHead>
     );
+  }
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center h-64 flex flex-col items-center justify-center">
+            <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
+            <h3 className="mt-4 text-lg font-medium text-foreground">
+              A carregar...
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+                A buscar os dados dos alunos.
+            </p>
+        </CardContent>
+      </Card>
+    )
   }
 
   if (students.length === 0) {
