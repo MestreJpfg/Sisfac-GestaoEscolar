@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, getCountFromServer } from 'firebase/firestore';
 
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown } from 'lucide-react';
@@ -28,6 +28,7 @@ export default function StudentDataView() {
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const [reportCardStudent, setReportCardStudent] = useState<any | null>(null);
   const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
+  const [totalStudentCount, setTotalStudentCount] = useState(0);
   
   const [filters, setFilters] = useState({
     nome: '',
@@ -44,6 +45,18 @@ export default function StudentDataView() {
   // Query for populating filter options
   const allStudentsForFiltersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'alunos')) : null, [firestore]);
   const { data: allStudentsForFilters, isLoading: isLoadingAllStudents } = useCollection(allStudentsForFiltersQuery);
+  
+  useEffect(() => {
+    const fetchTotalCount = async () => {
+      if (firestore) {
+        const coll = collection(firestore, 'alunos');
+        const snapshot = await getCountFromServer(coll);
+        setTotalStudentCount(snapshot.data().count);
+      }
+    };
+    fetchTotalCount();
+  }, [firestore]);
+
 
   const uniqueFilterOptions = useMemo(() => {
     if (!allStudentsForFilters) return { ensinos: [], series: [], classes: [], turnos: [] };
@@ -229,8 +242,8 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {isAnyFilterActive && !isLoadingStudents && (
-          `A exibir ${filteredAndSortedStudents.length} aluno(s).`
+         {isAnyFilterActive && !isLoadingStudents && (
+          `A exibir ${filteredAndSortedStudents.length} de ${totalStudentCount} aluno(s).`
         )}
       </div>
       
