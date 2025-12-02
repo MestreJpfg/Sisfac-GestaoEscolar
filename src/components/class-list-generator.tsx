@@ -14,8 +14,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import ReportCardGrid from './report-card-grid';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { collection, query, getDocs } from 'firebase/firestore';
 
 
 // Helper function to chunk array
@@ -35,6 +35,9 @@ export default function ClassListGenerator() {
   const [students, setStudents] = useState<any[]>([]);
   const [activeAccordion, setActiveAccordion] = useState<string>("item-1");
   
+  const [allStudents, setAllStudents] = useState<any[]>([]);
+  const [isLoadingAllStudents, setIsLoadingAllStudents] = useState(true);
+
   const [filters, setFilters] = useState({
     ensino: '',
     serie: '',
@@ -42,11 +45,28 @@ export default function ClassListGenerator() {
     classe: '',
   });
 
-  const allStudentsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'alunos'));
-  }, [firestore]);
-  const { data: allStudents, isLoading: isLoadingAllStudents } = useCollection(allStudentsQuery);
+  useEffect(() => {
+    const fetchStudents = async () => {
+      if (!firestore) return;
+      setIsLoadingAllStudents(true);
+      try {
+        const q = query(collection(firestore, "alunos"));
+        const querySnapshot = await getDocs(q);
+        const studentsData = querySnapshot.docs.map(doc => doc.data());
+        setAllStudents(studentsData);
+      } catch (error) {
+        console.error("Error fetching students: ", error);
+        toast({
+          variant: "destructive",
+          title: "Erro ao carregar alunos",
+          description: "Não foi possível buscar os dados dos alunos para os filtros.",
+        });
+      } finally {
+        setIsLoadingAllStudents(false);
+      }
+    };
+    fetchStudents();
+  }, [firestore, toast]);
 
 
   const uniqueOptions = useMemo(() => {
@@ -290,17 +310,6 @@ export default function ClassListGenerator() {
 
   const isAnyFilterSelected = filters.ensino || filters.serie || filters.turno || filters.classe;
 
-  if (isLoadingAllStudents) {
-    return (
-        <Card className="w-full">
-            <CardContent className="flex flex-col items-center justify-center p-6 h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="mt-4 text-muted-foreground">A carregar dados dos alunos...</p>
-            </CardContent>
-        </Card>
-    );
-  }
-
   return (
     <Card className="w-full">
         <CardHeader>
@@ -320,29 +329,29 @@ export default function ClassListGenerator() {
                     </AccordionTrigger>
                     <AccordionContent>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
-                            <Select value={filters.ensino} onValueChange={(value) => handleFilterChange('ensino', value)}>
-                                <SelectTrigger><SelectValue placeholder="Filtrar por Ensino..." /></SelectTrigger>
+                            <Select value={filters.ensino} onValueChange={(value) => handleFilterChange('ensino', value)} disabled={isLoadingAllStudents}>
+                                <SelectTrigger><SelectValue placeholder={isLoadingAllStudents ? "A carregar..." : "Filtrar por Ensino..."} /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todos os Segmentos</SelectItem>
                                     {uniqueOptions.ensinos.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                            <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)} disabled={!filters.ensino}>
-                                <SelectTrigger><SelectValue placeholder="Filtrar por Série..." /></SelectTrigger>
+                            <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)} disabled={isLoadingAllStudents || !filters.ensino}>
+                                <SelectTrigger><SelectValue placeholder={isLoadingAllStudents ? "A carregar..." : "Filtrar por Série..."} /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todas as Séries</SelectItem>
                                     {uniqueOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                            <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)} disabled={!filters.serie}>
-                                <SelectTrigger><SelectValue placeholder="Filtrar por Turno..." /></SelectTrigger>
+                            <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)} disabled={isLoadingAllStudents || !filters.serie}>
+                                <SelectTrigger><SelectValue placeholder={isLoadingAllStudents ? "A carregar..." : "Filtrar por Turno..."} /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todos os Turnos</SelectItem>
                                     {uniqueOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                            <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)} disabled={!filters.turno}>
-                                <SelectTrigger><SelectValue placeholder="Filtrar por Classe..." /></SelectTrigger>
+                            <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)} disabled={isLoadingAllStudents || !filters.turno}>
+                                <SelectTrigger><SelectValue placeholder={isLoadingAllStudents ? "A carregar..." : "Filtrar por Classe..."} /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todas as Classes</SelectItem>
                                     {uniqueOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
@@ -350,7 +359,7 @@ export default function ClassListGenerator() {
                             </Select>
                         </div>
                          <div className="flex items-center gap-2 pt-2">
-                            <Button onClick={handleGenerateList} disabled={!isAnyFilterSelected || isGenerating} className="flex-1">
+                            <Button onClick={handleGenerateList} disabled={!isAnyFilterSelected || isGenerating || isLoadingAllStudents} className="flex-1">
                                 {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Gerar Lista'}
                             </Button>
                             {isAnyFilterSelected && (
@@ -413,3 +422,5 @@ export default function ClassListGenerator() {
     </Card>
   );
 }
+
+    

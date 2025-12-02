@@ -1,10 +1,10 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -44,12 +44,8 @@ export default function AttendanceReports() {
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    // Student data for filters
-    const studentsOptionsQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, 'alunos'));
-    }, [firestore]);
-    const { data: allStudents, isLoading: isLoadingStudentsOptions } = useCollection(studentsOptionsQuery);
+    const [allStudents, setAllStudents] = useState<any[]>([]);
+    const [isLoadingStudentsOptions, setIsLoadingStudentsOptions] = useState(true);
     
     // Daily Report State
     const [dailyFilters, setDailyFilters] = useState<ReportFilters>({ ensino: '', serie: '', classe: '', turno: '' });
@@ -65,6 +61,25 @@ export default function AttendanceReports() {
     const [individualDateRange, setIndividualDateRange] = useState<DateRange | undefined>();
     const [individualReportData, setIndividualReportData] = useState<AttendanceRecord[]>([]);
     const [isLoadingIndividual, setIsLoadingIndividual] = useState(false);
+
+    useEffect(() => {
+        const fetchStudents = async () => {
+            if (!firestore) return;
+            setIsLoadingStudentsOptions(true);
+            try {
+                const q = query(collection(firestore, "alunos"));
+                const querySnapshot = await getDocs(q);
+                const studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setAllStudents(studentsData);
+            } catch (error) {
+                console.error("Error fetching students for filters:", error);
+                toast({ variant: "destructive", title: "Erro ao Carregar Alunos" });
+            } finally {
+                setIsLoadingStudentsOptions(false);
+            }
+        };
+        fetchStudents();
+    }, [firestore, toast]);
 
 
     const studentMap = useMemo(() => {
@@ -130,7 +145,6 @@ export default function AttendanceReports() {
         const formattedDate = format(dailyDate, 'yyyy-MM-dd');
         const records: AttendanceRecord[] = [];
 
-        // Firestore 'in' query has a limit of 30 items. We need to chunk the requests.
         const chunkSize = 30;
         for (let i = 0; i < studentIds.length; i += chunkSize) {
             const chunk = studentIds.slice(i, i + chunkSize);
@@ -205,7 +219,7 @@ export default function AttendanceReports() {
             body: body,
             startY: 20,
             theme: 'striped',
-            headStyles: { fillColor: [30, 136, 229] }, // Um azul agradável
+            headStyles: { fillColor: [30, 136, 229] },
         });
 
         doc.save(`${title.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
@@ -219,10 +233,10 @@ export default function AttendanceReports() {
             </CardHeader>
             <CardContent className="space-y-4">
                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                    <Select value={dailyFilters.ensino} onValueChange={(v) => handleDailyFilterChange('ensino', v)}><SelectTrigger><SelectValue placeholder="Ensino..." /></SelectTrigger><SelectContent>{uniqueFilterOptions.ensinos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
-                    <Select value={dailyFilters.serie} onValueChange={(v) => handleDailyFilterChange('serie', v)} disabled={!dailyFilters.ensino}><SelectTrigger><SelectValue placeholder="Série..." /></SelectTrigger><SelectContent>{uniqueFilterOptions.series.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
-                    <Select value={dailyFilters.classe} onValueChange={(v) => handleDailyFilterChange('classe', v)} disabled={!dailyFilters.serie}><SelectTrigger><SelectValue placeholder="Classe..." /></SelectTrigger><SelectContent>{uniqueFilterOptions.classes.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
-                    <Select value={dailyFilters.turno} onValueChange={(v) => handleDailyFilterChange('turno', v)} disabled={!dailyFilters.classe}><SelectTrigger><SelectValue placeholder="Turno..." /></SelectTrigger><SelectContent>{uniqueFilterOptions.turnos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
+                    <Select value={dailyFilters.ensino} onValueChange={(v) => handleDailyFilterChange('ensino', v)} disabled={isLoadingStudentsOptions}><SelectTrigger><SelectValue placeholder={isLoadingStudentsOptions ? "A carregar..." : "Ensino..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.ensinos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
+                    <Select value={dailyFilters.serie} onValueChange={(v) => handleDailyFilterChange('serie', v)} disabled={isLoadingStudentsOptions || !dailyFilters.ensino}><SelectTrigger><SelectValue placeholder={isLoadingStudentsOptions ? "A carregar..." : "Série..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.series.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
+                    <Select value={dailyFilters.classe} onValueChange={(v) => handleDailyFilterChange('classe', v)} disabled={isLoadingStudentsOptions || !dailyFilters.serie}><SelectTrigger><SelectValue placeholder={isLoadingStudentsOptions ? "A carregar..." : "Classe..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.classes.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
+                    <Select value={dailyFilters.turno} onValueChange={(v) => handleDailyFilterChange('turno', v)} disabled={isLoadingStudentsOptions || !dailyFilters.classe}><SelectTrigger><SelectValue placeholder={isLoadingStudentsOptions ? "A carregar..." : "Turno..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.turnos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
                     <Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("justify-start text-left font-normal", !dailyDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{dailyDate ? format(dailyDate, "PPP", { locale: ptBR }) : <span>Escolha uma data</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={dailyDate} onSelect={setDailyDate} initialFocus disabled={(date) => date > new Date()} /></PopoverContent></Popover>
                 </div>
                 <Button onClick={generateDailyReport} disabled={isLoadingDaily}>
@@ -323,3 +337,5 @@ export default function AttendanceReports() {
         </Tabs>
     );
 }
+
+    

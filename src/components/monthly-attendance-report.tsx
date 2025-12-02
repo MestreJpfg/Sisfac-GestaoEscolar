@@ -1,10 +1,10 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -40,18 +40,33 @@ export default function MonthlyAttendanceReport() {
     const firestore = useFirestore();
     const { toast } = useToast();
     
-    // Student data for filters
-    const studentsOptionsQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, 'alunos'));
-    }, [firestore]);
-    const { data: allStudents } = useCollection(studentsOptionsQuery);
-    
+    const [allStudents, setAllStudents] = useState<any[]>([]);
+    const [isLoadingOptions, setIsLoadingOptions] = useState(true);
+
     const [filters, setFilters] = useState<ReportFilters>({ ensino: '', serie: '', classe: '', turno: '' });
     const [selectedYear, setSelectedYear] = useState<number>(getYear(new Date()));
     const [selectedMonth, setSelectedMonth] = useState<number>(getMonth(new Date()));
     const [reportData, setReportData] = useState<MonthlyRecord[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        const fetchStudents = async () => {
+            if (!firestore) return;
+            setIsLoadingOptions(true);
+            try {
+                const q = query(collection(firestore, "alunos"));
+                const querySnapshot = await getDocs(q);
+                const studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setAllStudents(studentsData);
+            } catch (error) {
+                console.error("Error fetching students for filters:", error);
+                toast({ variant: "destructive", title: "Erro ao Carregar Alunos" });
+            } finally {
+                setIsLoadingOptions(false);
+            }
+        };
+        fetchStudents();
+    }, [firestore, toast]);
 
     const uniqueFilterOptions = useMemo(() => {
         if (!allStudents) return { ensinos: [], series: [], classes: [], turnos: [] };
@@ -115,7 +130,6 @@ export default function MonthlyAttendanceReport() {
         const endDate = format(endOfMonth(new Date(selectedYear, selectedMonth)), 'yyyy-MM-dd');
         const attendanceByStudent: { [studentId: string]: { [date: string]: 'F' | 'J' } } = {};
 
-        // Firestore 'in' query has a limit of 30 items. We need to chunk the requests.
         const chunkSize = 30;
         for (let i = 0; i < studentIds.length; i += chunkSize) {
             const chunk = studentIds.slice(i, i + chunkSize);
@@ -145,7 +159,7 @@ export default function MonthlyAttendanceReport() {
                 const status = studentAbsences[formattedDate];
                 if (status) {
                     absences[day.getDate()] = status;
-                    if (status === 'F') total++; // Count only unexcused absences
+                    if (status === 'F') total++; 
                 }
             });
 
@@ -214,15 +228,15 @@ export default function MonthlyAttendanceReport() {
     return (
         <div className="space-y-4">
              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 border rounded-md">
-                <Select value={filters.ensino} onValueChange={(v) => handleFilterChange('ensino', v)}><SelectTrigger><SelectValue placeholder="Ensino..." /></SelectTrigger><SelectContent>{uniqueFilterOptions.ensinos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
-                <Select value={filters.serie} onValueChange={(v) => handleFilterChange('serie', v)} disabled={!filters.ensino}><SelectTrigger><SelectValue placeholder="Série..." /></SelectTrigger><SelectContent>{uniqueFilterOptions.series.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
-                <Select value={filters.classe} onValueChange={(v) => handleFilterChange('classe', v)} disabled={!filters.serie}><SelectTrigger><SelectValue placeholder="Classe..." /></SelectTrigger><SelectContent>{uniqueFilterOptions.classes.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
-                <Select value={filters.turno} onValueChange={(v) => handleFilterChange('turno', v)} disabled={!filters.classe}><SelectTrigger><SelectValue placeholder="Turno..." /></SelectTrigger><SelectContent>{uniqueFilterOptions.turnos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
+                <Select value={filters.ensino} onValueChange={(v) => handleFilterChange('ensino', v)} disabled={isLoadingOptions}><SelectTrigger><SelectValue placeholder={isLoadingOptions ? "A carregar..." : "Ensino..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.ensinos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
+                <Select value={filters.serie} onValueChange={(v) => handleFilterChange('serie', v)} disabled={isLoadingOptions || !filters.ensino}><SelectTrigger><SelectValue placeholder={isLoadingOptions ? "A carregar..." : "Série..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.series.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
+                <Select value={filters.classe} onValueChange={(v) => handleFilterChange('classe', v)} disabled={isLoadingOptions || !filters.serie}><SelectTrigger><SelectValue placeholder={isLoadingOptions ? "A carregar..." : "Classe..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.classes.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
+                <Select value={filters.turno} onValueChange={(v) => handleFilterChange('turno', v)} disabled={isLoadingOptions || !filters.classe}><SelectTrigger><SelectValue placeholder={isLoadingOptions ? "A carregar..." : "Turno..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.turnos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
                 <Select value={String(selectedMonth)} onValueChange={(v) => setSelectedMonth(Number(v))}><SelectTrigger><SelectValue placeholder="Mês..." /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>)}</SelectContent></Select>
                 <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}><SelectTrigger><SelectValue placeholder="Ano..." /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent></Select>
             </div>
-            <Button onClick={generateReport} disabled={isLoading}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Search className="mr-2 h-4 w-4"/>}
+            <Button onClick={generateReport} disabled={isLoading || isLoadingOptions}>
+                {isLoading || isLoadingOptions ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Search className="mr-2 h-4 w-4"/>}
                 Gerar Relatório Mensal
             </Button>
             {reportData.length > 0 && (
@@ -266,3 +280,5 @@ export default function MonthlyAttendanceReport() {
         </div>
     );
 }
+
+    

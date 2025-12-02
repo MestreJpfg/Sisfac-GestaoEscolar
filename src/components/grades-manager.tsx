@@ -2,8 +2,8 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, writeBatch } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { collection, query, where, doc, writeBatch, getDocs } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -37,12 +37,30 @@ export default function GradesManager() {
     const [grades, setGrades] = useState<Grades>({});
     const [isSaving, setIsSaving] = useState(false);
 
-    // Query for all students (for filter options)
-    const studentsOptionsQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, 'alunos'));
-    }, [firestore]);
-    const { data: allStudents, isLoading: isLoadingOptions } = useCollection(studentsOptionsQuery);
+    const [allStudents, setAllStudents] = useState<any[]>([]);
+    const [isLoadingOptions, setIsLoadingOptions] = useState(true);
+    const [studentsInClass, setStudentsInClass] = useState<any[]>([]);
+    const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+
+
+    useEffect(() => {
+        const fetchStudents = async () => {
+            if (!firestore) return;
+            setIsLoadingOptions(true);
+            try {
+                const q = query(collection(firestore, "alunos"));
+                const querySnapshot = await getDocs(q);
+                const studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setAllStudents(studentsData);
+            } catch (error) {
+                console.error("Error fetching students for filters:", error);
+                toast({ variant: "destructive", title: "Erro ao Carregar Alunos" });
+            } finally {
+                setIsLoadingOptions(false);
+            }
+        };
+        fetchStudents();
+    }, [firestore, toast]);
     
     // Derived unique options for filters
     const uniqueFilterOptions = useMemo(() => {
@@ -74,21 +92,24 @@ export default function GradesManager() {
         return filters.ensino && filters.serie && filters.classe && filters.turno && selectedDiscipline;
     }, [filters, selectedDiscipline]);
 
-    // Query for students in the selected class
-    const studentsInClassQuery = useMemoFirebase(() => {
-        if (!firestore || !isReadyToLoad) return null;
-        let q = query(collection(firestore, 'alunos'));
-        q = query(q, where('ensino', '==', filters.ensino));
-        q = query(q, where('serie', '==', filters.serie));
-        q = query(q, where('classe', '==', filters.classe));
-        q = query(q, where('turno', '==', filters.turno));
-        return q;
-    }, [firestore, isReadyToLoad, filters.ensino, filters.serie, filters.classe, filters.turno]);
-    const { data: studentsInClass, isLoading: isLoadingStudents } = useCollection(studentsInClassQuery);
 
-    const sortedStudentsInClass = useMemo(() => {
-        return studentsInClass?.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR')) || [];
-    }, [studentsInClass]);
+    useEffect(() => {
+        if (isReadyToLoad && allStudents.length > 0) {
+            setIsLoadingStudents(true);
+            const filtered = allStudents.filter(s => 
+                s.ensino === filters.ensino &&
+                s.serie === filters.serie &&
+                s.classe === filters.classe &&
+                s.turno === filters.turno
+            ).sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+            setStudentsInClass(filtered);
+            setIsLoadingStudents(false);
+        } else {
+            setStudentsInClass([]);
+        }
+    }, [isReadyToLoad, filters, allStudents]);
+
+    const sortedStudentsInClass = studentsInClass;
 
 
     const disciplineId = useMemo(() => {
@@ -354,3 +375,5 @@ export default function GradesManager() {
         </div>
     );
 }
+
+    

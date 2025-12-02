@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { collection, query, where, doc, writeBatch, getDocs } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -39,15 +39,31 @@ export default function AttendanceManager() {
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
     const [attendance, setAttendance] = useState<Map<string, AttendanceStatus>>(new Map());
     const [isSaving, setIsSaving] = useState(false);
-
-    // Query to get all students for filter options
-    const studentsOptionsQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, 'alunos'));
-    }, [firestore]);
-    const { data: allStudents, isLoading: isLoadingOptions } = useCollection(studentsOptionsQuery);
     
-    // Derived unique options for filters, now dependent on other filters
+    const [allStudents, setAllStudents] = useState<any[]>([]);
+    const [isLoadingOptions, setIsLoadingOptions] = useState(true);
+    const [studentsInClass, setStudentsInClass] = useState<any[]>([]);
+    const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+
+     useEffect(() => {
+        const fetchStudents = async () => {
+            if (!firestore) return;
+            setIsLoadingOptions(true);
+            try {
+                const q = query(collection(firestore, "alunos"));
+                const querySnapshot = await getDocs(q);
+                const studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setAllStudents(studentsData);
+            } catch (error) {
+                console.error("Error fetching students for filters:", error);
+                toast({ variant: "destructive", title: "Erro ao Carregar Alunos" });
+            } finally {
+                setIsLoadingOptions(false);
+            }
+        };
+        fetchStudents();
+    }, [firestore, toast]);
+    
     const uniqueFilterOptions = useMemo(() => {
         if (!allStudents) return { ensinos: [], series: [], classes: [], turnos: [] };
         
@@ -78,21 +94,23 @@ export default function AttendanceManager() {
         return `${filters.ensino}-${filters.serie}-${filters.classe}-${filters.turno}`.replace(/\s+/g, '_');
     }, [isClassSelected, filters]);
 
-    // Query for students in the selected class
-    const studentsInClassQuery = useMemoFirebase(() => {
-        if (!firestore || !isClassSelected) return null;
-        let q = query(collection(firestore, 'alunos'));
-        q = query(q, where('ensino', '==', filters.ensino));
-        q = query(q, where('serie', '==', filters.serie));
-        q = query(q, where('classe', '==', filters.classe));
-        q = query(q, where('turno', '==', filters.turno));
-        return q;
-    }, [firestore, isClassSelected, filters.ensino, filters.serie, filters.classe, filters.turno]);
-    const { data: studentsInClass, isLoading: isLoadingStudents } = useCollection(studentsInClassQuery);
+     useEffect(() => {
+        if (isClassSelected && allStudents.length > 0) {
+            setIsLoadingStudents(true);
+            const filtered = allStudents.filter(s => 
+                s.ensino === filters.ensino &&
+                s.serie === filters.serie &&
+                s.classe === filters.classe &&
+                s.turno === filters.turno
+            ).sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+            setStudentsInClass(filtered);
+            setIsLoadingStudents(false);
+        } else {
+            setStudentsInClass([]);
+        }
+    }, [isClassSelected, filters, allStudents]);
 
-    const sortedStudentsInClass = useMemo(() => {
-        return studentsInClass?.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR')) || [];
-    }, [studentsInClass]);
+    const sortedStudentsInClass = studentsInClass;
 
 
     const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
@@ -102,21 +120,29 @@ export default function AttendanceManager() {
     // Effect to fetch existing attendance for the selected date and class
     useEffect(() => {
         const fetchAttendance = async () => {
-            if (!firestore || !classId || !selectedDate || !sortedStudentsInClass || sortedStudentsInClass.length === 0) return;
+            if (!firestore || !classId || !selectedDate || !sortedStudentsInClass || sortedStudentsInClass.length === 0) {
+                 setAttendance(new Map(sortedStudentsInClass.map(s => [s.id, 'Presente'])));
+                return;
+            };
 
             const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-            const attendanceQuery = query(
-                collection(firestore, 'attendance'),
-                where('classId', '==', classId),
-                where('date', '==', formattedDate)
-            );
-            
-            const snapshot = await getDocs(attendanceQuery);
+            const studentIds = sortedStudentsInClass.map(s => s.id);
             const existingAttendance = new Map<string, AttendanceStatus>();
-            snapshot.forEach(doc => {
-                const data = doc.data() as AttendanceRecord;
-                existingAttendance.set(data.studentId, data.status);
-            });
+
+            const chunkSize = 30;
+            for (let i = 0; i < studentIds.length; i += chunkSize) {
+                const chunk = studentIds.slice(i, i + chunkSize);
+                const attendanceQuery = query(
+                    collection(firestore, 'attendance'),
+                    where('studentId', 'in', chunk),
+                    where('date', '==', formattedDate)
+                );
+                const snapshot = await getDocs(attendanceQuery);
+                snapshot.forEach(doc => {
+                    const data = doc.data() as AttendanceRecord;
+                    existingAttendance.set(data.studentId, data.status);
+                });
+            }
             
             const newAttendance = new Map<string, AttendanceStatus>();
             sortedStudentsInClass.forEach(student => {
@@ -158,7 +184,6 @@ export default function AttendanceManager() {
             const docRef = doc(firestore, 'attendance', attendanceId);
     
             if (status === 'Ausente' || status === 'Justificado') {
-                // Create or update records for absent or justified students
                 const record: AttendanceRecord = {
                     id: attendanceId,
                     studentId,
@@ -167,9 +192,7 @@ export default function AttendanceManager() {
                     status,
                 };
                 batch.set(docRef, record);
-            } else { // status === 'Presente'
-                // If the student is present, delete any existing non-present record for that day.
-                // This handles the case where a student was marked absent and then changed to present.
+            } else { 
                 batch.delete(docRef);
             }
         });
@@ -326,3 +349,5 @@ export default function AttendanceManager() {
         </div>
     );
 }
+
+    
