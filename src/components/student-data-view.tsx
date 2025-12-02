@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown } from 'lucide-react';
@@ -41,9 +41,9 @@ export default function StudentDataView() {
   const debouncedNome = useDebounce(filters.nome, 300);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: 'ascending' });
 
-  const { data: allStudents, isLoading: isLoadingAllStudents } = useCollection(
-    useMemoFirebase(() => firestore ? query(collection(firestore, 'alunos')) : null, [firestore])
-  );
+  // One query to fetch all students. This will be used for both filtering and populating filter options.
+  const allStudentsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'alunos')) : null, [firestore]);
+  const { data: allStudents, isLoading: isLoadingAllStudents } = useCollection(allStudentsQuery);
 
   const uniqueFilterOptions = useMemo(() => {
     if (isLoadingAllStudents || !allStudents) return { ensinos: [], series: [], classes: [], turnos: [] };
@@ -59,12 +59,13 @@ export default function StudentDataView() {
     };
   }, [allStudents, isLoadingAllStudents]);
   
-  
   const isAnyFilterActive = useMemo(() => {
+    // A search is active if the debounced name has 3+ chars or any other filter is set.
     return debouncedNome.trim().length >= 3 || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
   }, [debouncedNome, filters]);
 
   const filteredAndSortedStudents = useMemo(() => {
+    // If no filter is active, return an empty array to show the initial "prompt" state.
     if (!allStudents || !isAnyFilterActive) return [];
 
     let filtered = [...allStudents];
@@ -79,6 +80,7 @@ export default function StudentDataView() {
     if (filters.turno) filtered = filtered.filter(s => s.turno === filters.turno);
     if (filters.nee) filtered = filtered.filter(s => !!s.nee);
     
+    // Apply sorting
     return filtered.sort((a, b) => {
       const aValue = a[sortConfig.key] || '';
       const bValue = b[sortConfig.key] || '';
@@ -201,7 +203,7 @@ export default function StudentDataView() {
                 </Label>
               </div>
               
-              {(isAnyFilterActive && !filters.nee) && (
+              {isAnyFilterActive && (
                 <div className="flex items-center justify-end mt-4">
                   <Button variant="ghost" size="sm" onClick={clearFilters} className="text-destructive hover:text-destructive">
                     <X className="w-4 h-4 mr-2" />
@@ -219,17 +221,20 @@ export default function StudentDataView() {
         {isAnyFilterActive && !isLoadingAllStudents && allStudents &&
           `A exibir ${filteredAndSortedStudents.length} de ${allStudents.length} aluno(s).`
         }
+        {!isAnyFilterActive && !isLoadingAllStudents && allStudents &&
+            `Total de ${allStudents.length} alunos na base de dados.`
+        }
       </div>
       
-        <StudentTable
-            students={filteredAndSortedStudents}
-            onRowClick={handleStudentSelect}
-            onReportCardClick={handleOpenReportCard}
-            onSort={handleSort}
-            sortConfig={sortConfig}
-            isLoading={isAnyFilterActive && isLoadingAllStudents}
-            isSearchActive={isAnyFilterActive}
-        />
+      <StudentTable
+          students={filteredAndSortedStudents}
+          onRowClick={handleStudentSelect}
+          onReportCardClick={handleOpenReportCard}
+          onSort={handleSort}
+          sortConfig={sortConfig}
+          isLoading={isLoadingAllStudents && isAnyFilterActive}
+          isSearchActive={isAnyFilterActive}
+      />
       
       <StudentDetailSheet
         student={selectedStudent}
