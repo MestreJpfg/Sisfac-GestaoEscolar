@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getCountFromServer } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown } from 'lucide-react';
@@ -41,82 +41,51 @@ export default function StudentDataView() {
 
   const debouncedNome = useDebounce(filters.nome, 300);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: 'ascending' });
-  const [totalStudentsCount, setTotalStudentsCount] = useState<number | null>(null);
-  const [isLoadingFilters, setIsLoadingFilters] = useState(true);
 
-  // Query otimizada para popular APENAS os filtros.
-  const allStudentsForFiltersQuery = useMemoFirebase(() => {
+  // Query única para buscar todos os alunos.
+  const allStudentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'alunos'));
   }, [firestore]);
-  const { data: allStudentsForFilters, isLoading: isLoadingAllStudents } = useCollection(allStudentsForFiltersQuery);
-
-  useEffect(() => {
-    if (!isLoadingAllStudents) {
-      setIsLoadingFilters(false);
-    }
-  }, [isLoadingAllStudents]);
+  const { data: allStudents, isLoading: isLoadingStudents } = useCollection(allStudentsQuery);
 
 
   // Memoize as opções de filtro para evitar recálculos.
   const uniqueFilterOptions = useMemo(() => {
-    const data = allStudentsForFilters || [];
+    if (isLoadingStudents || !allStudents) return { ensinos: [], series: [], classes: [], turnos: [] };
+    
     const getUniqueValues = (key: string) =>
-      [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
+      [...new Set(allStudents.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
-    const ensinos = getUniqueValues('ensino');
-    const series = getUniqueValues('serie');
-    const classes = getUniqueValues('classe');
-    const turnos = getUniqueValues('turno');
-    return { ensinos, series, classes, turnos };
-  }, [allStudentsForFilters]);
+    return {
+        ensinos: getUniqueValues('ensino'),
+        series: getUniqueValues('serie'),
+        classes: getUniqueValues('classe'),
+        turnos: getUniqueValues('turno'),
+    };
+  }, [allStudents, isLoadingStudents]);
+  
   
   const isAnyFilterActive = useMemo(() => {
     return debouncedNome.trim().length >= 3 || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
   }, [debouncedNome, filters]);
 
-  // Query principal que busca os alunos para a tabela, baseada nos filtros
-  const studentsQuery = useMemoFirebase(() => {
-    if (!firestore || !isAnyFilterActive) return null;
-
-    let q = query(collection(firestore, 'alunos'));
-
-    if (filters.ensino) q = query(q, where('ensino', '==', filters.ensino));
-    if (filters.serie) q = query(q, where('serie', '==', filters.serie));
-    if (filters.classe) q = query(q, where('classe', '==', filters.classe));
-    if (filters.turno) q = query(q, where('turno', '==', filters.turno));
-    if (filters.nee) q = query(q, where('nee', '!=', null));
-    
-    // A busca por nome não pode ser combinada com outras queries de range/inequality no Firestore
-    // por isso é aplicada no cliente após o resultado dos outros filtros.
-    // Se a busca por nome fosse a única, poderíamos usar where('nome', '>=', search).
-
-    return q;
-  }, [firestore, isAnyFilterActive, filters.ensino, filters.serie, filters.classe, filters.turno, filters.nee]);
-
-  const { data: studentsData, isLoading: isLoadingStudents } = useCollection(studentsQuery);
-  
-   useEffect(() => {
-    const fetchTotalCount = async () => {
-      if (firestore) {
-        const studentsColl = collection(firestore, 'alunos');
-        const snapshot = await getCountFromServer(studentsColl);
-        setTotalStudentsCount(snapshot.data().count);
-      }
-    };
-    fetchTotalCount();
-  }, [firestore]);
-
-
   const filteredAndSortedStudents = useMemo(() => {
-    if (!studentsData) return [];
+    if (!allStudents) return [];
+    if (!isAnyFilterActive) return [];
 
-    let filtered = [...studentsData];
+    let filtered = [...allStudents];
     const searchLower = debouncedNome.trim().toLowerCase();
-
+    
+    // Aplicar todos os filtros
     if (searchLower.length >= 3) {
       filtered = filtered.filter(student => student.nome?.toLowerCase().includes(searchLower));
     }
+    if (filters.ensino) filtered = filtered.filter(s => s.ensino === filters.ensino);
+    if (filters.serie) filtered = filtered.filter(s => s.serie === filters.serie);
+    if (filters.classe) filtered = filtered.filter(s => s.classe === filters.classe);
+    if (filters.turno) filtered = filtered.filter(s => s.turno === filters.turno);
+    if (filters.nee) filtered = filtered.filter(s => !!s.nee);
     
     // Ordenação
     return filtered.sort((a, b) => {
@@ -127,7 +96,7 @@ export default function StudentDataView() {
       return 0;
     });
 
-  }, [studentsData, debouncedNome, sortConfig]);
+  }, [allStudents, isAnyFilterActive, debouncedNome, filters, sortConfig]);
 
   const handleSort = (key: string) => {
     setSortConfig(prevConfig => ({
@@ -192,36 +161,36 @@ export default function StudentDataView() {
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-4 pt-4 data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <Select value={filters.ensino || ''} onValueChange={(value) => handleFilterChange('ensino', value)} disabled={isLoadingFilters}>
+                  <Select value={filters.ensino || ''} onValueChange={(value) => handleFilterChange('ensino', value)} disabled={isLoadingStudents}>
                     <SelectTrigger>
-                      <SelectValue placeholder={isLoadingFilters ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por ensino..."} />
+                      <SelectValue placeholder={isLoadingStudents ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por ensino..."} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os ensinos</SelectItem>
                       {uniqueFilterOptions.ensinos.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Select value={filters.serie || ''} onValueChange={(value) => handleFilterChange('serie', value)} disabled={isLoadingFilters}>
+                  <Select value={filters.serie || ''} onValueChange={(value) => handleFilterChange('serie', value)} disabled={isLoadingStudents}>
                     <SelectTrigger>
-                       <SelectValue placeholder={isLoadingFilters ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por série..."} />
+                       <SelectValue placeholder={isLoadingStudents ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por série..."} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as séries</SelectItem>
                       {uniqueFilterOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Select value={filters.classe || ''} onValueChange={(value) => handleFilterChange('classe', value)} disabled={isLoadingFilters}>
+                  <Select value={filters.classe || ''} onValueChange={(value) => handleFilterChange('classe', value)} disabled={isLoadingStudents}>
                     <SelectTrigger>
-                       <SelectValue placeholder={isLoadingFilters ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por classe..."} />
+                       <SelectValue placeholder={isLoadingStudents ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por classe..."} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as classes</SelectItem>
                       {uniqueFilterOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Select value={filters.turno || ''} onValueChange={(value) => handleFilterChange('turno', value)} disabled={isLoadingFilters}>
+                  <Select value={filters.turno || ''} onValueChange={(value) => handleFilterChange('turno', value)} disabled={isLoadingStudents}>
                     <SelectTrigger>
-                       <SelectValue placeholder={isLoadingFilters ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por turno..."} />
+                       <SelectValue placeholder={isLoadingStudents ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por turno..."} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os turnos</SelectItem>
@@ -241,7 +210,7 @@ export default function StudentDataView() {
                 </Label>
               </div>
               
-              {isAnyFilterActive && (
+              {(isAnyFilterActive && !filters.nee) && (
                 <div className="flex items-center justify-end mt-4">
                   <Button variant="ghost" size="sm" onClick={clearFilters} className="text-destructive hover:text-destructive">
                     <X className="w-4 h-4 mr-2" />
@@ -256,8 +225,8 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {isAnyFilterActive && !isLoadingStudents && totalStudentsCount !== null &&
-          `A exibir ${filteredAndSortedStudents.length} de ${totalStudentsCount} aluno(s).`
+        {isAnyFilterActive && !isLoadingStudents && allStudents &&
+          `A exibir ${filteredAndSortedStudents.length} de ${allStudents.length} aluno(s).`
         }
       </div>
       
@@ -267,7 +236,7 @@ export default function StudentDataView() {
             onReportCardClick={handleOpenReportCard}
             onSort={handleSort}
             sortConfig={sortConfig}
-            isLoading={isAnyFilterActive && isLoadingStudents}
+            isLoading={isLoadingStudents}
             isSearchActive={isAnyFilterActive}
         />
       
