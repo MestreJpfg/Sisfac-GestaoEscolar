@@ -41,7 +41,7 @@ export default function StudentDataView() {
   const debouncedNome = useDebounce(filters.nome, 300);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: 'ascending' });
 
-  // One query to fetch all students for populating filter options.
+  // Query for populating filter options
   const allStudentsForFiltersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'alunos')) : null, [firestore]);
   const { data: allStudentsForFilters, isLoading: isLoadingAllStudents } = useCollection(allStudentsForFiltersQuery);
 
@@ -229,9 +229,9 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {isAnyFilterActive && !isLoadingStudents &&
+        {isAnyFilterActive && !isLoadingStudents && (
           `A exibir ${filteredAndSortedStudents.length} aluno(s).`
-        }
+        )}
       </div>
       
       <StudentTable
