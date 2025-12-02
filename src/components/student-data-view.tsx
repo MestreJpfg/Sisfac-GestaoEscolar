@@ -2,8 +2,8 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getCountFromServer, getDocs } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { collection, query, getDocs, getCountFromServer } from 'firebase/firestore';
 
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown } from 'lucide-react';
@@ -41,7 +41,6 @@ export default function StudentDataView() {
   const debouncedNome = useDebounce(filters.nome, 300);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: 'ascending' });
 
-  // State for populating filters
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [isLoadingFilters, setIsLoadingFilters] = useState(true);
   const [totalStudentCount, setTotalStudentCount] = useState(0);
@@ -81,16 +80,23 @@ export default function StudentDataView() {
   const uniqueFilterOptions = useMemo(() => {
     if (!allStudents || allStudents.length === 0) return { ensinos: [], series: [], classes: [], turnos: [] };
     
-    const getUniqueValues = (key: string) =>
-      [...new Set(allStudents.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
+    const getUniqueValues = (key: string, data: any[]) =>
+      [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
-    return {
-        ensinos: getUniqueValues('ensino'),
-        series: getUniqueValues('serie'),
-        classes: getUniqueValues('classe'),
-        turnos: getUniqueValues('turno'),
-    };
-  }, [allStudents]);
+    let filteredForOptions = allStudents;
+    const ensinos = getUniqueValues('ensino', filteredForOptions);
+
+    if(filters.ensino) filteredForOptions = filteredForOptions.filter(s => s.ensino === filters.ensino);
+    const series = getUniqueValues('serie', filteredForOptions);
+
+    if(filters.serie) filteredForOptions = filteredForOptions.filter(s => s.serie === filters.serie);
+    const classes = getUniqueValues('classe', filteredForOptions);
+
+    if(filters.classe) filteredForOptions = filteredForOptions.filter(s => s.classe === filters.classe);
+    const turnos = getUniqueValues('turno', filteredForOptions);
+    
+    return { ensinos, series, classes, turnos };
+  }, [allStudents, filters]);
   
   const isAnyFilterActive = useMemo(() => {
     return debouncedNome.trim().length >= 3 || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
@@ -131,9 +137,22 @@ export default function StudentDataView() {
   };
 
   const handleFilterChange = (name: string, value: string | boolean) => {
-    const newValue = typeof value === 'string' && value === 'all' ? '' : value;
-    setFilters(prev => ({ ...prev, [name]: newValue }));
-  };
+    setFilters(prev => {
+        const newFilters = { ...prev, [name]: (typeof value === 'string' && value === 'all' ? '' : value) };
+        // Reset dependent filters
+        if (name === 'ensino') {
+            newFilters.serie = '';
+            newFilters.classe = '';
+            newFilters.turno = '';
+        } else if (name === 'serie') {
+            newFilters.classe = '';
+            newFilters.turno = '';
+        } else if (name === 'classe') {
+            newFilters.turno = '';
+        }
+        return newFilters;
+    });
+};
 
   const clearFilters = () => {
     setFilters({
@@ -200,7 +219,7 @@ export default function StudentDataView() {
                       {uniqueFilterOptions.ensinos.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Select value={filters.serie || ''} onValueChange={(value) => handleFilterChange('serie', value)} disabled={isLoadingFilters}>
+                  <Select value={filters.serie || ''} onValueChange={(value) => handleFilterChange('serie', value)} disabled={isLoadingFilters || !filters.ensino}>
                     <SelectTrigger>
                        <SelectValue placeholder={isLoadingFilters ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por série..."} />
                     </SelectTrigger>
@@ -209,7 +228,7 @@ export default function StudentDataView() {
                       {uniqueFilterOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Select value={filters.classe || ''} onValueChange={(value) => handleFilterChange('classe', value)} disabled={isLoadingFilters}>
+                  <Select value={filters.classe || ''} onValueChange={(value) => handleFilterChange('classe', value)} disabled={isLoadingFilters || !filters.serie}>
                     <SelectTrigger>
                        <SelectValue placeholder={isLoadingFilters ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por classe..."} />
                     </SelectTrigger>
@@ -218,7 +237,7 @@ export default function StudentDataView() {
                       {uniqueFilterOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Select value={filters.turno || ''} onValueChange={(value) => handleFilterChange('turno', value)} disabled={isLoadingFilters}>
+                  <Select value={filters.turno || ''} onValueChange={(value) => handleFilterChange('turno', value)} disabled={isLoadingFilters || !filters.classe}>
                     <SelectTrigger>
                        <SelectValue placeholder={isLoadingFilters ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por turno..."} />
                     </SelectTrigger>
@@ -266,7 +285,7 @@ export default function StudentDataView() {
           onReportCardClick={handleOpenReportCard}
           onSort={handleSort}
           sortConfig={sortConfig}
-          isLoading={isLoadingFilters && isAnyFilterActive} // A tabela só mostra "loading" se um filtro estiver ativo E os dados estiverem carregando
+          isLoading={isLoadingFilters && isAnyFilterActive}
           isSearchActive={isAnyFilterActive}
       />
       
@@ -275,8 +294,6 @@ export default function StudentDataView() {
         isOpen={!!selectedStudent}
         onClose={handleCloseSheet}
         onUpdate={() => {
-            // A atualização otimista acontece no handleStudentUpdate, aqui podemos fechar a sheet
-            // A re-query não é necessária pois estamos editando o estado local `allStudents`
             if(selectedStudent) {
               const updatedStudent = allStudents.find(s => s.id === selectedStudent.id);
               if (updatedStudent) {
