@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown } from 'lucide-react';
@@ -41,15 +41,15 @@ export default function StudentDataView() {
   const debouncedNome = useDebounce(filters.nome, 300);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: 'ascending' });
 
-  // One query to fetch all students. This will be used for both filtering and populating filter options.
-  const allStudentsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'alunos')) : null, [firestore]);
-  const { data: allStudents, isLoading: isLoadingAllStudents } = useCollection(allStudentsQuery);
+  // One query to fetch all students for populating filter options.
+  const allStudentsForFiltersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'alunos')) : null, [firestore]);
+  const { data: allStudentsForFilters, isLoading: isLoadingAllStudents } = useCollection(allStudentsForFiltersQuery);
 
   const uniqueFilterOptions = useMemo(() => {
-    if (isLoadingAllStudents || !allStudents) return { ensinos: [], series: [], classes: [], turnos: [] };
+    if (!allStudentsForFilters) return { ensinos: [], series: [], classes: [], turnos: [] };
     
     const getUniqueValues = (key: string) =>
-      [...new Set(allStudents.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
+      [...new Set(allStudentsForFilters.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
     return {
         ensinos: getUniqueValues('ensino'),
@@ -57,31 +57,42 @@ export default function StudentDataView() {
         classes: getUniqueValues('classe'),
         turnos: getUniqueValues('turno'),
     };
-  }, [allStudents, isLoadingAllStudents]);
+  }, [allStudentsForFilters]);
   
   const isAnyFilterActive = useMemo(() => {
-    // A search is active if the debounced name has 3+ chars or any other filter is set.
     return debouncedNome.trim().length >= 3 || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
   }, [debouncedNome, filters]);
 
-  const filteredAndSortedStudents = useMemo(() => {
-    // If no filter is active, return an empty array to show the initial "prompt" state.
-    if (!allStudents || !isAnyFilterActive) return [];
+  // Main query for the table, only runs when a filter is active
+  const studentsQuery = useMemoFirebase(() => {
+    if (!firestore || !isAnyFilterActive) return null;
 
-    let filtered = [...allStudents];
-    const searchLower = debouncedNome.trim().toLowerCase();
+    let q = query(collection(firestore, 'alunos'));
+
+    if (filters.ensino) q = query(q, where('ensino', '==', filters.ensino));
+    if (filters.serie) q = query(q, where('serie', '==', filters.serie));
+    if (filters.classe) q = query(q, where('classe', '==', filters.classe));
+    if (filters.turno) q = query(q, where('turno', '==', filters.turno));
+    if (filters.nee) q = query(q, where('nee', '!=', null));
     
+    return q;
+  }, [firestore, isAnyFilterActive, filters.ensino, filters.serie, filters.classe, filters.turno, filters.nee]);
+
+  const { data: studentsData, isLoading: isLoadingStudents } = useCollection(studentsQuery);
+
+  const filteredAndSortedStudents = useMemo(() => {
+    if (!studentsData && isAnyFilterActive) return []; // In case data is null while loading
+    
+    let filtered = isAnyFilterActive ? studentsData || [] : [];
+    const searchLower = debouncedNome.trim().toLowerCase();
+
+    // The name search must be done on the client side because Firestore doesn't support partial text search on its own
     if (searchLower.length >= 3) {
       filtered = filtered.filter(student => student.nome?.toLowerCase().includes(searchLower));
     }
-    if (filters.ensino) filtered = filtered.filter(s => s.ensino === filters.ensino);
-    if (filters.serie) filtered = filtered.filter(s => s.serie === filters.serie);
-    if (filters.classe) filtered = filtered.filter(s => s.classe === filters.classe);
-    if (filters.turno) filtered = filtered.filter(s => s.turno === filters.turno);
-    if (filters.nee) filtered = filtered.filter(s => !!s.nee);
     
     // Apply sorting
-    return filtered.sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       const aValue = a[sortConfig.key] || '';
       const bValue = b[sortConfig.key] || '';
       if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
@@ -89,7 +100,7 @@ export default function StudentDataView() {
       return 0;
     });
 
-  }, [allStudents, isAnyFilterActive, debouncedNome, filters, sortConfig]);
+  }, [studentsData, isAnyFilterActive, debouncedNome, sortConfig]);
 
   const handleSort = (key: string) => {
     setSortConfig(prevConfig => ({
@@ -218,11 +229,8 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {isAnyFilterActive && !isLoadingAllStudents && allStudents &&
-          `A exibir ${filteredAndSortedStudents.length} de ${allStudents.length} aluno(s).`
-        }
-        {!isAnyFilterActive && !isLoadingAllStudents && allStudents &&
-            `Total de ${allStudents.length} alunos na base de dados.`
+        {isAnyFilterActive && !isLoadingStudents &&
+          `A exibir ${filteredAndSortedStudents.length} aluno(s).`
         }
       </div>
       
@@ -232,7 +240,7 @@ export default function StudentDataView() {
           onReportCardClick={handleOpenReportCard}
           onSort={handleSort}
           sortConfig={sortConfig}
-          isLoading={isLoadingAllStudents && isAnyFilterActive}
+          isLoading={isLoadingStudents}
           isSearchActive={isAnyFilterActive}
       />
       
