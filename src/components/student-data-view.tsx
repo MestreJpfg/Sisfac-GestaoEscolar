@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query, getDocs, getCountFromServer } from 'firebase/firestore';
+import { collection, getDocs, query } from 'firebase/firestore';
 
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown } from 'lucide-react';
@@ -47,19 +47,15 @@ export default function StudentDataView() {
 
 
   useEffect(() => {
-    const fetchFilterDataAndCount = async () => {
+    const fetchFilterData = async () => {
       if (!firestore) return;
       setIsLoadingFilters(true);
       try {
         const studentsQuery = query(collection(firestore, 'alunos'));
-        const [studentsSnapshot, countSnapshot] = await Promise.all([
-          getDocs(studentsQuery),
-          getCountFromServer(studentsQuery)
-        ]);
-
+        const studentsSnapshot = await getDocs(studentsQuery);
         const studentsData = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setAllStudents(studentsData);
-        setTotalStudentCount(countSnapshot.data().count);
+        setTotalStudentCount(studentsData.length);
 
       } catch (error) {
         console.error("Error fetching data for filters:", error);
@@ -73,7 +69,7 @@ export default function StudentDataView() {
       }
     };
 
-    fetchFilterDataAndCount();
+    fetchFilterData();
   }, [firestore, toast]);
 
 
@@ -274,7 +270,7 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-         {isAnyFilterActive && (
+         {isAnyFilterActive && !isLoadingFilters && (
           `A exibir ${filteredAndSortedStudents.length} de ${totalStudentCount} aluno(s).`
         )}
       </div>
