@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 
 import StudentTable from './student-table';
 import { Filter, X, ChevronDown } from 'lucide-react';
@@ -21,7 +21,6 @@ import { Label } from './ui/label';
 import StudentReportCardDialog from './student-report-card-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-
 
 export default function StudentDataView() {
   const { toast } = useToast();
@@ -42,17 +41,12 @@ export default function StudentDataView() {
   const debouncedNome = useDebounce(filters.nome, 300);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: 'ascending' });
 
-  // Query única para buscar todos os alunos.
-  const allStudentsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'alunos'));
-  }, [firestore]);
-  const { data: allStudents, isLoading: isLoadingStudents } = useCollection(allStudentsQuery);
+  const { data: allStudents, isLoading: isLoadingAllStudents } = useCollection(
+    useMemoFirebase(() => firestore ? query(collection(firestore, 'alunos')) : null, [firestore])
+  );
 
-
-  // Memoize as opções de filtro para evitar recálculos.
   const uniqueFilterOptions = useMemo(() => {
-    if (isLoadingStudents || !allStudents) return { ensinos: [], series: [], classes: [], turnos: [] };
+    if (isLoadingAllStudents || !allStudents) return { ensinos: [], series: [], classes: [], turnos: [] };
     
     const getUniqueValues = (key: string) =>
       [...new Set(allStudents.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
@@ -63,7 +57,7 @@ export default function StudentDataView() {
         classes: getUniqueValues('classe'),
         turnos: getUniqueValues('turno'),
     };
-  }, [allStudents, isLoadingStudents]);
+  }, [allStudents, isLoadingAllStudents]);
   
   
   const isAnyFilterActive = useMemo(() => {
@@ -71,13 +65,11 @@ export default function StudentDataView() {
   }, [debouncedNome, filters]);
 
   const filteredAndSortedStudents = useMemo(() => {
-    if (!allStudents) return [];
-    if (!isAnyFilterActive) return [];
+    if (!allStudents || !isAnyFilterActive) return [];
 
     let filtered = [...allStudents];
     const searchLower = debouncedNome.trim().toLowerCase();
     
-    // Aplicar todos os filtros
     if (searchLower.length >= 3) {
       filtered = filtered.filter(student => student.nome?.toLowerCase().includes(searchLower));
     }
@@ -87,7 +79,6 @@ export default function StudentDataView() {
     if (filters.turno) filtered = filtered.filter(s => s.turno === filters.turno);
     if (filters.nee) filtered = filtered.filter(s => !!s.nee);
     
-    // Ordenação
     return filtered.sort((a, b) => {
       const aValue = a[sortConfig.key] || '';
       const bValue = b[sortConfig.key] || '';
@@ -161,36 +152,36 @@ export default function StudentDataView() {
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-4 pt-4 data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <Select value={filters.ensino || ''} onValueChange={(value) => handleFilterChange('ensino', value)} disabled={isLoadingStudents}>
+                  <Select value={filters.ensino || ''} onValueChange={(value) => handleFilterChange('ensino', value)} disabled={isLoadingAllStudents}>
                     <SelectTrigger>
-                      <SelectValue placeholder={isLoadingStudents ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por ensino..."} />
+                      <SelectValue placeholder={isLoadingAllStudents ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por ensino..."} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os ensinos</SelectItem>
                       {uniqueFilterOptions.ensinos.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Select value={filters.serie || ''} onValueChange={(value) => handleFilterChange('serie', value)} disabled={isLoadingStudents}>
+                  <Select value={filters.serie || ''} onValueChange={(value) => handleFilterChange('serie', value)} disabled={isLoadingAllStudents}>
                     <SelectTrigger>
-                       <SelectValue placeholder={isLoadingStudents ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por série..."} />
+                       <SelectValue placeholder={isLoadingAllStudents ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por série..."} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as séries</SelectItem>
                       {uniqueFilterOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Select value={filters.classe || ''} onValueChange={(value) => handleFilterChange('classe', value)} disabled={isLoadingStudents}>
+                  <Select value={filters.classe || ''} onValueChange={(value) => handleFilterChange('classe', value)} disabled={isLoadingAllStudents}>
                     <SelectTrigger>
-                       <SelectValue placeholder={isLoadingStudents ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por classe..."} />
+                       <SelectValue placeholder={isLoadingAllStudents ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por classe..."} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as classes</SelectItem>
                       {uniqueFilterOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Select value={filters.turno || ''} onValueChange={(value) => handleFilterChange('turno', value)} disabled={isLoadingStudents}>
+                  <Select value={filters.turno || ''} onValueChange={(value) => handleFilterChange('turno', value)} disabled={isLoadingAllStudents}>
                     <SelectTrigger>
-                       <SelectValue placeholder={isLoadingStudents ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por turno..."} />
+                       <SelectValue placeholder={isLoadingAllStudents ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por turno..."} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os turnos</SelectItem>
@@ -225,7 +216,7 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-        {isAnyFilterActive && !isLoadingStudents && allStudents &&
+        {isAnyFilterActive && !isLoadingAllStudents && allStudents &&
           `A exibir ${filteredAndSortedStudents.length} de ${allStudents.length} aluno(s).`
         }
       </div>
@@ -236,7 +227,7 @@ export default function StudentDataView() {
             onReportCardClick={handleOpenReportCard}
             onSort={handleSort}
             sortConfig={sortConfig}
-            isLoading={isLoadingStudents}
+            isLoading={isAnyFilterActive && isLoadingAllStudents}
             isSearchActive={isAnyFilterActive}
         />
       
