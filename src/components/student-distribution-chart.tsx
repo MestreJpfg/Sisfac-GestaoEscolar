@@ -4,9 +4,11 @@
 import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import { useTheme } from 'next-themes';
+import { Loader2 } from 'lucide-react';
 
 interface StudentDistributionChartProps {
     students: any[];
+    isLoading: boolean;
     onDrilldown: (serie: string | null) => void;
     drilledSerie: string | null;
 }
@@ -26,7 +28,7 @@ const CustomLabel = (props: any) => {
     );
 };
 
-export default function StudentDistributionChart({ students, onDrilldown, drilledSerie }: StudentDistributionChartProps) {
+export default function StudentDistributionChart({ students, isLoading, onDrilldown, drilledSerie }: StudentDistributionChartProps) {
     const { resolvedTheme } = useTheme();
 
     const handleBarClick = (payload: any) => {
@@ -39,7 +41,7 @@ export default function StudentDistributionChart({ students, onDrilldown, drille
     };
     
     const data = useMemo(() => {
-        if (!students) return [];
+        if (isLoading || !students) return [];
 
         if (drilledSerie) {
             const filteredStudents = students.filter(s => s.serie === drilledSerie);
@@ -58,7 +60,7 @@ export default function StudentDistributionChart({ students, onDrilldown, drille
 
         } else {
              const seriesCount = students
-                .filter(student => student.serie) // Filtra alunos sem série definida
+                .filter(student => student.serie) 
                 .reduce((acc, student) => {
                     const serie = student.serie;
                     acc[serie] = (acc[serie] || 0) + 1;
@@ -80,7 +82,7 @@ export default function StudentDistributionChart({ students, onDrilldown, drille
                     return a.name.localeCompare(b.name, 'pt-BR');
                 });
         }
-    }, [students, drilledSerie]);
+    }, [students, drilledSerie, isLoading]);
 
     const chartColors = [
         'hsl(var(--chart-1))',
@@ -91,6 +93,14 @@ export default function StudentDistributionChart({ students, onDrilldown, drille
     ];
 
     const tickColor = resolvedTheme === 'dark' ? '#a1a1aa' : '#71717a';
+    
+    if (isLoading) {
+        return (
+            <div className="flex h-[350px] w-full items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        )
+    }
 
     if (data.length === 0) {
         return (

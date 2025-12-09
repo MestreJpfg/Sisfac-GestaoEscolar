@@ -5,8 +5,7 @@ import { useMemo, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, query, doc, getCountFromServer } from 'firebase/firestore';
+import { collection, query, doc, getCountFromServer, getDocs } from 'firebase/firestore';
 import { Loader2, Users, UserCog, Shield, Database, ClipboardList, Megaphone, CalendarCheck, ArrowLeft, NotebookText, Gamepad2 } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
@@ -25,9 +24,10 @@ export default function DashboardPage() {
   const router = useRouter();
 
   const [studentCount, setStudentCount] = useState<number | React.ReactNode>(<Loader2 className="h-5 w-5 animate-spin" />);
-  const [userCount, setUserCount] = useState<number | React.ReactNode>(<Loader2 className="h-5 w-5 animate-spin" />);
-  const [profileCount, setProfileCount] = useState<number | React.ReactNode>(<Loader2 className="h-5 w-5 animate-spin" />);
   const [chartDrilldown, setChartDrilldown] = useState<string | null>(null);
+
+  const [allStudents, setAllStudents] = useState<any[]>([]);
+  const [isLoadingAllStudents, setIsLoadingAllStudents] = useState(true);
 
   const userDocRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -42,23 +42,15 @@ export default function DashboardPage() {
 
   const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
   
-  const studentsQuery = useMemoFirebase(() => {
-      if (!firestore) return null;
-      return query(collection(firestore, 'alunos'));
-  }, [firestore]);
-  const { data: allStudents, isLoading: isLoadingAllStudents } = useCollection(studentsQuery);
-
   const isPermissionsLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
 
   const hasPermission = (permission: string) => {
     if (isPermissionsLoading || !userProfile || !firestore) return false;
     
-    // Admin override check
     if (userProfile.profileId === 'Administrador' || userProfile.profileId === 'Administrador(a)') {
       return true;
     }
     
-    // If checking for a 'view' permission, also check for the corresponding 'manage' permission
     if (permission.startsWith('view:')) {
         const managePermission = permission.replace('view:', 'manage:');
         if (profileDetails?.permissions?.includes(managePermission) || userProfile.customPermissions?.includes(managePermission)) {
@@ -66,12 +58,10 @@ export default function DashboardPage() {
         }
     }
     
-    // Check profile permissions
     if (profileDetails?.permissions?.includes(permission)) {
       return true;
     }
     
-    // Check user-specific custom permissions
     if (userProfile.customPermissions?.includes(permission)) {
       return true;
     }
@@ -90,28 +80,34 @@ export default function DashboardPage() {
   const canViewGrades = useMemo(() => hasPermission('view:grades'), [userProfile, profileDetails, isPermissionsLoading]);
   const canManageGrades = useMemo(() => hasPermission('manage:grades'), [userProfile, profileDetails, isPermissionsLoading]);
 
-
   useEffect(() => {
-    const fetchCounts = async () => {
+    const fetchCountsAndStudents = async () => {
         if (!firestore) return;
 
+        setIsLoadingAllStudents(true);
         try {
             if (canViewStudents) {
                 const studentsColl = collection(firestore, 'alunos');
-                const studentsSnapshot = await getCountFromServer(query(studentsColl));
-                setStudentCount(studentsSnapshot.data().count);
+                const studentsSnapshot = await getDocs(query(studentsColl));
+                const studentsData = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                setStudentCount(studentsData.length);
+                setAllStudents(studentsData);
             } else {
                  setStudentCount(0);
+                 setAllStudents([]);
             }
         } catch (e) {
-            console.error("Error fetching student count: ", e);
+            console.error("Error fetching students data: ", e);
             setStudentCount('N/A');
+            setAllStudents([]);
+        } finally {
+            setIsLoadingAllStudents(false);
         }
-
     };
 
     if (!isPermissionsLoading) {
-      fetchCounts();
+      fetchCountsAndStudents();
     }
   }, [firestore, isPermissionsLoading, canViewStudents]);
 
@@ -239,7 +235,7 @@ export default function DashboardPage() {
                                     {chartDrilldown ? `Detalhes de ${chartDrilldown}` : 'Distribuição de Alunos por Série'}
                                 </CardTitle>
                                 <CardDescription>
-                                    {chartDrilldown ? `Total de alunos por turma e turno (${(allStudents || []).filter(s => s.serie === chartDrilldown).length || 0} alunos).` : 'Clique duplo numa barra para ver os detalhes da série.'}
+                                    {chartDrilldown ? `Total de alunos por turma e turno (${allStudents.filter(s => s.serie === chartDrilldown).length || 0} alunos).` : 'Clique duplo numa barra para ver os detalhes da série.'}
                                 </CardDescription>
                                 </div>
                                 {chartDrilldown && (
@@ -251,20 +247,15 @@ export default function DashboardPage() {
                             </div>
                         </CardHeader>
                         <CardContent className="pl-2">
-                            {isLoadingAllStudents ? (
-                                <div className="flex h-[350px] w-full items-center justify-center">
-                                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                </div>
-                            ) : (
-                                <StudentDistributionChart 
-                                    students={allStudents || []}
-                                    onDrilldown={setChartDrilldown}
-                                    drilledSerie={chartDrilldown}
-                                />
-                            )}
+                            <StudentDistributionChart 
+                                students={allStudents}
+                                isLoading={isLoadingAllStudents}
+                                onDrilldown={setChartDrilldown}
+                                drilledSerie={chartDrilldown}
+                            />
                         </CardContent>
                     </Card>
-                    <NeeDistributionChart students={allStudents || []} isLoading={isLoadingAllStudents} />
+                    <NeeDistributionChart students={allStudents} isLoading={isLoadingAllStudents} />
                   </div>
                 )}
             </div>
