@@ -1,19 +1,18 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { collection, doc, query, orderBy } from 'firebase/firestore';
-import { useCollection } from '@/firebase/firestore/use-collection';
+import { useFirestore, useUser } from '@/firebase';
+import { collection, doc, query, getDocs, deleteDoc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
 import { UserNav } from '@/components/user-nav';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Plus, Megaphone, Trash2, Edit, Search } from 'lucide-react';
+import { ArrowLeft, Plus, Megaphone, Trash2, Edit, Search, Loader2 } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +20,6 @@ import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import AnnouncementEditDialog from '@/components/announcement-edit-dialog';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { deleteDoc } from 'firebase/firestore';
 
 
 export default function AnnouncementsPage() {
@@ -34,27 +32,52 @@ export default function AnnouncementsPage() {
     const [deletingAnnouncement, setDeletingAnnouncement] = useState<any | null>(null);
     const [isNew, setIsNew] = useState(false);
 
-    const announcementsQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, 'announcements'));
-    }, [firestore]);
+    const [announcements, setAnnouncements] = useState<any[]>([]);
+    const [profiles, setProfiles] = useState<any[]>([]);
+    const [isLoadingData, setIsLoadingData] = useState(true);
 
-    const { data: announcementsData, isLoading: isLoadingAnnouncements } = useCollection(announcementsQuery);
+    useEffect(() => {
+        if (!firestore) return;
 
-    const announcements = useMemo(() => {
-        if (!announcementsData) return [];
-        return [...announcementsData].sort((a, b) => {
-            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-            return dateB - dateA;
-        });
-    }, [announcementsData]);
-    
-    const profilesQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, 'profiles'));
-    }, [firestore]);
-    const { data: profiles } = useCollection(profilesQuery);
+        const fetchData = async () => {
+            setIsLoadingData(true);
+            try {
+                const announcementsQuery = query(collection(firestore, 'announcements'));
+                const profilesQuery = query(collection(firestore, 'profiles'));
+
+                const [announcementsSnapshot, profilesSnapshot] = await Promise.all([
+                    getDocs(announcementsQuery),
+                    getDocs(profilesQuery)
+                ]);
+
+                const announcementsData = announcementsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const profilesData = profilesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                announcementsData.sort((a, b) => {
+                    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                    return dateB - dateA;
+                });
+                
+                setAnnouncements(announcementsData);
+                setProfiles(profilesData);
+
+            } catch (error) {
+                console.error("Error fetching announcements or profiles: ", error);
+                toast({
+                    variant: 'destructive',
+                    title: 'Erro ao Carregar Dados',
+                    description: 'Não foi possível carregar os comunicados ou perfis.',
+                });
+            } finally {
+                setIsLoadingData(false);
+            }
+        };
+
+        fetchData();
+    }, [firestore, toast]);
+
+
     const profileMap = useMemo(() => new Map(profiles?.map(p => [p.id, p.name])), [profiles]);
 
 
@@ -93,6 +116,12 @@ export default function AnnouncementsPage() {
         };
 
         setDocumentNonBlocking(docRef, announcementData, { merge: true });
+        
+        if (isNew) {
+            setAnnouncements(prev => [announcementData, ...prev]);
+        } else {
+            setAnnouncements(prev => prev.map(ann => ann.id === id ? announcementData : ann));
+        }
 
         toast({
             title: isNew ? "Comunicado Criado" : "Comunicado Atualizado",
@@ -106,6 +135,7 @@ export default function AnnouncementsPage() {
         if (!firestore || !deletingAnnouncement) return;
         try {
             await deleteDoc(doc(firestore, 'announcements', deletingAnnouncement.id));
+            setAnnouncements(prev => prev.filter(ann => ann.id !== deletingAnnouncement.id));
             toast({
                 title: "Comunicado Eliminado",
                 description: `O comunicado foi eliminado com sucesso.`
@@ -165,8 +195,11 @@ export default function AnnouncementsPage() {
 
                 <main className="flex-1 py-8">
                     <div className="container max-w-5xl">
-                        {isLoadingAnnouncements ? (
-                            <p>A carregar comunicados...</p>
+                        {isLoadingData ? (
+                             <div className="flex h-64 items-center justify-center">
+                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                <p className="ml-4 text-muted-foreground">A carregar comunicados...</p>
+                            </div>
                         ) : announcements && announcements.length > 0 ? (
                            <div className="space-y-6">
                              {announcements.map((ann) => (
@@ -222,6 +255,7 @@ export default function AnnouncementsPage() {
                     onClose={handleCloseDialog}
                     announcement={isNew ? null : editingAnnouncement}
                     onSave={handleSaveAnnouncement}
+                    profiles={profiles}
                 />
             )}
 
@@ -231,7 +265,7 @@ export default function AnnouncementsPage() {
                         <AlertDialogHeader>
                             <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                Esta ação não pode ser desfeita. Isto irá eliminar permanentemente o comunicado titled
+                                Esta ação não pode ser desfeita. Isto irá eliminar permanentemente o comunicado intitulado
                                 <strong className="text-foreground"> {deletingAnnouncement.title}</strong>.
                             </AlertDialogDescription>
                         </AlertDialogHeader>

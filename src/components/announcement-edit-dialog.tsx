@@ -10,9 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query } from "firebase/firestore";
-import { useCollection } from "@/firebase/firestore/use-collection";
 import { MultiSelect } from "./multi-select";
 
 
@@ -29,24 +26,15 @@ interface AnnouncementEditDialogProps {
   onClose: () => void;
   announcement: any | null;
   onSave: (data: AnnouncementFormValues, announcementId?: string) => void;
+  profiles: any[]; // Profiles are now passed as props
 }
 
-export default function AnnouncementEditDialog({ isOpen, onClose, announcement, onSave }: AnnouncementEditDialogProps) {
-  const firestore = useFirestore();
+export default function AnnouncementEditDialog({ isOpen, onClose, announcement, onSave, profiles }: AnnouncementEditDialogProps) {
 
-  const profilesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    // Removido orderBy('name') para evitar erros de asserção interna do Firestore.
-    // A ordenação será feita no cliente.
-    return query(collection(firestore, 'profiles'));
-  }, [firestore]);
-  
-  const { data: profilesData, isLoading: isLoadingProfiles } = useCollection(profilesQuery);
-
-  const profiles = useMemo(() => {
-    if (!profilesData) return [];
-    return [...profilesData].sort((a, b) => a.name.localeCompare(b.name));
-  }, [profilesData]);
+  const sortedProfiles = useMemo(() => {
+    if (!profiles) return [];
+    return [...profiles].sort((a, b) => a.name.localeCompare(b.name));
+  }, [profiles]);
 
   const form = useForm<AnnouncementFormValues>({
     resolver: zodResolver(announcementSchema),
@@ -79,7 +67,7 @@ export default function AnnouncementEditDialog({ isOpen, onClose, announcement, 
   
   const audienceOptions = [
     { value: 'all', label: 'Todos os Utilizadores' },
-    ...(profiles?.map(p => ({ value: p.id, label: `Perfil: ${p.name}` })) || [])
+    ...(sortedProfiles?.map(p => ({ value: p.id, label: `Perfil: ${p.name}` })) || [])
   ];
 
   return (
@@ -130,7 +118,7 @@ export default function AnnouncementEditDialog({ isOpen, onClose, announcement, 
                             selected={field.value}
                             onChange={field.onChange}
                             placeholder="Selecione os destinatários..."
-                            isLoading={isLoadingProfiles}
+                            isLoading={!profiles} // Show loading if profiles are not yet available
                         />
                         <FormMessage />
                     </FormItem>
