@@ -54,24 +54,24 @@ export default function GradeRanking() {
         fetchStudents();
     }, [firestore, toast]);
     
-    // NEW APPROACH: Calculate filter options independently.
+    // NEW SIMPLIFIED APPROACH for filter options.
+    // Each dropdown is populated independently from the full list of students.
     const uniqueFilterOptions = useMemo(() => {
-        const getUniqueValues = (data: any[], key: string) => 
-            [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
-
-        const ensinos = getUniqueValues(allStudents, 'ensino');
+        if (isLoading || allStudents.length === 0) {
+            return { ensinos: [], series: [], classes: [], turnos: [] };
+        }
         
-        const seriesData = filters.ensino ? allStudents.filter(s => s.ensino === filters.ensino) : [];
-        const series = getUniqueValues(seriesData, 'serie');
+        const getUniqueValues = (key: string) => 
+            [...new Set(allStudents.map(s => s[key]).filter(Boolean))]
+            .sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
-        const classesData = filters.serie ? allStudents.filter(s => s.ensino === filters.ensino && s.serie === filters.serie) : [];
-        const classes = getUniqueValues(classesData, 'classe');
-
-        const turnosData = filters.classe ? allStudents.filter(s => s.ensino === filters.ensino && s.serie === filters.serie && s.classe === filters.classe) : [];
-        const turnos = getUniqueValues(turnosData, 'turno');
-        
-        return { ensinos, series, classes, turnos };
-    }, [allStudents, filters.ensino, filters.serie, filters.classe]);
+        return {
+            ensinos: getUniqueValues('ensino'),
+            series: getUniqueValues('serie'),
+            classes: getUniqueValues('classe'),
+            turnos: getUniqueValues('turno'),
+        };
+    }, [allStudents, isLoading]);
 
 
     const isClassSelected = useMemo(() => {
@@ -121,13 +121,7 @@ export default function GradeRanking() {
     
     const handleFilterChange = (name: string, value: string) => {
         const newValue = value === 'all' ? '' : value;
-        setFilters(prev => {
-            const newFilters = { ...prev, [name]: newValue };
-            if (name === 'ensino') { newFilters.serie = ''; newFilters.classe = ''; newFilters.turno = ''; }
-            else if (name === 'serie') { newFilters.classe = ''; newFilters.turno = ''; }
-            else if (name === 'classe') { newFilters.turno = ''; }
-            return newFilters;
-        });
+        setFilters(prev => ({...prev, [name]: newValue}));
     };
 
     const exportToPDF = () => {
@@ -192,15 +186,15 @@ export default function GradeRanking() {
                                 <SelectTrigger><SelectValue placeholder="Ensino..." /></SelectTrigger>
                                 <SelectContent>{uniqueFilterOptions.ensinos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                             </Select>
-                            <Select value={filters.serie} onValueChange={(v) => handleFilterChange('serie', v)} disabled={!filters.ensino}>
+                            <Select value={filters.serie} onValueChange={(v) => handleFilterChange('serie', v)}>
                                 <SelectTrigger><SelectValue placeholder="Série..." /></SelectTrigger>
                                 <SelectContent>{uniqueFilterOptions.series.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                             </Select>
-                            <Select value={filters.classe} onValueChange={(v) => handleFilterChange('classe', v)} disabled={!filters.serie}>
+                            <Select value={filters.classe} onValueChange={(v) => handleFilterChange('classe', v)}>
                                 <SelectTrigger><SelectValue placeholder="Classe..." /></SelectTrigger>
                                 <SelectContent>{uniqueFilterOptions.classes.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                             </Select>
-                            <Select value={filters.turno} onValueChange={(v) => handleFilterChange('turno', v)} disabled={!filters.classe}>
+                            <Select value={filters.turno} onValueChange={(v) => handleFilterChange('turno', v)}>
                                 <SelectTrigger><SelectValue placeholder="Turno..." /></SelectTrigger>
                                 <SelectContent>{uniqueFilterOptions.turnos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                             </Select>
