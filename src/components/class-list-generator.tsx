@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect } from 'react';
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
-import { ClipboardList, X, Loader2, Download, Filter, BookCheck } from 'lucide-react';
+import { ClipboardList, X, Loader2, Download, Filter, BookCheck, Columns, Grid3x3 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import ReportCardGrid from './report-card-grid';
 import { useFirestore } from '@/firebase';
 import { collection, query, getDocs } from 'firebase/firestore';
+import { Label } from './ui/label';
 
 
 // Helper function to chunk array
@@ -32,8 +33,11 @@ export default function ClassListGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDownloadingGrid, setIsDownloadingGrid] = useState(false);
+  const [isDownloadingCustom, setIsDownloadingCustom] = useState(false);
+  const [isDownloadingSubjects, setIsDownloadingSubjects] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [activeAccordion, setActiveAccordion] = useState<string>("item-1");
+  const [customColumnCount, setCustomColumnCount] = useState<string>('5');
   
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [isLoadingAllStudents, setIsLoadingAllStudents] = useState(true);
@@ -301,6 +305,116 @@ export default function ClassListGenerator() {
     }
   };
 
+  const handleDownloadCustomColumns = async () => {
+    if (students.length === 0) return;
+    setIsDownloadingCustom(true);
+
+    try {
+      const doc = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
+      const numCols = parseInt(customColumnCount, 10);
+      
+      const head = [['Nº', 'Nome do Aluno', ...Array(numCols).fill('')]];
+      const body = students.map((student, index) => [index + 1, student.nome, ...Array(numCols).fill('')]);
+      const studentSample = students[0] || {};
+      const title = `Lista de Alunos - ${studentSample.serie || ''} ${studentSample.classe || ''} (${studentSample.turno || ''})`;
+
+      autoTable(doc, {
+        head: head,
+        body: body,
+        didDrawPage: (data) => {
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
+            
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.text(title, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+        },
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [230, 230, 230], textColor: [40, 40, 40] },
+        columnStyles: {
+            0: { cellWidth: 10 },
+            1: { cellWidth: 'auto' },
+        },
+        margin: { top: 20 },
+      });
+
+      doc.save(`Lista_Personalizada_${studentSample.serie || 'Geral'}.pdf`);
+
+    } catch (e) {
+      console.error(e);
+      toast({ variant: 'destructive', title: "Erro ao gerar PDF" });
+    } finally {
+      setIsDownloadingCustom(false);
+    }
+  };
+
+  const handleDownloadSubjectGrid = async () => {
+    if (students.length === 0) return;
+    setIsDownloadingSubjects(true);
+
+    try {
+        const doc = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
+        const subjects = ['ART', 'CIE', 'ED.F', 'HIS', 'GEO', 'ING', 'MAT', 'PORT', 'REL'];
+        
+        const head = [['Nº', 'Nome do Aluno', ...subjects]];
+        const body = students.map((student, index) => [index + 1, student.nome, ...Array(subjects.length).fill('')]);
+        const studentSample = students[0] || {};
+        const title = `Grelha de Avaliação - ${studentSample.serie || ''} ${studentSample.classe || ''} (${studentSample.turno || ''})`;
+
+        autoTable(doc, {
+            head: head,
+            body: body,
+            didDrawPage: (data) => {
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
+                
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'normal');
+                doc.text(title, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+            },
+            styles: { fontSize: 8, cellPadding: 1, overflow: 'linebreak' },
+            headStyles: { 
+                fillColor: [230, 230, 230], 
+                textColor: [40, 40, 40],
+                halign: 'center',
+                valign: 'middle',
+                minCellHeight: 15, // Aumenta a altura para texto vertical
+            },
+            didParseCell: (data) => {
+                if (data.section === 'head' && data.row.index === 0 && data.column.index > 1) {
+                    data.cell.styles.valign = 'bottom';
+                    data.cell.styles.halign = 'center';
+                }
+            },
+            columnStyles: {
+                0: { cellWidth: 10, halign: 'center' },
+                1: { cellWidth: 'auto' },
+                // Distribuir o espaço restante igualmente entre as disciplinas
+                2: { cellWidth: 15, halign: 'center' },
+                3: { cellWidth: 15, halign: 'center' },
+                4: { cellWidth: 15, halign: 'center' },
+                5: { cellWidth: 15, halign: 'center' },
+                6: { cellWidth: 15, halign: 'center' },
+                7: { cellWidth: 15, halign: 'center' },
+                8: { cellWidth: 15, halign: 'center' },
+                9: { cellWidth: 15, halign: 'center' },
+                10: { cellWidth: 15, halign: 'center' },
+            },
+            margin: { top: 20 },
+        });
+
+        doc.save(`Grelha_Disciplinas_${studentSample.serie || 'Geral'}.pdf`);
+
+    } catch (e) {
+        console.error(e);
+        toast({ variant: 'destructive', title: "Erro ao gerar PDF" });
+    } finally {
+        setIsDownloadingSubjects(false);
+    }
+  };
+
 
   const clearFiltersAndResults = () => {
     setFilters({ ensino: '', serie: '', turno: '', classe: '' });
@@ -402,14 +516,55 @@ export default function ClassListGenerator() {
                             </Table>
                         </ScrollArea>
                         <div className="p-4 border-t mt-auto grid grid-cols-1 md:grid-cols-2 gap-2">
-                            <Button onClick={handleDownload} disabled={isDownloading || isDownloadingGrid} variant="secondary">
-                                {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                                {isDownloading ? 'A gerar PDF...' : 'Download da Lista'}
-                            </Button>
-                             <Button onClick={handleDownloadGrid} disabled={isDownloadingGrid || isDownloading}>
-                                {isDownloadingGrid ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BookCheck className="mr-2 h-4 w-4" />}
-                                {isDownloadingGrid ? 'A gerar Boletins...' : 'Download Boletins (Grade)'}
-                            </Button>
+                             <Accordion type="single" collapsible className="w-full md:col-span-2">
+                                <AccordionItem value="exports">
+                                    <AccordionTrigger>
+                                        <div className="flex items-center gap-2">
+                                            <Download className="h-4 w-4" />
+                                            <span>Opções de Download</span>
+                                        </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="pt-4 space-y-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                             <Button onClick={handleDownload} disabled={isDownloading} variant="secondary">
+                                                {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ClipboardList className="mr-2 h-4 w-4" />}
+                                                Lista Simples
+                                            </Button>
+                                            <Button onClick={handleDownloadGrid} disabled={isDownloadingGrid} variant="secondary">
+                                                {isDownloadingGrid ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BookCheck className="mr-2 h-4 w-4" />}
+                                                Boletins em Grade
+                                            </Button>
+                                        </div>
+                                        <Card className="p-4 space-y-3">
+                                            <Label htmlFor="custom-cols">Lista com Colunas Vazias</Label>
+                                             <div className="flex items-center gap-2">
+                                                <Select value={customColumnCount} onValueChange={setCustomColumnCount}>
+                                                    <SelectTrigger id="custom-cols" className="flex-1">
+                                                        <SelectValue placeholder="Nº de colunas" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
+                                                            <SelectItem key={num} value={String(num)}>{num} {num > 1 ? 'Colunas' : 'Coluna'}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <Button onClick={handleDownloadCustomColumns} disabled={isDownloadingCustom} className="flex-shrink-0">
+                                                    {isDownloadingCustom ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Columns className="mr-2 h-4 w-4" />}
+                                                    Gerar
+                                                </Button>
+                                            </div>
+                                        </Card>
+                                         <Card className="p-4 space-y-3">
+                                            <Label>Grelha de Disciplinas</Label>
+                                            <p className="text-xs text-muted-foreground">Gera uma lista com colunas para as principais disciplinas.</p>
+                                            <Button onClick={handleDownloadSubjectGrid} disabled={isDownloadingSubjects} className="w-full">
+                                                {isDownloadingSubjects ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Grid3x3 className="mr-2 h-4 w-4" />}
+                                                Gerar Grelha de Disciplinas
+                                            </Button>
+                                        </Card>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            </Accordion>
                         </div>
                     </div>
                 ) : (
