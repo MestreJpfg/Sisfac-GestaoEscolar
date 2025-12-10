@@ -303,30 +303,35 @@ export default function ClassListGenerator() {
 
   const calculateAverage = (boletim: any): number => {
     if (!boletim || typeof boletim !== 'object') {
-        return 0;
+      return 0;
     }
-    
-    // Obter todas as chaves de disciplina do boletim
+  
     const disciplineKeys = Object.keys(boletim);
-
+  
     const validMedias = disciplineKeys
-        .map((key) => {
-            const disciplina = boletim[key];
-            if (disciplina && disciplina.mediaFinal !== null && disciplina.mediaFinal !== undefined) {
-                // Padroniza a nota, trocando vírgula por ponto, antes de converter para número
-                const numericMedia = parseFloat(String(disciplina.mediaFinal).replace(',', '.'));
-                if (!isNaN(numericMedia)) {
-                    return numericMedia;
-                }
-            }
-            return null;
-        })
-        .filter((media): media is number => media !== null);
-
+      .map((key) => {
+        const disciplina = boletim[key];
+        
+        // Check for both 'mediaFinal' and 'mediafinal'
+        const mediaValue = disciplina?.mediaFinal ?? disciplina?.mediafinal;
+        
+        if (mediaValue !== null && mediaValue !== undefined && String(mediaValue).trim() !== '') {
+          // Standardize the value to a string and replace comma with dot
+          const standardizedValue = String(mediaValue).replace(',', '.');
+          const numericMedia = parseFloat(standardizedValue);
+          
+          if (!isNaN(numericMedia)) {
+            return numericMedia;
+          }
+        }
+        return null;
+      })
+      .filter((media): media is number => media !== null);
+  
     if (validMedias.length === 0) {
-        return 0;
+      return 0;
     }
-
+  
     const sum = validMedias.reduce((acc, curr) => acc + curr, 0);
     return sum / validMedias.length;
   };
