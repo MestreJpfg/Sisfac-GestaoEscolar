@@ -26,6 +26,27 @@ const chunk = (arr: any[], size: number) =>
   Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
     arr.slice(i * size, i * size + size)
   );
+  
+const hexToRgb = (hex: string): { r: number, g: number, b: number } | null => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+};
+
+const getLightAlternateColor = (hex: string): [number, number, number] => {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return [245, 245, 245]; // Fallback to light gray
+
+    // Blend with white to get a very light tint
+    const r = Math.floor(rgb.r * 0.1 + 255 * 0.9);
+    const g = Math.floor(rgb.g * 0.1 + 255 * 0.9);
+    const b = Math.floor(rgb.b * 0.1 + 255 * 0.9);
+    
+    return [r, g, b];
+};
 
 
 export default function ClassListGenerator() {
@@ -197,59 +218,69 @@ export default function ClassListGenerator() {
             }
 
             const classStudents = groupedStudents[groupKey];
-            const studentSample = classStudents[0] || {};
-            
-            const tableData = classStudents.map((student, index) => {
-                return [
-                    index + 1,
-                    student.nome,
-                    student.data_nascimento || '',
-                    '' // Coluna de observações vazia
-                ];
-            });
-            
-            const dynamicTitleParts = [
-                'Lista de Alunos',
-                studentSample.ensino,
-                studentSample.serie,
-                studentSample.classe,
-                studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
-            ];
-            const dynamicTitle = dynamicTitleParts.filter(Boolean).join(' ');
-            const finalTitle = customTitle.trim() ? `${customTitle.trim()} - ${dynamicTitle}` : dynamicTitle;
-            
-            autoTable(doc, {
-                head: [['Nº', 'Nome do Aluno', 'Data de Nasc.', 'Observações']],
-                body: tableData,
-                didDrawPage: (data) => {
-                    doc.setFontSize(10);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
-                    
-                    doc.setFontSize(9);
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(finalTitle, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+            if (classStudents.length === 0) continue;
 
-                    doc.setFontSize(7);
-                    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, data.settings.margin.left, doc.internal.pageSize.getHeight() - 5);
-                    const pageNum = doc.internal.getNumberOfPages();
-                    doc.text(`Página ${pageNum}`, doc.internal.pageSize.getWidth() - data.settings.margin.right, doc.internal.pageSize.getHeight() - 5, { align: 'right' });
-                },
-                styles: {
-                    font: 'helvetica',
-                    fontSize: 8,
-                    cellPadding: 1.5,
-                },
-                headStyles: {
-                    fillColor: headerColor,
-                    textColor: [40, 40, 40],
-                    fontStyle: 'bold',
-                },
-                alternateRowStyles: {
-                    fillColor: useAlternateRowColors ? [245, 245, 245] : false
-                },
-                margin: { top: 20, right: 10, bottom: 10, left: 10 },
-            });
+            const studentChunks = chunk(classStudents, 39);
+
+            for (let i = 0; i < studentChunks.length; i++) {
+                const pageStudents = studentChunks[i];
+                if (i > 0 || !isFirstPage) {
+                    doc.addPage();
+                }
+                
+                const tableData = pageStudents.map((student, index) => {
+                    return [
+                        (i * 39) + index + 1,
+                        student.nome,
+                        student.data_nascimento || '',
+                        '' // Coluna de observações vazia
+                    ];
+                });
+                
+                const studentSample = pageStudents[0] || {};
+                const dynamicTitleParts = [
+                    'Lista de Alunos',
+                    studentSample.ensino,
+                    studentSample.serie,
+                    studentSample.classe,
+                    studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
+                ];
+                const dynamicTitle = dynamicTitleParts.filter(Boolean).join(' ');
+                const finalTitle = customTitle.trim() ? `${customTitle.trim()} - ${dynamicTitle}` : dynamicTitle;
+                
+                autoTable(doc, {
+                    head: [['Nº', 'Nome do Aluno', 'Data de Nasc.', 'Observações']],
+                    body: tableData,
+                    didDrawPage: (data) => {
+                        doc.setFontSize(10);
+                        doc.setFont('helvetica', 'bold');
+                        doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
+                        
+                        doc.setFontSize(9);
+                        doc.setFont('helvetica', 'normal');
+                        doc.text(finalTitle, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+
+                        doc.setFontSize(7);
+                        doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, data.settings.margin.left, doc.internal.pageSize.getHeight() - 5);
+                        const pageNumText = `Página ${doc.internal.getNumberOfPages()}`;
+                        doc.text(pageNumText, doc.internal.pageSize.getWidth() - data.settings.margin.right, doc.internal.pageSize.getHeight() - 5, { align: 'right' });
+                    },
+                    styles: {
+                        font: 'helvetica',
+                        fontSize: 8,
+                        cellPadding: 1.5,
+                    },
+                    headStyles: {
+                        fillColor: headerColor,
+                        textColor: [40, 40, 40],
+                        fontStyle: 'bold',
+                    },
+                    alternateRowStyles: {
+                        fillColor: useAlternateRowColors ? getLightAlternateColor(headerColor) : false
+                    },
+                    margin: { top: 20, right: 10, bottom: 10, left: 10 },
+                });
+            }
             
             isFirstPage = false;
         }
@@ -355,46 +386,57 @@ export default function ClassListGenerator() {
                 doc.addPage();
             }
             const classStudents = groupedStudents[groupKey];
-            const studentSample = classStudents[0] || {};
-            const body = classStudents.map((student, index) => [index + 1, student.nome, ...Array(numCols).fill('')]);
-            
-            const dynamicTitleParts = [
-                'Lista de Alunos',
-                studentSample.ensino,
-                studentSample.serie,
-                studentSample.classe,
-                studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
-            ];
-            const dynamicTitle = dynamicTitleParts.filter(Boolean).join(' ');
-            const finalTitle = customTitle.trim() ? `${customTitle.trim()} - ${dynamicTitle}` : dynamicTitle;
+            if (classStudents.length === 0) continue;
 
-            autoTable(doc, {
-                head: head,
-                body: body,
-                theme: 'grid',
-                didDrawPage: (data) => {
-                    doc.setFontSize(10);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
-                    doc.setFontSize(9);
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(finalTitle, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
-                },
-                styles: { fontSize: 8, cellPadding: 1.5 },
-                headStyles: {
-                    fillColor: headerColor,
-                    textColor: [40, 40, 40],
-                    fontStyle: 'bold',
-                },
-                alternateRowStyles: {
-                    fillColor: useAlternateRowColors ? [245, 245, 245] : false
-                },
-                columnStyles: {
-                    0: { cellWidth: 10 },
-                    1: { cellWidth: 'auto' },
-                },
-                margin: { top: 20, right: 10, bottom: 10, left: 10 },
-            });
+            const studentChunks = chunk(classStudents, 39);
+
+            for(let i=0; i < studentChunks.length; i++) {
+                const pageStudents = studentChunks[i];
+
+                if (i > 0 || !isFirstPage) {
+                    doc.addPage();
+                }
+
+                const body = pageStudents.map((student, index) => [ (i * 39) + index + 1, student.nome, ...Array(numCols).fill('')]);
+                const studentSample = pageStudents[0] || {};
+                const dynamicTitleParts = [
+                    'Lista de Alunos',
+                    studentSample.ensino,
+                    studentSample.serie,
+                    studentSample.classe,
+                    studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
+                ];
+                const dynamicTitle = dynamicTitleParts.filter(Boolean).join(' ');
+                const finalTitle = customTitle.trim() ? `${customTitle.trim()} - ${dynamicTitle}` : dynamicTitle;
+
+                autoTable(doc, {
+                    head: head,
+                    body: body,
+                    theme: 'grid',
+                    didDrawPage: (data) => {
+                        doc.setFontSize(10);
+                        doc.setFont('helvetica', 'bold');
+                        doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
+                        doc.setFontSize(9);
+                        doc.setFont('helvetica', 'normal');
+                        doc.text(finalTitle, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+                    },
+                    styles: { fontSize: 8, cellPadding: 1.5 },
+                    headStyles: {
+                        fillColor: headerColor,
+                        textColor: [40, 40, 40],
+                        fontStyle: 'bold',
+                    },
+                    alternateRowStyles: {
+                        fillColor: useAlternateRowColors ? getLightAlternateColor(headerColor) : false
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 10 },
+                        1: { cellWidth: 'auto' },
+                    },
+                    margin: { top: 20, right: 10, bottom: 10, left: 10 },
+                });
+            }
             isFirstPage = false;
         }
 
@@ -432,59 +474,64 @@ export default function ClassListGenerator() {
                 doc.addPage();
             }
             const classStudents = groupedStudents[groupKey];
-            const studentSample = classStudents[0] || {};
-            const body = classStudents.map((student, index) => [index + 1, student.nome, ...Array(subjects.length).fill('')]);
-            
-             const dynamicTitleParts = [
-                'Grelha de Avaliação',
-                studentSample.ensino,
-                studentSample.serie,
-                studentSample.classe,
-                studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
-            ];
-            const dynamicTitle = dynamicTitleParts.filter(Boolean).join(' ');
-            const finalTitle = customTitle.trim() ? `${customTitle.trim()} - ${dynamicTitle}` : dynamicTitle;
+            if (classStudents.length === 0) continue;
+
+            const studentChunks = chunk(classStudents, 39);
+
+            for(let i=0; i < studentChunks.length; i++) {
+                const pageStudents = studentChunks[i];
+                if (i > 0 || !isFirstPage) {
+                    doc.addPage();
+                }
+
+                const body = pageStudents.map((student, index) => [(i * 39) + index + 1, student.nome, ...Array(subjects.length).fill('')]);
+                const studentSample = pageStudents[0] || {};
+                
+                const dynamicTitleParts = [
+                    'Grelha de Avaliação',
+                    studentSample.ensino,
+                    studentSample.serie,
+                    studentSample.classe,
+                    studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
+                ];
+                const dynamicTitle = dynamicTitleParts.filter(Boolean).join(' ');
+                const finalTitle = customTitle.trim() ? `${customTitle.trim()} - ${dynamicTitle}` : dynamicTitle;
 
 
-            autoTable(doc, {
-                head: head,
-                body: body,
-                theme: 'grid', // Add grid lines
-                didDrawPage: (data) => {
-                    doc.setFontSize(10);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
-                    doc.setFontSize(9);
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(finalTitle, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
-                },
-                styles: { fontSize: 8, cellPadding: 1 },
-                headStyles: { 
-                    fillColor: headerColor, 
-                    textColor: [40, 40, 40],
-                    fontStyle: 'bold',
-                    halign: 'center',
-                    valign: 'middle',
-                    minCellHeight: 10,
-                },
-                alternateRowStyles: {
-                    fillColor: useAlternateRowColors ? [245, 245, 245] : false
-                },
-                columnStyles: {
-                    0: { cellWidth: 10, halign: 'center' },
-                    1: { cellWidth: 'auto' }, 
-                    2: { cellWidth: 12, halign: 'center' },
-                    3: { cellWidth: 12, halign: 'center' },
-                    4: { cellWidth: 12, halign: 'center' },
-                    5: { cellWidth: 12, halign: 'center' },
-                    6: { cellWidth: 12, halign: 'center' },
-                    7: { cellWidth: 12, halign: 'center' },
-                    8: { cellWidth: 12, halign: 'center' },
-                    9: { cellWidth: 12, halign: 'center' },
-                    10: { cellWidth: 12, halign: 'center' },
-                },
-                margin: { top: 20, right: 10, bottom: 10, left: 10 },
-            });
+                autoTable(doc, {
+                    head: head,
+                    body: body,
+                    theme: 'grid',
+                    didDrawPage: (data) => {
+                        doc.setFontSize(10);
+                        doc.setFont('helvetica', 'bold');
+                        doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
+                        doc.setFontSize(9);
+                        doc.setFont('helvetica', 'normal');
+                        doc.text(finalTitle, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+                    },
+                    styles: { fontSize: 8, cellPadding: 1 },
+                    headStyles: { 
+                        fillColor: headerColor, 
+                        textColor: [40, 40, 40],
+                        fontStyle: 'bold',
+                        halign: 'center',
+                        valign: 'middle',
+                    },
+                    alternateRowStyles: {
+                        fillColor: useAlternateRowColors ? getLightAlternateColor(headerColor) : false
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 10, halign: 'center' },
+                        1: { cellWidth: 'auto' }, 
+                        ...subjects.reduce((acc, _, index) => {
+                            acc[index + 2] = { cellWidth: 12, halign: 'center' };
+                            return acc;
+                        }, {} as {[key: number]: {cellWidth: number, halign: 'center'}})
+                    },
+                    margin: { top: 20, right: 10, bottom: 10, left: 10 },
+                });
+            }
             isFirstPage = false;
         }
 
@@ -580,7 +627,7 @@ export default function ClassListGenerator() {
                             <p className="text-sm text-muted-foreground text-center">{`${students.length} alunos encontrados`}</p>
                         </div>
                         <div className="space-y-4 p-4">
-                            <div>
+                           <div className="space-y-2">
                                 <Label htmlFor="custom-title">Título Personalizado (Opcional)</Label>
                                 <Input 
                                     id="custom-title" 
@@ -605,7 +652,7 @@ export default function ClassListGenerator() {
                                                 type="color" 
                                                 value={headerColor}
                                                 onChange={(e) => setHeaderColor(e.target.value)}
-                                                className="w-14 h-10 p-1"
+                                                className="w-14 h-10 p-1 cursor-pointer"
                                             />
                                         </div>
                                         <div className="flex items-center space-x-2">
