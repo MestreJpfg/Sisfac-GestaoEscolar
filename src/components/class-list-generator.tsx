@@ -223,7 +223,7 @@ export default function ClassListGenerator() {
                     textColor: [40, 40, 40],
                     fontStyle: 'bold',
                 },
-                margin: { top: 25 },
+                margin: { top: 20, right: 10, bottom: 10, left: 10 },
             });
             
             isFirstPage = false;
@@ -330,13 +330,13 @@ export default function ClassListGenerator() {
             doc.setFont('helvetica', 'normal');
             doc.text(title, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
         },
-        styles: { fontSize: 8 },
+        styles: { fontSize: 8, cellPadding: 1.5 },
         headStyles: { fillColor: [230, 230, 230], textColor: [40, 40, 40] },
         columnStyles: {
             0: { cellWidth: 10 },
             1: { cellWidth: 'auto' },
         },
-        margin: { top: 20 },
+        margin: { top: 20, right: 10, bottom: 10, left: 10 },
       });
 
       doc.save(`Lista_Personalizada_${studentSample.serie || 'Geral'}.pdf`);
@@ -384,19 +384,19 @@ export default function ClassListGenerator() {
             },
             columnStyles: {
                 0: { cellWidth: 10, halign: 'center' },
-                1: { cellWidth: 'auto' },
-                // Distribuir o espaço restante igualmente entre as disciplinas
-                2: { cellWidth: 15, halign: 'center' },
-                3: { cellWidth: 15, halign: 'center' },
-                4: { cellWidth: 15, halign: 'center' },
-                5: { cellWidth: 15, halign: 'center' },
-                6: { cellWidth: 15, halign: 'center' },
-                7: { cellWidth: 15, halign: 'center' },
-                8: { cellWidth: 15, halign: 'center' },
-                9: { cellWidth: 15, halign: 'center' },
-                10: { cellWidth: 15, halign: 'center' },
+                1: { cellWidth: 'auto' }, // Deixa o nome ocupar o espaço necessário
+                // Colunas das disciplinas com largura fixa
+                2: { cellWidth: 12, halign: 'center' },
+                3: { cellWidth: 12, halign: 'center' },
+                4: { cellWidth: 12, halign: 'center' },
+                5: { cellWidth: 12, halign: 'center' },
+                6: { cellWidth: 12, halign: 'center' },
+                7: { cellWidth: 12, halign: 'center' },
+                8: { cellWidth: 12, halign: 'center' },
+                9: { cellWidth: 12, halign: 'center' },
+                10: { cellWidth: 12, halign: 'center' },
             },
-            margin: { top: 20 },
+            margin: { top: 20, right: 10, bottom: 10, left: 10 },
         });
 
         doc.save(`Grelha_Disciplinas_${studentSample.serie || 'Geral'}.pdf`);
