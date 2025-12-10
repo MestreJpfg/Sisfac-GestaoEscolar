@@ -26,18 +26,13 @@ const calculateAverage = (boletim: any): number => {
     const validMedias = Object.values(boletim)
         .map((disciplina: any) => {
             const media = disciplina.mediaFinal;
-            if (media === null || media === undefined) return null;
+            if (media === null || media === undefined || String(media).trim() === '') return null;
 
             // Padroniza a nota para usar ponto como decimal
-            let numericMedia: number;
-            if (typeof media === 'string') {
-                numericMedia = parseFloat(media.replace(',', '.'));
-            } else {
-                numericMedia = media;
-            }
+            const numericMedia = parseFloat(String(media).replace(',', '.'));
             
             // Verifica se o resultado é um número válido
-            if (typeof numericMedia === 'number' && !isNaN(numericMedia)) {
+            if (!isNaN(numericMedia)) {
                 return numericMedia;
             }
             
@@ -126,26 +121,44 @@ export default function StudentRankingView() {
     }, [firestore, toast]);
     
     const { fundamental1, fundamental2 } = useMemo(() => {
+        if (!allStudents || allStudents.length === 0) {
+            return { fundamental1: [], fundamental2: [] };
+        }
+
         const seriesFund1 = ["3º ANO", "4º ANO", "5º ANO"];
         const seriesFund2 = ["6º ANO", "7º ANO", "8º ANO", "9º ANO"];
 
-        const processStudents = (series: string[]) => {
-            return allStudents
-                .filter(s => s.serie && series.includes(s.serie.toUpperCase()))
-                .map(student => ({
-                    id: student.id,
-                    name: student.nome,
-                    turma: `${student.serie} ${student.classe || ''}`,
-                    average: calculateAverage(student.boletim),
-                }))
-                .filter(student => student.average > 0)
-                .sort((a, b) => b.average - a.average);
+        const rankedStudents: { [key: string]: RankedStudent[] } = {
+            fundamental1: [],
+            fundamental2: [],
         };
 
-        return {
-            fundamental1: processStudents(seriesFund1),
-            fundamental2: processStudents(seriesFund2),
-        };
+        for (const student of allStudents) {
+            const studentSerie = student.serie?.toUpperCase();
+            
+            const processStudent = (segment: 'fundamental1' | 'fundamental2') => {
+                const average = calculateAverage(student.boletim);
+                if (average > 0) {
+                    rankedStudents[segment].push({
+                        id: student.id,
+                        name: student.nome,
+                        turma: `${student.serie} ${student.classe || ''}`,
+                        average: average,
+                    });
+                }
+            };
+
+            if (studentSerie && seriesFund1.includes(studentSerie)) {
+                processStudent('fundamental1');
+            } else if (studentSerie && seriesFund2.includes(studentSerie)) {
+                processStudent('fundamental2');
+            }
+        }
+
+        rankedStudents.fundamental1.sort((a, b) => b.average - a.average);
+        rankedStudents.fundamental2.sort((a, b) => b.average - a.average);
+
+        return rankedStudents;
     }, [allStudents]);
 
 
