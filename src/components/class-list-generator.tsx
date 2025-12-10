@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect } from 'react';
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
-import { ClipboardList, X, Loader2, Download, Filter, BookCheck, Columns, Grid3x3 } from 'lucide-react';
+import { ClipboardList, X, Loader2, Download, Filter, BookCheck, Columns, Grid3x3, Heading } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -17,6 +17,7 @@ import ReportCardGrid from './report-card-grid';
 import { useFirestore } from '@/firebase';
 import { collection, query, getDocs } from 'firebase/firestore';
 import { Label } from './ui/label';
+import { Input } from './ui/input';
 
 
 // Helper function to chunk array
@@ -38,6 +39,8 @@ export default function ClassListGenerator() {
   const [students, setStudents] = useState<any[]>([]);
   const [activeAccordion, setActiveAccordion] = useState<string>("item-1");
   const [customColumnCount, setCustomColumnCount] = useState<string>('5');
+  const [customTitle, setCustomTitle] = useState('');
+  const [customHeaders, setCustomHeaders] = useState<string[]>([]);
   
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [isLoadingAllStudents, setIsLoadingAllStudents] = useState(true);
@@ -71,6 +74,17 @@ export default function ClassListGenerator() {
     };
     fetchStudents();
   }, [firestore, toast]);
+  
+  useEffect(() => {
+    const count = parseInt(customColumnCount, 10);
+    setCustomHeaders(prev => {
+        const newHeaders = new Array(count).fill('');
+        for(let i=0; i < Math.min(prev.length, count); i++) {
+            newHeaders[i] = prev[i];
+        }
+        return newHeaders;
+    });
+  }, [customColumnCount]);
 
 
   const uniqueOptions = useMemo(() => {
@@ -312,7 +326,7 @@ export default function ClassListGenerator() {
     try {
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
         const numCols = parseInt(customColumnCount, 10);
-        const head = [['Nº', 'Nome do Aluno', ...Array(numCols).fill('')]];
+        const head = [['Nº', 'Nome do Aluno', ...customHeaders]];
         
         const groupedStudents = students.reduce((acc, student) => {
             const key = `${student.serie || 'Série Indefinida'}|${student.classe || 'Classe Indefinida'}|${student.turno || 'Turno Indefinido'}`;
@@ -333,28 +347,29 @@ export default function ClassListGenerator() {
             const studentSample = classStudents[0] || {};
             const body = classStudents.map((student, index) => [index + 1, student.nome, ...Array(numCols).fill('')]);
             
-            const titleParts = [
+            const defaultTitleParts = [
                 'Lista de Alunos',
                 studentSample.ensino,
                 studentSample.serie,
                 studentSample.classe,
                 studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
             ];
-            const title = titleParts.filter(Boolean).join(' ');
+            const finalTitle = customTitle.trim() !== '' ? customTitle.trim() : defaultTitleParts.filter(Boolean).join(' ');
 
             autoTable(doc, {
                 head: head,
                 body: body,
+                theme: 'grid',
                 didDrawPage: (data) => {
                     doc.setFontSize(10);
                     doc.setFont('helvetica', 'bold');
                     doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
                     doc.setFontSize(9);
                     doc.setFont('helvetica', 'normal');
-                    doc.text(title, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+                    doc.text(finalTitle, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
                 },
                 styles: { fontSize: 8, cellPadding: 1.5 },
-                headStyles: { fillColor: [230, 230, 230], textColor: [40, 40, 40] },
+                headStyles: { fillColor: [230, 230, 230], textColor: [40, 40, 40], fontStyle: 'bold' },
                 columnStyles: {
                     0: { cellWidth: 10 },
                     1: { cellWidth: 'auto' },
@@ -426,6 +441,7 @@ export default function ClassListGenerator() {
                 headStyles: { 
                     fillColor: [230, 230, 230], 
                     textColor: [40, 40, 40],
+                    fontStyle: 'bold',
                     halign: 'center',
                     valign: 'middle',
                     minCellHeight: 10,
@@ -577,25 +593,63 @@ export default function ClassListGenerator() {
                                                 Boletins em Grade
                                             </Button>
                                         </div>
-                                        <Card className="p-4 space-y-3">
-                                            <Label htmlFor="custom-cols">Lista com Colunas Vazias</Label>
-                                             <div className="flex items-center gap-2">
-                                                <Select value={customColumnCount} onValueChange={setCustomColumnCount}>
-                                                    <SelectTrigger id="custom-cols" className="flex-1">
-                                                        <SelectValue placeholder="Nº de colunas" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
-                                                            <SelectItem key={num} value={String(num)}>{num} {num > 1 ? 'Colunas' : 'Coluna'}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                <Button onClick={handleDownloadCustomColumns} disabled={isDownloadingCustom} className="flex-shrink-0">
-                                                    {isDownloadingCustom ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Columns className="mr-2 h-4 w-4" />}
-                                                    Gerar
-                                                </Button>
-                                            </div>
-                                        </Card>
+                                        
+                                        <Accordion type="single" collapsible className="w-full">
+                                            <AccordionItem value="custom-list">
+                                                <AccordionTrigger>
+                                                    <div className="flex items-center gap-2">
+                                                        <Columns className="h-4 w-4" />
+                                                        <span>Lista Personalizada</span>
+                                                    </div>
+                                                </AccordionTrigger>
+                                                <AccordionContent className="pt-4 space-y-4">
+                                                     <div className="space-y-2">
+                                                        <Label htmlFor="custom-title">Título do Documento (Opcional)</Label>
+                                                        <Input 
+                                                            id="custom-title" 
+                                                            placeholder="Ex: Lista de Presença - Workshop de Robótica"
+                                                            value={customTitle}
+                                                            onChange={(e) => setCustomTitle(e.target.value)}
+                                                        />
+                                                     </div>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor="custom-cols">Quantidade de Colunas Vazias</Label>
+                                                        <Select value={customColumnCount} onValueChange={setCustomColumnCount}>
+                                                            <SelectTrigger id="custom-cols">
+                                                                <SelectValue placeholder="Nº de colunas" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
+                                                                    <SelectItem key={num} value={String(num)}>{num} {num > 1 ? 'Colunas' : 'Coluna'}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                     <div className="space-y-2">
+                                                        <Label>Cabeçalhos das Colunas</Label>
+                                                         <div className="grid grid-cols-2 gap-2">
+                                                            {customHeaders.map((header, index) => (
+                                                                <Input 
+                                                                    key={index} 
+                                                                    placeholder={`Coluna ${index + 1}`}
+                                                                    value={header}
+                                                                    onChange={(e) => {
+                                                                        const newHeaders = [...customHeaders];
+                                                                        newHeaders[index] = e.target.value;
+                                                                        setCustomHeaders(newHeaders);
+                                                                    }}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                     </div>
+                                                    <Button onClick={handleDownloadCustomColumns} disabled={isDownloadingCustom} className="w-full">
+                                                        {isDownloadingCustom ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                                                        Gerar PDF Personalizado
+                                                    </Button>
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        </Accordion>
+
                                          <Card className="p-4 space-y-3">
                                             <Label>Grelha de Disciplinas</Label>
                                             <p className="text-xs text-muted-foreground">Gera uma lista com colunas para as principais disciplinas.</p>
@@ -619,3 +673,5 @@ export default function ClassListGenerator() {
     </Card>
   );
 }
+
+    
