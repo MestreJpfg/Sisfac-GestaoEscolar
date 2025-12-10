@@ -311,8 +311,7 @@ export default function ClassListGenerator() {
     const validMedias = disciplineKeys
       .map((key) => {
         const disciplina = boletim[key];
-        
-        // Check for both 'mediaFinal' and 'mediafinal'
+        // Check for both 'mediaFinal' and 'mediafinal' to handle inconsistencies
         const mediaValue = disciplina?.mediaFinal ?? disciplina?.mediafinal;
         
         if (mediaValue !== null && mediaValue !== undefined && String(mediaValue).trim() !== '') {
@@ -882,3 +881,5 @@ export default function ClassListGenerator() {
     </Card>
   );
 }
+
+    
