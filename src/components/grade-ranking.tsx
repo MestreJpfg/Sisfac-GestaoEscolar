@@ -60,17 +60,16 @@ export default function GradeRanking() {
         const getUniqueValues = (key: string, data: any[]) =>
             [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
-        let filteredForOptions = allStudents;
-        const ensinos = getUniqueValues('ensino', filteredForOptions);
-
-        if(filters.ensino) filteredForOptions = filteredForOptions.filter(s => s.ensino === filters.ensino);
-        const series = getUniqueValues('serie', filteredForOptions);
-
-        if(filters.serie) filteredForOptions = filteredForOptions.filter(s => s.serie === filters.serie);
-        const classes = getUniqueValues('classe', filteredForOptions);
+        const ensinos = getUniqueValues('ensino', allStudents);
         
-        if(filters.classe) filteredForOptions = filteredForOptions.filter(s => s.classe === filters.classe);
-        const turnos = getUniqueValues('turno', filteredForOptions);
+        const seriesData = filters.ensino ? allStudents.filter(s => s.ensino === filters.ensino) : allStudents;
+        const series = getUniqueValues('serie', seriesData);
+        
+        const classesData = filters.serie ? seriesData.filter(s => s.serie === filters.serie) : seriesData;
+        const classes = getUniqueValues('classe', classesData);
+        
+        const turnosData = filters.classe ? classesData.filter(s => s.classe === filters.classe) : classesData;
+        const turnos = getUniqueValues('turno', turnosData);
         
         return { ensinos, series, classes, turnos };
     }, [allStudents, filters]);
@@ -102,7 +101,7 @@ export default function GradeRanking() {
                     }
                 });
             }
-
+            
             const average = countDisciplinasComMedia > 0 ? totalMediaFinal / 9 : null;
 
             return { 
@@ -212,7 +211,9 @@ export default function GradeRanking() {
             </Card>
 
             {isClassSelected ? (
-                rankedStudents.length > 0 ? (
+                isLoading ? (
+                    <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>
+                ) : rankedStudents.length > 0 ? (
                     <Card>
                         <CardHeader>
                             <div className="flex justify-between items-center">
