@@ -28,10 +28,8 @@ const calculateAverage = (boletim: any): number => {
             const media = disciplina.mediaFinal;
             if (media === null || media === undefined || String(media).trim() === '') return null;
 
-            // Padroniza a nota para usar ponto como decimal
             const numericMedia = parseFloat(String(media).replace(',', '.'));
             
-            // Verifica se o resultado é um número válido
             if (!isNaN(numericMedia)) {
                 return numericMedia;
             }
@@ -121,45 +119,43 @@ export default function StudentRankingView() {
     }, [firestore, toast]);
     
     const { fundamental1, fundamental2 } = useMemo(() => {
-        if (!allStudents || allStudents.length === 0) {
+        if (isLoading || allStudents.length === 0) {
             return { fundamental1: [], fundamental2: [] };
         }
 
         const seriesFund1 = ["3º ANO", "4º ANO", "5º ANO"];
         const seriesFund2 = ["6º ANO", "7º ANO", "8º ANO", "9º ANO"];
 
-        const rankedStudents: { [key: string]: RankedStudent[] } = {
-            fundamental1: [],
-            fundamental2: [],
-        };
+        const fund1: RankedStudent[] = [];
+        const fund2: RankedStudent[] = [];
 
-        for (const student of allStudents) {
+        allStudents.forEach(student => {
             const studentSerie = student.serie?.toUpperCase();
             
-            const processStudent = (segment: 'fundamental1' | 'fundamental2') => {
-                const average = calculateAverage(student.boletim);
-                if (average > 0) {
-                    rankedStudents[segment].push({
-                        id: student.id,
-                        name: student.nome,
-                        turma: `${student.serie} ${student.classe || ''}`,
-                        average: average,
-                    });
+            if (!studentSerie) return;
+
+            const average = calculateAverage(student.boletim);
+            if (average > 0) {
+                 const rankedStudent: RankedStudent = {
+                    id: student.id,
+                    name: student.nome,
+                    turma: `${student.serie || ''} ${student.classe || ''}`.trim(),
+                    average: average,
+                };
+                
+                if (seriesFund1.includes(studentSerie)) {
+                    fund1.push(rankedStudent);
+                } else if (seriesFund2.includes(studentSerie)) {
+                    fund2.push(rankedStudent);
                 }
-            };
-
-            if (studentSerie && seriesFund1.includes(studentSerie)) {
-                processStudent('fundamental1');
-            } else if (studentSerie && seriesFund2.includes(studentSerie)) {
-                processStudent('fundamental2');
             }
-        }
+        });
 
-        rankedStudents.fundamental1.sort((a, b) => b.average - a.average);
-        rankedStudents.fundamental2.sort((a, b) => b.average - a.average);
+        fund1.sort((a, b) => b.average - a.average);
+        fund2.sort((a, b) => b.average - a.average);
 
-        return rankedStudents;
-    }, [allStudents]);
+        return { fundamental1: fund1, fundamental2: fund2 };
+    }, [allStudents, isLoading]);
 
 
     return (
