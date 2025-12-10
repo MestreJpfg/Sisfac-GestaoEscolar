@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect } from 'react';
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
-import { ClipboardList, X, Loader2, Download, Filter, BookCheck, Columns, Grid3x3, Heading, Palette } from 'lucide-react';
+import { ClipboardList, X, Loader2, Download, Filter, BookCheck, Columns, Grid3x3, Heading, Palette, TrendingUp } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -58,6 +58,7 @@ export default function ClassListGenerator() {
   const [isDownloadingGrid, setIsDownloadingGrid] = useState(false);
   const [isDownloadingCustom, setIsDownloadingCustom] = useState(false);
   const [isDownloadingSubjects, setIsDownloadingSubjects] = useState(false);
+  const [isDownloadingAverages, setIsDownloadingAverages] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
   const [activeAccordion, setActiveAccordion] = useState<string>("item-1");
   const [customColumnCount, setCustomColumnCount] = useState<string>('5');
@@ -297,6 +298,87 @@ export default function ClassListGenerator() {
         });
     } finally {
         setIsDownloading(false);
+    }
+  };
+
+  const calculateAverage = (boletim: any): number => {
+    if (!boletim || typeof boletim !== 'object') return 0;
+    const validMedias = Object.values(boletim)
+        .map((disciplina: any) => {
+            const media = disciplina.mediaFinal;
+            if (media === null || media === undefined || String(media).trim() === '') return null;
+            const numericMedia = parseFloat(String(media).replace(',', '.'));
+            return !isNaN(numericMedia) ? numericMedia : null;
+        })
+        .filter((media): media is number => media !== null);
+    if (validMedias.length === 0) return 0;
+    const sum = validMedias.reduce((acc, curr) => acc + curr, 0);
+    return sum / validMedias.length;
+  };
+
+  const handleDownloadWithAverages = async () => {
+    if (students.length === 0) return;
+    setIsDownloadingAverages(true);
+
+    try {
+        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+        
+        const studentChunks = chunk(students, 39);
+        let isFirstPage = true;
+
+        for (let i = 0; i < studentChunks.length; i++) {
+            const pageStudents = studentChunks[i];
+            if (i > 0) {
+                doc.addPage();
+            }
+            
+            const tableData = pageStudents.map((student, index) => {
+                const average = calculateAverage(student.boletim);
+                return [
+                    (i * 39) + index + 1,
+                    student.nome,
+                    average > 0 ? average.toFixed(2).replace('.', ',') : '-'
+                ];
+            });
+            
+            const studentSample = pageStudents[0] || {};
+            const dynamicTitleParts = [
+                'Lista de Alunos com Média Final',
+                studentSample.ensino,
+                studentSample.serie,
+                studentSample.classe,
+                studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
+            ];
+            const dynamicTitle = dynamicTitleParts.filter(Boolean).join(' ');
+            const finalTitle = customTitle.trim() ? `${customTitle.trim()} - ${dynamicTitle}` : dynamicTitle;
+            
+            autoTable(doc, {
+                head: [['Nº', 'Nome do Aluno', 'Média Final']],
+                body: tableData,
+                didDrawPage: (data) => {
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
+                    
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(finalTitle, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+                },
+                styles: { fontSize: 8, cellPadding: 1.5 },
+                headStyles: { fillColor: headerColor, textColor: [40, 40, 40], fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: useAlternateRowColors ? getLightAlternateColor(headerColor) : false },
+                margin: { top: 20, right: 10, bottom: 10, left: 10 },
+            });
+        }
+        
+        const fileName = `Lista_com_Medias_${filters.serie || 'Geral'}.pdf`.replace(/ /g, '_');
+        doc.save(fileName);
+
+    } catch (error) {
+        console.error("Error generating PDF with averages:", error);
+        toast({ variant: "destructive", title: "Erro ao Gerar PDF", description: "Não foi possível criar o ficheiro com as médias." });
+    } finally {
+        setIsDownloadingAverages(false);
     }
   };
 
@@ -699,6 +781,10 @@ export default function ClassListGenerator() {
                                              <Button onClick={handleDownload} disabled={isDownloading} variant="secondary">
                                                 {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ClipboardList className="mr-2 h-4 w-4" />}
                                                 Lista Simples
+                                            </Button>
+                                            <Button onClick={handleDownloadWithAverages} disabled={isDownloadingAverages} variant="secondary">
+                                                {isDownloadingAverages ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <TrendingUp className="mr-2 h-4 w-4" />}
+                                                Lista com Média Final
                                             </Button>
                                             <Button onClick={handleDownloadGrid} disabled={isDownloadingGrid} variant="secondary">
                                                 {isDownloadingGrid ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BookCheck className="mr-2 h-4 w-4" />}
