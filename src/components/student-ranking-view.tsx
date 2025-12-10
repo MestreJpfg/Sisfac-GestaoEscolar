@@ -24,8 +24,26 @@ const calculateAverage = (boletim: any): number => {
     }
 
     const validMedias = Object.values(boletim)
-        .map((disciplina: any) => disciplina.mediaFinal)
-        .filter((media): media is number => typeof media === 'number' && !isNaN(media));
+        .map((disciplina: any) => {
+            const media = disciplina.mediaFinal;
+            if (media === null || media === undefined) return null;
+
+            // Padroniza a nota para usar ponto como decimal
+            let numericMedia: number;
+            if (typeof media === 'string') {
+                numericMedia = parseFloat(media.replace(',', '.'));
+            } else {
+                numericMedia = media;
+            }
+            
+            // Verifica se o resultado é um número válido
+            if (typeof numericMedia === 'number' && !isNaN(numericMedia)) {
+                return numericMedia;
+            }
+            
+            return null;
+        })
+        .filter((media): media is number => media !== null);
 
     if (validMedias.length === 0) {
         return 0;
