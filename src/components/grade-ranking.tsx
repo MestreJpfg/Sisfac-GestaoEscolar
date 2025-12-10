@@ -37,6 +37,8 @@ export default function GradeRanking() {
     const [filters, setFilters] = useState({
         ensino: '',
         serie: '',
+        classe: '',
+        turno: '',
         discipline: '', // 'geral' or specific discipline
     });
 
@@ -63,24 +65,32 @@ export default function GradeRanking() {
         const getUniqueValues = (key: string, data: any[]) =>
             [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
-        const ensinos = getUniqueValues('ensino', allStudents);
-        const series = filters.ensino ? getUniqueValues('serie', allStudents.filter(s => s.ensino === filters.ensino)) : getUniqueValues('serie', allStudents);
+        let filteredForOptions = allStudents;
+        const ensinos = getUniqueValues('ensino', filteredForOptions);
+        if(filters.ensino) filteredForOptions = filteredForOptions.filter(s => s.ensino === filters.ensino);
+        
+        const series = getUniqueValues('serie', filteredForOptions);
+        if(filters.serie) filteredForOptions = filteredForOptions.filter(s => s.serie === filters.serie);
+
+        const classes = getUniqueValues('classe', filteredForOptions);
+        if(filters.classe) filteredForOptions = filteredForOptions.filter(s => s.classe === filters.classe);
+
+        const turnos = getUniqueValues('turno', filteredForOptions);
+
         const disciplines = [...new Set(allStudents.flatMap(s => s.boletim ? Object.keys(s.boletim) : []))]
             .map(d => d.replace(/_/g, ' ').replace(/-/g, '/'))
             .sort((a, b) => a.localeCompare(b));
 
-        return { ensinos, series, disciplines };
-    }, [allStudents, filters.ensino]);
+        return { ensinos, series, classes, turnos, disciplines };
+    }, [allStudents, filters.ensino, filters.serie, filters.classe]);
 
     const rankedStudents = useMemo(() => {
         let studentsToRank = allStudents;
 
-        if (filters.ensino) {
-            studentsToRank = studentsToRank.filter(s => s.ensino === filters.ensino);
-        }
-        if (filters.serie) {
-            studentsToRank = studentsToRank.filter(s => s.serie === filters.serie);
-        }
+        if (filters.ensino) studentsToRank = studentsToRank.filter(s => s.ensino === filters.ensino);
+        if (filters.serie) studentsToRank = studentsToRank.filter(s => s.serie === filters.serie);
+        if (filters.classe) studentsToRank = studentsToRank.filter(s => s.classe === filters.classe);
+        if (filters.turno) studentsToRank = studentsToRank.filter(s => s.turno === filters.turno);
 
         const studentsWithAverages: StudentWithAverage[] = studentsToRank.map(student => {
             let average: number | null = null;
@@ -106,11 +116,17 @@ export default function GradeRanking() {
 
     const handleFilterChange = (name: string, value: string) => {
         const newValue = value === 'all' ? '' : value;
-        setFilters(prev => ({ ...prev, [name]: newValue }));
+        setFilters(prev => {
+            const newFilters = { ...prev, [name]: newValue };
+            if (name === 'ensino') { newFilters.serie = ''; newFilters.classe = ''; newFilters.turno = '';}
+            else if (name === 'serie') { newFilters.classe = ''; newFilters.turno = '';}
+            else if (name === 'classe') { newFilters.turno = '';}
+            return newFilters;
+        });
     };
 
     const clearFilters = () => {
-        setFilters({ ensino: '', serie: '', discipline: '' });
+        setFilters({ ensino: '', serie: '', classe: '', turno: '', discipline: '' });
     };
 
     const exportToPDF = () => {
@@ -149,7 +165,7 @@ export default function GradeRanking() {
                 }
 
                 const body = pageStudents.map((student, index) => [
-                    (i * 39) + index + 1, // Global ranking position if needed, or per-class
+                    (i * 39) + index + 1,
                     student.nome,
                     student.average?.toFixed(2).replace('.', ',') ?? 'N/A'
                 ]);
@@ -194,7 +210,7 @@ export default function GradeRanking() {
                 <CardContent className="space-y-4">
                      <div className="flex items-center gap-2 p-4 border rounded-lg bg-muted/50">
                         <Filter className="h-5 w-5 text-primary" />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 flex-1">
                             <Select value={filters.ensino} onValueChange={(v) => handleFilterChange('ensino', v)} disabled={isLoading}>
                                 <SelectTrigger><SelectValue placeholder="Ensino..." /></SelectTrigger>
                                 <SelectContent>
@@ -209,6 +225,20 @@ export default function GradeRanking() {
                                     {uniqueFilterOptions.series.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
                                 </SelectContent>
                             </Select>
+                             <Select value={filters.classe} onValueChange={(v) => handleFilterChange('classe', v)} disabled={isLoading || !filters.serie}>
+                                <SelectTrigger><SelectValue placeholder="Classe..." /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todas as Classes</SelectItem>
+                                    {uniqueFilterOptions.classes.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <Select value={filters.turno} onValueChange={(v) => handleFilterChange('turno', v)} disabled={isLoading || !filters.classe}>
+                                <SelectTrigger><SelectValue placeholder="Turno..." /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos os Turnos</SelectItem>
+                                    {uniqueFilterOptions.turnos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                             <Select value={filters.discipline} onValueChange={(v) => handleFilterChange('discipline', v)} disabled={isLoading}>
                                 <SelectTrigger><SelectValue placeholder="Média..." /></SelectTrigger>
                                 <SelectContent>
@@ -217,7 +247,7 @@ export default function GradeRanking() {
                                 </SelectContent>
                             </Select>
                         </div>
-                        {(filters.ensino || filters.serie || filters.discipline) && (
+                        {(filters.ensino || filters.serie || filters.classe || filters.turno || filters.discipline) && (
                             <Button variant="ghost" size="icon" onClick={clearFilters}>
                                 <X className="h-4 w-4 text-muted-foreground" />
                             </Button>
