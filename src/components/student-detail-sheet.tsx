@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import {
@@ -18,7 +18,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import StudentDeclaration from "./student-declaration";
 import StudentTransferDeclaration from "./student-transfer-declaration";
 import StudentEditDialog from "./student-edit-dialog";
-import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Loader2, Share2, Pencil, Printer, MapPin, BookCheck } from "lucide-react";
+import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Loader2, Share2, Pencil, Printer, MapPin, BookCheck, Award } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
@@ -46,6 +46,7 @@ type PdfType = 'declaration' | 'transfer' | 'declarationWithReport' | 'detailedR
 
 interface StudentDetailSheetProps {
   student: any | null;
+  allStudents: any[];
   isOpen: boolean;
   onClose: () => void;
   onUpdate: () => void;
@@ -79,13 +80,83 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, lab
   );
 };
 
-export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate }: StudentDetailSheetProps) {
+// Robust average calculation function
+const calculateAverage = (boletim: any): number => {
+    if (!boletim || typeof boletim !== 'object') {
+        return 0;
+    }
+
+    const validMedias = Object.values(boletim)
+        .map((disciplina: any) => {
+            // Check both possible capitalizations
+            const media = disciplina.mediaFinal ?? disciplina.mediafinal;
+            if (media === null || media === undefined || String(media).trim() === '') return null;
+
+            const numericMedia = parseFloat(String(media).replace(',', '.'));
+            
+            if (!isNaN(numericMedia)) {
+                return numericMedia;
+            }
+            
+            return null;
+        })
+        .filter((media): media is number => media !== null);
+
+    if (validMedias.length === 0) {
+        return 0;
+    }
+
+    const sum = validMedias.reduce((acc, curr) => acc + curr, 0);
+    return sum / validMedias.length;
+};
+
+
+export default function StudentDetailSheet({ student, allStudents, isOpen, onClose, onUpdate }: StudentDetailSheetProps) {
   const [isProcessing, setIsProcessing] = useState<PdfType | null>(null);
   const [isSharing, setIsSharing] = useState<PdfType | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isReportCardOpen, setIsReportCardOpen] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
+
+  const classRanking = useMemo(() => {
+    if (!student || !allStudents || allStudents.length === 0) {
+      return null;
+    }
+    const studentClass = {
+        ensino: student.ensino,
+        serie: student.serie,
+        classe: student.classe,
+        turno: student.turno,
+    };
+    if (!studentClass.ensino || !studentClass.serie || !studentClass.classe || !studentClass.turno) {
+        return null;
+    }
+    const classmates = allStudents
+      .filter(s => 
+        s.ensino === studentClass.ensino &&
+        s.serie === studentClass.serie &&
+        s.classe === studentClass.classe &&
+        s.turno === studentClass.turno
+      )
+      .map(s => ({
+        id: s.id,
+        average: calculateAverage(s.boletim)
+      }))
+      .filter(s => s.average > 0)
+      .sort((a, b) => b.average - a.average);
+    
+    const rank = classmates.findIndex(s => s.id === student.id) + 1;
+    
+    if (rank > 0) {
+        return {
+            rank: rank,
+            total: classmates.length
+        };
+    }
+    
+    return null;
+  }, [student, allStudents]);
 
   if (!student) return null;
 
@@ -133,7 +204,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
             componentToRender = <ReportCardWithDeclaration student={student} boletim={student.boletim || {}} />;
             break;
         case 'detailedReport':
-            componentToRender = <ReportCardDetailed student={student} boletim={student.boletim || {}} />;
+            componentToRender = <ReportCardDetailed student={student} boletim={student.boletim || {}} ranking={classRanking} />;
             break;
         case 'compact':
              componentToRender = <ReportCardGrid students={[student]} />;
@@ -330,6 +401,7 @@ export default function StudentDetailSheet({ student, isOpen, onClose, onUpdate 
     { label: "Série", value: student.serie, icon: Book },
     { label: "Classe", value: student.classe, icon: Users },
     { label: "Turno", value: student.turno, icon: Clock },
+    ...(classRanking ? [{ label: "Classificação na Turma", value: `${classRanking.rank}º de ${classRanking.total}`, icon: Award }] : [])
   ];
 
   const familyDetails = [

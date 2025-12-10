@@ -287,6 +287,7 @@ export default function StudentDataView() {
       
       <StudentDetailSheet
         student={selectedStudent}
+        allStudents={allStudents}
         isOpen={!!selectedStudent}
         onClose={handleCloseSheet}
         onUpdate={() => {

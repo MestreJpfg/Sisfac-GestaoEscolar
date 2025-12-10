@@ -14,9 +14,15 @@ interface Boletim {
   };
 }
 
+interface Ranking {
+    rank: number;
+    total: number;
+}
+
 interface ReportCardDetailedProps {
     student: any | null;
     boletim: Boletim;
+    ranking: Ranking | null;
 }
 
 const DetailItem = ({ label, value }: { label: string, value: React.ReactNode }) => {
@@ -29,7 +35,7 @@ const DetailItem = ({ label, value }: { label: string, value: React.ReactNode })
 };
 
 
-export default function ReportCardDetailed({ student, boletim }: ReportCardDetailedProps) {
+export default function ReportCardDetailed({ student, boletim, ranking }: ReportCardDetailedProps) {
     if (!student) return null;
 
     const today = new Date();
@@ -80,7 +86,11 @@ export default function ReportCardDetailed({ student, boletim }: ReportCardDetai
                     <DetailItem label="Nascimento" value={student.data_nascimento} />
                     <DetailItem label="Turma" value={`${student.serie || ''} ${student.classe || ''}`} />
                     <DetailItem label="Turno" value={student.turno} />
-                    <DetailItem label="Ensino" value={student.ensino} />
+                    {ranking ? (
+                        <DetailItem label="Classificação" value={`${ranking.rank}º de ${ranking.total} alunos na turma`} />
+                    ) : (
+                        <DetailItem label="Ensino" value={student.ensino} />
+                    )}
                 </div>
                 
                 {/* Boletim */}
