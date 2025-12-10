@@ -157,7 +157,7 @@ export default function ClassListGenerator() {
     setIsDownloading(true);
 
     try {
-        const doc = new jsPDF();
+        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
         
         const groupedStudents = students.reduce((acc, student) => {
             const key = `${student.serie || 'Série Indefinida'}|${student.classe || 'Classe Indefinida'}|${student.turno || 'Turno Indefinido'}`;
@@ -310,37 +310,61 @@ export default function ClassListGenerator() {
     setIsDownloadingCustom(true);
 
     try {
-      const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-      const numCols = parseInt(customColumnCount, 10);
-      
-      const head = [['Nº', 'Nome do Aluno', ...Array(numCols).fill('')]];
-      const body = students.map((student, index) => [index + 1, student.nome, ...Array(numCols).fill('')]);
-      const studentSample = students[0] || {};
-      const title = `Lista de Alunos - ${studentSample.serie || ''} ${studentSample.classe || ''} (${studentSample.turno || ''})`;
+        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+        const numCols = parseInt(customColumnCount, 10);
+        const head = [['Nº', 'Nome do Aluno', ...Array(numCols).fill('')]];
+        
+        const groupedStudents = students.reduce((acc, student) => {
+            const key = `${student.serie || 'Série Indefinida'}|${student.classe || 'Classe Indefinida'}|${student.turno || 'Turno Indefinido'}`;
+            if (!acc[key]) {
+                acc[key] = [];
+            }
+            acc[key].push(student);
+            return acc;
+        }, {} as { [key: string]: any[] });
 
-      autoTable(doc, {
-        head: head,
-        body: body,
-        didDrawPage: (data) => {
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'bold');
-            doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
+        let isFirstPage = true;
+
+        for (const groupKey in groupedStudents) {
+             if (!isFirstPage) {
+                doc.addPage();
+            }
+            const classStudents = groupedStudents[groupKey];
+            const studentSample = classStudents[0] || {};
+            const body = classStudents.map((student, index) => [index + 1, student.nome, ...Array(numCols).fill('')]);
             
-            doc.setFontSize(9);
-            doc.setFont('helvetica', 'normal');
-            doc.text(title, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
-        },
-        styles: { fontSize: 8, cellPadding: 1.5 },
-        headStyles: { fillColor: [230, 230, 230], textColor: [40, 40, 40] },
-        columnStyles: {
-            0: { cellWidth: 10 },
-            1: { cellWidth: 'auto' },
-        },
-        margin: { top: 20, right: 10, bottom: 10, left: 10 },
-      });
+            const titleParts = [
+                'Lista de Alunos',
+                studentSample.ensino,
+                studentSample.serie,
+                studentSample.classe,
+                studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
+            ];
+            const title = titleParts.filter(Boolean).join(' ');
 
-      doc.save(`Lista_Personalizada_${studentSample.serie || 'Geral'}.pdf`);
+            autoTable(doc, {
+                head: head,
+                body: body,
+                didDrawPage: (data) => {
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(title, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+                },
+                styles: { fontSize: 8, cellPadding: 1.5 },
+                headStyles: { fillColor: [230, 230, 230], textColor: [40, 40, 40] },
+                columnStyles: {
+                    0: { cellWidth: 10 },
+                    1: { cellWidth: 'auto' },
+                },
+                margin: { top: 20, right: 10, bottom: 10, left: 10 },
+            });
+            isFirstPage = false;
+        }
 
+        doc.save(`Lista_Personalizada_${filters.serie || 'Geral'}.pdf`);
     } catch (e) {
       console.error(e);
       toast({ variant: 'destructive', title: "Erro ao gerar PDF" });
@@ -356,51 +380,75 @@ export default function ClassListGenerator() {
     try {
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
         const subjects = ['ART', 'CIE', 'ED.F', 'HIS', 'GEO', 'ING', 'MAT', 'PORT', 'REL'];
-        
         const head = [['Nº', 'Nome do Aluno', ...subjects]];
-        const body = students.map((student, index) => [index + 1, student.nome, ...Array(subjects.length).fill('')]);
-        const studentSample = students[0] || {};
-        const title = `Grelha de Avaliação - ${studentSample.serie || ''} ${studentSample.classe || ''} (${studentSample.turno || ''})`;
+        
+        const groupedStudents = students.reduce((acc, student) => {
+            const key = `${student.serie || 'Série Indefinida'}|${student.classe || 'Classe Indefinida'}|${student.turno || 'Turno Indefinido'}`;
+            if (!acc[key]) {
+                acc[key] = [];
+            }
+            acc[key].push(student);
+            return acc;
+        }, {} as { [key: string]: any[] });
 
-        autoTable(doc, {
-            head: head,
-            body: body,
-            didDrawPage: (data) => {
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'bold');
-                doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
-                
-                doc.setFontSize(9);
-                doc.setFont('helvetica', 'normal');
-                doc.text(title, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
-            },
-            styles: { fontSize: 8, cellPadding: 1, overflow: 'linebreak' },
-            headStyles: { 
-                fillColor: [230, 230, 230], 
-                textColor: [40, 40, 40],
-                halign: 'center',
-                valign: 'middle',
-                minCellHeight: 10,
-            },
-            columnStyles: {
-                0: { cellWidth: 10, halign: 'center' },
-                1: { cellWidth: 'auto' }, // Deixa o nome ocupar o espaço necessário
-                // Colunas das disciplinas com largura fixa
-                2: { cellWidth: 12, halign: 'center' },
-                3: { cellWidth: 12, halign: 'center' },
-                4: { cellWidth: 12, halign: 'center' },
-                5: { cellWidth: 12, halign: 'center' },
-                6: { cellWidth: 12, halign: 'center' },
-                7: { cellWidth: 12, halign: 'center' },
-                8: { cellWidth: 12, halign: 'center' },
-                9: { cellWidth: 12, halign: 'center' },
-                10: { cellWidth: 12, halign: 'center' },
-            },
-            margin: { top: 20, right: 10, bottom: 10, left: 10 },
-        });
+        let isFirstPage = true;
 
-        doc.save(`Grelha_Disciplinas_${studentSample.serie || 'Geral'}.pdf`);
+        for (const groupKey in groupedStudents) {
+            if (!isFirstPage) {
+                doc.addPage();
+            }
+            const classStudents = groupedStudents[groupKey];
+            const studentSample = classStudents[0] || {};
+            const body = classStudents.map((student, index) => [index + 1, student.nome, ...Array(subjects.length).fill('')]);
+            
+             const titleParts = [
+                'Grelha de Avaliação',
+                studentSample.ensino,
+                studentSample.serie,
+                studentSample.classe,
+                studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
+            ];
+            const title = titleParts.filter(Boolean).join(' ');
 
+            autoTable(doc, {
+                head: head,
+                body: body,
+                theme: 'grid', // Add grid lines
+                didDrawPage: (data) => {
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(title, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+                },
+                styles: { fontSize: 8, cellPadding: 1 },
+                headStyles: { 
+                    fillColor: [230, 230, 230], 
+                    textColor: [40, 40, 40],
+                    halign: 'center',
+                    valign: 'middle',
+                    minCellHeight: 10,
+                },
+                columnStyles: {
+                    0: { cellWidth: 10, halign: 'center' },
+                    1: { cellWidth: 'auto' }, 
+                    2: { cellWidth: 12, halign: 'center' },
+                    3: { cellWidth: 12, halign: 'center' },
+                    4: { cellWidth: 12, halign: 'center' },
+                    5: { cellWidth: 12, halign: 'center' },
+                    6: { cellWidth: 12, halign: 'center' },
+                    7: { cellWidth: 12, halign: 'center' },
+                    8: { cellWidth: 12, halign: 'center' },
+                    9: { cellWidth: 12, halign: 'center' },
+                    10: { cellWidth: 12, halign: 'center' },
+                },
+                margin: { top: 20, right: 10, bottom: 10, left: 10 },
+            });
+            isFirstPage = false;
+        }
+
+        doc.save(`Grelha_Disciplinas_${filters.serie || 'Geral'}.pdf`);
     } catch (e) {
         console.error(e);
         toast({ variant: 'destructive', title: "Erro ao gerar PDF" });
