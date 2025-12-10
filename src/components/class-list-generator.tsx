@@ -305,34 +305,35 @@ export default function ClassListGenerator() {
     if (!boletim || typeof boletim !== 'object') {
       return 0;
     }
-  
+
     const disciplineKeys = Object.keys(boletim);
-  
-    const validMedias = disciplineKeys
-      .map((key) => {
+    const allSubjectAverages: number[] = [];
+
+    disciplineKeys.forEach(key => {
         const disciplina = boletim[key];
-        // Check for both 'mediaFinal' and 'mediafinal' to handle inconsistencies
-        const mediaValue = disciplina?.mediaFinal ?? disciplina?.mediafinal;
-        
-        if (mediaValue !== null && mediaValue !== undefined && String(mediaValue).trim() !== '') {
-          // Standardize the value to a string and replace comma with dot
-          const standardizedValue = String(mediaValue).replace(',', '.');
-          const numericMedia = parseFloat(standardizedValue);
-          
-          if (!isNaN(numericMedia)) {
-            return numericMedia;
-          }
+        if (disciplina && typeof disciplina === 'object') {
+            
+            // Calculate subject average from 'etapas'
+            const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
+            const validEtapaGrades = etapaGrades.map(g => {
+                if (g === null || g === undefined || String(g).trim() === '') return null;
+                const numericGrade = parseFloat(String(g).replace(',', '.'));
+                return isNaN(numericGrade) ? null : numericGrade;
+            }).filter((g): g is number => g !== null);
+
+            if (validEtapaGrades.length > 0) {
+                const subjectAverage = validEtapaGrades.reduce((sum, grade) => sum + grade, 0) / validEtapaGrades.length;
+                allSubjectAverages.push(subjectAverage);
+            }
         }
-        return null;
-      })
-      .filter((media): media is number => media !== null);
-  
-    if (validMedias.length === 0) {
-      return 0;
+    });
+
+    if (allSubjectAverages.length === 0) {
+        return 0;
     }
-  
-    const sum = validMedias.reduce((acc, curr) => acc + curr, 0);
-    return sum / validMedias.length;
+
+    const overallSum = allSubjectAverages.reduce((acc, curr) => acc + curr, 0);
+    return overallSum / allSubjectAverages.length;
   };
 
   const handleDownloadWithAverages = async () => {
@@ -882,4 +883,3 @@ export default function ClassListGenerator() {
   );
 }
 
-    
