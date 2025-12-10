@@ -69,14 +69,17 @@ export default function GradeRanking() {
 
         const ensinos = getUniqueValues('ensino', allStudents);
         
-        const filteredByEnsino = filters.ensino ? allStudents.filter(s => s.ensino === filters.ensino) : allStudents;
-        const series = getUniqueValues('serie', filteredByEnsino);
+        let seriesData = allStudents;
+        if (filters.ensino) seriesData = allStudents.filter(s => s.ensino === filters.ensino);
+        const series = getUniqueValues('serie', seriesData);
         
-        const filteredBySerie = filters.serie ? filteredByEnsino.filter(s => s.serie === filters.serie) : filteredByEnsino;
-        const classes = getUniqueValues('classe', filteredBySerie);
-
-        const filteredByClasse = filters.classe ? filteredBySerie.filter(s => s.classe === filters.classe) : filteredBySerie;
-        const turnos = getUniqueValues('turno', filteredByClasse);
+        let classesData = seriesData;
+        if (filters.serie) classesData = seriesData.filter(s => s.serie === filters.serie);
+        const classes = getUniqueValues('classe', classesData);
+        
+        let turnosData = classesData;
+        if(filters.classe) turnosData = classesData.filter(s => s.classe === filters.classe);
+        const turnos = getUniqueValues('turno', turnosData);
 
         const disciplines = [...new Set(allStudents.flatMap(s => s.boletim ? Object.keys(s.boletim) : []))]
             .map(d => d.replace(/_/g, ' ').replace(/-/g, '/'))
@@ -102,11 +105,15 @@ export default function GradeRanking() {
                     : null;
 
                 if (disciplineId) {
-                    average = student.boletim[disciplineId]?.mediaFinal ?? null;
+                    const disciplineData = student.boletim[disciplineId];
+                    if (disciplineData && disciplineData.mediaFinal !== null && disciplineData.mediaFinal !== undefined) {
+                        average = disciplineData.mediaFinal;
+                    }
                 } else { // Média Geral
                     const averages = Object.values(student.boletim)
                         .map((disciplina: any) => disciplina.mediaFinal)
                         .filter((media): media is number => media !== null && media !== undefined && !isNaN(media));
+                    
                     if (averages.length > 0) {
                         average = averages.reduce((a, b) => a + b, 0) / averages.length;
                     }
