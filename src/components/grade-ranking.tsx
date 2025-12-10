@@ -54,25 +54,24 @@ export default function GradeRanking() {
         fetchStudents();
     }, [firestore, toast]);
     
+    // NEW APPROACH: Calculate filter options independently.
     const uniqueFilterOptions = useMemo(() => {
-        if (!allStudents) return { ensinos: [], series: [], classes: [], turnos: [] };
-        
-        const getUniqueValues = (key: string, data: any[]) =>
+        const getUniqueValues = (data: any[], key: string) => 
             [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
-        const ensinos = getUniqueValues('ensino', allStudents);
+        const ensinos = getUniqueValues(allStudents, 'ensino');
         
-        const seriesData = filters.ensino ? allStudents.filter(s => s.ensino === filters.ensino) : allStudents;
-        const series = getUniqueValues('serie', seriesData);
-        
-        const classesData = filters.serie ? seriesData.filter(s => s.serie === filters.serie) : seriesData;
-        const classes = getUniqueValues('classe', classesData);
-        
-        const turnosData = filters.classe ? classesData.filter(s => s.classe === filters.classe) : classesData;
-        const turnos = getUniqueValues('turno', turnosData);
+        const seriesData = filters.ensino ? allStudents.filter(s => s.ensino === filters.ensino) : [];
+        const series = getUniqueValues(seriesData, 'serie');
+
+        const classesData = filters.serie ? allStudents.filter(s => s.ensino === filters.ensino && s.serie === filters.serie) : [];
+        const classes = getUniqueValues(classesData, 'classe');
+
+        const turnosData = filters.classe ? allStudents.filter(s => s.ensino === filters.ensino && s.serie === filters.serie && s.classe === filters.classe) : [];
+        const turnos = getUniqueValues(turnosData, 'turno');
         
         return { ensinos, series, classes, turnos };
-    }, [allStudents, filters]);
+    }, [allStudents, filters.ensino, filters.serie, filters.classe]);
 
 
     const isClassSelected = useMemo(() => {
