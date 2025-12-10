@@ -62,20 +62,21 @@ export default function GradeRanking() {
     }, [firestore, toast]);
 
     const uniqueFilterOptions = useMemo(() => {
+        if (!allStudents) return { ensinos: [], series: [], classes: [], turnos: [], disciplines: [] };
+
         const getUniqueValues = (key: string, data: any[]) =>
             [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
-        let filteredForOptions = allStudents;
-        const ensinos = getUniqueValues('ensino', filteredForOptions);
-        if(filters.ensino) filteredForOptions = filteredForOptions.filter(s => s.ensino === filters.ensino);
+        const ensinos = getUniqueValues('ensino', allStudents);
         
-        const series = getUniqueValues('serie', filteredForOptions);
-        if(filters.serie) filteredForOptions = filteredForOptions.filter(s => s.serie === filters.serie);
+        const filteredByEnsino = filters.ensino ? allStudents.filter(s => s.ensino === filters.ensino) : allStudents;
+        const series = getUniqueValues('serie', filteredByEnsino);
+        
+        const filteredBySerie = filters.serie ? filteredByEnsino.filter(s => s.serie === filters.serie) : filteredByEnsino;
+        const classes = getUniqueValues('classe', filteredBySerie);
 
-        const classes = getUniqueValues('classe', filteredForOptions);
-        if(filters.classe) filteredForOptions = filteredForOptions.filter(s => s.classe === filters.classe);
-
-        const turnos = getUniqueValues('turno', filteredForOptions);
+        const filteredByClasse = filters.classe ? filteredBySerie.filter(s => s.classe === filters.classe) : filteredBySerie;
+        const turnos = getUniqueValues('turno', filteredByClasse);
 
         const disciplines = [...new Set(allStudents.flatMap(s => s.boletim ? Object.keys(s.boletim) : []))]
             .map(d => d.replace(/_/g, ' ').replace(/-/g, '/'))
@@ -83,6 +84,7 @@ export default function GradeRanking() {
 
         return { ensinos, series, classes, turnos, disciplines };
     }, [allStudents, filters.ensino, filters.serie, filters.classe]);
+
 
     const rankedStudents = useMemo(() => {
         let studentsToRank = allStudents;
@@ -95,10 +97,13 @@ export default function GradeRanking() {
         const studentsWithAverages: StudentWithAverage[] = studentsToRank.map(student => {
             let average: number | null = null;
             if (student.boletim) {
-                if (filters.discipline && filters.discipline !== 'geral') {
-                    const disciplineId = filters.discipline.trim().replace(/\s+/g, '_').toLowerCase();
+                const disciplineId = filters.discipline && filters.discipline !== 'geral' 
+                    ? filters.discipline.trim().replace(/\s+/g, '_').toLowerCase() 
+                    : null;
+
+                if (disciplineId) {
                     average = student.boletim[disciplineId]?.mediaFinal ?? null;
-                } else {
+                } else { // Média Geral
                     const averages = Object.values(student.boletim)
                         .map((disciplina: any) => disciplina.mediaFinal)
                         .filter((media): media is number => media !== null && media !== undefined && !isNaN(media));
