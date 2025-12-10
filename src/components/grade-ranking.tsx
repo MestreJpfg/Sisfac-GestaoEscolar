@@ -47,20 +47,26 @@ export default function GradeRanking() {
     }, [firestore, toast]);
 
     const rankedStudents = useMemo(() => {
-        if (!allStudents) return [];
+        if (!allStudents || allStudents.length === 0) return [];
         
-        const studentsWithAverages: StudentWithAverage[] = allStudents.map(student => {
-            let average: number | null = null;
+        // 1. Map ALL students and calculate their average.
+        const studentsWithAverages = allStudents.map(student => {
+            let totalMediaFinal = 0;
+            let countDisciplinasComMedia = 0;
+            
             if (student.boletim) {
-                const averages = Object.values(student.boletim)
-                    .map((disciplina: any) => disciplina.mediaFinal)
-                    .filter((media): media is number => media !== null && media !== undefined && !isNaN(media));
-                
-                // Calcula a média dividindo por 9, como solicitado.
-                if (averages.length > 0) {
-                    average = averages.reduce((a, b) => a + b, 0) / 9;
-                }
+                Object.values(student.boletim).forEach((disciplina: any) => {
+                    if (disciplina && typeof disciplina.mediaFinal === 'number' && !isNaN(disciplina.mediaFinal)) {
+                        totalMediaFinal += disciplina.mediaFinal;
+                        countDisciplinasComMedia++; // This counts subjects with a valid final grade
+                    }
+                });
             }
+
+            // Calculate the average based on the fixed number of 9 disciplines, as requested.
+            // If there are no grades, the average will be 0.
+            const average = totalMediaFinal > 0 ? totalMediaFinal / 9 : null;
+
             return { 
                 id: student.id,
                 nome: student.nome,
@@ -69,10 +75,12 @@ export default function GradeRanking() {
                 turno: student.turno,
                 average 
             };
-        }).filter(s => s.average !== null);
+        });
 
-        // Classifica os alunos pela média em ordem decrescente
-        return studentsWithAverages.sort((a, b) => (b.average ?? 0) - (a.average ?? 0));
+        // 2. Filter out students without a valid average, then sort.
+        return studentsWithAverages
+            .filter((s): s is StudentWithAverage => s.average !== null && s.average > 0)
+            .sort((a, b) => (b.average ?? 0) - (a.average ?? 0));
 
     }, [allStudents]);
 
