@@ -201,14 +201,15 @@ export default function ClassListGenerator() {
                 ];
             });
             
-            const titleParts = [
+            const dynamicTitleParts = [
                 'Lista de Alunos',
                 studentSample.ensino,
                 studentSample.serie,
                 studentSample.classe,
                 studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
             ];
-            const title = titleParts.filter(Boolean).join(' ');
+            const dynamicTitle = dynamicTitleParts.filter(Boolean).join(' ');
+            const finalTitle = customTitle.trim() ? `${customTitle.trim()} - ${dynamicTitle}` : dynamicTitle;
             
             autoTable(doc, {
                 head: [['Nº', 'Nome do Aluno', 'Data de Nasc.', 'Observações']],
@@ -220,7 +221,7 @@ export default function ClassListGenerator() {
                     
                     doc.setFontSize(9);
                     doc.setFont('helvetica', 'normal');
-                    doc.text(title, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+                    doc.text(finalTitle, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
 
                     doc.setFontSize(7);
                     doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, data.settings.margin.left, doc.internal.pageSize.getHeight() - 5);
@@ -347,14 +348,15 @@ export default function ClassListGenerator() {
             const studentSample = classStudents[0] || {};
             const body = classStudents.map((student, index) => [index + 1, student.nome, ...Array(numCols).fill('')]);
             
-            const defaultTitleParts = [
+            const dynamicTitleParts = [
                 'Lista de Alunos',
                 studentSample.ensino,
                 studentSample.serie,
                 studentSample.classe,
                 studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
             ];
-            const finalTitle = customTitle.trim() !== '' ? customTitle.trim() : defaultTitleParts.filter(Boolean).join(' ');
+            const dynamicTitle = dynamicTitleParts.filter(Boolean).join(' ');
+            const finalTitle = customTitle.trim() ? `${customTitle.trim()} - ${dynamicTitle}` : dynamicTitle;
 
             autoTable(doc, {
                 head: head,
@@ -416,14 +418,16 @@ export default function ClassListGenerator() {
             const studentSample = classStudents[0] || {};
             const body = classStudents.map((student, index) => [index + 1, student.nome, ...Array(subjects.length).fill('')]);
             
-             const titleParts = [
+             const dynamicTitleParts = [
                 'Grelha de Avaliação',
                 studentSample.ensino,
                 studentSample.serie,
                 studentSample.classe,
                 studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
             ];
-            const title = titleParts.filter(Boolean).join(' ');
+            const dynamicTitle = dynamicTitleParts.filter(Boolean).join(' ');
+            const finalTitle = customTitle.trim() ? `${customTitle.trim()} - ${dynamicTitle}` : dynamicTitle;
+
 
             autoTable(doc, {
                 head: head,
@@ -435,7 +439,7 @@ export default function ClassListGenerator() {
                     doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
                     doc.setFontSize(9);
                     doc.setFont('helvetica', 'normal');
-                    doc.text(title, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+                    doc.text(finalTitle, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
                 },
                 styles: { fontSize: 8, cellPadding: 1 },
                 headStyles: { 
@@ -555,6 +559,15 @@ export default function ClassListGenerator() {
                             <h3 className="font-semibold text-center">{`Resultado da Filtragem`}</h3>
                             <p className="text-sm text-muted-foreground text-center">{`${students.length} alunos encontrados`}</p>
                         </div>
+                        <div className="space-y-2 p-4">
+                            <Label htmlFor="custom-title">Título Personalizado (Opcional)</Label>
+                            <Input 
+                                id="custom-title" 
+                                placeholder="Ex: Frequência de Prova, Lista de Atividades..."
+                                value={customTitle}
+                                onChange={(e) => setCustomTitle(e.target.value)}
+                            />
+                        </div>
                         <ScrollArea className="flex-1" style={{ maxHeight: '500px' }}>
                             <Table>
                                 <TableHeader>
@@ -603,15 +616,6 @@ export default function ClassListGenerator() {
                                                     </div>
                                                 </AccordionTrigger>
                                                 <AccordionContent className="pt-4 space-y-4">
-                                                     <div className="space-y-2">
-                                                        <Label htmlFor="custom-title">Título do Documento (Opcional)</Label>
-                                                        <Input 
-                                                            id="custom-title" 
-                                                            placeholder="Ex: Lista de Presença - Workshop de Robótica"
-                                                            value={customTitle}
-                                                            onChange={(e) => setCustomTitle(e.target.value)}
-                                                        />
-                                                     </div>
                                                     <div className="space-y-2">
                                                         <Label htmlFor="custom-cols">Quantidade de Colunas Vazias</Label>
                                                         <Select value={customColumnCount} onValueChange={setCustomColumnCount}>
@@ -673,5 +677,3 @@ export default function ClassListGenerator() {
     </Card>
   );
 }
-
-    
