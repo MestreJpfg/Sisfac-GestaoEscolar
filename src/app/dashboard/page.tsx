@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, doc, getCountFromServer, getDocs } from 'firebase/firestore';
-import { Loader2, Users, UserCog, Shield, Database, ClipboardList, Megaphone, CalendarCheck, ArrowLeft, NotebookText, Gamepad2 } from 'lucide-react';
+import { Loader2, Users, UserCog, Shield, Database, ClipboardList, Megaphone, CalendarCheck, ArrowLeft, NotebookText, Gamepad2, Award } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -194,6 +194,15 @@ export default function DashboardPage() {
                                 icon={NotebookText}
                                 description="Lançar e gerir notas e boletins"
                                 action={<Button onClick={() => router.push('/dashboard/grades')}>Aceder</Button>}
+                            />
+                           )}
+                           {canViewGrades && (
+                             <StatCard
+                                title="Ranking de Alunos"
+                                value={"Desempenho"}
+                                icon={Award}
+                                description="Classificar alunos por média"
+                                action={<Button onClick={() => router.push('/dashboard/ranking')}>Aceder</Button>}
                             />
                            )}
                           {(canViewAnnouncements || canManageAnnouncements) && (

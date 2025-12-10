@@ -1,0 +1,148 @@
+
+'use client';
+
+import { useState, useMemo, useEffect } from 'react';
+import { useFirestore } from '@/firebase';
+import { collection, query, getDocs } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
+
+interface RankedStudent {
+  id: string;
+  name: string;
+  turma: string;
+  average: number;
+}
+
+const calculateAverage = (boletim: any): number => {
+    if (!boletim || typeof boletim !== 'object') {
+        return 0;
+    }
+
+    const validMedias = Object.values(boletim)
+        .map((disciplina: any) => disciplina.mediaFinal)
+        .filter((media): media is number => typeof media === 'number' && !isNaN(media));
+
+    if (validMedias.length === 0) {
+        return 0;
+    }
+
+    const sum = validMedias.reduce((acc, curr) => acc + curr, 0);
+    return sum / validMedias.length;
+};
+
+
+const RankingTable = ({ title, students, isLoading }: { title: string, students: RankedStudent[], isLoading: boolean }) => (
+    <Card>
+        <CardHeader>
+            <CardTitle>{title}</CardTitle>
+            <CardDescription>
+                Classificação dos alunos com base na média geral de todas as disciplinas.
+            </CardDescription>
+        </CardHeader>
+        <CardContent>
+            {isLoading ? (
+                <div className="flex justify-center items-center h-64">
+                    <Loader2 className="w-8 h-8 animate-spin" />
+                </div>
+            ) : (
+                <div className="border rounded-md">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-16 text-center">Pos.</TableHead>
+                                <TableHead>Aluno</TableHead>
+                                <TableHead className="hidden sm:table-cell">Turma</TableHead>
+                                <TableHead className="text-right">Média Final</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {students.map((student, index) => (
+                                <TableRow key={student.id}>
+                                    <TableCell className="text-center font-bold">{index + 1}º</TableCell>
+                                    <TableCell className="font-medium">{student.name}</TableCell>
+                                    <TableCell className="hidden sm:table-cell">{student.turma}</TableCell>
+                                    <TableCell className="text-right font-semibold">{student.average.toFixed(2)}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            )}
+             { !isLoading && students.length === 0 && (
+                <div className="text-center py-16 text-muted-foreground">
+                    Nenhum aluno com notas válidas encontrado para este segmento.
+                </div>
+            )}
+        </CardContent>
+    </Card>
+);
+
+export default function StudentRankingView() {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const [allStudents, setAllStudents] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStudents = async () => {
+            if (!firestore) return;
+            setIsLoading(true);
+            try {
+                const q = query(collection(firestore, "alunos"));
+                const querySnapshot = await getDocs(q);
+                const studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setAllStudents(studentsData);
+            } catch (error) {
+                console.error("Error fetching students:", error);
+                toast({ variant: "destructive", title: "Erro ao carregar alunos" });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchStudents();
+    }, [firestore, toast]);
+    
+    const { fundamental1, fundamental2 } = useMemo(() => {
+        const seriesFund1 = ["3º ANO", "4º ANO", "5º ANO"];
+        const seriesFund2 = ["6º ANO", "7º ANO", "8º ANO", "9º ANO"];
+
+        const processStudents = (series: string[]) => {
+            return allStudents
+                .filter(s => s.serie && series.includes(s.serie.toUpperCase()))
+                .map(student => ({
+                    id: student.id,
+                    name: student.nome,
+                    turma: `${student.serie} ${student.classe || ''}`,
+                    average: calculateAverage(student.boletim),
+                }))
+                .filter(student => student.average > 0)
+                .sort((a, b) => b.average - a.average);
+        };
+
+        return {
+            fundamental1: processStudents(seriesFund1),
+            fundamental2: processStudents(seriesFund2),
+        };
+    }, [allStudents]);
+
+
+    return (
+        <Tabs defaultValue="fund1" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="fund1">3º ao 5º Ano</TabsTrigger>
+                <TabsTrigger value="fund2">6º ao 9º Ano</TabsTrigger>
+            </TabsList>
+            <TabsContent value="fund1" className="mt-6">
+                <RankingTable title="Ranking Fundamental I (3º ao 5º Ano)" students={fundamental1} isLoading={isLoading} />
+            </TabsContent>
+            <TabsContent value="fund2" className="mt-6">
+                 <RankingTable title="Ranking Fundamental II (6º ao 9º Ano)" students={fundamental2} isLoading={isLoading} />
+            </TabsContent>
+        </Tabs>
+    );
+}

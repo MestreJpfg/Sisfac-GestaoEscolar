@@ -11,6 +11,8 @@ import { Loader2, Save, Users, NotebookPen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+
 
 type EtapaGrade = {
     etapa1?: number | null;
@@ -230,7 +232,7 @@ export default function GradesManager() {
         <div className="space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>Selecionar Turma e Disciplina</CardTitle>
+                    <CardTitle>Lançamento de Notas</CardTitle>
                     <CardDescription>Escolha os filtros para lançar as notas de uma turma específica.</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -376,4 +378,3 @@ export default function GradesManager() {
     );
 }
 
-    

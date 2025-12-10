@@ -6,13 +6,13 @@ import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
 import { UserNav } from '@/components/user-nav';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, NotebookText } from 'lucide-react';
+import { ArrowLeft, Award } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
-import GradesManager from '@/components/grades-manager';
+import StudentRankingView from '@/components/student-ranking-view';
 
-export default function GradesPage() {
+export default function RankingPage() {
     const router = useRouter();
-    
+
     return (
         <AuthGuard>
             <div className="flex min-h-screen flex-col">
@@ -23,8 +23,8 @@ export default function GradesPage() {
                                 <ArrowLeft className="h-4 w-4" />
                             </Button>
                             <div className="flex items-center gap-2">
-                                <NotebookText className="h-6 w-6 text-primary" />
-                                <h1 className="text-xl font-bold text-primary hidden sm:block">Avaliações e Desempenho</h1>
+                                <Award className="h-6 w-6 text-primary" />
+                                <h1 className="text-xl font-bold text-primary hidden sm:block">Ranking de Desempenho</h1>
                             </div>
                         </div>
                         <div className="flex flex-1 items-center justify-end space-x-4">
@@ -38,7 +38,7 @@ export default function GradesPage() {
 
                 <main className="flex-1 py-8">
                     <div className="container">
-                       <GradesManager />
+                       <StudentRankingView />
                     </div>
                 </main>
                 <AppFooter />
