@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect } from 'react';
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
-import { ClipboardList, X, Loader2, Download, Filter, BookCheck, Columns, Grid3x3, Heading } from 'lucide-react';
+import { ClipboardList, X, Loader2, Download, Filter, BookCheck, Columns, Grid3x3, Heading, Palette } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -18,6 +18,7 @@ import { useFirestore } from '@/firebase';
 import { collection, query, getDocs } from 'firebase/firestore';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
+import { Switch } from './ui/switch';
 
 
 // Helper function to chunk array
@@ -44,6 +45,11 @@ export default function ClassListGenerator() {
   
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [isLoadingAllStudents, setIsLoadingAllStudents] = useState(true);
+
+  // Styling state
+  const [headerColor, setHeaderColor] = useState('#e6e6e6');
+  const [useAlternateRowColors, setUseAlternateRowColors] = useState(true);
+
 
   const [filters, setFilters] = useState({
     ensino: '',
@@ -77,6 +83,7 @@ export default function ClassListGenerator() {
   
   useEffect(() => {
     const count = parseInt(customColumnCount, 10);
+    if (isNaN(count)) return;
     setCustomHeaders(prev => {
         const newHeaders = new Array(count).fill('');
         for(let i=0; i < Math.min(prev.length, count); i++) {
@@ -234,9 +241,12 @@ export default function ClassListGenerator() {
                     cellPadding: 1.5,
                 },
                 headStyles: {
-                    fillColor: [230, 230, 230],
+                    fillColor: headerColor,
                     textColor: [40, 40, 40],
                     fontStyle: 'bold',
+                },
+                alternateRowStyles: {
+                    fillColor: useAlternateRowColors ? [245, 245, 245] : false
                 },
                 margin: { top: 20, right: 10, bottom: 10, left: 10 },
             });
@@ -371,7 +381,14 @@ export default function ClassListGenerator() {
                     doc.text(finalTitle, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
                 },
                 styles: { fontSize: 8, cellPadding: 1.5 },
-                headStyles: { fillColor: [230, 230, 230], textColor: [40, 40, 40], fontStyle: 'bold' },
+                headStyles: {
+                    fillColor: headerColor,
+                    textColor: [40, 40, 40],
+                    fontStyle: 'bold',
+                },
+                alternateRowStyles: {
+                    fillColor: useAlternateRowColors ? [245, 245, 245] : false
+                },
                 columnStyles: {
                     0: { cellWidth: 10 },
                     1: { cellWidth: 'auto' },
@@ -443,12 +460,15 @@ export default function ClassListGenerator() {
                 },
                 styles: { fontSize: 8, cellPadding: 1 },
                 headStyles: { 
-                    fillColor: [230, 230, 230], 
+                    fillColor: headerColor, 
                     textColor: [40, 40, 40],
                     fontStyle: 'bold',
                     halign: 'center',
                     valign: 'middle',
                     minCellHeight: 10,
+                },
+                alternateRowStyles: {
+                    fillColor: useAlternateRowColors ? [245, 245, 245] : false
                 },
                 columnStyles: {
                     0: { cellWidth: 10, halign: 'center' },
@@ -559,14 +579,46 @@ export default function ClassListGenerator() {
                             <h3 className="font-semibold text-center">{`Resultado da Filtragem`}</h3>
                             <p className="text-sm text-muted-foreground text-center">{`${students.length} alunos encontrados`}</p>
                         </div>
-                        <div className="space-y-2 p-4">
-                            <Label htmlFor="custom-title">Título Personalizado (Opcional)</Label>
-                            <Input 
-                                id="custom-title" 
-                                placeholder="Ex: Frequência de Prova, Lista de Atividades..."
-                                value={customTitle}
-                                onChange={(e) => setCustomTitle(e.target.value)}
-                            />
+                        <div className="space-y-4 p-4">
+                            <div>
+                                <Label htmlFor="custom-title">Título Personalizado (Opcional)</Label>
+                                <Input 
+                                    id="custom-title" 
+                                    placeholder="Ex: Frequência de Prova, Lista de Atividades..."
+                                    value={customTitle}
+                                    onChange={(e) => setCustomTitle(e.target.value)}
+                                />
+                            </div>
+                             <Accordion type="single" collapsible className="w-full">
+                                <AccordionItem value="styling">
+                                    <AccordionTrigger>
+                                        <div className="flex items-center gap-2">
+                                            <Palette className="h-4 w-4" />
+                                            <span>Estilo do PDF</span>
+                                        </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="pt-4 space-y-4">
+                                        <div className="flex items-center gap-4">
+                                            <Label htmlFor="header-color">Cor do Cabeçalho</Label>
+                                            <Input 
+                                                id="header-color" 
+                                                type="color" 
+                                                value={headerColor}
+                                                onChange={(e) => setHeaderColor(e.target.value)}
+                                                className="w-14 h-10 p-1"
+                                            />
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <Switch 
+                                                id="alternate-rows" 
+                                                checked={useAlternateRowColors}
+                                                onCheckedChange={setUseAlternateRowColors}
+                                            />
+                                            <Label htmlFor="alternate-rows">Cores de linha alternadas</Label>
+                                        </div>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            </Accordion>
                         </div>
                         <ScrollArea className="flex-1" style={{ maxHeight: '500px' }}>
                             <Table>
