@@ -5,11 +5,9 @@ import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
 import { UserNav } from '@/components/user-nav';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, NotebookText, Trophy } from 'lucide-react';
+import { ArrowLeft, NotebookText } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
 import GradesManager from '@/components/grades-manager';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import GradeRanking from '@/components/grade-ranking';
 
 export default function GradesPage() {
     const router = useRouter();
@@ -24,8 +22,8 @@ export default function GradesPage() {
                                 <ArrowLeft className="h-4 w-4" />
                             </Button>
                             <div className="flex items-center gap-2">
-                                <Trophy className="h-6 w-6 text-primary" />
-                                <h1 className="text-xl font-bold text-primary hidden sm:block">Avaliações e Desempenho</h1>
+                                <NotebookText className="h-6 w-6 text-primary" />
+                                <h1 className="text-xl font-bold text-primary hidden sm:block">Lançamento de Notas</h1>
                             </div>
                         </div>
                         <div className="flex flex-1 items-center justify-end space-x-4">
@@ -39,24 +37,7 @@ export default function GradesPage() {
 
                 <main className="flex-1 py-8">
                     <div className="container">
-                       <Tabs defaultValue="ranking" className="w-full">
-                          <TabsList className="grid w-full grid-cols-2 max-w-lg mx-auto">
-                            <TabsTrigger value="lancamento">
-                                <NotebookText className="mr-2 h-4 w-4" />
-                                Lançamento de Notas
-                            </TabsTrigger>
-                            <TabsTrigger value="ranking">
-                                <Trophy className="mr-2 h-4 w-4" />
-                                Ranking por Média
-                            </TabsTrigger>
-                          </TabsList>
-                          <TabsContent value="lancamento" className="mt-6">
-                            <GradesManager />
-                          </TabsContent>
-                          <TabsContent value="ranking" className="mt-6">
-                            <GradeRanking />
-                          </TabsContent>
-                        </Tabs>
+                       <GradesManager />
                     </div>
                 </main>
                 <AppFooter />
