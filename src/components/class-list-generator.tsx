@@ -310,7 +310,7 @@ export default function ClassListGenerator() {
     setIsDownloadingCustom(true);
 
     try {
-      const doc = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
+      const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
       const numCols = parseInt(customColumnCount, 10);
       
       const head = [['Nº', 'Nome do Aluno', ...Array(numCols).fill('')]];
@@ -354,7 +354,7 @@ export default function ClassListGenerator() {
     setIsDownloadingSubjects(true);
 
     try {
-        const doc = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
+        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
         const subjects = ['ART', 'CIE', 'ED.F', 'HIS', 'GEO', 'ING', 'MAT', 'PORT', 'REL'];
         
         const head = [['Nº', 'Nome do Aluno', ...subjects]];
@@ -380,13 +380,7 @@ export default function ClassListGenerator() {
                 textColor: [40, 40, 40],
                 halign: 'center',
                 valign: 'middle',
-                minCellHeight: 15, // Aumenta a altura para texto vertical
-            },
-            didParseCell: (data) => {
-                if (data.section === 'head' && data.row.index === 0 && data.column.index > 1) {
-                    data.cell.styles.valign = 'bottom';
-                    data.cell.styles.halign = 'center';
-                }
+                minCellHeight: 10,
             },
             columnStyles: {
                 0: { cellWidth: 10, halign: 'center' },
@@ -577,5 +571,3 @@ export default function ClassListGenerator() {
     </Card>
   );
 }
-
-    
