@@ -80,35 +80,39 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, lab
   );
 };
 
-// Robust average calculation function
 const calculateAverage = (boletim: any): number => {
     if (!boletim || typeof boletim !== 'object') {
-        return 0;
+      return 0;
     }
 
-    const validMedias = Object.values(boletim)
-        .map((disciplina: any) => {
-            // Check both possible capitalizations
-            const media = disciplina.mediaFinal ?? disciplina.mediafinal;
-            if (media === null || media === undefined || String(media).trim() === '') return null;
+    const disciplineKeys = Object.keys(boletim);
+    const allSubjectAverages: number[] = [];
 
-            const numericMedia = parseFloat(String(media).replace(',', '.'));
+    disciplineKeys.forEach(key => {
+        const disciplina = boletim[key];
+        if (disciplina && typeof disciplina === 'object') {
             
-            if (!isNaN(numericMedia)) {
-                return numericMedia;
+            const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
+            const validEtapaGrades = etapaGrades.map(g => {
+                if (g === null || g === undefined || String(g).trim() === '') return null;
+                const numericGrade = parseFloat(String(g).replace(',', '.'));
+                return isNaN(numericGrade) ? null : numericGrade;
+            }).filter((g): g is number => g !== null);
+
+            if (validEtapaGrades.length > 0) {
+                const subjectAverage = validEtapaGrades.reduce((sum, grade) => sum + grade, 0) / validEtapaGrades.length;
+                allSubjectAverages.push(subjectAverage);
             }
-            
-            return null;
-        })
-        .filter((media): media is number => media !== null);
+        }
+    });
 
-    if (validMedias.length === 0) {
+    if (allSubjectAverages.length === 0) {
         return 0;
     }
 
-    const sum = validMedias.reduce((acc, curr) => acc + curr, 0);
-    return sum / validMedias.length;
-};
+    const overallSum = allSubjectAverages.reduce((acc, curr) => acc + curr, 0);
+    return overallSum / allSubjectAverages.length;
+  };
 
 
 export default function StudentDetailSheet({ student, allStudents, isOpen, onClose, onUpdate }: StudentDetailSheetProps) {

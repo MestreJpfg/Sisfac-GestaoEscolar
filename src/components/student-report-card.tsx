@@ -34,7 +34,6 @@ interface StudentReportCardProps {
 const formatGrade = (grade: number | null | undefined, isEditing = false) => {
     if (grade === null || grade === undefined) return isEditing ? '' : "-";
     
-    // Always show one decimal place unless it's a whole number in edit mode
     if (isEditing && grade % 1 === 0) {
         return String(grade);
     }
@@ -57,10 +56,14 @@ export default function StudentReportCard({ boletim, isPrintMode = false, compac
   const processedBoletim = Object.entries(boletim)
     .filter(([disciplina]) => !['aluno', 'nome_do_aluno', 'matricula', 'rm', 'nome'].includes(disciplina.toLowerCase()))
     .map(([disciplina, notas]) => {
-      const validGrades = [notas.etapa1, notas.etapa2, notas.etapa3, notas.etapa4].filter(
-        (nota): nota is number => nota !== null && nota !== undefined && !isNaN(nota)
-      );
-      const media = validGrades.length > 0 ? validGrades.reduce((a, b) => a + b, 0) / validGrades.length : null;
+      const etapaGrades = [notas.etapa1, notas.etapa2, notas.etapa3, notas.etapa4];
+      const validGrades = etapaGrades.map(g => {
+          if (g === null || g === undefined || String(g).trim() === '') return null;
+          const numericGrade = parseFloat(String(g).replace(',', '.'));
+          return isNaN(numericGrade) ? null : numericGrade;
+      }).filter((g): g is number => g !== null);
+
+      const media = validGrades.length > 0 ? validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length : null;
 
       const cleanedDisciplina = disciplina
           .replace(/_/g, ' ')
@@ -141,5 +144,3 @@ export default function StudentReportCard({ boletim, isPrintMode = false, compac
     </Table>
   );
 }
-
-    
