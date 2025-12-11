@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -305,33 +306,33 @@ export default function ClassListGenerator() {
     if (!boletim || typeof boletim !== 'object') {
       return 0;
     }
-
+  
     const disciplineKeys = Object.keys(boletim);
     const allSubjectAverages: number[] = [];
-
+  
     disciplineKeys.forEach(key => {
         const disciplina = boletim[key];
         if (disciplina && typeof disciplina === 'object') {
             
-            // Calculate subject average from 'etapas'
             const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
             const validEtapaGrades = etapaGrades.map(g => {
                 if (g === null || g === undefined || String(g).trim() === '') return null;
+                // Standardize comma to dot and parse as float
                 const numericGrade = parseFloat(String(g).replace(',', '.'));
                 return isNaN(numericGrade) ? null : numericGrade;
             }).filter((g): g is number => g !== null);
-
+  
             if (validEtapaGrades.length > 0) {
                 const subjectAverage = validEtapaGrades.reduce((sum, grade) => sum + grade, 0) / validEtapaGrades.length;
                 allSubjectAverages.push(subjectAverage);
             }
         }
     });
-
+  
     if (allSubjectAverages.length === 0) {
         return 0;
     }
-
+  
     const overallSum = allSubjectAverages.reduce((acc, curr) => acc + curr, 0);
     return overallSum / allSubjectAverages.length;
   };
@@ -343,8 +344,13 @@ export default function ClassListGenerator() {
     try {
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
         
-        const studentChunks = chunk(students, 39);
-        let isFirstPage = true;
+        // Calculate averages and sort students
+        const studentsWithAverages = students.map(student => ({
+            ...student,
+            average: calculateAverage(student.boletim)
+        })).sort((a, b) => b.average - a.average);
+
+        const studentChunks = chunk(studentsWithAverages, 39);
 
         for (let i = 0; i < studentChunks.length; i++) {
             const pageStudents = studentChunks[i];
@@ -353,11 +359,10 @@ export default function ClassListGenerator() {
             }
             
             const tableData = pageStudents.map((student, index) => {
-                const average = calculateAverage(student.boletim);
                 return [
                     (i * 39) + index + 1,
                     student.nome,
-                    average > 0 ? average.toFixed(2).replace('.', ',') : '-'
+                    student.average > 0 ? student.average.toFixed(2).replace('.', ',') : '-'
                 ];
             });
             
@@ -373,7 +378,7 @@ export default function ClassListGenerator() {
             const finalTitle = customTitle.trim() ? `${customTitle.trim()} - ${dynamicTitle}` : dynamicTitle;
             
             autoTable(doc, {
-                head: [['Nº', 'Nome do Aluno', 'Média Final']],
+                head: [['Pos.', 'Nome do Aluno', 'Média Final']],
                 body: tableData,
                 didDrawPage: (data) => {
                     doc.setFontSize(10);
@@ -882,4 +887,3 @@ export default function ClassListGenerator() {
     </Card>
   );
 }
-
