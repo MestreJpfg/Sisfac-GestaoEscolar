@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList, Legend } from 'recharts';
 import { useTheme } from 'next-themes';
 import { Loader2 } from 'lucide-react';
 
@@ -27,6 +27,15 @@ const CustomLabel = (props: any) => {
         </text>
     );
 };
+
+const getCapacityForSerie = (serieName: string): number => {
+    const upperCaseSerie = serieName.toUpperCase();
+    if (upperCaseSerie.includes('INFANTIL IV') || upperCaseSerie.includes('INFANTIL V') || upperCaseSerie === '1º ANO') return 20;
+    if (upperCaseSerie === '2º ANO') return 25;
+    if (upperCaseSerie === '3º ANO' || upperCaseSerie === '4º ANO' || upperCaseSerie === '5º ANO') return 30;
+    if (['6º ANO', '7º ANO', '8º ANO', '9º ANO'].includes(upperCaseSerie)) return 35;
+    return 0; // Fallback
+}
 
 export default function StudentDistributionChart({ students, isLoading, onDrilldown, drilledSerie }: StudentDistributionChartProps) {
     const { resolvedTheme } = useTheme();
@@ -54,7 +63,7 @@ export default function StudentDistributionChart({ students, isLoading, onDrilld
             return Object.keys(classCount)
                 .map(className => ({
                     name: className,
-                    Alunos: classCount[className],
+                    Matriculados: classCount[className],
                 }))
                 .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 
@@ -70,7 +79,8 @@ export default function StudentDistributionChart({ students, isLoading, onDrilld
             return Object.keys(seriesCount)
                 .map(serie => ({
                     name: serie,
-                    Alunos: seriesCount[serie],
+                    Matriculados: seriesCount[serie],
+                    Capacidade: getCapacityForSerie(serie)
                 }))
                 .sort((a, b) => {
                     const numA = getSeriesNumber(a.name);
@@ -83,14 +93,6 @@ export default function StudentDistributionChart({ students, isLoading, onDrilld
                 });
         }
     }, [students, drilledSerie, isLoading]);
-
-    const chartColors = [
-        'hsl(var(--chart-1))',
-        'hsl(var(--chart-2))',
-        'hsl(var(--chart-3))',
-        'hsl(var(--chart-4))',
-        'hsl(var(--chart-5))',
-    ];
 
     const tickColor = resolvedTheme === 'dark' ? '#a1a1aa' : '#71717a';
     
@@ -146,23 +148,19 @@ export default function StudentDistributionChart({ students, isLoading, onDrilld
                         borderRadius: 'var(--radius)',
                         boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
                      }}
-                     formatter={(value: number) => [`${value} Alunos`, 'Total']}
                 />
-                <Bar dataKey="Alunos" radius={[4, 4, 0, 0]}>
-                    {drilledSerie && (
-                        <LabelList 
-                            dataKey="Alunos" 
-                            position="top" 
-                            content={<CustomLabel theme={resolvedTheme} />} 
-                        />
-                    )}
-                    {data.map((entry, index) => (
-                        <Cell 
-                            key={`cell-${index}`} 
-                            fill={chartColors[index % chartColors.length]}
-                            className={!drilledSerie ? 'cursor-pointer' : ''}
-                        />
-                    ))}
+                <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                
+                {!drilledSerie && (
+                    <Bar dataKey="Capacidade" fill="hsl(var(--chart-2) / 0.6)" radius={[4, 4, 0, 0]} />
+                )}
+
+                <Bar dataKey="Matriculados" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]}>
+                    <LabelList 
+                        dataKey="Matriculados" 
+                        position="top" 
+                        content={<CustomLabel theme={resolvedTheme} />} 
+                    />
                 </Bar>
             </BarChart>
         </ResponsiveContainer>
