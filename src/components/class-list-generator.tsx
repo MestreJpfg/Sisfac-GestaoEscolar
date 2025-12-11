@@ -303,45 +303,37 @@ export default function ClassListGenerator() {
     }
   };
 
-  const calculateAverage = (student: any): number => {
-    const boletim = student?.boletim;
-    if (!boletim || typeof boletim !== 'object') {
-      return 0;
-    }
-  
-    const disciplineKeys = Object.keys(boletim);
-    const subjectAverages: number[] = [];
-  
-    disciplineKeys.forEach(key => {
-      const disciplina = boletim[key];
-      if (disciplina && typeof disciplina === 'object') {
-        const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
-        
-        const validGrades = etapaGrades.map(g => {
-            if (g === null || g === undefined || String(g).trim() === '') return null;
-            const numericGrade = parseFloat(String(g).replace(',', '.'));
-            return isNaN(numericGrade) ? null : numericGrade;
-        }).filter((g): g is number => g !== null);
-
-        if (validGrades.length > 0) {
-            const subjectAverage = validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length;
-            subjectAverages.push(subjectAverage);
+    const calculateAverage = (boletim: any): number => {
+        if (!boletim || typeof boletim !== 'object') {
+            return 0;
         }
-      }
-    });
-  
-    if (subjectAverages.length === 0) return 0;
-    
-    const overallSum = subjectAverages.reduce((acc, curr) => acc + curr, 0);
-    return overallSum / subjectAverages.length;
-  };
 
-  const getMedal = (index: number) => {
-    if (index === 0) return '🥇';
-    if (index === 1) return '🥈';
-    if (index === 2) return '🥉';
-    return `${index + 1}º`;
-  }
+        const disciplineKeys = Object.keys(boletim);
+        const subjectAverages: number[] = [];
+
+        disciplineKeys.forEach(key => {
+            const disciplina = boletim[key];
+            if (disciplina && typeof disciplina === 'object') {
+                const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
+                
+                const validGrades = etapaGrades.map(g => {
+                    if (g === null || g === undefined || String(g).trim() === '') return null;
+                    const numericGrade = parseFloat(String(g).replace(',', '.'));
+                    return isNaN(numericGrade) ? null : numericGrade;
+                }).filter((g): g is number => g !== null);
+
+                if (validGrades.length > 0) {
+                    const subjectAverage = validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length;
+                    subjectAverages.push(subjectAverage);
+                }
+            }
+        });
+
+        if (subjectAverages.length === 0) return 0;
+        
+        const overallSum = subjectAverages.reduce((acc, curr) => acc + curr, 0);
+        return overallSum / subjectAverages.length;
+    };
 
   const handleDownloadWithAverages = async () => {
     if (students.length === 0) return;
@@ -353,7 +345,7 @@ export default function ClassListGenerator() {
         const processStudentGroup = (studentList: any[], isFirstPage: boolean) => {
             const studentsWithAverages = studentList.map(student => ({
                 ...student,
-                average: calculateAverage(student)
+                average: calculateAverage(student.boletim)
             })).sort((a, b) => b.average - a.average);
 
             const studentChunks = chunk(studentsWithAverages, 39);
@@ -367,7 +359,7 @@ export default function ClassListGenerator() {
                 const tableData = pageStudents.map((student, index) => {
                     const globalIndex = (i * 39) + index;
                     return [
-                        getMedal(globalIndex),
+                        `${globalIndex + 1}º`,
                         student.nome,
                         student.average > 0 ? student.average.toFixed(2).replace('.', ',') : '-'
                     ];
