@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList, Legend } from 'recharts';
 import { useTheme } from 'next-themes';
 import { Loader2 } from 'lucide-react';
 
@@ -169,10 +169,10 @@ export default function StudentDistributionChart({ students, isLoading, onDrilld
                 />
                 <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                 
-                <Bar dataKey="Capacidade +10%" fill="hsl(var(--chart-3) / 0.5)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Capacidade" fill="hsl(var(--chart-2) / 0.6)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Capacidade +10%" stackId="capacity" fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} barSize={40} />
+                <Bar dataKey="Capacidade" stackId="capacity" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
 
-                <Bar dataKey="Matriculados" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]}>
+                <Bar dataKey="Matriculados" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} barSize={40}>
                     <LabelList 
                         dataKey="Matriculados" 
                         position="top" 
