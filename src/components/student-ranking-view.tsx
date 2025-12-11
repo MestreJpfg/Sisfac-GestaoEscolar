@@ -30,6 +30,7 @@ const calculateAverage = (boletim: any): number => {
         const disciplina = boletim[key];
         if (disciplina && typeof disciplina === 'object') {
             
+            // Calculate subject average from 'etapas'
             const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
             const validEtapaGrades = etapaGrades.map(g => {
                 if (g === null || g === undefined || String(g).trim() === '') return null;
@@ -50,7 +51,7 @@ const calculateAverage = (boletim: any): number => {
 
     const overallSum = allSubjectAverages.reduce((acc, curr) => acc + curr, 0);
     return overallSum / allSubjectAverages.length;
-  };
+};
 
 
 const RankingTable = ({ title, students, isLoading }: { title: string, students: RankedStudent[], isLoading: boolean }) => (
@@ -132,8 +133,8 @@ export default function StudentRankingView() {
         const seriesFund1 = ["3º ANO", "4º ANO", "5º ANO"];
         const seriesFund2 = ["6º ANO", "7º ANO", "8º ANO", "9º ANO"];
 
-        const fund1: RankedStudent[] = [];
-        const fund2: RankedStudent[] = [];
+        const fundamental1: RankedStudent[] = [];
+        const fundamental2: RankedStudent[] = [];
 
         allStudents.forEach(student => {
             const studentSerie = student.serie?.toUpperCase();
@@ -150,15 +151,15 @@ export default function StudentRankingView() {
                 };
                 
                 if (seriesFund1.includes(studentSerie)) {
-                    fund1.push(rankedStudent);
+                    fundamental1.push(rankedStudent);
                 } else if (seriesFund2.includes(studentSerie)) {
-                    fund2.push(rankedStudent);
+                    fundamental2.push(rankedStudent);
                 }
             }
         });
 
-        fund1.sort((a, b) => b.average - a.average);
-        fund2.sort((a, b) => b.average - a.average);
+        fundamental1.sort((a, b) => b.average - a.average);
+        fundamental2.sort((a, b) => b.average - a.average);
 
         return { fundamental1, fundamental2 };
     }, [allStudents, isLoading]);
