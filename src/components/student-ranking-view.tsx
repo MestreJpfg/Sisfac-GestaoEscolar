@@ -17,41 +17,42 @@ interface RankedStudent {
   turma: string;
   average: number;
   serie: string;
+  classe: string;
+  turno: string;
 }
 
 const calculateAverage = (boletim: any): number => {
     if (!boletim || typeof boletim !== 'object') {
         return 0;
     }
-
+  
     const disciplineKeys = Object.keys(boletim);
-    const subjectAverages: number[] = [];
-
+    const allSubjectAverages: number[] = [];
+  
     disciplineKeys.forEach(key => {
         const disciplina = boletim[key];
         if (disciplina && typeof disciplina === 'object') {
             const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
-            const validGrades = etapaGrades.map(g => {
+            const validEtapaGrades = etapaGrades.map(g => {
                 if (g === null || g === undefined || String(g).trim() === '') return null;
                 const numericGrade = parseFloat(String(g).replace(',', '.'));
                 return isNaN(numericGrade) ? null : numericGrade;
             }).filter((g): g is number => g !== null);
-
-            if (validGrades.length > 0) {
-                const subjectAverage = validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length;
-                subjectAverages.push(subjectAverage);
+  
+            if (validEtapaGrades.length > 0) {
+                const subjectAverage = validEtapaGrades.reduce((sum, grade) => sum + grade, 0) / validEtapaGrades.length;
+                allSubjectAverages.push(subjectAverage);
             }
         }
     });
-
-    if (subjectAverages.length === 0) {
+  
+    if (allSubjectAverages.length === 0) {
         return 0;
     }
-
-    const overallSum = subjectAverages.reduce((acc, curr) => acc + curr, 0);
-    return overallSum / subjectAverages.length;
+  
+    const overallSum = allSubjectAverages.reduce((acc, curr) => acc + curr, 0);
+    return overallSum / allSubjectAverages.length;
 };
-
 
 const RankingTable = ({ title, students, isLoading }: { title: string, students: RankedStudent[], isLoading: boolean }) => (
     <Card>
@@ -119,8 +120,8 @@ export default function StudentRankingView() {
     const [allStudents, setAllStudents] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    const [filterFund1, setFilterFund1] = useState('all');
-    const [filterFund2, setFilterFund2] = useState('all');
+    const [filtersFund1, setFiltersFund1] = useState({ serie: 'all', classe: 'all', turno: 'all' });
+    const [filtersFund2, setFiltersFund2] = useState({ serie: 'all', classe: 'all', turno: 'all' });
 
     const seriesFund1 = useMemo(() => ["3º ANO", "4º ANO", "5º ANO"], []);
     const seriesFund2 = useMemo(() => ["6º ANO", "7º ANO", "8º ANO", "9º ANO"], []);
@@ -164,6 +165,8 @@ export default function StudentRankingView() {
                     turma: `${student.serie || ''} ${student.classe || ''}`.trim(),
                     average: average,
                     serie: studentSerie,
+                    classe: student.classe || '',
+                    turno: student.turno || '',
                 };
                 
                 if (seriesFund1.includes(studentSerie)) {
@@ -180,15 +183,51 @@ export default function StudentRankingView() {
         return { fundamental1: fund1, fundamental2: fund2 };
     }, [allStudents, isLoading, seriesFund1, seriesFund2]);
 
+    const filterOptionsFund1 = useMemo(() => {
+        let students = fundamental1;
+        if (filtersFund1.serie !== 'all') {
+            students = students.filter(s => s.serie === filtersFund1.serie);
+        }
+        const classes = [...new Set(students.map(s => s.classe))].sort();
+
+        if (filtersFund1.classe !== 'all') {
+            students = students.filter(s => s.classe === filtersFund1.classe);
+        }
+        const turnos = [...new Set(students.map(s => s.turno))].sort();
+        
+        return { classes, turnos };
+    }, [fundamental1, filtersFund1]);
+
+    const filterOptionsFund2 = useMemo(() => {
+        let students = fundamental2;
+        if (filtersFund2.serie !== 'all') {
+            students = students.filter(s => s.serie === filtersFund2.serie);
+        }
+        const classes = [...new Set(students.map(s => s.classe))].sort();
+
+        if (filtersFund2.classe !== 'all') {
+            students = students.filter(s => s.classe === filtersFund2.classe);
+        }
+        const turnos = [...new Set(students.map(s => s.turno))].sort();
+        
+        return { classes, turnos };
+    }, [fundamental2, filtersFund2]);
+
     const filteredFund1 = useMemo(() => {
-        if (filterFund1 === 'all') return fundamental1;
-        return fundamental1.filter(s => s.serie === filterFund1);
-    }, [fundamental1, filterFund1]);
+        return fundamental1.filter(s => 
+            (filtersFund1.serie === 'all' || s.serie === filtersFund1.serie) &&
+            (filtersFund1.classe === 'all' || s.classe === filtersFund1.classe) &&
+            (filtersFund1.turno === 'all' || s.turno === filtersFund1.turno)
+        );
+    }, [fundamental1, filtersFund1]);
 
     const filteredFund2 = useMemo(() => {
-        if (filterFund2 === 'all') return fundamental2;
-        return fundamental2.filter(s => s.serie === filterFund2);
-    }, [fundamental2, filterFund2]);
+        return fundamental2.filter(s => 
+            (filtersFund2.serie === 'all' || s.serie === filtersFund2.serie) &&
+            (filtersFund2.classe === 'all' || s.classe === filtersFund2.classe) &&
+            (filtersFund2.turno === 'all' || s.turno === filtersFund2.turno)
+        );
+    }, [fundamental2, filtersFund2]);
 
     return (
         <Tabs defaultValue="fund1" className="w-full">
@@ -197,32 +236,56 @@ export default function StudentRankingView() {
                 <TabsTrigger value="fund2">6º ao 9º Ano</TabsTrigger>
             </TabsList>
             <TabsContent value="fund1" className="mt-6 space-y-4">
-                <div className="w-full sm:w-64">
-                    <Select value={filterFund1} onValueChange={setFilterFund1}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Filtrar por série..." />
-                        </SelectTrigger>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    <Select value={filtersFund1.serie} onValueChange={v => setFiltersFund1({ serie: v, classe: 'all', turno: 'all' })}>
+                        <SelectTrigger><SelectValue placeholder="Filtrar por série..." /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Todas as Séries (3º ao 5º)</SelectItem>
                             {seriesFund1.map(serie => <SelectItem key={serie} value={serie}>{serie}</SelectItem>)}
                         </SelectContent>
                     </Select>
+                    <Select value={filtersFund1.classe} onValueChange={v => setFiltersFund1(f => ({...f, classe: v, turno: 'all'}))} disabled={filtersFund1.serie === 'all'}>
+                        <SelectTrigger><SelectValue placeholder="Filtrar por turma..." /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todas as Turmas</SelectItem>
+                            {filterOptionsFund1.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <Select value={filtersFund1.turno} onValueChange={v => setFiltersFund1(f => ({...f, turno: v}))} disabled={filtersFund1.classe === 'all'}>
+                        <SelectTrigger><SelectValue placeholder="Filtrar por turno..." /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos os Turnos</SelectItem>
+                             {filterOptionsFund1.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
                 </div>
-                <RankingTable title={`Ranking Fundamental I ${filterFund1 !== 'all' ? `(${filterFund1})` : ''}`} students={filteredFund1} isLoading={isLoading} />
+                <RankingTable title="Ranking Fundamental I" students={filteredFund1} isLoading={isLoading} />
             </TabsContent>
             <TabsContent value="fund2" className="mt-6 space-y-4">
-                <div className="w-full sm:w-64">
-                    <Select value={filterFund2} onValueChange={setFilterFund2}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Filtrar por série..." />
-                        </SelectTrigger>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    <Select value={filtersFund2.serie} onValueChange={v => setFiltersFund2({ serie: v, classe: 'all', turno: 'all' })}>
+                        <SelectTrigger><SelectValue placeholder="Filtrar por série..." /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Todas as Séries (6º ao 9º)</SelectItem>
                             {seriesFund2.map(serie => <SelectItem key={serie} value={serie}>{serie}</SelectItem>)}
                         </SelectContent>
                     </Select>
+                     <Select value={filtersFund2.classe} onValueChange={v => setFiltersFund2(f => ({...f, classe: v, turno: 'all'}))} disabled={filtersFund2.serie === 'all'}>
+                        <SelectTrigger><SelectValue placeholder="Filtrar por turma..." /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todas as Turmas</SelectItem>
+                            {filterOptionsFund2.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <Select value={filtersFund2.turno} onValueChange={v => setFiltersFund2(f => ({...f, turno: v}))} disabled={filtersFund2.classe === 'all'}>
+                        <SelectTrigger><SelectValue placeholder="Filtrar por turno..." /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos os Turnos</SelectItem>
+                             {filterOptionsFund2.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
                 </div>
-                <RankingTable title={`Ranking Fundamental II ${filterFund2 !== 'all' ? `(${filterFund2})` : ''}`} students={filteredFund2} isLoading={isLoading} />
+                <RankingTable title="Ranking Fundamental II" students={filteredFund2} isLoading={isLoading} />
             </TabsContent>
         </Tabs>
     );
