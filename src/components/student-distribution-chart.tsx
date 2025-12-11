@@ -69,7 +69,6 @@ export default function StudentDistributionChart({ students, isLoading, onDrilld
                     return {
                         name: className,
                         Matriculados: classCount[className],
-                        Capacidade: capacity,
                         "Capacidade +10%": Math.floor(capacity * 1.1),
                     }
                 })
@@ -96,7 +95,6 @@ export default function StudentDistributionChart({ students, isLoading, onDrilld
                     return {
                         name: serie,
                         Matriculados: seriesCount[serie].count,
-                        Capacidade: totalCapacity,
                         "Capacidade +10%": Math.floor(totalCapacity * 1.1)
                     }
                 })
@@ -169,9 +167,7 @@ export default function StudentDistributionChart({ students, isLoading, onDrilld
                 />
                 <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                 
-                <Bar dataKey="Capacidade +10%" stackId="capacity" fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} barSize={40} />
-                <Bar dataKey="Capacidade" stackId="capacity" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
-
+                <Bar dataKey="Capacidade +10%" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} barSize={40} />
                 <Bar dataKey="Matriculados" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} barSize={40}>
                     <LabelList 
                         dataKey="Matriculados" 
