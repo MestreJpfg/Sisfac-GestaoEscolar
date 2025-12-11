@@ -29,6 +29,7 @@ const CustomLabel = (props: any) => {
 };
 
 const getCapacityForSerie = (serieName: string): number => {
+    if (!serieName) return 0;
     const upperCaseSerie = serieName.toUpperCase();
     if (upperCaseSerie.includes('INFANTIL IV') || upperCaseSerie.includes('INFANTIL V') || upperCaseSerie === '1º ANO') return 20;
     if (upperCaseSerie === '2º ANO') return 25;
@@ -59,11 +60,14 @@ export default function StudentDistributionChart({ students, isLoading, onDrilld
                 acc[key] = (acc[key] || 0) + 1;
                 return acc;
             }, {} as { [key: string]: number });
+            
+            const capacityForDrilledSerie = getCapacityForSerie(drilledSerie);
 
             return Object.keys(classCount)
                 .map(className => ({
                     name: className,
                     Matriculados: classCount[className],
+                    Capacidade: capacityForDrilledSerie,
                 }))
                 .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 
@@ -72,16 +76,24 @@ export default function StudentDistributionChart({ students, isLoading, onDrilld
                 .filter(student => student.serie) 
                 .reduce((acc, student) => {
                     const serie = student.serie;
-                    acc[serie] = (acc[serie] || 0) + 1;
+                    if (!acc[serie]) {
+                        acc[serie] = { count: 0, classes: new Set() };
+                    }
+                    acc[serie].count++;
+                    acc[serie].classes.add(`${student.classe}-${student.turno}`);
                     return acc;
-                }, {} as { [key: string]: number });
+                }, {} as { [key: string]: { count: number, classes: Set<string> } });
 
             return Object.keys(seriesCount)
-                .map(serie => ({
-                    name: serie,
-                    Matriculados: seriesCount[serie],
-                    Capacidade: getCapacityForSerie(serie)
-                }))
+                .map(serie => {
+                    const numClasses = seriesCount[serie].classes.size;
+                    const capacityPerClass = getCapacityForSerie(serie);
+                    return {
+                        name: serie,
+                        Matriculados: seriesCount[serie].count,
+                        Capacidade: capacityPerClass * numClasses
+                    }
+                })
                 .sort((a, b) => {
                     const numA = getSeriesNumber(a.name);
                     const numB = getSeriesNumber(b.name);
@@ -151,9 +163,7 @@ export default function StudentDistributionChart({ students, isLoading, onDrilld
                 />
                 <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                 
-                {!drilledSerie && (
-                    <Bar dataKey="Capacidade" fill="hsl(var(--chart-2) / 0.6)" radius={[4, 4, 0, 0]} />
-                )}
+                <Bar dataKey="Capacidade" fill="hsl(var(--chart-2) / 0.6)" radius={[4, 4, 0, 0]} />
 
                 <Bar dataKey="Matriculados" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]}>
                     <LabelList 
