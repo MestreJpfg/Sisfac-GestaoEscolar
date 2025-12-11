@@ -6,7 +6,7 @@ import { useState, useMemo, useEffect } from 'react';
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
-import { ClipboardList, X, Loader2, Download, Filter, BookCheck, Columns, Grid3x3, Heading, Palette, TrendingUp } from 'lucide-react';
+import { ClipboardList, X, Loader2, Download, Filter, BookCheck, Columns, Grid3x3, Heading, Palette, TrendingUp, Award } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -72,6 +72,7 @@ export default function ClassListGenerator() {
   // Styling state
   const [headerColor, setHeaderColor] = useState('#e6e6e6');
   const [useAlternateRowColors, setUseAlternateRowColors] = useState(true);
+  const [oneClassPerPage, setOneClassPerPage] = useState(false);
 
 
   const [filters, setFilters] = useState({
@@ -302,40 +303,45 @@ export default function ClassListGenerator() {
     }
   };
 
-  const calculateAverage = (boletim: any): number => {
+  const calculateAverage = (student: any): number => {
+    const boletim = student?.boletim;
     if (!boletim || typeof boletim !== 'object') {
       return 0;
     }
   
     const disciplineKeys = Object.keys(boletim);
-    const allSubjectAverages: number[] = [];
+    const subjectAverages: number[] = [];
   
     disciplineKeys.forEach(key => {
-        const disciplina = boletim[key];
-        if (disciplina && typeof disciplina === 'object') {
-            
-            const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
-            const validEtapaGrades = etapaGrades.map(g => {
-                if (g === null || g === undefined || String(g).trim() === '') return null;
-                // Standardize comma to dot and parse as float
-                const numericGrade = parseFloat(String(g).replace(',', '.'));
-                return isNaN(numericGrade) ? null : numericGrade;
-            }).filter((g): g is number => g !== null);
-  
-            if (validEtapaGrades.length > 0) {
-                const subjectAverage = validEtapaGrades.reduce((sum, grade) => sum + grade, 0) / validEtapaGrades.length;
-                allSubjectAverages.push(subjectAverage);
-            }
+      const disciplina = boletim[key];
+      if (disciplina && typeof disciplina === 'object') {
+        const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
+        
+        const validGrades = etapaGrades.map(g => {
+            if (g === null || g === undefined || String(g).trim() === '') return null;
+            const numericGrade = parseFloat(String(g).replace(',', '.'));
+            return isNaN(numericGrade) ? null : numericGrade;
+        }).filter((g): g is number => g !== null);
+
+        if (validGrades.length > 0) {
+            const subjectAverage = validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length;
+            subjectAverages.push(subjectAverage);
         }
+      }
     });
   
-    if (allSubjectAverages.length === 0) {
-        return 0;
-    }
-  
-    const overallSum = allSubjectAverages.reduce((acc, curr) => acc + curr, 0);
-    return overallSum / allSubjectAverages.length;
+    if (subjectAverages.length === 0) return 0;
+    
+    const overallSum = subjectAverages.reduce((acc, curr) => acc + curr, 0);
+    return overallSum / subjectAverages.length;
   };
+
+  const getMedal = (index: number) => {
+    if (index === 0) return '🥇';
+    if (index === 1) return '🥈';
+    if (index === 2) return '🥉';
+    return `${index + 1}º`;
+  }
 
   const handleDownloadWithAverages = async () => {
     if (students.length === 0) return;
@@ -344,58 +350,88 @@ export default function ClassListGenerator() {
     try {
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
         
-        // Calculate averages and sort students
-        const studentsWithAverages = students.map(student => ({
-            ...student,
-            average: calculateAverage(student.boletim)
-        })).sort((a, b) => b.average - a.average);
+        const processStudentGroup = (studentList: any[], isFirstPage: boolean) => {
+            const studentsWithAverages = studentList.map(student => ({
+                ...student,
+                average: calculateAverage(student)
+            })).sort((a, b) => b.average - a.average);
 
-        const studentChunks = chunk(studentsWithAverages, 39);
+            const studentChunks = chunk(studentsWithAverages, 39);
 
-        for (let i = 0; i < studentChunks.length; i++) {
-            const pageStudents = studentChunks[i];
-            if (i > 0) {
-                doc.addPage();
-            }
-            
-            const tableData = pageStudents.map((student, index) => {
-                return [
-                    (i * 39) + index + 1,
-                    student.nome,
-                    student.average > 0 ? student.average.toFixed(2).replace('.', ',') : '-'
+            for (let i = 0; i < studentChunks.length; i++) {
+                const pageStudents = studentChunks[i];
+                if (i > 0 || !isFirstPage) {
+                    doc.addPage();
+                }
+                
+                const tableData = pageStudents.map((student, index) => {
+                    const globalIndex = (i * 39) + index;
+                    return [
+                        getMedal(globalIndex),
+                        student.nome,
+                        student.average > 0 ? student.average.toFixed(2).replace('.', ',') : '-'
+                    ];
+                });
+                
+                const studentSample = pageStudents[0] || {};
+                const dynamicTitleParts = [
+                    'Lista de Alunos com Média Final',
+                    studentSample.ensino,
+                    studentSample.serie,
+                    studentSample.classe,
+                    studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
                 ];
-            });
+                const dynamicTitle = dynamicTitleParts.filter(Boolean).join(' ');
+                const finalTitle = customTitle.trim() ? `${customTitle.trim()} - ${dynamicTitle}` : dynamicTitle;
+                
+                autoTable(doc, {
+                    head: [['Pos.', 'Nome do Aluno', 'Média Final']],
+                    body: tableData,
+                    didDrawPage: (data) => {
+                        doc.setFontSize(10);
+                        doc.setFont('helvetica', 'bold');
+                        doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
+                        doc.setFontSize(9);
+                        doc.setFont('helvetica', 'normal');
+                        doc.text(finalTitle, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+                    },
+                    styles: { fontSize: 8, cellPadding: 1.5, halign: 'center' },
+                    headStyles: { fillColor: headerColor, textColor: [40, 40, 40], fontStyle: 'bold' },
+                    alternateRowStyles: { fillColor: useAlternateRowColors ? getLightAlternateColor(headerColor) : false },
+                    columnStyles: {
+                        0: { cellWidth: 15, halign: 'center' },
+                        1: { cellWidth: 'auto', halign: 'left' },
+                        2: { cellWidth: 25, halign: 'center' },
+                    },
+                    margin: { top: 20, right: 10, bottom: 10, left: 10 },
+                });
+
+                if (i === 0) isFirstPage = false;
+            }
+            return isFirstPage;
+        };
+
+        if (oneClassPerPage) {
+            const groupedStudents = students.reduce((acc, student) => {
+                const key = `${student.ensino || 'S/E'}|${student.serie || 'S/S'}|${student.classe || 'S/C'}|${student.turno || 'S/T'}`;
+                if (!acc[key]) acc[key] = [];
+                acc[key].push(student);
+                return acc;
+            }, {} as { [key: string]: any[] });
             
-            const studentSample = pageStudents[0] || {};
-            const dynamicTitleParts = [
-                'Lista de Alunos com Média Final',
-                studentSample.ensino,
-                studentSample.serie,
-                studentSample.classe,
-                studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
-            ];
-            const dynamicTitle = dynamicTitleParts.filter(Boolean).join(' ');
-            const finalTitle = customTitle.trim() ? `${customTitle.trim()} - ${dynamicTitle}` : dynamicTitle;
-            
-            autoTable(doc, {
-                head: [['Pos.', 'Nome do Aluno', 'Média Final']],
-                body: tableData,
-                didDrawPage: (data) => {
-                    doc.setFontSize(10);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
-                    
-                    doc.setFontSize(9);
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(finalTitle, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
-                },
-                styles: { fontSize: 8, cellPadding: 1.5 },
-                headStyles: { fillColor: headerColor, textColor: [40, 40, 40], fontStyle: 'bold' },
-                alternateRowStyles: { fillColor: useAlternateRowColors ? getLightAlternateColor(headerColor) : false },
-                margin: { top: 20, right: 10, bottom: 10, left: 10 },
-            });
+            let isFirstGroup = true;
+            for (const groupKey in groupedStudents) {
+                if (!isFirstGroup) {
+                    doc.addPage();
+                }
+                processStudentGroup(groupedStudents[groupKey], true);
+                isFirstGroup = false;
+            }
+
+        } else {
+            processStudentGroup(students, true);
         }
-        
+
         const fileName = `Lista_com_Medias_${filters.serie || 'Geral'}.pdf`.replace(/ /g, '_');
         doc.save(fileName);
 
@@ -406,6 +442,7 @@ export default function ClassListGenerator() {
         setIsDownloadingAverages(false);
     }
   };
+
 
   const handleDownloadGrid = async () => {
     if (students.length === 0) return;
@@ -769,6 +806,14 @@ export default function ClassListGenerator() {
                                                 onCheckedChange={setUseAlternateRowColors}
                                             />
                                             <Label htmlFor="alternate-rows">Cores de linha alternadas</Label>
+                                        </div>
+                                         <div className="flex items-center space-x-2">
+                                            <Switch 
+                                                id="one-class-per-page" 
+                                                checked={oneClassPerPage}
+                                                onCheckedChange={setOneClassPerPage}
+                                            />
+                                            <Label htmlFor="one-class-per-page">Uma turma por página (apenas para lista com médias)</Label>
                                         </div>
                                     </AccordionContent>
                                 </AccordionItem>
