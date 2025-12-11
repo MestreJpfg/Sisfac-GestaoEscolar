@@ -64,11 +64,15 @@ export default function StudentDistributionChart({ students, isLoading, onDrilld
             const capacityForDrilledSerie = getCapacityForSerie(drilledSerie);
 
             return Object.keys(classCount)
-                .map(className => ({
-                    name: className,
-                    Matriculados: classCount[className],
-                    Capacidade: capacityForDrilledSerie,
-                }))
+                .map(className => {
+                    const capacity = capacityForDrilledSerie;
+                    return {
+                        name: className,
+                        Matriculados: classCount[className],
+                        Capacidade: capacity,
+                        "Capacidade +10%": Math.floor(capacity * 1.1),
+                    }
+                })
                 .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 
         } else {
@@ -88,10 +92,12 @@ export default function StudentDistributionChart({ students, isLoading, onDrilld
                 .map(serie => {
                     const numClasses = seriesCount[serie].classes.size;
                     const capacityPerClass = getCapacityForSerie(serie);
+                    const totalCapacity = capacityPerClass * numClasses;
                     return {
                         name: serie,
                         Matriculados: seriesCount[serie].count,
-                        Capacidade: capacityPerClass * numClasses
+                        Capacidade: totalCapacity,
+                        "Capacidade +10%": Math.floor(totalCapacity * 1.1)
                     }
                 })
                 .sort((a, b) => {
@@ -163,6 +169,7 @@ export default function StudentDistributionChart({ students, isLoading, onDrilld
                 />
                 <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                 
+                <Bar dataKey="Capacidade +10%" fill="hsl(var(--chart-3) / 0.5)" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Capacidade" fill="hsl(var(--chart-2) / 0.6)" radius={[4, 4, 0, 0]} />
 
                 <Bar dataKey="Matriculados" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]}>
