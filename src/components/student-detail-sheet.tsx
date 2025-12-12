@@ -18,7 +18,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import StudentDeclaration from "./student-declaration";
 import StudentTransferDeclaration from "./student-transfer-declaration";
 import StudentEditDialog from "./student-edit-dialog";
-import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Loader2, Share2, Pencil, Printer, MapPin, BookCheck, Award } from "lucide-react";
+import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Loader2, Share2, Pencil, Printer, MapPin, BookCheck, Award, GraduationCap } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
@@ -30,6 +30,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import ReportCardWithDeclaration from "./report-card-with-declaration";
 import ReportCardDetailed from "./report-card-detailed";
 import ReportCardGrid from "./report-card-grid";
+import StudentTranscript from "./student-transcript";
+
 
 const formatPhoneNumber = (phone: string): string => {
   const cleaned = ('' + phone).replace(/\D/g, '');
@@ -42,7 +44,7 @@ const formatPhoneNumber = (phone: string): string => {
   return phone; // Return original if not a valid length
 };
 
-type PdfType = 'declaration' | 'transfer' | 'declarationWithReport' | 'detailedReport' | 'compact' | 'grid';
+type PdfType = 'declaration' | 'transfer' | 'declarationWithReport' | 'detailedReport' | 'compact' | 'grid' | 'transcript';
 
 interface StudentDetailSheetProps {
   student: any | null;
@@ -145,7 +147,7 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
       )
       .map(s => ({
         id: s.id,
-        average: calculateAverage(s.boletim)
+        average: calculateAverage(s.boletim?.[new Date().getFullYear()])
       }))
       .filter(s => s.average > 0)
       .sort((a, b) => b.average - a.average);
@@ -196,6 +198,8 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
     
     let componentToRender;
     let pdfOptions: any = { orientation: 'p', unit: 'mm', format: 'a4' };
+    const currentYear = new Date().getFullYear();
+    const currentBoletim = student.boletim?.[currentYear] || {};
     
     switch (type) {
         case 'declaration':
@@ -205,10 +209,10 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
             componentToRender = <StudentTransferDeclaration student={student} />;
             break;
         case 'declarationWithReport':
-            componentToRender = <ReportCardWithDeclaration student={student} boletim={student.boletim || {}} />;
+            componentToRender = <ReportCardWithDeclaration student={student} boletim={currentBoletim} />;
             break;
         case 'detailedReport':
-            componentToRender = <ReportCardDetailed student={student} boletim={student.boletim || {}} ranking={classRanking} />;
+            componentToRender = <ReportCardDetailed student={student} boletim={currentBoletim} ranking={classRanking} />;
             break;
         case 'compact':
              componentToRender = <ReportCardGrid students={[student]} />;
@@ -217,6 +221,9 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
         case 'grid':
              componentToRender = <ReportCardGrid students={[student, student, student, student]} />;
              pdfOptions.orientation = 'l';
+             break;
+        case 'transcript':
+             componentToRender = <StudentTranscript student={student} />;
              break;
         default:
             return null;
@@ -277,6 +284,7 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
         case 'detailedReport': fileName = `Boletim_Detalhado_${student.nome.replace(/\s+/g, '_')}.pdf`; break;
         case 'compact': fileName = `Boletim_Compacto_${student.nome.replace(/\s+/g, '_')}.pdf`; break;
         case 'grid': fileName = `Boletim_Grade_${student.nome.replace(/\s+/g, '_')}.pdf`; break;
+        case 'transcript': fileName = `Historico_Escolar_${student.nome.replace(/\s+/g, '_')}.pdf`; break;
         default: fileName = `Documento_${student.nome.replace(/\s+/g, '_')}.pdf`;
       }
       
@@ -324,6 +332,10 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
       case 'grid':
         fileName = `Boletim_Grade_${student.nome.replace(/\s+/g, '_')}.pdf`;
         title = `Boletim em Grade - ${student.nome}`;
+        break;
+      case 'transcript':
+        fileName = `Historico_Escolar_${student.nome.replace(/\s+/g, '_')}.pdf`;
+        title = `Histórico Escolar - ${student.nome}`;
         break;
       default:
         fileName = `Documento_${student.nome.replace(/\s+/g, '_')}.pdf`;
@@ -380,6 +392,9 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
   const address = parseAddress(student.endereco);
   
   const studentPhones = student.telefones || (student.telefone ? [student.telefone] : []);
+  const currentYear = new Date().getFullYear();
+  const currentBoletim = student.boletim?.[currentYear] || {};
+
 
   const studentDetails = [
     { label: "RM", value: student.rm, icon: Hash },
@@ -421,6 +436,7 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
   ];
 
   const hasBoletim = student.boletim && Object.keys(student.boletim).length > 0;
+  const hasCurrentYearBoletim = currentBoletim && Object.keys(currentBoletim).length > 0;
 
   return (
     <>
@@ -450,11 +466,11 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
                 <AccordionTrigger className="text-lg font-semibold text-foreground">Dados Acadêmicos</AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-4">
                   {academicDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                   {hasBoletim && (
+                   {hasCurrentYearBoletim && (
                     <div className="pt-2">
                         <Button onClick={() => setIsReportCardOpen(true)} variant="outline" className="w-full">
                             <BookCheck className="mr-2 h-4 w-4" />
-                            Visualizar Boletim
+                            Visualizar Boletim ({currentYear})
                         </Button>
                     </div>
                   )}
@@ -515,22 +531,25 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
                         </TooltipContent>
                     </Tooltip>
                     <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleGeneratePdf('transcript')} disabled={!hasBoletim}>
+                            <GraduationCap className="mr-2 h-4 w-4"/> Histórico Escolar
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleGeneratePdf('declaration')}>
                             Declaração de Matrícula
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleGeneratePdf('transfer')}>
                             Declaração de Transferência
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleGeneratePdf('declarationWithReport')} disabled={!hasBoletim}>
-                            Declaração com Boletim
+                        <DropdownMenuItem onClick={() => handleGeneratePdf('declarationWithReport')} disabled={!hasCurrentYearBoletim}>
+                            Declaração com Boletim ({currentYear})
                         </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleGeneratePdf('detailedReport')} disabled={!hasBoletim}>
-                            Boletim Detalhado
+                         <DropdownMenuItem onClick={() => handleGeneratePdf('detailedReport')} disabled={!hasCurrentYearBoletim}>
+                            Boletim Detalhado ({currentYear})
                         </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleGeneratePdf('compact')} disabled={!hasBoletim}>
+                         <DropdownMenuItem onClick={() => handleGeneratePdf('compact')} disabled={!hasCurrentYearBoletim}>
                             Boletim Compacto (1 por folha)
                         </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleGeneratePdf('grid')} disabled={!hasBoletim}>
+                         <DropdownMenuItem onClick={() => handleGeneratePdf('grid')} disabled={!hasCurrentYearBoletim}>
                             Boletim em Grade (4 por folha)
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -551,22 +570,25 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
                         </TooltipContent>
                     </Tooltip>
                     <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleShare('transcript')} disabled={!hasBoletim}>
+                           <GraduationCap className="mr-2 h-4 w-4"/> Histórico Escolar
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleShare('declaration')}>
                             Declaração de Matrícula
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleShare('transfer')}>
                             Declaração de Transferência
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleShare('declarationWithReport')} disabled={!hasBoletim}>
-                            Declaração com Boletim
+                        <DropdownMenuItem onClick={() => handleShare('declarationWithReport')} disabled={!hasCurrentYearBoletim}>
+                            Declaração com Boletim ({currentYear})
                         </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleShare('detailedReport')} disabled={!hasBoletim}>
-                            Boletim Detalhado
+                         <DropdownMenuItem onClick={() => handleShare('detailedReport')} disabled={!hasCurrentYearBoletim}>
+                            Boletim Detalhado ({currentYear})
                         </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleShare('compact')} disabled={!hasBoletim}>
+                         <DropdownMenuItem onClick={() => handleShare('compact')} disabled={!hasCurrentYearBoletim}>
                             Boletim Compacto (1 por folha)
                         </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleShare('grid')} disabled={!hasBoletim}>
+                         <DropdownMenuItem onClick={() => handleShare('grid')} disabled={!hasCurrentYearBoletim}>
                             Boletim em Grade (4 por folha)
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -577,11 +599,11 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
         </SheetContent>
       </Sheet>
       
-      {hasBoletim && (
+      {hasCurrentYearBoletim && (
         <StudentReportCardDialog
             isOpen={isReportCardOpen}
             onClose={() => setIsReportCardOpen(false)}
-            boletim={student.boletim}
+            boletim={currentBoletim}
             student={student}
         />
       )}

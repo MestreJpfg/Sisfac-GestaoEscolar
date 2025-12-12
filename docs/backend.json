@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "User": {
@@ -87,7 +86,13 @@
         "transporte_escolar": { "type": "boolean" },
         "carteira_estudante": { "type": "boolean" },
         "nee": { "type": ["string", "null"] },
-        "boletim": { "$ref": "#/entities/Boletim" }
+        "boletim": {
+          "type": "object",
+          "description": "A map where keys are the school year (e.g., '2024') and values are the student's report card for that year.",
+          "additionalProperties": {
+            "$ref": "#/entities/Boletim"
+          }
+        }
       },
        "required": ["id", "rm", "nome"]
     },
