@@ -56,16 +56,18 @@ export default function StudentReportCard({ boletim, isPrintMode = false, compac
   const processedBoletim = Object.entries(boletim)
     .filter(([disciplina]) => !['aluno', 'nome_do_aluno', 'matricula', 'rm', 'nome'].includes(disciplina.toLowerCase()))
     .map(([disciplina, notas]) => {
-      // **FIX:** Check if 'notas' is null or undefined before accessing its properties.
-      const etapaGrades = notas ? [notas.etapa1, notas.etapa2, notas.etapa3, notas.etapa4] : [null, null, null, null];
-      
-      const validGrades = etapaGrades.map(g => {
-          if (g === null || g === undefined || String(g).trim() === '') return null;
-          const numericGrade = parseFloat(String(g).replace(',', '.'));
-          return isNaN(numericGrade) ? null : numericGrade;
-      }).filter((g): g is number => g !== null);
+      const mediaCalculada = (() => {
+        if (!notas) return null;
+        const etapaGrades = [notas.etapa1, notas.etapa2, notas.etapa3, notas.etapa4];
+        const validGrades = etapaGrades.map(g => {
+            if (g === null || g === undefined || String(g).trim() === '') return null;
+            const numericGrade = parseFloat(String(g).replace(',', '.'));
+            return isNaN(numericGrade) ? null : numericGrade;
+        }).filter((g): g is number => g !== null);
 
-      const media = validGrades.length > 0 ? validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length : null;
+        return validGrades.length > 0 ? validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length : null;
+      })();
+
 
       const cleanedDisciplina = disciplina
           .replace(/_/g, ' ')
@@ -80,7 +82,7 @@ export default function StudentReportCard({ boletim, isPrintMode = false, compac
         etapa2: notas?.etapa2,
         etapa3: notas?.etapa3,
         etapa4: notas?.etapa4,
-        mediaFinal: notas?.mediaFinal ?? media,
+        mediaFinal: notas?.mediaFinal ?? mediaCalculada,
       };
   }).sort((a, b) => a.disciplina.localeCompare(b.disciplina));
 

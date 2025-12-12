@@ -34,6 +34,8 @@ export default function GradesManager() {
         turno: '',
     });
     const [selectedDiscipline, setSelectedDiscipline] = useState('');
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+
 
     // Data
     const [grades, setGrades] = useState<Grades>({});
@@ -43,6 +45,11 @@ export default function GradesManager() {
     const [isLoadingOptions, setIsLoadingOptions] = useState(true);
     const [studentsInClass, setStudentsInClass] = useState<any[]>([]);
     const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+
+    const availableYears = useMemo(() => {
+        const currentYear = new Date().getFullYear();
+        return Array.from({ length: 5 }, (_, i) => (currentYear - i).toString());
+    }, []);
 
 
     useEffect(() => {
@@ -83,16 +90,16 @@ export default function GradesManager() {
         if(filters.classe) filteredForOptions = filteredForOptions.filter(s => s.classe === filters.classe);
         const turnos = getUniqueValues('turno', filteredForOptions);
 
-        const disciplines = [...new Set(allStudents.flatMap(s => s.boletim ? Object.keys(s.boletim) : []))]
+        const disciplines = [...new Set(allStudents.flatMap(s => s.boletim && s.boletim[selectedYear] ? Object.keys(s.boletim[selectedYear]) : []))]
             .map(d => d.replace(/_/g, ' ').replace(/-/g, '/'))
             .sort((a, b) => a.localeCompare(b));
         
         return { ensinos, series, classes, turnos, disciplines };
-    }, [allStudents, filters]);
+    }, [allStudents, filters, selectedYear]);
     
     const isReadyToLoad = useMemo(() => {
-        return filters.ensino && filters.serie && filters.classe && filters.turno && selectedDiscipline;
-    }, [filters, selectedDiscipline]);
+        return filters.ensino && filters.serie && filters.classe && filters.turno && selectedDiscipline && selectedYear;
+    }, [filters, selectedDiscipline, selectedYear]);
 
 
     useEffect(() => {
@@ -119,10 +126,10 @@ export default function GradesManager() {
     }, [selectedDiscipline]);
 
     useEffect(() => {
-        if (sortedStudentsInClass && disciplineId) {
+        if (sortedStudentsInClass && disciplineId && selectedYear) {
             const newGrades: Grades = {};
             sortedStudentsInClass.forEach(student => {
-                const disciplineGrades = student.boletim?.[disciplineId];
+                const disciplineGrades = student.boletim?.[selectedYear]?.[disciplineId];
                 newGrades[student.id] = {
                     etapa1: disciplineGrades?.etapa1 ?? null,
                     etapa2: disciplineGrades?.etapa2 ?? null,
@@ -134,7 +141,7 @@ export default function GradesManager() {
         } else {
             setGrades({});
         }
-    }, [sortedStudentsInClass, disciplineId]);
+    }, [sortedStudentsInClass, disciplineId, selectedYear]);
 
     const handleFilterChange = (name: string, value: string) => {
         const newValue = value === 'all' ? '' : value;
@@ -183,7 +190,7 @@ export default function GradesManager() {
 
 
     const handleSaveChanges = async () => {
-        if (!firestore || !sortedStudentsInClass || !disciplineId || Object.keys(grades).length === 0) return;
+        if (!firestore || !sortedStudentsInClass || !disciplineId || !selectedYear || Object.keys(grades).length === 0) return;
     
         setIsSaving(true);
         
@@ -200,11 +207,11 @@ export default function GradesManager() {
                 const average = validGrades.length > 0 ? validGrades.reduce((a, b) => a + b, 0) / validGrades.length : null;
 
                 const updatePayload: { [key: string]: any } = {
-                    [`boletim.${disciplineId}.etapa1`]: studentGrades.etapa1,
-                    [`boletim.${disciplineId}.etapa2`]: studentGrades.etapa2,
-                    [`boletim.${disciplineId}.etapa3`]: studentGrades.etapa3,
-                    [`boletim.${disciplineId}.etapa4`]: studentGrades.etapa4,
-                    [`boletim.${disciplineId}.mediaFinal`]: average,
+                    [`boletim.${selectedYear}.${disciplineId}.etapa1`]: studentGrades.etapa1,
+                    [`boletim.${selectedYear}.${disciplineId}.etapa2`]: studentGrades.etapa2,
+                    [`boletim.${selectedYear}.${disciplineId}.etapa3`]: studentGrades.etapa3,
+                    [`boletim.${selectedYear}.${disciplineId}.etapa4`]: studentGrades.etapa4,
+                    [`boletim.${selectedYear}.${disciplineId}.mediaFinal`]: average !== null ? parseFloat(average.toFixed(1)) : null,
                 };
     
                 batch.update(studentDocRef, updatePayload);
@@ -241,7 +248,13 @@ export default function GradesManager() {
                             <Loader2 className="h-8 w-8 animate-spin text-primary" />
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                             <Select value={selectedYear} onValueChange={setSelectedYear}>
+                                <SelectTrigger><SelectValue placeholder="Ano Letivo..." /></SelectTrigger>
+                                <SelectContent>
+                                    {availableYears.map(y => <SelectItem key={y} value={y}>Ano de {y}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                             <Select value={filters.ensino} onValueChange={(v) => handleFilterChange('ensino', v)}>
                                 <SelectTrigger><SelectValue placeholder="Ensino..." /></SelectTrigger>
                                 <SelectContent>{uniqueFilterOptions.ensinos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
@@ -277,7 +290,7 @@ export default function GradesManager() {
                 ) : sortedStudentsInClass && sortedStudentsInClass.length > 0 ? (
                     <Card>
                         <CardHeader>
-                            <CardTitle>Lançamento de Notas: <span className="text-primary">{selectedDiscipline}</span></CardTitle>
+                            <CardTitle>Lançamento de Notas: <span className="text-primary">{selectedDiscipline} ({selectedYear})</span></CardTitle>
                             <CardDescription>
                                 Insira as notas para todas as etapas. A média final será calculada automaticamente.
                             </CardDescription>
@@ -377,4 +390,3 @@ export default function GradesManager() {
         </div>
     );
 }
-
