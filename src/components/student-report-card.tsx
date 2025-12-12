@@ -19,7 +19,7 @@ interface Boletim {
     etapa3?: number | null;
     etapa4?: number | null;
     mediaFinal?: number | null;
-  };
+  } | null; // Allow discipline entry to be null
 }
 
 interface StudentReportCardProps {
@@ -56,7 +56,9 @@ export default function StudentReportCard({ boletim, isPrintMode = false, compac
   const processedBoletim = Object.entries(boletim)
     .filter(([disciplina]) => !['aluno', 'nome_do_aluno', 'matricula', 'rm', 'nome'].includes(disciplina.toLowerCase()))
     .map(([disciplina, notas]) => {
-      const etapaGrades = [notas.etapa1, notas.etapa2, notas.etapa3, notas.etapa4];
+      // **FIX:** Check if 'notas' is null or undefined before accessing its properties.
+      const etapaGrades = notas ? [notas.etapa1, notas.etapa2, notas.etapa3, notas.etapa4] : [null, null, null, null];
+      
       const validGrades = etapaGrades.map(g => {
           if (g === null || g === undefined || String(g).trim() === '') return null;
           const numericGrade = parseFloat(String(g).replace(',', '.'));
@@ -74,8 +76,11 @@ export default function StudentReportCard({ boletim, isPrintMode = false, compac
       return {
         originalDisciplina: disciplina,
         disciplina: formattedDisciplina,
-        ...notas,
-        mediaFinal: notas.mediaFinal ?? media,
+        etapa1: notas?.etapa1,
+        etapa2: notas?.etapa2,
+        etapa3: notas?.etapa3,
+        etapa4: notas?.etapa4,
+        mediaFinal: notas?.mediaFinal ?? media,
       };
   }).sort((a, b) => a.disciplina.localeCompare(b.disciplina));
 
