@@ -227,7 +227,7 @@ export default function TranscriptPDFTemplate({ student }: TranscriptPDFTemplate
                     
                     <div className="flex justify-around w-full mt-8">
                         <div className="text-center w-48 relative">
-                             <div className="relative h-16 w-full -mb-10" style={{ right: '1cm' }}>
+                             <div className="relative h-16 w-full -mb-10" style={{ right: '0.5cm' }}>
                                 <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized />
                             </div>
                             <div className="border-t border-black w-full pt-1">
