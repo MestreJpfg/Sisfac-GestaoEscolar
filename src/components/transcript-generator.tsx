@@ -4,14 +4,13 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, getDocs, query, doc } from 'firebase/firestore';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, getDocs, query } from 'firebase/firestore';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { UserPlus, Search, Loader2, Save } from 'lucide-react';
+import { UserPlus, Search, Loader2 } from 'lucide-react';
 import TranscriptPDFTemplate from './transcript-pdf-template';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -71,10 +70,8 @@ export default function TranscriptGenerator() {
     };
 
     const handleCreateNew = () => {
-        const newRM = `HISTORICO_${Date.now()}`;
         setSelectedStudent({
-            id: newRM,
-            rm: newRM,
+            rm: `TEMPORARIO_${Date.now()}`,
             nome: '',
             data_nascimento: '',
             filiacao_1: '',
@@ -87,36 +84,6 @@ export default function TranscriptGenerator() {
         setSearchResults([]);
     };
     
-    const handleSaveTranscript = () => {
-        if (!firestore || !selectedStudent?.rm) {
-            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível salvar o histórico.' });
-            return;
-        }
-        
-        const docRef = doc(firestore, 'alunos', selectedStudent.rm);
-        
-        // Remove a flag de edição antes de salvar
-        const { isEditing, ...dataToSave } = selectedStudent;
-        
-        setDocumentNonBlocking(docRef, dataToSave, { merge: true });
-
-        toast({
-            title: 'Histórico Salvo!',
-            description: 'As alterações no histórico foram salvas com sucesso.',
-        });
-        
-        // Atualiza a lista de alunos localmente
-        setAllStudents(prev => {
-            const studentExists = prev.some(s => s.id === selectedStudent.id);
-            if(studentExists) {
-                return prev.map(s => s.id === selectedStudent.id ? dataToSave : s);
-            }
-            return [...prev, dataToSave];
-        });
-
-        setIsNewTranscript(false); // Sai do modo de criação/edição
-    };
-
     const handleGeneratePDF = async () => {
         if (!selectedStudent) return;
         setIsGenerating(true);
@@ -195,12 +162,6 @@ export default function TranscriptGenerator() {
                                 <CardDescription>Aluno: {selectedStudent.nome || "Novo Histórico"}</CardDescription>
                             </div>
                             <div className="flex items-center gap-2">
-                                {isNewTranscript && (
-                                     <Button onClick={handleSaveTranscript}>
-                                        <Save className="mr-2 h-4 w-4" />
-                                        Salvar Histórico
-                                    </Button>
-                                )}
                                 <Button onClick={handleGeneratePDF} disabled={isGenerating}>
                                     {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4"/>}
                                     Gerar PDF
