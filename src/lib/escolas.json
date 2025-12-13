@@ -1,0 +1,25 @@
+
+{
+  "escolas": [
+    { "nome": "E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES" },
+    { "nome": "E.M. DEPUTADO PAULO BENEVIDES" },
+    { "nome": "E.M. DOUTOR EDSON PILLEGI" },
+    { "nome": "E.M. PROFESSOR FRANCISCO DE ALMEIDA E SOUZA" },
+    { "nome": "E.M. SANTA TEREZA" },
+    { "nome": "E.M. PROFESSORA TEREZINHA DE JESUS" },
+    { "nome": "E.M. JOÃO PAULO II" },
+    { "nome": "E.M. PROFESSORA AÍDA BALTAZAR DE ARRUDA" },
+    { "nome": "E.M. PROFESSOR JOSÉ ARTHUR DE CARVALHO" },
+    { "nome": "E.M. PROFESSOR LUÍS DE FRANÇA" },
+    { "nome": "E.M. JOSÉ DE ALENCAR" },
+    { "nome": "E.M. RACHEL DE QUEIROZ" },
+    { "nome": "E.M. DOM HÉLDER CÂMARA" },
+    { "nome": "E.M. IRMÃ ZULMIRA" },
+    { "nome": "E.M. PRESIDENTE TANCREDO NEVES" },
+    { "nome": "E.M. FREI TITO DE ALENCAR LIMA" },
+    { "nome": "E.M. ANTONIO SALES" },
+    { "nome": "E.M. PROFESSORA BELARMINA CAMPOS" },
+    { "nome": "E.M. PREFEITO JOSÉ WALTER" },
+    { "nome": "E.M. PROFESSORA MARLENE MAIA" }
+  ]
+}

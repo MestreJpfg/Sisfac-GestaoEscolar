@@ -6,6 +6,7 @@ import { Input } from "./ui/input";
 import { cn } from "@/lib/utils";
 import React, { useState, useEffect, useRef } from "react";
 import { municipios } from "@/lib/municipios";
+import { escolas as escolasData } from "@/lib/escolas";
 import { Card, CardContent } from "./ui/card";
 
 interface TranscriptPDFTemplateProps {
@@ -138,23 +139,7 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
     const [activeAutocomplete, setActiveAutocomplete] = useState<{ index: number, field: string } | null>(null);
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const wrapperRef = useRef<HTMLDivElement>(null);
-
-    const schoolSuggestions = React.useMemo(() => {
-        if (!allStudents || allStudents.length === 0) return [];
-        const schoolSet = new Set<string>();
-        allStudents.forEach(s => {
-            if (s.boletim) {
-                Object.values(s.boletim).forEach((yearData: any) => {
-                    if (yearData?.info?.estabelecimento) {
-                        schoolSet.add(yearData.info.estabelecimento);
-                    }
-                });
-            }
-        });
-        return Array.from(schoolSet);
-    }, [allStudents]);
-
-
+    
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
@@ -191,7 +176,6 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
             });
         }
         
-        // Ensure empty fields if anoCivil is empty
         rows = rows.map(row => {
             if (!row.anoCivil) {
                 return { ...row, estabelecimento: '', municipioUF: '', resultado: '' };
@@ -222,15 +206,15 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
 
         if (value.length > 2) {
             let filteredSuggestions: string[] = [];
+            const searchLower = value.toLowerCase();
             if (field === 'municipioUF') {
-                const searchLower = value.toLowerCase();
                 filteredSuggestions = municipios
                     .map(m => `${m.nome}/${m.uf}`)
                     .filter(m => m.toLowerCase().includes(searchLower))
                     .slice(0, 5);
             } else if (field === 'estabelecimento') {
-                const searchLower = value.toLowerCase();
-                filteredSuggestions = schoolSuggestions
+                filteredSuggestions = escolasData.escolas
+                    .map(e => e.nome)
                     .filter(s => s.toLowerCase().includes(searchLower))
                     .slice(0, 5);
             }
