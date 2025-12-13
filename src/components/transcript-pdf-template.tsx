@@ -72,16 +72,11 @@ const GradeMatrix = ({ boletim }: { boletim: any }) => {
 
                     const formattedMedia = (mediaCalculada !== null && mediaCalculada !== undefined) ? mediaCalculada.toFixed(1).replace('.', ',') : '-';
                     
-                    // Match discipline key to display name, including special case for "Educação Física"
-                    const discDisplayName = disciplinasBase.find(d => {
-                        const lower_d = d.toLowerCase();
-                        const lower_discKey = discKey.toLowerCase();
-                        if (lower_d === 'educação física') {
-                           return lower_discKey === 'educacao_fisica';
-                        }
-                        return lower_d.replace(/ /g, '_') === lower_discKey ||
-                               lower_d.replace(/\//g, '-') === lower_discKey;
-                    });
+                    // Lógica de mapeamento flexível
+                    const cleanedDiscKey = discKey.replace(/_/g, ' ').replace(/-/g, '/');
+                    const discDisplayName = disciplinasBase.find(d => 
+                        d.toLowerCase() === cleanedDiscKey.toLowerCase()
+                    );
                     
                     if (discDisplayName) {
                         gradeData[discDisplayName][serieDoAno] = formattedMedia;
