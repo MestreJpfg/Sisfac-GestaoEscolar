@@ -19,6 +19,7 @@ const DetailItem = ({ label, value }: { label: string, value: React.ReactNode })
 
 // Normalization function to handle special characters
 const normalizeString = (str: string) => {
+    if (typeof str !== 'string') return '';
     return str
         .toLowerCase()
         .normalize("NFD")
@@ -240,5 +241,4 @@ export default function TranscriptPDFTemplate({ student }: TranscriptPDFTemplate
             </div>
         </div>
     );
-
-    
+}
