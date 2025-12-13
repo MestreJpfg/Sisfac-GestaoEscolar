@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -117,7 +118,12 @@ export default function GradesManager() {
 
 
     const disciplineId = useMemo(() => {
-        return selectedDiscipline.trim().replace(/\s+/g, '_').toLowerCase();
+      if (!selectedDiscipline) return '';
+      return selectedDiscipline
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^\w-]/g, ''); // Remove non-alphanumeric chars except underscore and hyphen
     }, [selectedDiscipline]);
 
     useEffect(() => {
