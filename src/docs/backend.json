@@ -127,7 +127,8 @@
                 "manage:grades",
                 "manage:attendance",
                 "manage:announcements",
-                "manage:cadastros"
+                "manage:cadastros",
+                "manage:transcript"
             ]
           },
           "description": "A list of permission keys granted to this profile."

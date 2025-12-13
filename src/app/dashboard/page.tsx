@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, doc, getCountFromServer, getDocs } from 'firebase/firestore';
-import { Loader2, Users, UserCog, Shield, Database, ClipboardList, Megaphone, CalendarCheck, ArrowLeft, NotebookText, Gamepad2, Award } from 'lucide-react';
+import { Loader2, Users, UserCog, Shield, Database, ClipboardList, Megaphone, CalendarCheck, ArrowLeft, NotebookText, Gamepad2, Award, FileText } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -79,6 +79,7 @@ export default function DashboardPage() {
   const canManageDatabase = useMemo(() => hasPermission('manage:database'), [userProfile, profileDetails, isPermissionsLoading]);
   const canViewGrades = useMemo(() => hasPermission('view:grades'), [userProfile, profileDetails, isPermissionsLoading]);
   const canManageGrades = useMemo(() => hasPermission('manage:grades'), [userProfile, profileDetails, isPermissionsLoading]);
+  const canManageTranscripts = useMemo(() => hasPermission('manage:transcript'), [userProfile, profileDetails, isPermissionsLoading]);
 
   useEffect(() => {
     const fetchCountsAndStudents = async () => {
@@ -213,6 +214,15 @@ export default function DashboardPage() {
                               description="Gerir comunicados para públicos específicos"
                               action={<Button onClick={() => router.push('/dashboard/announcements')}>Aceder</Button>}
                               />
+                          )}
+                          {canManageTranscripts && (
+                            <StatCard
+                                title="Histórico Escolar"
+                                value={"Gerador"}
+                                icon={FileText}
+                                description="Gerar históricos escolares completos"
+                                action={<Button onClick={() => router.push('/dashboard/transcript')}>Aceder</Button>}
+                            />
                           )}
                           {(canViewDatabase || canManageDatabase) && (
                             <StatCard
