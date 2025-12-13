@@ -17,8 +17,17 @@ const DetailItem = ({ label, value }: { label: string, value: React.ReactNode })
     );
 };
 
+// Normalization function to handle special characters
+const normalizeString = (str: string) => {
+    return str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Remove accents
+        .replace(/[^a-z0-9/]/g, ' '); // Keep letters, numbers, slash, and replace others with space
+};
+
+
 const GradeMatrix = ({ boletim }: { boletim: any }) => {
-    // Fixed list of disciplines to ensure order and completeness
     const disciplinasBase = [
         "Arte/Literatura",
         "Ciências",
@@ -35,7 +44,6 @@ const GradeMatrix = ({ boletim }: { boletim: any }) => {
 
     const gradeData: { [disciplina: string]: { [serie: string]: string } } = {};
 
-    // Initialize the data structure
     disciplinasBase.forEach(disc => {
         gradeData[disc] = {};
         anosSeries.forEach(serie => {
@@ -43,7 +51,6 @@ const GradeMatrix = ({ boletim }: { boletim: any }) => {
         });
     });
 
-    // Populate with student data
     if (boletim) {
         Object.keys(boletim).forEach(year => {
             const yearData = boletim[year];
@@ -72,10 +79,11 @@ const GradeMatrix = ({ boletim }: { boletim: any }) => {
 
                     const formattedMedia = (mediaCalculada !== null && mediaCalculada !== undefined) ? mediaCalculada.toFixed(1).replace('.', ',') : '-';
                     
-                    // Lógica de mapeamento flexível
-                    const cleanedDiscKey = discKey.replace(/_/g, ' ').replace(/-/g, '/');
+                    const cleanedDiscKey = discKey.replace(/_/g, ' ');
+                    const normalizedDiscKey = normalizeString(cleanedDiscKey);
+
                     const discDisplayName = disciplinasBase.find(d => 
-                        d.toLowerCase() === cleanedDiscKey.toLowerCase()
+                        normalizeString(d) === normalizedDiscKey
                     );
                     
                     if (discDisplayName) {
@@ -232,4 +240,5 @@ export default function TranscriptPDFTemplate({ student }: TranscriptPDFTemplate
             </div>
         </div>
     );
-}
+
+    
