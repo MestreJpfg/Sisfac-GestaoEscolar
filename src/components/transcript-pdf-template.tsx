@@ -21,9 +21,12 @@ const DetailItem = ({ label, value }: { label: string, value: React.ReactNode })
 const normalizeString = (str: string): string => {
     if (typeof str !== 'string') return '';
     return str.trim().toLowerCase()
-        .replace(/ç/g, 'c')
-        .replace(/ã/g, 'a')
-        .replace(/é/g, 'e')
+        .replace(/[ç]/g, 'c')
+        .replace(/[ãáâà]/g, 'a')
+        .replace(/[éêè]/g, 'e')
+        .replace(/[íìî]/g, 'i')
+        .replace(/[óôõò]/g, 'o')
+        .replace(/[úùû]/g, 'u')
         .replace(/º/g, '')
         .replace(/\./g, '')
         .replace(/\//g, '-')
@@ -85,13 +88,12 @@ const GradeMatrix = ({ boletim }: { boletim: any }) => {
                     const formattedMedia = (mediaCalculada !== null && mediaCalculada !== undefined) ? mediaCalculada.toFixed(1).replace('.', ',') : '-';
                     
                     const normalizedDiscKey = normalizeString(discKey);
-
                     const discDisplayName = disciplinasBase.find(d => 
                         normalizeString(d) === normalizedDiscKey
                     );
                     
-                    if (discDisplayName) {
-                        gradeData[discDisplayName][serieDoAno] = formattedMedia;
+                    if (discDisplayName && anosSeries.includes(serieDoAno)) {
+                         gradeData[discDisplayName][serieDoAno] = formattedMedia;
                     }
                 });
             }
@@ -172,6 +174,12 @@ export default function TranscriptPDFTemplate({ student }: TranscriptPDFTemplate
                     <DetailItem label="Mãe" value={student.filiacao_1} />
                     <DetailItem label="Pai" value={student.filiacao_2} />
                 </section>
+                
+                {/* Notas e Frequência */}
+                <section className="my-4 space-y-4">
+                     <h2 className="text-sm font-bold text-center mb-2">NOTAS E FREQUÊNCIA POR ANO/SÉRIE</h2>
+                     <GradeMatrix boletim={student.boletim} />
+                </section>
 
                 {/* Trajetória Escolar */}
                 <section className="my-4">
@@ -210,12 +218,6 @@ export default function TranscriptPDFTemplate({ student }: TranscriptPDFTemplate
                     </table>
                 </section>
 
-                {/* Notas e Frequência */}
-                <section className="my-4 space-y-4">
-                     <h2 className="text-sm font-bold text-center mb-2">NOTAS E FREQUÊNCIA POR ANO/SÉRIE</h2>
-                     <GradeMatrix boletim={student.boletim} />
-                </section>
-                
                  {/* Rodapé */}
                  <footer className="flex flex-col items-center justify-center text-center pt-2 mt-auto text-[9px]">
                     <div className="text-center w-full mb-4">
