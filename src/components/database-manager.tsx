@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, getDocs, writeBatch, query } from 'firebase/firestore';
+import { collection, getDocs, writeBatch, query, doc, updateDoc, deleteField } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import FileUploaderSheet from './file-uploader-sheet';
 import GradesUploaderSheet from './grades-uploader-sheet';
@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from './ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Loader2, Upload, NotebookText, HardDriveDownload, Trash2, Users, Shield } from 'lucide-react';
+import { Loader2, Upload, NotebookText, HardDriveDownload, Trash2, Users, Shield, Sparkles } from 'lucide-react';
 import UserManager from './user-manager';
 import ProfileManager from './profile-manager';
 
@@ -21,6 +21,8 @@ export default function DatabaseManager() {
     const { toast } = useToast();
     const [isDeleting, setIsDeleting] = useState(false);
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+    const [isCleaning, setIsCleaning] = useState(false);
+    const [isCleanupAlertOpen, setIsCleanupAlertOpen] = useState(false);
     
     const onUploadSuccess = () => {
         toast({
@@ -74,6 +76,84 @@ export default function DatabaseManager() {
             setIsDeleteAlertOpen(false);
         }
     };
+
+    const handleCleanupOldBoletimStructure = async () => {
+        if (!firestore) {
+            toast({ variant: "destructive", title: "Erro de Conexão" });
+            return;
+        }
+
+        setIsCleaning(true);
+        toast({ title: "A iniciar limpeza...", description: "A verificar a estrutura dos boletins. Isto pode demorar." });
+
+        try {
+            const studentsCollection = collection(firestore, 'alunos');
+            const snapshot = await getDocs(query(studentsCollection));
+
+            if (snapshot.empty) {
+                toast({ title: "Nenhum aluno encontrado.", description: "A base de dados de alunos está vazia." });
+                setIsCleaning(false);
+                setIsCleanupAlertOpen(false);
+                return;
+            }
+
+            const batchSize = 500;
+            let fieldsCleanedCount = 0;
+            let studentsAffectedCount = 0;
+
+            for (let i = 0; i < snapshot.docs.length; i += batchSize) {
+                const batch = writeBatch(firestore);
+                const chunk = snapshot.docs.slice(i, i + batchSize);
+                
+                chunk.forEach(studentDoc => {
+                    const studentData = studentDoc.data();
+                    if (studentData.boletim && typeof studentData.boletim === 'object') {
+                        const boletimUpdates: { [key: string]: any } = {};
+                        let needsUpdate = false;
+                        
+                        Object.keys(studentData.boletim).forEach(key => {
+                            // Se a chave NÃO é um número de 4 dígitos (ou seja, não é um ano), marca para eliminação.
+                            if (!/^\d{4}$/.test(key)) {
+                                boletimUpdates[`boletim.${key}`] = deleteField();
+                                needsUpdate = true;
+                                fieldsCleanedCount++;
+                            }
+                        });
+
+                        if (needsUpdate) {
+                            batch.update(studentDoc.ref, boletimUpdates);
+                            studentsAffectedCount++;
+                        }
+                    }
+                });
+                await batch.commit();
+            }
+
+            if (studentsAffectedCount > 0) {
+                 toast({
+                    title: "Limpeza Concluída!",
+                    description: `Foram removidos ${fieldsCleanedCount} campos de ${studentsAffectedCount} alunos.`,
+                });
+            } else {
+                 toast({
+                    title: "Nenhuma Limpeza Necessária",
+                    description: "A estrutura dos boletins já está correta.",
+                });
+            }
+           
+
+        } catch (error: any) {
+            console.error("Error cleaning old boletim structure:", error);
+            toast({
+                variant: "destructive",
+                title: "Erro na Limpeza",
+                description: error.message || "Não foi possível concluir a limpeza. Tente novamente.",
+            });
+        } finally {
+            setIsCleaning(false);
+            setIsCleanupAlertOpen(false);
+        }
+    };
     
     return (
        <div className="space-y-6">
@@ -114,12 +194,16 @@ export default function DatabaseManager() {
                                 </CardFooter>
                             </Card>
 
-                             <Card className="border-destructive">
+                             <Card className="border-destructive/50">
                                 <CardHeader>
                                     <CardTitle className='flex items-center gap-2 text-destructive'><Trash2 /> Zona de Perigo</CardTitle>
-                                    <CardDescription>Ações permanentes que não podem ser desfeitas. Use com extrema cautela.</CardDescription>
+                                    <CardDescription>Ações permanentes que podem afetar a base de dados. Use com extrema cautela.</CardDescription>
                                 </CardHeader>
-                                <CardFooter>
+                                <CardFooter className="flex-col items-start gap-4">
+                                     <Button variant="destructive" onClick={() => setIsCleanupAlertOpen(true)} disabled={isCleaning}>
+                                        {isCleaning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                                        Limpar Estrutura Antiga de Boletins
+                                    </Button>
                                     <Button variant="destructive" onClick={() => setIsDeleteAlertOpen(true)} disabled={isDeleting}>
                                         {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                                         Apagar Base de Dados de Alunos
@@ -164,6 +248,25 @@ export default function DatabaseManager() {
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
                         <AlertDialogAction onClick={handleDeleteAllStudents} className="bg-destructive hover:bg-destructive/90">
                             Sim, apagar tudo
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={isCleanupAlertOpen} onOpenChange={setIsCleanupAlertOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmar Limpeza da Estrutura?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta ação irá percorrer todos os alunos e remover campos de notas antigos que não estejam organizados por ano (ex: "ciências", "matematica", etc. que estão diretamente dentro de "boletim").
+                            <br /><br />
+                            Campos como "2024", "2025" serão mantidos. Esta ação é <strong className="text-destructive">irreversível</strong> para os dados removidos.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleCleanupOldBoletimStructure} className="bg-destructive hover:bg-destructive/90">
+                            Sim, limpar estrutura
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
