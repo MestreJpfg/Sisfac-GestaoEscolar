@@ -29,6 +29,7 @@ const normalizeString = (str: string): string => {
       .replace(/º/g, '')
       .replace(/\./g, '')
       .replace(/[\/]/g, '-')
+      .replace(/[\[\]*~]/g, '')
       .replace(/\s+/g, '_');
 };
 
@@ -84,13 +85,12 @@ const GradeMatrix = ({ boletim }: { boletim: any }) => {
                     const formattedMedia = (mediaCalculada !== null && mediaCalculada !== undefined) ? mediaCalculada.toFixed(1).replace('.', ',') : '-';
                     
                     const normalizedDiscKey = normalizeString(discKey);
+                    const normalizedDisciplinasBase = disciplinasBase.map(d => ({original: d, normalized: normalizeString(d)}));
                     
-                    const discDisplayName = disciplinasBase.find(d => 
-                        normalizeString(d) === normalizedDiscKey
-                    );
+                    const foundDisciplina = normalizedDisciplinasBase.find(d => d.normalized === normalizedDiscKey);
                     
-                    if (discDisplayName && anosSeries.includes(serieDoAno)) {
-                         gradeData[discDisplayName][serieDoAno] = formattedMedia;
+                    if (foundDisciplina && anosSeries.includes(serieDoAno)) {
+                         gradeData[foundDisciplina.original][serieDoAno] = formattedMedia;
                     }
                 });
             }
@@ -237,7 +237,7 @@ export default function TranscriptPDFTemplate({ student }: TranscriptPDFTemplate
                             </div>
                         </div>
                         <div className="text-center w-48 relative">
-                             <div className="relative h-16 w-full -mb-10" style={{ left: '-0.5cm', bottom: '0.5cm' }}>
+                             <div className="relative h-16 w-full -mb-10" style={{ left: '-0.5cm', bottom: '0.2cm' }}>
                                 <Image src="/assinatura2.png" alt="Segunda Assinatura" layout="fill" objectFit="contain" unoptimized />
                             </div>
                              <div className="border-t border-black w-full pt-1">
