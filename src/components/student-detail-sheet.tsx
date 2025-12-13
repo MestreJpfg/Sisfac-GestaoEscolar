@@ -82,16 +82,16 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, lab
   );
 };
 
-const calculateAverage = (boletim: any): number => {
-    if (!boletim || typeof boletim !== 'object') {
+const calculateAverage = (boletimAno: any): number => {
+    if (!boletimAno || typeof boletimAno !== 'object') {
         return 0;
     }
 
-    const disciplineKeys = Object.keys(boletim);
+    const disciplineKeys = Object.keys(boletimAno);
     const allSubjectAverages: number[] = [];
 
     disciplineKeys.forEach(key => {
-        const disciplina = boletim[key];
+        const disciplina = boletimAno[key];
         if (disciplina && typeof disciplina === 'object') {
             const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
             const validEtapaGrades = etapaGrades.map(g => {
