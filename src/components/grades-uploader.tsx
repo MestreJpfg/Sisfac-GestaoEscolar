@@ -9,7 +9,7 @@ import { UploadCloud, FileCheck2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { useFirestore } from "@/firebase";
-import { writeBatch, doc } from "firebase/firestore";
+import { writeBatch, doc, collection } from "firebase/firestore";
 import { commitBatchNonBlocking } from "@/firebase/non-blocking-updates";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Label } from "./ui/label";
@@ -108,7 +108,7 @@ export default function GradesUploader() {
           .replace(/\s+/g, '_')
     );
     const rmIndex = headers.findIndex(h => h === 'matricula' || h === 'rm');
-    const nameIndex = headers.findIndex(h => h === 'nome' || h === 'nome_do_aluno');
+    const nameIndex = headers.findIndex(h => h === 'nome' || h === 'nome_do_aluno' || h === 'aluno');
 
     if (rmIndex === -1) {
         throw new Error("A coluna 'Matrícula' ou 'RM' é obrigatória na planilha de notas.");
@@ -128,7 +128,7 @@ export default function GradesUploader() {
         const gradeUpdate: { [key: string]: any } = {};
 
         headers.forEach((header, index) => {
-            if (index === rmIndex || index === nameIndex) return;
+            if (index === rmIndex || index === nameIndex || !header) return;
 
             const subject = header;
             const gradeValue = row[index];
