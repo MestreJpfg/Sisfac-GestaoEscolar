@@ -326,9 +326,12 @@ export default function ClassListGenerator() {
     disciplineKeys.forEach(key => {
         const disciplina = boletimAno.notas[key];
         if (disciplina && typeof disciplina === 'object') {
-            const mediaFinal = disciplina.mediaFinal;
-            if (mediaFinal !== null && mediaFinal !== undefined && !isNaN(mediaFinal)) {
-                allSubjectAverages.push(mediaFinal);
+            const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
+            const validGrades = etapaGrades.filter(g => g !== null && g !== undefined && !isNaN(g));
+            
+            if (validGrades.length > 0) {
+                const subjectAverage = validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length;
+                allSubjectAverages.push(subjectAverage);
             }
         }
     });
