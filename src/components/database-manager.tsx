@@ -98,34 +98,52 @@ export default function DatabaseManager() {
             }
 
             let studentsAffectedCount = 0;
-            const batchSize = 500;
+            const batchSize = 100; // Smaller batch size due to more complex operations per doc
+
             for (let i = 0; i < snapshot.docs.length; i += batchSize) {
                 const batch = writeBatch(firestore);
                 const chunk = snapshot.docs.slice(i, i + batchSize);
                 
                 chunk.forEach(studentDoc => {
                     const studentData = studentDoc.data();
-                    if (studentData.boletim) {
-                         batch.update(studentDoc.ref, { boletim: deleteField() });
-                         studentsAffectedCount++;
+                    let hasFieldsToDelete = false;
+                    const fieldsToDelete: { [key: string]: any } = {};
+
+                    // Find all top-level fields that start with "boletim."
+                    for (const key in studentData) {
+                        if (key.startsWith('boletim.')) {
+                            fieldsToDelete[key] = deleteField();
+                            hasFieldsToDelete = true;
+                        }
+                    }
+
+                    // Also check for a 'boletim' map field itself
+                    if ('boletim' in studentData) {
+                        fieldsToDelete['boletim'] = deleteField();
+                        hasFieldsToDelete = true;
+                    }
+
+                    if (hasFieldsToDelete) {
+                        batch.update(studentDoc.ref, fieldsToDelete);
+                        studentsAffectedCount++;
                     }
                 });
                 
-                if (chunk.length > 0) {
+                // Only commit if there are updates in the batch
+                if (studentsAffectedCount > (i / batchSize) * batchSize) {
                   await batch.commit();
                 }
             }
 
-
             if (studentsAffectedCount > 0) {
                  toast({
                     title: "Limpeza Concluída!",
-                    description: `O campo 'boletim' foi completamente removido de ${studentsAffectedCount} alunos, preparando para a reimportação.`,
+                    description: `Todos os dados de boletim foram removidos de ${studentsAffectedCount} alunos, preparando para a reimportação.`,
                 });
             } else {
                  toast({
                     title: "Nenhuma Limpeza Necessária",
-                    description: "Nenhum aluno tinha o campo 'boletim' para ser limpo.",
+                    description: "Nenhum aluno tinha campos de boletim para serem limpos.",
                 });
             }
            
@@ -243,11 +261,11 @@ export default function DatabaseManager() {
             <AlertDialog open={isCleanupAlertOpen} onOpenChange={setIsCleanupAlertOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Confirmar Limpeza da Estrutura?</AlertDialogTitle>
+                        <AlertDialogTitle>Confirmar Limpeza Completa dos Boletins?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Esta ação irá percorrer todos os alunos e <strong className="text-destructive">APAGARÁ</strong> todo o campo 'boletim' de cada um. Isto inclui tanto estruturas antigas como todos os dados de notas de todos os anos.
+                            Esta ação irá percorrer todos os alunos e <strong className="text-destructive">APAGARÁ</strong> todo o campo 'boletim', incluindo todos os dados de notas de todos os anos, para preparar a base de dados para uma reimportação limpa.
                             <br /><br />
-                            Use esta função para preparar a base de dados para uma reimportação limpa de todas as notas. A ação é <strong className="text-destructive">irreversível</strong>.
+                            A ação é <strong className="text-destructive">irreversível</strong>. Deseja continuar?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
