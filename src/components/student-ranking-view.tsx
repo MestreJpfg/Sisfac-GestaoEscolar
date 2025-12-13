@@ -21,30 +21,31 @@ interface RankedStudent {
   turno: string;
 }
 
-const calculateAverage = (boletimAno: any): number => {
-  if (!boletimAno || !boletimAno.notas || typeof boletimAno.notas !== 'object') {
-      return 0;
-  }
-
-  const disciplineKeys = Object.keys(boletimAno.notas);
-  const allSubjectAverages: number[] = [];
-
-  disciplineKeys.forEach(key => {
-      const disciplina = boletimAno.notas[key];
-      if (disciplina && typeof disciplina === 'object') {
-          const mediaFinal = disciplina.mediaFinal;
-          if (mediaFinal !== null && mediaFinal !== undefined && !isNaN(mediaFinal)) {
-              allSubjectAverages.push(mediaFinal);
-          }
-      }
-  });
-
-  if (allSubjectAverages.length === 0) {
-      return 0;
-  }
-
-  const overallSum = allSubjectAverages.reduce((acc, curr) => acc + curr, 0);
-  return overallSum / allSubjectAverages.length;
+const calculateAverage = (boletim: any, year: string): number => {
+    const boletimAno = boletim?.[year];
+    if (!boletimAno || !boletimAno.notas || typeof boletimAno.notas !== 'object') {
+        return 0;
+    }
+  
+    const disciplineKeys = Object.keys(boletimAno.notas);
+    const allSubjectAverages: number[] = [];
+  
+    disciplineKeys.forEach(key => {
+        const disciplina = boletimAno.notas[key];
+        if (disciplina && typeof disciplina === 'object') {
+            const mediaFinal = disciplina.mediaFinal;
+            if (mediaFinal !== null && mediaFinal !== undefined && !isNaN(mediaFinal)) {
+                allSubjectAverages.push(mediaFinal);
+            }
+        }
+    });
+  
+    if (allSubjectAverages.length === 0) {
+        return 0;
+    }
+  
+    const overallSum = allSubjectAverages.reduce((acc, curr) => acc + curr, 0);
+    return overallSum / allSubjectAverages.length;
 };
 
 const RankingTable = ({ title, students, isLoading }: { title: string, students: RankedStudent[], isLoading: boolean }) => (
@@ -142,7 +143,7 @@ export default function StudentRankingView() {
             const studentSerie = student.serie?.toUpperCase();
             if (!studentSerie) return;
 
-            const average = calculateAverage(student.boletim?.[currentYear]);
+            const average = calculateAverage(student.boletim, currentYear);
             if (average > 0) {
                 const rankedStudent: RankedStudent = {
                     id: student.id,
