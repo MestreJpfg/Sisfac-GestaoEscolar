@@ -112,12 +112,11 @@ export default function DatabaseManager() {
                         let needsUpdate = false;
                         
                         Object.keys(studentData.boletim).forEach(key => {
-                            // Se a chave NÃO é um número de 4 dígitos (ou seja, não é um ano), marca para eliminação.
-                            if (!/^\d{4}$/.test(key)) {
-                                boletimUpdates[`boletim.${key}`] = deleteField();
-                                needsUpdate = true;
-                                fieldsCleanedCount++;
-                            }
+                            // Se a chave NÃO é um número de 4 dígitos (ano), ou SE é um ano, marca para eliminação.
+                            // Isto limpa tanto a estrutura antiga como os dados dos anos existentes.
+                            boletimUpdates[`boletim.${key}`] = deleteField();
+                            needsUpdate = true;
+                            fieldsCleanedCount++;
                         });
 
                         if (needsUpdate) {
@@ -132,12 +131,12 @@ export default function DatabaseManager() {
             if (studentsAffectedCount > 0) {
                  toast({
                     title: "Limpeza Concluída!",
-                    description: `Foram removidos ${fieldsCleanedCount} campos de ${studentsAffectedCount} alunos.`,
+                    description: `Foram limpos ${fieldsCleanedCount} campos de ${studentsAffectedCount} alunos, preparando para a reimportação.`,
                 });
             } else {
                  toast({
                     title: "Nenhuma Limpeza Necessária",
-                    description: "A estrutura dos boletins já está correta.",
+                    description: "A estrutura dos boletins já está vazia ou correta.",
                 });
             }
            
@@ -202,7 +201,7 @@ export default function DatabaseManager() {
                                 <CardFooter className="flex-col items-start gap-4">
                                      <Button variant="destructive" onClick={() => setIsCleanupAlertOpen(true)} disabled={isCleaning}>
                                         {isCleaning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                                        Limpar Estrutura Antiga de Boletins
+                                        Limpar Estrutura de Boletins
                                     </Button>
                                     <Button variant="destructive" onClick={() => setIsDeleteAlertOpen(true)} disabled={isDeleting}>
                                         {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
@@ -258,9 +257,9 @@ export default function DatabaseManager() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Confirmar Limpeza da Estrutura?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Esta ação irá percorrer todos os alunos e remover campos de notas antigos que não estejam organizados por ano (ex: "ciências", "matematica", etc. que estão diretamente dentro de "boletim").
+                            Esta ação irá percorrer todos os alunos e <strong className="text-destructive">APAGARÁ</strong> todos os dados dentro do campo 'boletim'. Isto inclui tanto a estrutura antiga como os dados dos anos já registados (ex: 2025).
                             <br /><br />
-                            Campos como "2024", "2025" serão mantidos. Esta ação é <strong className="text-destructive">irreversível</strong> para os dados removidos.
+                            Use esta função para preparar a base de dados para uma reimportação limpa. A ação é <strong className="text-destructive">irreversível</strong>.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -274,3 +273,5 @@ export default function DatabaseManager() {
        </div>
     );
 }
+
+    
