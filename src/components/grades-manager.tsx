@@ -11,6 +11,7 @@ import { Loader2, Save, Users, NotebookPen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { disciplinas as availableDisciplines } from '@/lib/disciplinas.json';
 
 type EtapaGrade = {
     etapa1?: number | null;
@@ -71,7 +72,7 @@ export default function GradesManager() {
     
     // Derived unique options for filters
     const uniqueFilterOptions = useMemo(() => {
-        if (!allStudents) return { ensinos: [], series: [], classes: [], turnos: [], disciplines: [] };
+        if (!allStudents) return { ensinos: [], series: [], classes: [], turnos: [] };
         
         const getUniqueValues = (key: string, data: any[]) =>
             [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
@@ -87,18 +88,9 @@ export default function GradesManager() {
         
         if(filters.classe) filteredForOptions = filteredForOptions.filter(s => s.classe === filters.classe);
         const turnos = getUniqueValues('turno', filteredForOptions);
-
-        const disciplines = [...new Set(allStudents.flatMap(s => s.boletim?.[selectedYear]?.notas ? Object.keys(s.boletim[selectedYear].notas) : []))]
-             .concat([
-                'portugues', 'matematica', 'ciencias', 'historia', 'geografia', 'arte',
-                'educacao_fisica', 'ensino_religioso', 'ingles', 'projeto_de_vida'
-             ]) // Adiciona disciplinas padrão
-            .map(d => d.replace(/_/g, ' ').replace(/-/g, '/'))
-            .filter((value, index, self) => self.indexOf(value) === index) // Garante unicidade
-            .sort((a, b) => a.localeCompare(b));
         
-        return { ensinos, series, classes, turnos, disciplines };
-    }, [allStudents, filters, selectedYear]);
+        return { ensinos, series, classes, turnos };
+    }, [allStudents, filters]);
     
     const isReadyToLoad = useMemo(() => {
         return filters.ensino && filters.serie && filters.classe && filters.turno && selectedDiscipline && selectedYear;
@@ -300,8 +292,8 @@ export default function GradesManager() {
                              <Select value={selectedDiscipline} onValueChange={setSelectedDiscipline} disabled={!filters.turno}>
                                 <SelectTrigger><SelectValue placeholder="Disciplina..." /></SelectTrigger>
                                 <SelectContent>
-                                    {uniqueFilterOptions.disciplines.map(d => 
-                                        <SelectItem key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</SelectItem>
+                                    {availableDisciplines.map(d => 
+                                        <SelectItem key={d} value={d}>{d}</SelectItem>
                                     )}
                                 </SelectContent>
                             </Select>
