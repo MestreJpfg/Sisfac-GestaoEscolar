@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Image from "next/image";
@@ -50,7 +49,7 @@ const normalizeString = (str: string): string => {
 
 const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEditing?: boolean, onGradeChange?: (year: string, disc: string, value: string) => void }) => {
     const disciplinasBase = [
-        "Arte/Literatura", "Ciências", "Educacao fisica", "Ensino Religioso",
+        "Arte/Literatura", "Ciências", "Educação Física", "Ensino Religioso",
         "Geografia", "História", "Inglês", "Língua Portuguesa", "Matemática",
     ];
     
@@ -134,7 +133,7 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
     const initialRows = React.useMemo(() => {
         const anosSeriesTemplate = ["1º ANO", "2º ANO", "3º ANO", "4º ANO", "5º ANO", "6º ANO", "7º ANO", "8º ANO", "9º ANO"];
         
-        const rows = anosSeriesTemplate.map((serie, index) => ({
+        const rows = anosSeriesTemplate.map((serie) => ({
             anoSerie: serie,
             anoCivil: '',
             estabelecimento: '',
@@ -146,8 +145,8 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
             return student.trajectoryData || anosSeriesTemplate.map(serie => ({
                 anoSerie: serie,
                 anoCivil: '',
-                estabelecimento: 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES',
-                municipioUF: 'Fortaleza/CE',
+                estabelecimento: '',
+                municipioUF: '',
                 resultado: ''
             }));
         }
@@ -159,9 +158,11 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
                     const rowIndex = anosSeriesTemplate.indexOf(yearInfo.serie);
                     if (rowIndex !== -1) {
                         rows[rowIndex].anoCivil = year;
-                        rows[rowIndex].estabelecimento = yearInfo.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
-                        rows[rowIndex].municipioUF = yearInfo.municipioUF || 'Fortaleza/CE';
-                        rows[rowIndex].resultado = yearInfo.resultado || 'Aprovado';
+                        if(year) {
+                            rows[rowIndex].estabelecimento = yearInfo.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
+                            rows[rowIndex].municipioUF = yearInfo.municipioUF || 'Fortaleza/CE';
+                            rows[rowIndex].resultado = yearInfo.resultado || 'Aprovado';
+                        }
                     }
                 }
             });
