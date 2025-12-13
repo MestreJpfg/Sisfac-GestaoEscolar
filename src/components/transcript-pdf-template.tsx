@@ -5,6 +5,7 @@
 import Image from "next/image";
 import { Input } from "./ui/input";
 import { cn } from "@/lib/utils";
+import React from "react";
 
 interface TranscriptPDFTemplateProps {
     student: any | null;
@@ -47,19 +48,11 @@ const normalizeString = (str: string): string => {
 };
 
 
-const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEditing?: boolean, onGradeChange?: (year: string, disc: string, etapa: string, value: string) => void }) => {
+const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEditing?: boolean, onGradeChange?: (year: string, disc: string, value: string) => void }) => {
     const disciplinasBase = [
-        "Arte/Literatura",
-        "Ciências",
-        "Educacao fisica",
-        "Ensino Religioso",
-        "Geografia",
-        "História",
-        "Inglês",
-        "Língua Portuguesa",
-        "Matemática",
+        "Arte/Literatura", "Ciências", "Educacao fisica", "Ensino Religioso",
+        "Geografia", "História", "Inglês", "Língua Portuguesa", "Matemática",
     ];
-
     const anosSeries = ["1º ANO", "2º ANO", "3º ANO", "4º ANO", "5º ANO", "6º ANO", "7º ANO", "8º ANO", "9º ANO"];
 
     const gradeData: { [disciplina: string]: { [serie: string]: string } } = {};
@@ -67,58 +60,44 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
     disciplinasBase.forEach(disc => {
         gradeData[disc] = {};
         anosSeries.forEach(serie => {
-            gradeData[disc][serie] = isEditing ? '' : '-';
+            gradeData[disc][serie] = '';
         });
     });
-
+    
     if (boletim) {
         Object.keys(boletim).forEach(year => {
             const yearData = boletim[year];
             const serieDoAno = yearData?.info?.serie;
-
             if (serieDoAno && yearData.notas) {
                 Object.keys(yearData.notas).forEach(discKey => {
                     const notas = yearData.notas[discKey];
                     if (!notas) return;
                     
-                     const mediaCalculada = (() => {
-                        if (notas.mediaFinal !== null && notas.mediaFinal !== undefined && !isNaN(notas.mediaFinal)) {
-                            return notas.mediaFinal;
-                        }
+                    const mediaCalculada = (() => {
+                        if (notas.mediaFinal !== null && notas.mediaFinal !== undefined && !isNaN(notas.mediaFinal)) return notas.mediaFinal;
                         const etapaGrades = [notas.etapa1, notas.etapa2, notas.etapa3, notas.etapa4];
-                        const validGrades = etapaGrades.map(g => {
-                            if (g === null || g === undefined || String(g).trim() === '') return null;
-                            const numericGrade = parseFloat(String(g).replace(',', '.'));
-                            return isNaN(numericGrade) ? null : numericGrade;
-                        }).filter((g): g is number => g !== null);
-
+                        const validGrades = etapaGrades.filter((g): g is number => g !== null && g !== undefined && !isNaN(g));
                         return validGrades.length > 0 ? validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length : null;
                     })();
 
-                    const formattedMedia = (mediaCalculada !== null && mediaCalculada !== undefined) ? mediaCalculada.toFixed(1).replace('.', ',') : (isEditing ? '' : '-');
-                    
+                    const formattedMedia = (mediaCalculada !== null) ? mediaCalculada.toFixed(1).replace('.', ',') : '';
                     const normalizedDiscKey = normalizeString(discKey);
-                    const normalizedDisciplinasBase = disciplinasBase.map(d => ({original: d, normalized: normalizeString(d)}));
-                    
-                    const foundDisciplina = normalizedDisciplinasBase.find(d => d.normalized === normalizedDiscKey);
+                    const foundDisciplina = disciplinasBase.find(d => normalizeString(d) === normalizedDiscKey);
                     
                     if (foundDisciplina && anosSeries.includes(serieDoAno)) {
-                         gradeData[foundDisciplina.original][serieDoAno] = formattedMedia;
+                         gradeData[foundDisciplina][serieDoAno] = formattedMedia;
                     }
                 });
             }
         });
     }
 
-
     return (
         <table className="w-full text-[8px] border-collapse" style={{ border: '1px solid black' }}>
             <thead>
                 <tr className="bg-gray-200">
                     <th className="border border-black p-1 font-bold w-[25%]">Componente Curricular</th>
-                    {anosSeries.map(serie => (
-                        <th key={serie} className="border border-black p-1 font-bold">{serie}</th>
-                    ))}
+                    {anosSeries.map(serie => <th key={serie} className="border border-black p-1 font-bold">{serie}</th>)}
                 </tr>
             </thead>
             <tbody>
@@ -126,23 +105,14 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
                     <tr key={disciplina}>
                         <td className="border border-black p-1 font-medium">{disciplina}</td>
                         {anosSeries.map(serie => (
-                            <td key={`${disciplina}-${serie}`} className="border border-black p-1 text-center">
+                            <td key={`${disciplina}-${serie}`} className="border border-black p-0 text-center">
                                 {isEditing ? (
                                     <Input
-                                        className={cn(
-                                            "h-6 text-[9px] p-1 text-center border-dashed",
-                                            "bg-white text-black border-blue-300 focus:border-blue-500 focus:ring-blue-500"
-                                        )}
+                                        className={cn("h-6 text-[9px] p-1 text-center border-dashed rounded-none", "bg-white text-black border-blue-300 focus:border-blue-500 focus:ring-blue-500")}
                                         value={gradeData[disciplina]?.[serie] || ''}
-                                        onChange={(e) => {
-                                            // This requires a more complex state update logic
-                                            // For now, it's a placeholder for where the change would happen
-                                            console.log(`Changing ${disciplina} for ${serie} to ${e.target.value}`);
-                                        }}
+                                        onChange={(e) => onGradeChange?.(serie, disciplina, e.target.value)}
                                     />
-                                ) : (
-                                    gradeData[disciplina]?.[serie] || (isEditing ? '' : '-')
-                                )}
+                                ) : ( gradeData[disciplina]?.[serie] || '-' )}
                             </td>
                         ))}
                     </tr>
@@ -152,111 +122,126 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
     );
 };
 
+const TrajectoryTable = ({ seriesData, isEditing, onTrajectoryChange }: { seriesData: any[], isEditing?: boolean, onTrajectoryChange?: (index: number, field: string, value: string) => void }) => {
+    const totalRows = 9;
+    const initialRows = Array.from({ length: totalRows }, (_, i) => {
+        return seriesData[i] || { anoSerie: `${i + 1}º ANO`, anoCivil: '', estabelecimento: 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', municipioUF: 'Fortaleza/CE', resultado: 'Aprovado' };
+    });
+
+    return (
+        <table className="w-full text-[8px] border-collapse" style={{ border: '1px solid black' }}>
+            <thead>
+               <tr className="bg-gray-200">
+                    <th className="border border-black p-1 font-bold">Ano/Série</th>
+                    <th className="border border-black p-1 font-bold">Ano Civil</th>
+                    <th className="border border-black p-1 font-bold">Estabelecimento de Ensino</th>
+                    <th className="border border-black p-1 font-bold">Município/UF</th>
+                    <th className="border border-black p-1 font-bold">Resultado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {initialRows.map((row, index) => (
+                    <tr key={index}>
+                        {['anoSerie', 'anoCivil', 'estabelecimento', 'municipioUF', 'resultado'].map(field => (
+                             <td key={field} className="border border-black p-0 text-center">
+                                {isEditing ? (
+                                    <Input
+                                        className={cn("h-6 text-[9px] p-1 text-center border-dashed rounded-none", "bg-white text-black border-blue-300 focus:border-blue-500 focus:ring-blue-500")}
+                                        value={row[field] || ''}
+                                        onChange={(e) => onTrajectoryChange?.(index, field, e.target.value)}
+                                    />
+                                ) : ( row[field] )}
+                            </td>
+                        ))}
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    )
+}
 
 export default function TranscriptPDFTemplate({ student, isEditing = false, onStudentChange }: TranscriptPDFTemplateProps) {
     if (!student) return null;
 
     const today = new Date();
-    const formattedDate = new Intl.DateTimeFormat('pt-BR', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
-    }).format(today);
+    const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(today);
     
     const allYears = student.boletim ? Object.keys(student.boletim).sort((a, b) => parseInt(a) - parseInt(b)) : [];
     const seriesData = allYears.map(year => ({
-        year,
+        anoCivil: year,
+        anoSerie: student.boletim[year]?.info?.serie,
         ...student.boletim[year]?.info
     }));
-    
+
     const handleDetailChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
         onStudentChange?.({ ...student, [field]: e.target.value });
+    };
+
+    const handleTrajectoryChange = (index: number, field: string, value: string) => {
+        const newSeriesData = [...(student.trajectoryData || Array.from({ length: 9 }, (_, i) => ({ anoSerie: `${i + 1}º ANO`, anoCivil: '', estabelecimento: 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', municipioUF: 'Fortaleza/CE', resultado: 'Aprovado' })))];
+        newSeriesData[index] = { ...newSeriesData[index], [field]: value };
+        onStudentChange?.({ ...student, trajectoryData: newSeriesData });
+    };
+    
+    const handleGradeChange = (serie: string, disciplina: string, value: string) => {
+        const newBoletim = JSON.parse(JSON.stringify(student.boletim || {}));
+        
+        // Find year corresponding to serie
+        const yearEntry = Object.entries(newBoletim).find(([year, data]: [string, any]) => data.info?.serie === serie);
+        const year = yearEntry ? yearEntry[0] : serie.replace('º ANO', ''); // Fallback logic
+
+        if (!newBoletim[year]) newBoletim[year] = { info: { serie }, notas: {} };
+        if (!newBoletim[year].notas) newBoletim[year].notas = {};
+        
+        const normalizedDiscKey = normalizeString(disciplina);
+        if (!newBoletim[year].notas[normalizedDiscKey]) newBoletim[year].notas[normalizedDiscKey] = {};
+        
+        newBoletim[year].notas[normalizedDiscKey].mediaFinal = parseFloat(value.replace(',', '.')) || null;
+
+        onStudentChange?.({ ...student, boletim: newBoletim });
     };
 
     return (
         <div className="bg-white text-black font-sans" style={{ width: '210mm', minHeight: '297mm' }}>
             <div className="flex flex-col h-full" style={{padding: '10mm 15mm'}}>
-                {/* Cabeçalho */}
                 <header className="flex flex-col items-center text-center text-[9px] font-bold mb-4">
-                    <div className="flex items-center gap-4 mb-2">
-                       <Image src="/logoyuri.png" alt="Logo" width={60} height={60} unoptimized />
-                    </div>
+                    <div className="flex items-center gap-4 mb-2"><Image src="/logoyuri.png" alt="Logo" width={60} height={60} unoptimized /></div>
                     <p className="text-[10px] font-bold">ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES - EI / EF</p>
                     <p className="text-[8px] font-bold">Ato de Criação: Portaria Nº 105/2021 de 31/12/2021</p>
                     <p className="text-[8px]">AVENIDA PROFESSOR JOSE ARTHUR DE CARVALHO, Nº 1540, LAGOA REDONDA - CEP: 60831-600</p>
                     <p className="text-[8px]">Fortaleza - CE | Fone: (85) 3488-3209 | E-mail: efernandacollares@institutoassumcao.org.br</p>
                 </header>
 
-                {/* Título */}
-                <div className="text-center my-4">
-                    <h1 className="text-base font-bold tracking-wider uppercase">HISTÓRICO ESCOLAR DO ENSINO FUNDAMENTAL DE 9 (NOVE) ANOS</h1>
-                </div>
+                <div className="text-center my-4"><h1 className="text-base font-bold tracking-wider uppercase">HISTÓRICO ESCOLAR DO ENSINO FUNDAMENTAL DE 9 (NOVE) ANOS</h1></div>
 
-                {/* Identificação do Aluno */}
                 <section className="border-t border-b border-black py-2 grid grid-cols-2 gap-x-4 gap-y-1 text-[9px]">
                     <DetailItem label="Nome do Aluno(a)" value={student.nome} isEditing={isEditing} onChange={handleDetailChange('nome')} />
                     <DetailItem label="Registro Acadêmico (RM)" value={student.rm} isEditing={isEditing} onChange={handleDetailChange('rm')} />
                     <DetailItem label="Data de Nascimento" value={student.data_nascimento} isEditing={isEditing} onChange={handleDetailChange('data_nascimento')} />
-                    <DetailItem label="Município de Nascimento" value="FORTALEZA" />
-                    <DetailItem label="UF" value="CE" />
+                    <DetailItem label="Município de Nascimento" value={student.municipio_nascimento || (isEditing ? '' : 'FORTALEZA')} isEditing={isEditing} onChange={handleDetailChange('municipio_nascimento')} />
+                    <DetailItem label="UF" value={student.uf_nascimento || (isEditing ? '' : 'CE')} isEditing={isEditing} onChange={handleDetailChange('uf_nascimento')} />
                     <DetailItem label="RG" value={student.rg} isEditing={isEditing} onChange={handleDetailChange('rg')} />
                     <DetailItem label="Mãe" value={student.filiacao_1} isEditing={isEditing} onChange={handleDetailChange('filiacao_1')} />
                     <DetailItem label="Pai" value={student.filiacao_2} isEditing={isEditing} onChange={handleDetailChange('filiacao_2')} />
                 </section>
                 
-                 {/* Trajetória Escolar */}
                 <section className="my-4">
                     <h2 className="text-sm font-bold text-center mb-2">TRAJETÓRIA ESCOLAR</h2>
-                    <table className="w-full text-[8px] border-collapse" style={{ border: '1px solid black' }}>
-                        <thead>
-                           <tr className="bg-gray-200">
-                                <th className="border border-black p-1 font-bold">Ano/Série</th>
-                                <th className="border border-black p-1 font-bold">Ano Civil</th>
-                                <th className="border border-black p-1 font-bold">Estabelecimento de Ensino</th>
-                                <th className="border border-black p-1 font-bold">Município/UF</th>
-                                <th className="border border-black p-1 font-bold">Resultado</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {seriesData.map(serie => (
-                                <tr key={serie.year}>
-                                    <td className="border border-black p-1 text-center">{serie.serie}</td>
-                                    <td className="border border-black p-1 text-center">{serie.year}</td>
-                                    <td className="border border-black p-1">E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES</td>
-                                    <td className="border border-black p-1 text-center">Fortaleza/CE</td>
-                                    <td className="border border-black p-1 text-center">Aprovado</td>
-                                </tr>
-                            ))}
-                             {/* Placeholder for future years */}
-                            {Array.from({ length: Math.max(0, 9 - seriesData.length) }).map((_, i) => (
-                                <tr key={`placeholder-${i}`}>
-                                    <td className="border border-black p-1 h-6"></td>
-                                    <td className="border border-black p-1"></td>
-                                    <td className="border border-black p-1"></td>
-                                    <td className="border border-black p-1"></td>
-                                    <td className="border border-black p-1"></td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                    <TrajectoryTable seriesData={student.trajectoryData || seriesData} isEditing={isEditing} onTrajectoryChange={handleTrajectoryChange} />
                 </section>
                 
-                {/* Notas e Frequência */}
                  <section className="my-4 space-y-4">
                      <h2 className="text-sm font-bold text-center mb-2">NOTAS E FREQUÊNCIA POR ANO/SÉRIE</h2>
-                     <GradeMatrix boletim={student.boletim} isEditing={isEditing} />
+                     <GradeMatrix boletim={student.boletim} isEditing={isEditing} onGradeChange={handleGradeChange} />
                 </section>
 
-                 {/* Rodapé */}
                  <footer className="flex flex-col items-center justify-center text-center pt-2 mt-auto text-[9px]">
                     <div className="text-center w-full mb-4">
                         <p className="font-bold">Base Legal:</p>
                         <p>Curso de Ensino Fundamental de 9 (nove) anos, com base na Lei Federal 9.394/96.</p>
                         <p>Escala de Avaliação: Notas de 0 a 10, com média para aprovação 6.0.</p>
                     </div>
-
                     <p className="my-4">Fortaleza, {formattedDate}.</p>
-                    
                     <div className="flex justify-around w-full mt-8">
                         <div className="text-center w-48 relative">
                              <div className="relative h-16 w-full -mb-10" style={{ right: '0.5cm' }}>
