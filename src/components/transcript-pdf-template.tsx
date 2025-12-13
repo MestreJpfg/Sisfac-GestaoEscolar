@@ -180,7 +180,7 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
         // Limpar dados se não houver ano civil
         rows = rows.map(row => {
             if (!row.anoCivil) {
-                return { ...row, estabelecimento: '', municipioUF: '', resultado: '' };
+                return { anoSerie: row.anoSerie, anoCivil: '', estabelecimento: '', municipioUF: '', resultado: '' };
             }
             return row;
         });
@@ -280,7 +280,7 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
                                                 </Card>
                                             )}
                                         </>
-                                    ) : ( row[field as keyof typeof row] )}
+                                    ) : ( <div className="p-1">{row[field as keyof typeof row]}</div> )}
                                 </td>
                             ))}
                         </tr>
@@ -339,8 +339,8 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
     };
 
     return (
-        <div className="bg-white text-black font-sans p-8">
-            <div className="flex flex-col h-full">
+        <div className="bg-white text-black font-sans">
+            <div className="flex flex-col h-full p-8">
                 <header className="flex flex-col items-center text-center text-[9px] font-bold mb-4">
                     <div className="flex items-center gap-4 mb-2"><Image src="/logoyuri.png" alt="Logo" width={60} height={60} unoptimized /></div>
                     <p className="text-[10px] font-bold">ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES - EI / EF</p>
