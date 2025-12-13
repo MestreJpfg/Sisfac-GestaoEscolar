@@ -1,18 +1,30 @@
 
+
 'use client';
 
 import Image from "next/image";
+import { Input } from "./ui/input";
 
 interface TranscriptPDFTemplateProps {
     student: any | null;
+    isEditing?: boolean;
+    onStudentChange?: (student: any) => void;
 }
 
-const DetailItem = ({ label, value }: { label: string, value: React.ReactNode }) => {
-    if (value === null || value === undefined || value === '') return null;
+const DetailItem = ({ label, value, isEditing, onChange }: { label: string, value: React.ReactNode, isEditing?: boolean, onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void }) => {
+    if (!isEditing && (value === null || value === undefined || value === '')) return null;
     return (
         <div>
             <span className="font-bold text-[8px] uppercase">{label}:</span>
-            <p className="text-[9px] leading-tight">{value}</p>
+            {isEditing ? (
+                <Input
+                    className="h-6 text-[9px] p-1 border-dashed"
+                    value={value as string || ''}
+                    onChange={onChange}
+                />
+            ) : (
+                <p className="text-[9px] leading-tight">{value}</p>
+            )}
         </div>
     );
 };
@@ -20,21 +32,18 @@ const DetailItem = ({ label, value }: { label: string, value: React.ReactNode })
 const normalizeString = (str: string): string => {
     if (typeof str !== 'string') return '';
     return str.trim().toLowerCase()
-      .replace(/[ç]/g, 'c')
-      .replace(/[áàâã]/g, 'a')
-      .replace(/[éèê]/g, 'e')
-      .replace(/[íìî]/g, 'i')
-      .replace(/[óòôõ]/g, 'o')
-      .replace(/[úùû]/g, 'u')
+      .replace(/ç/g, 'c')
+      .replace(/ã/g, 'a')
+      .replace(/é/g, 'e')
       .replace(/º/g, '')
       .replace(/\./g, '')
-      .replace(/[\/]/g, '-')
-      .replace(/[\[\]*~]/g, '')
+      .replace(/\//g, '-') 
+      .replace(/[\[\]*~]/g, '') 
       .replace(/\s+/g, '_');
 };
 
 
-const GradeMatrix = ({ boletim }: { boletim: any }) => {
+const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEditing?: boolean, onGradeChange?: (year: string, disc: string, etapa: string, value: string) => void }) => {
     const disciplinasBase = [
         "Arte/Literatura",
         "Ciências",
@@ -54,7 +63,7 @@ const GradeMatrix = ({ boletim }: { boletim: any }) => {
     disciplinasBase.forEach(disc => {
         gradeData[disc] = {};
         anosSeries.forEach(serie => {
-            gradeData[disc][serie] = '-';
+            gradeData[disc][serie] = isEditing ? '' : '-';
         });
     });
 
@@ -82,7 +91,7 @@ const GradeMatrix = ({ boletim }: { boletim: any }) => {
                         return validGrades.length > 0 ? validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length : null;
                     })();
 
-                    const formattedMedia = (mediaCalculada !== null && mediaCalculada !== undefined) ? mediaCalculada.toFixed(1).replace('.', ',') : '-';
+                    const formattedMedia = (mediaCalculada !== null && mediaCalculada !== undefined) ? mediaCalculada.toFixed(1).replace('.', ',') : (isEditing ? '' : '-');
                     
                     const normalizedDiscKey = normalizeString(discKey);
                     const normalizedDisciplinasBase = disciplinasBase.map(d => ({original: d, normalized: normalizeString(d)}));
@@ -114,7 +123,19 @@ const GradeMatrix = ({ boletim }: { boletim: any }) => {
                         <td className="border border-black p-1 font-medium">{disciplina}</td>
                         {anosSeries.map(serie => (
                             <td key={`${disciplina}-${serie}`} className="border border-black p-1 text-center">
-                                {gradeData[disciplina]?.[serie] || '-'}
+                                {isEditing ? (
+                                    <Input
+                                        className="h-6 text-[9px] p-1 text-center border-dashed"
+                                        value={gradeData[disciplina]?.[serie] || ''}
+                                        onChange={(e) => {
+                                            // This requires a more complex state update logic
+                                            // For now, it's a placeholder for where the change would happen
+                                            console.log(`Changing ${disciplina} for ${serie} to ${e.target.value}`);
+                                        }}
+                                    />
+                                ) : (
+                                    gradeData[disciplina]?.[serie] || (isEditing ? '' : '-')
+                                )}
                             </td>
                         ))}
                     </tr>
@@ -125,7 +146,7 @@ const GradeMatrix = ({ boletim }: { boletim: any }) => {
 };
 
 
-export default function TranscriptPDFTemplate({ student }: TranscriptPDFTemplateProps) {
+export default function TranscriptPDFTemplate({ student, isEditing = false, onStudentChange }: TranscriptPDFTemplateProps) {
     if (!student) return null;
 
     const today = new Date();
@@ -140,6 +161,10 @@ export default function TranscriptPDFTemplate({ student }: TranscriptPDFTemplate
         year,
         ...student.boletim[year]?.info
     }));
+    
+    const handleDetailChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+        onStudentChange?.({ ...student, [field]: e.target.value });
+    };
 
     return (
         <div className="bg-white text-black font-sans" style={{ width: '210mm', minHeight: '297mm' }}>
@@ -162,20 +187,20 @@ export default function TranscriptPDFTemplate({ student }: TranscriptPDFTemplate
 
                 {/* Identificação do Aluno */}
                 <section className="border-t border-b border-black py-2 grid grid-cols-2 gap-x-4 gap-y-1 text-[9px]">
-                    <DetailItem label="Nome do Aluno(a)" value={student.nome} />
-                    <DetailItem label="Registro Acadêmico (RM)" value={student.rm} />
-                    <DetailItem label="Data de Nascimento" value={student.data_nascimento} />
+                    <DetailItem label="Nome do Aluno(a)" value={student.nome} isEditing={isEditing} onChange={handleDetailChange('nome')} />
+                    <DetailItem label="Registro Acadêmico (RM)" value={student.rm} isEditing={isEditing} onChange={handleDetailChange('rm')} />
+                    <DetailItem label="Data de Nascimento" value={student.data_nascimento} isEditing={isEditing} onChange={handleDetailChange('data_nascimento')} />
                     <DetailItem label="Município de Nascimento" value="FORTALEZA" />
                     <DetailItem label="UF" value="CE" />
-                    <DetailItem label="RG" value={student.rg} />
-                    <DetailItem label="Mãe" value={student.filiacao_1} />
-                    <DetailItem label="Pai" value={student.filiacao_2} />
+                    <DetailItem label="RG" value={student.rg} isEditing={isEditing} onChange={handleDetailChange('rg')} />
+                    <DetailItem label="Mãe" value={student.filiacao_1} isEditing={isEditing} onChange={handleDetailChange('filiacao_1')} />
+                    <DetailItem label="Pai" value={student.filiacao_2} isEditing={isEditing} onChange={handleDetailChange('filiacao_2')} />
                 </section>
                 
                  {/* Notas e Frequência */}
                  <section className="my-4 space-y-4">
                      <h2 className="text-sm font-bold text-center mb-2">NOTAS E FREQUÊNCIA POR ANO/SÉRIE</h2>
-                     <GradeMatrix boletim={student.boletim} />
+                     <GradeMatrix boletim={student.boletim} isEditing={isEditing} />
                 </section>
 
                 {/* Trajetória Escolar */}
@@ -237,7 +262,7 @@ export default function TranscriptPDFTemplate({ student }: TranscriptPDFTemplate
                             </div>
                         </div>
                         <div className="text-center w-48 relative">
-                             <div className="relative h-16 w-full -mb-10" style={{ left: '-0.5cm', bottom: '0.2cm' }}>
+                             <div className="relative h-16 w-full -mb-10" style={{ right: '0.5cm', bottom: '0.2cm' }}>
                                 <Image src="/assinatura2.png" alt="Segunda Assinatura" layout="fill" objectFit="contain" unoptimized />
                             </div>
                              <div className="border-t border-black w-full pt-1">
