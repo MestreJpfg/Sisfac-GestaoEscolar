@@ -53,7 +53,20 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
         "Arte/Literatura", "Ciências", "Educacao fisica", "Ensino Religioso",
         "Geografia", "História", "Inglês", "Língua Portuguesa", "Matemática",
     ];
-    const anosSeries = ["1º ANO", "2º ANO", "3º ANO", "4º ANO", "5º ANO", "6º ANO", "7º ANO", "8º ANO", "9º ANO"];
+    
+    // Anos/Séries a serem exibidos na tabela de notas
+    const anosSeries = React.useMemo(() => {
+        if (isEditing) {
+            return ["1º ANO", "2º ANO", "3º ANO", "4º ANO", "5º ANO", "6º ANO", "7º ANO", "8º ANO", "9º ANO"];
+        }
+        if (!boletim) return [];
+        
+        return Object.keys(boletim)
+            .map(year => boletim[year]?.info?.serie)
+            .filter((serie): serie is string => !!serie)
+            .sort((a, b) => parseInt(a.replace('º ANO', '')) - parseInt(b.replace('º ANO', '')));
+    }, [boletim, isEditing]);
+
 
     const gradeData: { [disciplina: string]: { [serie: string]: string } } = {};
 
@@ -92,6 +105,10 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
         });
     }
 
+    if (anosSeries.length === 0 && !isEditing) {
+        return <p className="text-center text-[8px] text-gray-500">Nenhum dado de notas encontrado.</p>
+    }
+
     return (
         <table className="w-full text-[8px] border-collapse" style={{ border: '1px solid black' }}>
             <thead>
@@ -122,11 +139,31 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
     );
 };
 
-const TrajectoryTable = ({ seriesData, isEditing, onTrajectoryChange }: { seriesData: any[], isEditing?: boolean, onTrajectoryChange?: (index: number, field: string, value: string) => void }) => {
-    const totalRows = 9;
-    const initialRows = Array.from({ length: totalRows }, (_, i) => {
-        return seriesData[i] || { anoSerie: `${i + 1}º ANO`, anoCivil: '', estabelecimento: 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', municipioUF: 'Fortaleza/CE', resultado: 'Aprovado' };
-    });
+const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: any, isEditing?: boolean, onTrajectoryChange?: (index: number, field: string, value: string) => void }) => {
+    
+    const initialRows = React.useMemo(() => {
+        if (isEditing) {
+            return Array.from({ length: 9 }, (_, i) => {
+                return student.trajectoryData?.[i] || { anoSerie: `${i + 1}º ANO`, anoCivil: '', estabelecimento: 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', municipioUF: 'Fortaleza/CE', resultado: 'Aprovado' };
+            });
+        }
+        
+        if (!student.boletim) return [];
+
+        const allYears = Object.keys(student.boletim).sort((a, b) => parseInt(a) - parseInt(b));
+        return allYears.map(year => ({
+            anoCivil: year,
+            anoSerie: student.boletim[year]?.info?.serie || '',
+            estabelecimento: student.boletim[year]?.info?.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES',
+            municipioUF: student.boletim[year]?.info?.municipioUF || 'Fortaleza/CE',
+            resultado: student.boletim[year]?.info?.resultado || 'Aprovado'
+        }));
+
+    }, [student, isEditing]);
+
+     if (initialRows.length === 0 && !isEditing) {
+        return <p className="text-center text-[8px] text-gray-500">Nenhum dado de trajetória escolar encontrado.</p>
+    }
 
     return (
         <table className="w-full text-[8px] border-collapse" style={{ border: '1px solid black' }}>
@@ -166,13 +203,6 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
     const today = new Date();
     const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(today);
     
-    const allYears = student.boletim ? Object.keys(student.boletim).sort((a, b) => parseInt(a) - parseInt(b)) : [];
-    const seriesData = allYears.map(year => ({
-        anoCivil: year,
-        anoSerie: student.boletim[year]?.info?.serie,
-        ...student.boletim[year]?.info
-    }));
-
     const handleDetailChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
         onStudentChange?.({ ...student, [field]: e.target.value });
     };
@@ -186,9 +216,7 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
     const handleGradeChange = (serie: string, disciplina: string, value: string) => {
         const newBoletim = JSON.parse(JSON.stringify(student.boletim || {}));
         
-        // Find year corresponding to serie
-        const yearEntry = Object.entries(newBoletim).find(([year, data]: [string, any]) => data.info?.serie === serie);
-        const year = yearEntry ? yearEntry[0] : serie.replace('º ANO', ''); // Fallback logic
+        const year = serie.replace(/\D/g,''); // Simplified logic, may need adjustment
 
         if (!newBoletim[year]) newBoletim[year] = { info: { serie }, notas: {} };
         if (!newBoletim[year].notas) newBoletim[year].notas = {};
@@ -227,7 +255,7 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                 
                 <section className="my-4">
                     <h2 className="text-sm font-bold text-center mb-2">TRAJETÓRIA ESCOLAR</h2>
-                    <TrajectoryTable seriesData={student.trajectoryData || seriesData} isEditing={isEditing} onTrajectoryChange={handleTrajectoryChange} />
+                    <TrajectoryTable student={student} isEditing={isEditing} onTrajectoryChange={handleTrajectoryChange} />
                 </section>
                 
                  <section className="my-4 space-y-4">
