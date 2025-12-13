@@ -4,13 +4,14 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, getDocs, query } from 'firebase/firestore';
+import { collection, getDocs, query, doc } from 'firebase/firestore';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { UserPlus, Search, Loader2 } from 'lucide-react';
+import { UserPlus, Search, Loader2, Edit, Save, X } from 'lucide-react';
 import TranscriptPDFTemplate from './transcript-pdf-template';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -24,8 +25,9 @@ export default function TranscriptGenerator() {
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
+    const [originalStudentData, setOriginalStudentData] = useState<any | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
-    const [isNewTranscript, setIsNewTranscript] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
 
     const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
@@ -63,27 +65,90 @@ export default function TranscriptGenerator() {
     }, [debouncedSearchTerm, allStudents]);
 
     const handleSelectStudent = (student: any) => {
-        setSelectedStudent(student);
+        const studentWithData = JSON.parse(JSON.stringify(student)); // Deep copy
+        setSelectedStudent(studentWithData);
+        setOriginalStudentData(studentWithData);
         setSearchTerm(student.nome);
         setSearchResults([]);
-        setIsNewTranscript(false);
+        setIsEditing(false);
     };
 
     const handleCreateNew = () => {
-        setSelectedStudent({
+        const newStudentTemplate = {
             rm: `TEMPORARIO_${Date.now()}`,
             nome: '',
             data_nascimento: '',
+            municipio_nascimento: 'FORTALEZA',
+            uf_nascimento: 'CE',
             filiacao_1: '',
             filiacao_2: '',
             rg: '',
             boletim: {},
-        });
-        setIsNewTranscript(true);
+            trajectoryData: Array.from({ length: 9 }, (_, i) => ({
+                anoSerie: `${i + 1}º ANO`,
+                anoCivil: '',
+                estabelecimento: 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES',
+                municipioUF: 'Fortaleza/CE',
+                resultado: 'Aprovado'
+            }))
+        };
+        setSelectedStudent(newStudentTemplate);
+        setOriginalStudentData(newStudentTemplate);
+        setIsEditing(true);
         setSearchTerm('');
         setSearchResults([]);
     };
     
+    const handleSaveChanges = () => {
+        if (!firestore || !selectedStudent || !originalStudentData || originalStudentData.rm.startsWith('TEMPORARIO')) {
+            toast({
+                variant: 'destructive',
+                title: 'Ação Inválida',
+                description: 'Não é possível salvar um histórico temporário.'
+            });
+            return;
+        }
+
+        const studentDocRef = doc(firestore, 'alunos', selectedStudent.id);
+        const { id, trajectoryData, ...dataToSave } = selectedStudent;
+        
+        // Save trajectory data inside boletim info for persistence
+        if (trajectoryData) {
+            trajectoryData.forEach((row: any) => {
+                if (row.anoCivil && dataToSave.boletim[row.anoCivil]) {
+                    if (!dataToSave.boletim[row.anoCivil].info) {
+                        dataToSave.boletim[row.anoCivil].info = {};
+                    }
+                    dataToSave.boletim[row.anoCivil].info.estabelecimento = row.estabelecimento;
+                    dataToSave.boletim[row.anoCivil].info.municipioUF = row.municipioUF;
+                    dataToSave.boletim[row.anoCivil].info.resultado = row.resultado;
+                }
+            });
+        }
+        
+        setDocumentNonBlocking(studentDocRef, dataToSave, { merge: true });
+
+        toast({
+            title: "Histórico Atualizado",
+            description: "As informações do histórico foram salvas com sucesso.",
+        });
+        
+        // Update local state to reflect saved changes
+        setAllStudents(prev => prev.map(s => s.id === selectedStudent.id ? selectedStudent : s));
+        setOriginalStudentData(selectedStudent);
+        setIsEditing(false);
+    };
+
+    const handleCancelEdit = () => {
+        if (originalStudentData?.rm.startsWith('TEMPORARIO')) {
+            setSelectedStudent(null);
+            setOriginalStudentData(null);
+        } else {
+            setSelectedStudent(originalStudentData);
+        }
+        setIsEditing(false);
+    }
+
     const handleGeneratePDF = async () => {
         if (!selectedStudent) return;
         setIsGenerating(true);
@@ -156,12 +221,28 @@ export default function TranscriptGenerator() {
             {selectedStudent && (
                  <Card>
                     <CardHeader>
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center flex-wrap gap-4">
                             <div>
                                 <CardTitle>Pré-visualização do Histórico</CardTitle>
                                 <CardDescription>Aluno: {selectedStudent.nome || "Novo Histórico"}</CardDescription>
                             </div>
                             <div className="flex items-center gap-2">
+                                {isEditing ? (
+                                    <>
+                                        <Button variant="outline" onClick={handleCancelEdit}>
+                                            <X className="mr-2 h-4 w-4" /> Cancelar
+                                        </Button>
+                                        {!selectedStudent.rm.startsWith('TEMPORARIO_') && (
+                                            <Button onClick={handleSaveChanges}>
+                                                <Save className="mr-2 h-4 w-4" /> Salvar Alterações
+                                            </Button>
+                                        )}
+                                    </>
+                                ) : (
+                                     <Button variant="secondary" onClick={() => setIsEditing(true)}>
+                                        <Edit className="mr-2 h-4 w-4" /> Editar Histórico
+                                    </Button>
+                                )}
                                 <Button onClick={handleGeneratePDF} disabled={isGenerating}>
                                     {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4"/>}
                                     Gerar PDF
@@ -174,7 +255,7 @@ export default function TranscriptGenerator() {
                            <div id="pdf-template-container" className="mx-auto">
                                 <TranscriptPDFTemplate 
                                     student={selectedStudent} 
-                                    isEditing={isNewTranscript}
+                                    isEditing={isEditing}
                                     onStudentChange={setSelectedStudent}
                                 />
                            </div>
