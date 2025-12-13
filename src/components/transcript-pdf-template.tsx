@@ -22,7 +22,7 @@ const GradeMatrix = ({ boletim }: { boletim: any }) => {
     const disciplinasBase = [
         "Arte/Literatura",
         "Ciências",
-        "Educacao Fisica",
+        "Educação Física",
         "Ensino Religioso",
         "Geografia",
         "História",
@@ -51,13 +51,32 @@ const GradeMatrix = ({ boletim }: { boletim: any }) => {
 
             if (serieDoAno && yearData.notas) {
                 Object.keys(yearData.notas).forEach(discKey => {
-                    const media = yearData.notas[discKey]?.mediaFinal;
-                    const formattedMedia = (media !== null && media !== undefined) ? String(media).replace('.', ',') : '-';
+                    const notas = yearData.notas[discKey];
+                    if (!notas) return;
+                    
+                    const mediaCalculada = (() => {
+                        const mediaFinalExistente = notas.mediaFinal;
+                        if (mediaFinalExistente !== null && mediaFinalExistente !== undefined && !isNaN(mediaFinalExistente)) {
+                            return mediaFinalExistente;
+                        }
+
+                        const etapaGrades = [notas.etapa1, notas.etapa2, notas.etapa3, notas.etapa4];
+                        const validGrades = etapaGrades.map(g => {
+                            if (g === null || g === undefined || String(g).trim() === '') return null;
+                            const numericGrade = parseFloat(String(g).replace(',', '.'));
+                            return isNaN(numericGrade) ? null : numericGrade;
+                        }).filter((g): g is number => g !== null);
+
+                        return validGrades.length > 0 ? validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length : null;
+                    })();
+
+                    const formattedMedia = (mediaCalculada !== null && mediaCalculada !== undefined) ? mediaCalculada.toFixed(1).replace('.', ',') : '-';
                     
                     // Match discipline key to display name
                     const discDisplayName = disciplinasBase.find(d => 
                         d.toLowerCase().replace(/ /g, '_') === discKey.toLowerCase() ||
-                        d.toLowerCase().replace('educacao fisica', 'educacao_fisica').replace('/', '-') === discKey.toLowerCase()
+                        d.toLowerCase().replace(/\//g, '-') === discKey.toLowerCase() ||
+                        d.toLowerCase().replace('educação física', 'educacao_fisica') === discKey.toLowerCase()
                     );
                     
                     if (discDisplayName) {
