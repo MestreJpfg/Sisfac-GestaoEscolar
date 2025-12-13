@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { cn } from '@/lib/utils';
 
 interface RankedStudent {
   id: string;
@@ -76,18 +77,27 @@ const RankingTable = ({ title, students, isLoading }: { title: string, students:
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {students.map((student, index) => (
-                                <TableRow key={student.id}>
-                                    <TableCell className="text-center font-bold">
-                                       <div className="flex items-center justify-center gap-2">
-                                          <span>{index + 1}º</span>
-                                       </div>
-                                    </TableCell>
-                                    <TableCell className="font-medium">{student.name}</TableCell>
-                                    <TableCell className="hidden sm:table-cell">{student.turma}</TableCell>
-                                    <TableCell className="text-right font-semibold">{student.average.toFixed(2)}</TableCell>
-                                </TableRow>
-                            ))}
+                            {students.map((student, index) => {
+                                const rank = index + 1;
+                                const medalColor =
+                                    rank === 1 ? 'text-yellow-500' :
+                                    rank === 2 ? 'text-gray-400' :
+                                    rank === 3 ? 'text-yellow-700' : '';
+
+                                return (
+                                    <TableRow key={student.id}>
+                                        <TableCell className="text-center font-bold">
+                                           <div className="flex items-center justify-center gap-2">
+                                              <span>{rank}º</span>
+                                              {rank <= 3 && <Award className={cn("h-5 w-5", medalColor)} />}
+                                           </div>
+                                        </TableCell>
+                                        <TableCell className="font-medium">{student.name}</TableCell>
+                                        <TableCell className="hidden sm:table-cell">{student.turma}</TableCell>
+                                        <TableCell className="text-right font-semibold">{student.average.toFixed(2)}</TableCell>
+                                    </TableRow>
+                                );
+                            })}
                         </TableBody>
                     </Table>
                 </div>
@@ -158,9 +168,9 @@ export default function StudentRankingView() {
                     turno: student.turno || '',
                 };
                 
-                if (seriesFund1.includes(studentSerie)) {
+                if (seriesFund1.some(s => studentSerie.startsWith(s.replace('º ANO', '')))) {
                     fund1.push(rankedStudent);
-                } else if (seriesFund2.includes(studentSerie)) {
+                } else if (seriesFund2.some(s => studentSerie.startsWith(s.replace('º ANO', '')))) {
                     fund2.push(rankedStudent);
                 }
             }
