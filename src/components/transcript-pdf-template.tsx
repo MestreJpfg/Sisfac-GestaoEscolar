@@ -39,6 +39,12 @@ const normalizeString = (str: string): string => {
     .replace(/ç/g, 'c')
     .replace(/ã/g, 'a')
     .replace(/é/g, 'e')
+    .replace(/í/g, 'i')
+    .replace(/ú/g, 'u')
+    .replace(/ó/g, 'o')
+    .replace(/â/g, 'a')
+    .replace(/ê/g, 'e')
+    .replace(/ô/g, 'o')
     .replace(/º/g, '')
     .replace(/\./g, '')
     .replace(/\//g, '-') 
@@ -53,7 +59,6 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
         "Geografia", "História", "Inglês", "Língua Portuguesa", "Matemática",
     ];
     
-    // Anos/Séries a serem exibidos na tabela de notas - SEMPRE MOSTRAR TODOS
     const anosSeries = ["1º ANO", "2º ANO", "3º ANO", "4º ANO", "5º ANO", "6º ANO", "7º ANO", "8º ANO", "9º ANO"];
 
 
@@ -84,6 +89,7 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
 
                     const formattedMedia = (mediaCalculada !== null) ? mediaCalculada.toFixed(1).replace('.', ',') : '';
                     const normalizedDiscKey = normalizeString(discKey);
+                    
                     const foundDisciplina = disciplinasBase.find(d => normalizeString(d) === normalizedDiscKey);
                     
                     if (foundDisciplina && anosSeries.includes(serieDoAno)) {
@@ -133,47 +139,48 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
     const initialRows = React.useMemo(() => {
         const anosSeriesTemplate = ["1º ANO", "2º ANO", "3º ANO", "4º ANO", "5º ANO", "6º ANO", "7º ANO", "8º ANO", "9º ANO"];
         
-        let rows;
-        if (isEditing) {
-            rows = student.trajectoryData || anosSeriesTemplate.map(serie => ({
-                anoSerie: serie,
-                anoCivil: '',
-                estabelecimento: '',
-                municipioUF: '',
-                resultado: ''
-            }));
-        } else {
-            rows = anosSeriesTemplate.map((serie) => ({
-                anoSerie: serie,
-                anoCivil: '',
-                estabelecimento: '',
-                municipioUF: '',
-                resultado: ''
-            }));
+        let rows = anosSeriesTemplate.map((serie) => ({
+            anoSerie: serie,
+            anoCivil: '',
+            estabelecimento: '',
+            municipioUF: '',
+            resultado: ''
+        }));
 
-            if (student.boletim) {
-                Object.keys(student.boletim).forEach(year => {
-                    const yearInfo = student.boletim[year]?.info;
-                    if (yearInfo?.serie) {
-                        const rowIndex = anosSeriesTemplate.indexOf(yearInfo.serie);
-                        if (rowIndex !== -1 && year) {
-                            rows[rowIndex].anoCivil = year;
+        if (student.boletim) {
+            Object.keys(student.boletim).forEach(year => {
+                const yearInfo = student.boletim[year]?.info;
+                if (yearInfo?.serie) {
+                    const rowIndex = anosSeriesTemplate.indexOf(yearInfo.serie);
+                    if (rowIndex !== -1 && year) {
+                        rows[rowIndex].anoCivil = year;
+                        if(year) {
                             rows[rowIndex].estabelecimento = yearInfo.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
                             rows[rowIndex].municipioUF = yearInfo.municipioUF || 'Fortaleza/CE';
                             rows[rowIndex].resultado = yearInfo.resultado || 'Aprovado';
                         }
                     }
-                });
-            }
+                }
+            });
+        }
+
+        // Se estiver editando, usar os dados temporários de 'trajectoryData' se existirem
+        if (isEditing && student.trajectoryData) {
+            return student.trajectoryData;
         }
         
         return rows;
 
     }, [student, isEditing]);
 
+    const handleResultadoChange = (index: number, value: string) => {
+        let finalValue = value;
+        const lowerValue = value.toLowerCase();
+        if (lowerValue === 'a') finalValue = 'Aprovado';
+        else if (lowerValue === 'r') finalValue = 'Reprovado';
+        else if (lowerValue === 't') finalValue = 'Transferido';
 
-     if (initialRows.length === 0 && !isEditing) {
-        return <p className="text-center text-[8px] text-gray-500">Nenhum dado de trajetória escolar encontrado.</p>
+        onTrajectoryChange?.(index, 'resultado', finalValue);
     }
 
     return (
@@ -196,7 +203,13 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
                                     <Input
                                         className={cn("h-6 text-[9px] p-1 text-center border-dashed rounded-none", "bg-white text-black border-blue-300 focus:border-blue-500 focus:ring-blue-500")}
                                         value={row[field as keyof typeof row] || ''}
-                                        onChange={(e) => onTrajectoryChange?.(index, field, e.target.value)}
+                                        onChange={(e) => {
+                                            if (field === 'resultado') {
+                                                handleResultadoChange(index, e.target.value);
+                                            } else {
+                                                onTrajectoryChange?.(index, field, e.target.value)
+                                            }
+                                        }}
                                         disabled={field === 'anoSerie'}
                                     />
                                 ) : ( row[field as keyof typeof row] )}
@@ -229,16 +242,20 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
     const handleGradeChange = (serie: string, disciplina: string, value: string) => {
         const newBoletim = JSON.parse(JSON.stringify(student.boletim || {}));
         
-        let targetYear = Object.keys(newBoletim).find(y => newBoletim[y]?.info?.serie === serie);
+        let targetYear: string | undefined = Object.keys(newBoletim).find(y => newBoletim[y]?.info?.serie === serie);
 
         if (!targetYear) {
             const trajectoryRow = student.trajectoryData?.find((row: any) => row.anoSerie === serie);
-            targetYear = trajectoryRow?.anoCivil || serie.replace(/\D/g,'');
+            targetYear = trajectoryRow?.anoCivil;
             if (!targetYear) {
-                console.warn(`Cannot save grade for ${serie} without a corresponding civil year.`);
-                return;
+                 console.warn(`Não é possível salvar a nota para ${serie} sem um ano civil correspondente na trajetória.`);
+                 const tempYear = serie.replace(/\D/g,'');
+                 if (!newBoletim[tempYear]) newBoletim[tempYear] = { info: { serie }, notas: {} };
+                 targetYear = tempYear;
             }
         }
+        
+        if (!targetYear) return;
 
         if (!newBoletim[targetYear]) newBoletim[targetYear] = { info: { serie }, notas: {} };
         if (!newBoletim[targetYear].info) newBoletim[targetYear].info = { serie };
@@ -247,7 +264,8 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
         const normalizedDiscKey = normalizeString(disciplina);
         if (!newBoletim[targetYear].notas[normalizedDiscKey]) newBoletim[targetYear].notas[normalizedDiscKey] = {};
         
-        newBoletim[targetYear].notas[normalizedDiscKey].mediaFinal = parseFloat(value.replace(',', '.')) || null;
+        const numericValue = parseFloat(value.replace(',', '.'));
+        newBoletim[targetYear].notas[normalizedDiscKey].mediaFinal = isNaN(numericValue) ? null : numericValue;
 
         onStudentChange?.({ ...student, boletim: newBoletim });
     };
