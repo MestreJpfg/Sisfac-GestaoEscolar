@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, doc, writeBatch, getDocs } from 'firebase/firestore';
+import { collection, query, where, doc, writeBatch, getDocs, getDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -89,7 +89,12 @@ export default function GradesManager() {
         const turnos = getUniqueValues('turno', filteredForOptions);
 
         const disciplines = [...new Set(allStudents.flatMap(s => s.boletim?.[selectedYear]?.notas ? Object.keys(s.boletim[selectedYear].notas) : []))]
+             .concat([
+                'portugues', 'matematica', 'ciencias', 'historia', 'geografia', 'arte',
+                'educacao_fisica', 'ensino_religioso', 'ingles', 'projeto_de_vida'
+             ]) // Adiciona disciplinas padrão
             .map(d => d.replace(/_/g, ' ').replace(/-/g, '/'))
+            .filter((value, index, self) => self.indexOf(value) === index) // Garante unicidade
             .sort((a, b) => a.localeCompare(b));
         
         return { ensinos, series, classes, turnos, disciplines };
@@ -124,7 +129,7 @@ export default function GradesManager() {
     }, [selectedDiscipline]);
 
     useEffect(() => {
-        if (sortedStudentsInClass && disciplineId && selectedYear) {
+        if (sortedStudentsInClass.length > 0 && disciplineId && selectedYear) {
             const newGrades: Grades = {};
             sortedStudentsInClass.forEach(student => {
                 const disciplineGrades = student.boletim?.[selectedYear]?.notas?.[disciplineId];
@@ -201,18 +206,41 @@ export default function GradesManager() {
                 const studentGrades = grades[studentId];
                 if (!studentGrades) continue;
 
+                // Create a deep copy of the student's existing boletim or an empty object
+                const studentData = (await getDoc(studentDocRef)).data();
+                const boletim = JSON.parse(JSON.stringify(studentData?.boletim || {}));
+
+                // Ensure the structure for the current year exists
+                if (!boletim[selectedYear]) {
+                    boletim[selectedYear] = { info: {}, notas: {} };
+                }
+                if (!boletim[selectedYear].info) {
+                    boletim[selectedYear].info = {};
+                }
+                if (!boletim[selectedYear].notas) {
+                    boletim[selectedYear].notas = {};
+                }
+                if (!boletim[selectedYear].notas[disciplineId]) {
+                    boletim[selectedYear].notas[disciplineId] = {};
+                }
+
+                // Update info for the year
+                boletim[selectedYear].info.serie = student.serie;
+                boletim[selectedYear].info.classe = student.classe;
+                boletim[selectedYear].info.turno = student.turno;
+
+                // Update grades for the discipline
+                boletim[selectedYear].notas[disciplineId].etapa1 = studentGrades.etapa1;
+                boletim[selectedYear].notas[disciplineId].etapa2 = studentGrades.etapa2;
+                boletim[selectedYear].notas[disciplineId].etapa3 = studentGrades.etapa3;
+                boletim[selectedYear].notas[disciplineId].etapa4 = studentGrades.etapa4;
+
+                // Calculate and update average
                 const validGrades = Object.values(studentGrades).filter((nota): nota is number => nota !== null && nota !== undefined && !isNaN(nota));
                 const average = validGrades.length > 0 ? validGrades.reduce((a, b) => a + b, 0) / validGrades.length : null;
-
-                const updatePayload: { [key: string]: any } = {
-                    [`boletim.${selectedYear}.notas.${disciplineId}.etapa1`]: studentGrades.etapa1,
-                    [`boletim.${selectedYear}.notas.${disciplineId}.etapa2`]: studentGrades.etapa2,
-                    [`boletim.${selectedYear}.notas.${disciplineId}.etapa3`]: studentGrades.etapa3,
-                    [`boletim.${selectedYear}.notas.${disciplineId}.etapa4`]: studentGrades.etapa4,
-                    [`boletim.${selectedYear}.notas.${disciplineId}.mediaFinal`]: average !== null ? parseFloat(average.toFixed(1)) : null,
-                };
+                boletim[selectedYear].notas[disciplineId].mediaFinal = average !== null ? parseFloat(average.toFixed(1)) : null;
     
-                batch.update(studentDocRef, updatePayload);
+                batch.set(studentDocRef, { boletim }, { merge: true });
             }
             
             await batch.commit();

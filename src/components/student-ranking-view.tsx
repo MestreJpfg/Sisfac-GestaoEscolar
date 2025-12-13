@@ -32,16 +32,9 @@ const calculateAverage = (boletimAno: any): number => {
     disciplineKeys.forEach(key => {
         const disciplina = boletimAno.notas[key];
         if (disciplina && typeof disciplina === 'object') {
-            const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
-            const validEtapaGrades = etapaGrades.map(g => {
-                if (g === null || g === undefined || String(g).trim() === '') return null;
-                const numericGrade = parseFloat(String(g).replace(',', '.'));
-                return isNaN(numericGrade) ? null : numericGrade;
-            }).filter((g): g is number => g !== null);
-  
-            if (validEtapaGrades.length > 0) {
-                const subjectAverage = validEtapaGrades.reduce((sum, grade) => sum + grade, 0) / validEtapaGrades.length;
-                allSubjectAverages.push(subjectAverage);
+            const mediaFinal = disciplina.mediaFinal;
+            if (mediaFinal !== null && mediaFinal !== undefined && !isNaN(mediaFinal)) {
+                allSubjectAverages.push(mediaFinal);
             }
         }
     });

@@ -49,17 +49,14 @@ export default function ReportCardDetailed({ student, boletim, ranking }: Report
     const subjectsInRecovery = Object.entries(boletim)
       .map(([disciplina, notas]) => {
         if (!notas) return { disciplina, media: null };
-        const validGrades = [notas.etapa1, notas.etapa2, notas.etapa3, notas.etapa4].filter(
-          (nota): nota is number => nota !== null && nota !== undefined && !isNaN(nota)
-        );
-        const media = notas.mediaFinal ?? (validGrades.length > 0 ? validGrades.reduce((a, b) => a + b, 0) / validGrades.length : null);
+        const media = notas.mediaFinal;
         
         const cleanedDisciplina = disciplina.replace(/_/g, ' ').replace(/-/g, '/');
         const formattedDisciplina = cleanedDisciplina.charAt(0).toUpperCase() + cleanedDisciplina.slice(1);
 
         return { disciplina: formattedDisciplina, media };
       })
-      .filter(item => item.media !== null && item.media < 6.0)
+      .filter(item => item.media !== null && item.media !== undefined && item.media < 6.0)
       .map(item => item.disciplina);
 
     return (

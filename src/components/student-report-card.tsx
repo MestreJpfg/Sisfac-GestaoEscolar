@@ -34,6 +34,7 @@ interface StudentReportCardProps {
 const formatGrade = (grade: number | null | undefined, isEditing = false) => {
     if (grade === null || grade === undefined) return isEditing ? '' : "-";
     
+    // For editing, show integers as "8" instead of "8.0" for easier editing
     if (isEditing && grade % 1 === 0) {
         return String(grade);
     }
@@ -58,6 +59,12 @@ export default function StudentReportCard({ boletim, isPrintMode = false, compac
     .map(([disciplina, notas]) => {
       const mediaCalculada = (() => {
         if (!notas) return null;
+        
+        const mediaFinalExistente = notas.mediaFinal;
+        if (mediaFinalExistente !== null && mediaFinalExistente !== undefined && !isNaN(mediaFinalExistente)) {
+            return mediaFinalExistente;
+        }
+
         const etapaGrades = [notas.etapa1, notas.etapa2, notas.etapa3, notas.etapa4];
         const validGrades = etapaGrades.map(g => {
             if (g === null || g === undefined || String(g).trim() === '') return null;
@@ -82,7 +89,7 @@ export default function StudentReportCard({ boletim, isPrintMode = false, compac
         etapa2: notas?.etapa2,
         etapa3: notas?.etapa3,
         etapa4: notas?.etapa4,
-        mediaFinal: notas?.mediaFinal ?? mediaCalculada,
+        mediaFinal: mediaCalculada,
       };
   }).sort((a, b) => a.disciplina.localeCompare(b.disciplina));
 

@@ -40,7 +40,7 @@ export default function StudentTranscript({ student }: StudentTranscriptProps) {
     const years = student.boletim ? Object.keys(student.boletim).sort((a, b) => parseInt(a) - parseInt(b)) : [];
 
     return (
-        <div className="bg-white text-black font-sans p-8" style={{ width: '210mm', height: '297mm', fontFamily: 'Arial, sans-serif' }}>
+        <div className="bg-white text-black font-sans p-8" style={{ width: '210mm', minHeight: '297mm', fontFamily: 'Arial, sans-serif' }}>
             <div className="flex flex-col h-full">
                 {/* Cabeçalho */}
                 <header className="flex flex-col items-center text-center text-xs font-bold mb-4">

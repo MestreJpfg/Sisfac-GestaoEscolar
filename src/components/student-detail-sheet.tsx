@@ -93,16 +93,9 @@ const calculateAverage = (boletimAno: any): number => {
     disciplineKeys.forEach(key => {
         const disciplina = boletimAno.notas[key];
         if (disciplina && typeof disciplina === 'object') {
-            const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
-            const validEtapaGrades = etapaGrades.map(g => {
-                if (g === null || g === undefined || String(g).trim() === '') return null;
-                const numericGrade = parseFloat(String(g).replace(',', '.'));
-                return isNaN(numericGrade) ? null : numericGrade;
-            }).filter((g): g is number => g !== null);
-
-            if (validEtapaGrades.length > 0) {
-                const subjectAverage = validEtapaGrades.reduce((sum, grade) => sum + grade, 0) / validEtapaGrades.length;
-                allSubjectAverages.push(subjectAverage);
+            const mediaFinal = disciplina.mediaFinal;
+            if (mediaFinal !== null && mediaFinal !== undefined && !isNaN(mediaFinal)) {
+                allSubjectAverages.push(mediaFinal);
             }
         }
     });
@@ -396,7 +389,7 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
   const address = parseAddress(student.endereco);
   
   const studentPhones = student.telefones || (student.telefone ? [student.telefone] : []);
-  const currentBoletim = student.boletim?.[currentYear]?.notas || {};
+  const currentBoletim = student.boletim?.[currentYear] || {};
   const hasAnyBoletim = student.boletim && Object.keys(student.boletim).length > 0;
 
 
@@ -545,16 +538,16 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
                         <DropdownMenuItem onClick={() => handleGeneratePdf('transfer')}>
                             Declaração de Transferência
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleGeneratePdf('declarationWithReport')} disabled={!currentBoletim || Object.keys(currentBoletim).length === 0}>
+                        <DropdownMenuItem onClick={() => handleGeneratePdf('declarationWithReport')} disabled={!currentBoletim.notas}>
                             Declaração com Boletim ({currentYear})
                         </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleGeneratePdf('detailedReport')} disabled={!currentBoletim || Object.keys(currentBoletim).length === 0}>
+                         <DropdownMenuItem onClick={() => handleGeneratePdf('detailedReport')} disabled={!currentBoletim.notas}>
                             Boletim Detalhado ({currentYear})
                         </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleGeneratePdf('compact')} disabled={!currentBoletim || Object.keys(currentBoletim).length === 0}>
+                         <DropdownMenuItem onClick={() => handleGeneratePdf('compact')} disabled={!currentBoletim.notas}>
                             Boletim Compacto (1 por folha)
                         </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleGeneratePdf('grid')} disabled={!currentBoletim || Object.keys(currentBoletim).length === 0}>
+                         <DropdownMenuItem onClick={() => handleGeneratePdf('grid')} disabled={!currentBoletim.notas}>
                             Boletim em Grade (4 por folha)
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -584,16 +577,16 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
                         <DropdownMenuItem onClick={() => handleShare('transfer')}>
                             Declaração de Transferência
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleShare('declarationWithReport')} disabled={!currentBoletim || Object.keys(currentBoletim).length === 0}>
+                        <DropdownMenuItem onClick={() => handleShare('declarationWithReport')} disabled={!currentBoletim.notas}>
                             Declaração com Boletim ({currentYear})
                         </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleShare('detailedReport')} disabled={!currentBoletim || Object.keys(currentBoletim).length === 0}>
+                         <DropdownMenuItem onClick={() => handleShare('detailedReport')} disabled={!currentBoletim.notas}>
                             Boletim Detalhado ({currentYear})
                         </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleShare('compact')} disabled={!currentBoletim || Object.keys(currentBoletim).length === 0}>
+                         <DropdownMenuItem onClick={() => handleShare('compact')} disabled={!currentBoletim.notas}>
                             Boletim Compacto (1 por folha)
                         </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleShare('grid')} disabled={!currentBoletim || Object.keys(currentBoletim).length === 0}>
+                         <DropdownMenuItem onClick={() => handleShare('grid')} disabled={!currentBoletim.notas}>
                             Boletim em Grade (4 por folha)
                         </DropdownMenuItem>
                     </DropdownMenuContent>

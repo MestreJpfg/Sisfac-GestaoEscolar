@@ -316,35 +316,29 @@ export default function ClassListGenerator() {
   };
 
   const calculateAverage = (boletimAno: any): number => {
-    if (!boletimAno || typeof boletimAno !== 'object') {
+    if (!boletimAno || !boletimAno.notas || typeof boletimAno.notas !== 'object') {
         return 0;
     }
-
-    const disciplineKeys = Object.keys(boletimAno);
-    const subjectAverages: number[] = [];
-
+  
+    const disciplineKeys = Object.keys(boletimAno.notas);
+    const allSubjectAverages: number[] = [];
+  
     disciplineKeys.forEach(key => {
-        const disciplina = boletimAno[key];
+        const disciplina = boletimAno.notas[key];
         if (disciplina && typeof disciplina === 'object') {
-            const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
-            
-            const validGrades = etapaGrades.map(g => {
-                if (g === null || g === undefined || String(g).trim() === '') return null;
-                const numericGrade = parseFloat(String(g).replace(',', '.'));
-                return isNaN(numericGrade) ? null : numericGrade;
-            }).filter((g): g is number => g !== null);
-
-            if (validGrades.length > 0) {
-                const subjectAverage = validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length;
-                subjectAverages.push(subjectAverage);
+            const mediaFinal = disciplina.mediaFinal;
+            if (mediaFinal !== null && mediaFinal !== undefined && !isNaN(mediaFinal)) {
+                allSubjectAverages.push(mediaFinal);
             }
         }
     });
-
-    if (subjectAverages.length === 0) return 0;
-    
-    const overallSum = subjectAverages.reduce((acc, curr) => acc + curr, 0);
-    return overallSum / subjectAverages.length;
+  
+    if (allSubjectAverages.length === 0) {
+        return 0;
+    }
+  
+    const overallSum = allSubjectAverages.reduce((acc, curr) => acc + curr, 0);
+    return overallSum / allSubjectAverages.length;
   };
 
   const handleDownloadWithAverages = async () => {
@@ -472,7 +466,7 @@ export default function ClassListGenerator() {
             
             const studentsWithBoletimForYear = chunk.map(student => ({
                 ...student,
-                boletim: student.boletim?.[selectedYear] || {}
+                boletim: student.boletim?.[selectedYear]?.notas || {}
             }));
 
             await new Promise<void>(resolve => {

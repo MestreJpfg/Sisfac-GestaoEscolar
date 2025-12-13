@@ -30,7 +30,7 @@ export default function ReportCardWithDeclaration({ student, boletim }: ReportCa
     }).format(today);
 
     return (
-        <div className="bg-white text-black font-sans p-8" style={{ width: '210mm', height: '297mm', fontFamily: 'Arial, sans-serif' }}>
+        <div className="bg-white text-black font-sans p-8" style={{ width: '210mm', minHeight: '297mm', fontFamily: 'Arial, sans-serif' }}>
             <div className="flex flex-col h-full">
                 {/* Cabeçalho */}
                 <header className="flex flex-col items-center text-center text-[9px] font-bold mb-4">
