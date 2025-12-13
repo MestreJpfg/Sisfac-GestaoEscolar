@@ -128,7 +128,8 @@ export default function GradesUploader() {
         const gradeUpdate: { [key: string]: any } = {};
 
         headers.forEach((header, index) => {
-            if (index === rmIndex || index === nameIndex || !header) return;
+            // Ignora colunas de identificação e cabeçalhos vazios
+            if (index === rmIndex || index === nameIndex || !header || header === 'aluno' || header ==='nome' || header === 'rm' || header === 'matricula') return;
 
             const subject = header;
             const gradeValue = row[index];
@@ -142,6 +143,7 @@ export default function GradesUploader() {
             }
             
             // Constrói o caminho para a nota dentro do ano letivo
+            // Isso garante que estamos escrevendo em boletim.2024.matematica.etapa1, por exemplo.
             gradeUpdate[`boletim.${year}.${subject}.${etapa}`] = grade;
         });
         
