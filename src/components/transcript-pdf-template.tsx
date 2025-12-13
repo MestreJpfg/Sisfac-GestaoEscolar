@@ -17,15 +17,14 @@ const DetailItem = ({ label, value }: { label: string, value: React.ReactNode })
     );
 };
 
-// Normalization function to handle special characters, matching the uploader logic
 const normalizeString = (str: string): string => {
     if (typeof str !== 'string') return '';
     return str.trim().toLowerCase()
         .replace(/[ç]/g, 'c')
-        .replace(/[ãáâà]/g, 'a')
-        .replace(/[éêè]/g, 'e')
+        .replace(/[áàâã]/g, 'a')
+        .replace(/[éèê]/g, 'e')
         .replace(/[íìî]/g, 'i')
-        .replace(/[óôõò]/g, 'o')
+        .replace(/[óòôõ]/g, 'o')
         .replace(/[úùû]/g, 'u')
         .replace(/º/g, '')
         .replace(/\./g, '')
@@ -146,7 +145,7 @@ export default function TranscriptPDFTemplate({ student }: TranscriptPDFTemplate
 
     return (
         <div className="bg-white text-black font-sans" style={{ width: '210mm', minHeight: '297mm', fontFamily: 'Arial, sans-serif' }}>
-            <div className="flex flex-col h-full p-8">
+            <div className="flex flex-col h-full" style={{padding: '10mm 15mm'}}>
                 {/* Cabeçalho */}
                 <header className="flex flex-col items-center text-center text-[9px] font-bold mb-4">
                     <div className="flex items-center gap-4 mb-2">
@@ -175,8 +174,8 @@ export default function TranscriptPDFTemplate({ student }: TranscriptPDFTemplate
                     <DetailItem label="Pai" value={student.filiacao_2} />
                 </section>
                 
-                {/* Notas e Frequência */}
-                <section className="my-4 space-y-4">
+                 {/* Notas e Frequência */}
+                 <section className="my-4 space-y-4">
                      <h2 className="text-sm font-bold text-center mb-2">NOTAS E FREQUÊNCIA POR ANO/SÉRIE</h2>
                      <GradeMatrix boletim={student.boletim} />
                 </section>
