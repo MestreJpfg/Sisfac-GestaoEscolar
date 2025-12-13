@@ -22,29 +22,29 @@ interface RankedStudent {
 }
 
 const calculateAverage = (boletimAno: any): number => {
-    if (!boletimAno || !boletimAno.notas || typeof boletimAno.notas !== 'object') {
-        return 0;
-    }
-  
-    const disciplineKeys = Object.keys(boletimAno.notas);
-    const allSubjectAverages: number[] = [];
-  
-    disciplineKeys.forEach(key => {
-        const disciplina = boletimAno.notas[key];
-        if (disciplina && typeof disciplina === 'object') {
-            const mediaFinal = disciplina.mediaFinal;
-            if (mediaFinal !== null && mediaFinal !== undefined && !isNaN(mediaFinal)) {
-                allSubjectAverages.push(mediaFinal);
-            }
-        }
-    });
-  
-    if (allSubjectAverages.length === 0) {
-        return 0;
-    }
-  
-    const overallSum = allSubjectAverages.reduce((acc, curr) => acc + curr, 0);
-    return overallSum / allSubjectAverages.length;
+  if (!boletimAno || !boletimAno.notas || typeof boletimAno.notas !== 'object') {
+      return 0;
+  }
+
+  const disciplineKeys = Object.keys(boletimAno.notas);
+  const allSubjectAverages: number[] = [];
+
+  disciplineKeys.forEach(key => {
+      const disciplina = boletimAno.notas[key];
+      if (disciplina && typeof disciplina === 'object') {
+          const mediaFinal = disciplina.mediaFinal;
+          if (mediaFinal !== null && mediaFinal !== undefined && !isNaN(mediaFinal)) {
+              allSubjectAverages.push(mediaFinal);
+          }
+      }
+  });
+
+  if (allSubjectAverages.length === 0) {
+      return 0;
+  }
+
+  const overallSum = allSubjectAverages.reduce((acc, curr) => acc + curr, 0);
+  return overallSum / allSubjectAverages.length;
 };
 
 const RankingTable = ({ title, students, isLoading }: { title: string, students: RankedStudent[], isLoading: boolean }) => (
@@ -107,15 +107,9 @@ export default function StudentRankingView() {
     const [filtersFund2, setFiltersFund2] = useState({ serie: 'all', classe: 'all', turno: 'all' });
     
     const currentYear = new Date().getFullYear().toString();
-
-    // Use consistent, "clean" series names for logic
-    const seriesFund1 = useMemo(() => ["3ANO", "4ANO", "5ANO"], []);
-    const seriesFund2 = useMemo(() => ["6ANO", "7ANO", "8ANO", "9ANO"], []);
-
-    const normalizeSerie = (serie: string | undefined): string => {
-        if (!serie) return '';
-        return serie.toUpperCase().replace(/º/g, '').replace(/\s/g, '');
-    }
+    
+    const seriesFund1 = useMemo(() => ["3º ANO", "4º ANO", "5º ANO"], []);
+    const seriesFund2 = useMemo(() => ["6º ANO", "7º ANO", "8º ANO", "9º ANO"], []);
 
     useEffect(() => {
         const fetchStudents = async () => {
@@ -145,8 +139,8 @@ export default function StudentRankingView() {
         const fund2: RankedStudent[] = [];
 
         allStudents.forEach(student => {
-            const studentSerieNormalized = normalizeSerie(student.serie);
-            if (!studentSerieNormalized) return;
+            const studentSerie = student.serie?.toUpperCase();
+            if (!studentSerie) return;
 
             const average = calculateAverage(student.boletim?.[currentYear]);
             if (average > 0) {
@@ -155,14 +149,14 @@ export default function StudentRankingView() {
                     name: student.nome,
                     turma: `${student.serie || ''} ${student.classe || ''}`.trim(),
                     average: average,
-                    serie: student.serie || '', // Keep original serie for display/filtering
+                    serie: student.serie || '',
                     classe: student.classe || '',
                     turno: student.turno || '',
                 };
                 
-                if (seriesFund1.includes(studentSerieNormalized)) {
+                if (seriesFund1.includes(studentSerie)) {
                     fund1.push(rankedStudent);
-                } else if (seriesFund2.includes(studentSerieNormalized)) {
+                } else if (seriesFund2.includes(studentSerie)) {
                     fund2.push(rankedStudent);
                 }
             }
