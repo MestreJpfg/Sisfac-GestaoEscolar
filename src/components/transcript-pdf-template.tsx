@@ -54,18 +54,8 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
         "Geografia", "História", "Inglês", "Língua Portuguesa", "Matemática",
     ];
     
-    // Anos/Séries a serem exibidos na tabela de notas
-    const anosSeries = React.useMemo(() => {
-        if (isEditing) {
-            return ["1º ANO", "2º ANO", "3º ANO", "4º ANO", "5º ANO", "6º ANO", "7º ANO", "8º ANO", "9º ANO"];
-        }
-        if (!boletim) return [];
-        
-        return Object.keys(boletim)
-            .map(year => boletim[year]?.info?.serie)
-            .filter((serie): serie is string => !!serie)
-            .sort((a, b) => parseInt(a.replace('º ANO', '')) - parseInt(b.replace('º ANO', '')));
-    }, [boletim, isEditing]);
+    // Anos/Séries a serem exibidos na tabela de notas - SEMPRE MOSTRAR TODOS
+    const anosSeries = ["1º ANO", "2º ANO", "3º ANO", "4º ANO", "5º ANO", "6º ANO", "7º ANO", "8º ANO", "9º ANO"];
 
 
     const gradeData: { [disciplina: string]: { [serie: string]: string } } = {};
@@ -216,15 +206,22 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
     const handleGradeChange = (serie: string, disciplina: string, value: string) => {
         const newBoletim = JSON.parse(JSON.stringify(student.boletim || {}));
         
-        const year = serie.replace(/\D/g,''); // Simplified logic, may need adjustment
+        // Find the year that corresponds to the 'serie'
+        let targetYear = Object.keys(newBoletim).find(y => newBoletim[y]?.info?.serie === serie);
 
-        if (!newBoletim[year]) newBoletim[year] = { info: { serie }, notas: {} };
-        if (!newBoletim[year].notas) newBoletim[year].notas = {};
+        // If no year found, try to infer it (e.g. from trajectoryData) or create a new one
+        if (!targetYear) {
+            const trajectoryRow = student.trajectoryData?.find((row: any) => row.anoSerie === serie);
+            targetYear = trajectoryRow?.anoCivil || serie.replace(/\D/g,''); // fallback to just the number
+        }
+
+        if (!newBoletim[targetYear]) newBoletim[targetYear] = { info: { serie }, notas: {} };
+        if (!newBoletim[targetYear].notas) newBoletim[targetYear].notas = {};
         
         const normalizedDiscKey = normalizeString(disciplina);
-        if (!newBoletim[year].notas[normalizedDiscKey]) newBoletim[year].notas[normalizedDiscKey] = {};
+        if (!newBoletim[targetYear].notas[normalizedDiscKey]) newBoletim[targetYear].notas[normalizedDiscKey] = {};
         
-        newBoletim[year].notas[normalizedDiscKey].mediaFinal = parseFloat(value.replace(',', '.')) || null;
+        newBoletim[targetYear].notas[normalizedDiscKey].mediaFinal = parseFloat(value.replace(',', '.')) || null;
 
         onStudentChange?.({ ...student, boletim: newBoletim });
     };
@@ -271,7 +268,7 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                     </div>
                     <p className="my-4">Fortaleza, {formattedDate}.</p>
                     <div className="flex justify-around w-full mt-8">
-                        <div className="text-center w-48 relative">
+                         <div className="text-center w-48 relative">
                              <div className="relative h-16 w-full -mb-10" style={{ right: '0.5cm' }}>
                                 <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized />
                             </div>
