@@ -17,42 +17,79 @@ const DetailItem = ({ label, value }: { label: string, value: React.ReactNode })
     );
 };
 
-const GradeTable = ({ boletim }: { boletim: any }) => {
-    const disciplinas = boletim?.notas ? Object.keys(boletim.notas).sort((a,b) => a.localeCompare(b)) : [];
-    
-    if (disciplinas.length === 0) return null;
+const GradeMatrix = ({ boletim }: { boletim: any }) => {
+    // Fixed list of disciplines to ensure order and completeness
+    const disciplinasBase = [
+        "Arte/Literatura",
+        "Ciências",
+        "Educacao Fisica",
+        "Ensino Religioso",
+        "Geografia",
+        "História",
+        "Inglês",
+        "Língua Portuguesa",
+        "Matemática",
+    ];
 
-    const renderGrade = (grade: any) => {
-        if (grade === null || grade === undefined) return '-';
-        return String(grade).replace('.', ',');
-    };
+    const anosSeries = ["1º ANO", "2º ANO", "3º ANO", "4º ANO", "5º ANO", "6º ANO", "7º ANO", "8º ANO", "9º ANO"];
+
+    const gradeData: { [disciplina: string]: { [serie: string]: string } } = {};
+
+    // Initialize the data structure
+    disciplinasBase.forEach(disc => {
+        gradeData[disc] = {};
+        anosSeries.forEach(serie => {
+            gradeData[disc][serie] = '-';
+        });
+    });
+
+    // Populate with student data
+    if (boletim) {
+        Object.keys(boletim).forEach(year => {
+            const yearData = boletim[year];
+            const serieDoAno = yearData?.info?.serie;
+
+            if (serieDoAno && yearData.notas) {
+                Object.keys(yearData.notas).forEach(discKey => {
+                    const media = yearData.notas[discKey]?.mediaFinal;
+                    const formattedMedia = (media !== null && media !== undefined) ? String(media).replace('.', ',') : '-';
+                    
+                    // Match discipline key to display name
+                    const discDisplayName = disciplinasBase.find(d => 
+                        d.toLowerCase().replace(/ /g, '_') === discKey.toLowerCase() ||
+                        d.toLowerCase().replace('educacao fisica', 'educacao_fisica').replace('/', '-') === discKey.toLowerCase()
+                    );
+                    
+                    if (discDisplayName) {
+                        gradeData[discDisplayName][serieDoAno] = formattedMedia;
+                    }
+                });
+            }
+        });
+    }
+
 
     return (
         <table className="w-full text-[8px] border-collapse" style={{ border: '1px solid black' }}>
             <thead>
                 <tr className="bg-gray-200">
-                    <th className="border border-black p-1 font-bold">Componente Curricular</th>
-                    <th className="border border-black p-1 font-bold">E1</th>
-                    <th className="border border-black p-1 font-bold">E2</th>
-                    <th className="border border-black p-1 font-bold">E3</th>
-                    <th className="border border-black p-1 font-bold">E4</th>
-                    <th className="border border-black p-1 font-bold">Média</th>
+                    <th className="border border-black p-1 font-bold w-[25%]">Componente Curricular</th>
+                    {anosSeries.map(serie => (
+                        <th key={serie} className="border border-black p-1 font-bold">{serie}</th>
+                    ))}
                 </tr>
             </thead>
             <tbody>
-                {disciplinas.map(disc => {
-                    const notas = boletim.notas[disc];
-                    return (
-                        <tr key={disc}>
-                            <td className="border border-black p-1">{disc.replace(/_/g, ' ').replace(/-/g, '/').replace(/\b\w/g, l => l.toUpperCase())}</td>
-                            <td className="border border-black p-1 text-center">{renderGrade(notas?.etapa1)}</td>
-                            <td className="border border-black p-1 text-center">{renderGrade(notas?.etapa2)}</td>
-                            <td className="border border-black p-1 text-center">{renderGrade(notas?.etapa3)}</td>
-                            <td className="border border-black p-1 text-center">{renderGrade(notas?.etapa4)}</td>
-                            <td className="border border-black p-1 text-center font-bold">{renderGrade(notas?.mediaFinal)}</td>
-                        </tr>
-                    )
-                })}
+                {disciplinasBase.map(disciplina => (
+                    <tr key={disciplina}>
+                        <td className="border border-black p-1 font-medium">{disciplina}</td>
+                        {anosSeries.map(serie => (
+                            <td key={`${disciplina}-${serie}`} className="border border-black p-1 text-center">
+                                {gradeData[disciplina]?.[serie] || '-'}
+                            </td>
+                        ))}
+                    </tr>
+                ))}
             </tbody>
         </table>
     );
@@ -146,12 +183,7 @@ export default function TranscriptPDFTemplate({ student }: TranscriptPDFTemplate
                 {/* Notas e Frequência */}
                 <section className="my-4 space-y-4">
                      <h2 className="text-sm font-bold text-center mb-2">NOTAS E FREQUÊNCIA POR ANO/SÉRIE</h2>
-                     {allYears.map(year => (
-                         <div key={year}>
-                            <h3 className="text-xs font-bold text-center mb-1">ANO LETIVO: {year} - SÉRIE: {student.boletim[year]?.info?.serie || ''}</h3>
-                            <GradeTable boletim={student.boletim[year]} />
-                         </div>
-                     ))}
+                     <GradeMatrix boletim={student.boletim} />
                 </section>
                 
                  {/* Rodapé */}
