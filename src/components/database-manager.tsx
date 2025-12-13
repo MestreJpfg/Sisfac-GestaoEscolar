@@ -97,52 +97,40 @@ export default function DatabaseManager() {
                 return;
             }
 
-            const batchSize = 500;
-            let fieldsCleanedCount = 0;
             let studentsAffectedCount = 0;
-
+            const batchSize = 500;
             for (let i = 0; i < snapshot.docs.length; i += batchSize) {
                 const batch = writeBatch(firestore);
                 const chunk = snapshot.docs.slice(i, i + batchSize);
                 
                 chunk.forEach(studentDoc => {
                     const studentData = studentDoc.data();
-                    if (studentData.boletim && typeof studentData.boletim === 'object') {
-                        const boletimUpdates: { [key: string]: any } = {};
-                        let needsUpdate = false;
-                        
-                        Object.keys(studentData.boletim).forEach(key => {
-                            // Se a chave NÃO é um número de 4 dígitos (ano), ou SE é um ano, marca para eliminação.
-                            // Isto limpa tanto a estrutura antiga como os dados dos anos existentes.
-                            boletimUpdates[`boletim.${key}`] = deleteField();
-                            needsUpdate = true;
-                            fieldsCleanedCount++;
-                        });
-
-                        if (needsUpdate) {
-                            batch.update(studentDoc.ref, boletimUpdates);
-                            studentsAffectedCount++;
-                        }
+                    if (studentData.boletim) {
+                         batch.update(studentDoc.ref, { boletim: deleteField() });
+                         studentsAffectedCount++;
                     }
                 });
-                await batch.commit();
+                
+                if (chunk.length > 0) {
+                  await batch.commit();
+                }
             }
+
 
             if (studentsAffectedCount > 0) {
                  toast({
                     title: "Limpeza Concluída!",
-                    description: `Foram limpos ${fieldsCleanedCount} campos de ${studentsAffectedCount} alunos, preparando para a reimportação.`,
+                    description: `O campo 'boletim' foi completamente removido de ${studentsAffectedCount} alunos, preparando para a reimportação.`,
                 });
             } else {
                  toast({
                     title: "Nenhuma Limpeza Necessária",
-                    description: "A estrutura dos boletins já está vazia ou correta.",
+                    description: "Nenhum aluno tinha o campo 'boletim' para ser limpo.",
                 });
             }
            
-
         } catch (error: any) {
-            console.error("Error cleaning old boletim structure:", error);
+            console.error("Error cleaning boletim structure:", error);
             toast({
                 variant: "destructive",
                 title: "Erro na Limpeza",
@@ -257,9 +245,9 @@ export default function DatabaseManager() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Confirmar Limpeza da Estrutura?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Esta ação irá percorrer todos os alunos e <strong className="text-destructive">APAGARÁ</strong> todos os dados dentro do campo 'boletim'. Isto inclui tanto a estrutura antiga como os dados dos anos já registados (ex: 2025).
+                            Esta ação irá percorrer todos os alunos e <strong className="text-destructive">APAGARÁ</strong> todo o campo 'boletim' de cada um. Isto inclui tanto estruturas antigas como todos os dados de notas de todos os anos.
                             <br /><br />
-                            Use esta função para preparar a base de dados para uma reimportação limpa. A ação é <strong className="text-destructive">irreversível</strong>.
+                            Use esta função para preparar a base de dados para uma reimportação limpa de todas as notas. A ação é <strong className="text-destructive">irreversível</strong>.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -273,5 +261,3 @@ export default function DatabaseManager() {
        </div>
     );
 }
-
-    
