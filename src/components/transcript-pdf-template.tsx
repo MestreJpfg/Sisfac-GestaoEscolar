@@ -134,21 +134,24 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
     const initialRows = React.useMemo(() => {
         const anosSeriesTemplate = ["1º ANO", "2º ANO", "3º ANO", "4º ANO", "5º ANO", "6º ANO", "7º ANO", "8º ANO", "9º ANO"];
         
-        // Create a base 9-row structure
         const rows = anosSeriesTemplate.map((serie, index) => ({
             anoSerie: serie,
             anoCivil: '',
-            estabelecimento: student.trajectoryData?.[index]?.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES',
-            municipioUF: student.trajectoryData?.[index]?.municipioUF || 'Fortaleza/CE',
-            resultado: student.trajectoryData?.[index]?.resultado || ''
+            estabelecimento: '',
+            municipioUF: '',
+            resultado: ''
         }));
 
-        // If editing, use the student's trajectoryData if it exists, otherwise the blank template is fine
         if (isEditing) {
-             return student.trajectoryData || rows;
+            return student.trajectoryData || anosSeriesTemplate.map(serie => ({
+                anoSerie: serie,
+                anoCivil: '',
+                estabelecimento: 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES',
+                municipioUF: 'Fortaleza/CE',
+                resultado: ''
+            }));
         }
 
-        // For viewing, map existing student data onto the template
         if (student.boletim) {
             Object.keys(student.boletim).forEach(year => {
                 const yearInfo = student.boletim[year]?.info;
@@ -156,8 +159,8 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
                     const rowIndex = anosSeriesTemplate.indexOf(yearInfo.serie);
                     if (rowIndex !== -1) {
                         rows[rowIndex].anoCivil = year;
-                        rows[rowIndex].estabelecimento = yearInfo.estabelecimento || rows[rowIndex].estabelecimento;
-                        rows[rowIndex].municipioUF = yearInfo.municipioUF || rows[rowIndex].municipioUF;
+                        rows[rowIndex].estabelecimento = yearInfo.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
+                        rows[rowIndex].municipioUF = yearInfo.municipioUF || 'Fortaleza/CE';
                         rows[rowIndex].resultado = yearInfo.resultado || 'Aprovado';
                     }
                 }
@@ -192,11 +195,11 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
                                 {isEditing ? (
                                     <Input
                                         className={cn("h-6 text-[9px] p-1 text-center border-dashed rounded-none", "bg-white text-black border-blue-300 focus:border-blue-500 focus:ring-blue-500")}
-                                        value={row[field] || ''}
+                                        value={row[field as keyof typeof row] || ''}
                                         onChange={(e) => onTrajectoryChange?.(index, field, e.target.value)}
-                                        disabled={field === 'anoSerie'} // Make the series column non-editable
+                                        disabled={field === 'anoSerie'}
                                     />
-                                ) : ( row[field] )}
+                                ) : ( row[field as keyof typeof row] )}
                             </td>
                         ))}
                     </tr>
@@ -219,21 +222,19 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
     const handleTrajectoryChange = (index: number, field: string, value: string) => {
         const defaultTrajectoryRow = { anoSerie: `${index + 1}º ANO`, anoCivil: '', estabelecimento: 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', municipioUF: 'Fortaleza/CE', resultado: 'Aprovado' };
         const newSeriesData = [...(student.trajectoryData || Array.from({ length: 9 }, (_, i) => ({...defaultTrajectoryRow, anoSerie: `${i + 1}º ANO` })))];
-        newSeriesData[index] = { ...newSeriesData[index], [field]: value };
+        (newSeriesData[index] as any)[field] = value;
         onStudentChange?.({ ...student, trajectoryData: newSeriesData });
     };
     
     const handleGradeChange = (serie: string, disciplina: string, value: string) => {
         const newBoletim = JSON.parse(JSON.stringify(student.boletim || {}));
         
-        // Find the year that corresponds to the 'serie'
         let targetYear = Object.keys(newBoletim).find(y => newBoletim[y]?.info?.serie === serie);
 
-        // If no year found, try to infer it (e.g. from trajectoryData) or create a new one
         if (!targetYear) {
             const trajectoryRow = student.trajectoryData?.find((row: any) => row.anoSerie === serie);
-            targetYear = trajectoryRow?.anoCivil || serie.replace(/\D/g,''); // fallback to just the number
-            if (!targetYear) { // If still no year, cannot proceed
+            targetYear = trajectoryRow?.anoCivil || serie.replace(/\D/g,'');
+            if (!targetYear) {
                 console.warn(`Cannot save grade for ${serie} without a corresponding civil year.`);
                 return;
             }
