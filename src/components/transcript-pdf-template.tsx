@@ -4,6 +4,7 @@
 
 import Image from "next/image";
 import { Input } from "./ui/input";
+import { cn } from "@/lib/utils";
 
 interface TranscriptPDFTemplateProps {
     student: any | null;
@@ -18,7 +19,10 @@ const DetailItem = ({ label, value, isEditing, onChange }: { label: string, valu
             <span className="font-bold text-[8px] uppercase">{label}:</span>
             {isEditing ? (
                 <Input
-                    className="h-6 text-[9px] p-1 border-dashed"
+                    className={cn(
+                        "h-6 text-[9px] p-1 border-dashed",
+                        "bg-white text-black border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                    )}
                     value={value as string || ''}
                     onChange={onChange}
                 />
@@ -30,16 +34,16 @@ const DetailItem = ({ label, value, isEditing, onChange }: { label: string, valu
 };
 
 const normalizeString = (str: string): string => {
-    if (typeof str !== 'string') return '';
-    return str.trim().toLowerCase()
-      .replace(/ç/g, 'c')
-      .replace(/ã/g, 'a')
-      .replace(/é/g, 'e')
-      .replace(/º/g, '')
-      .replace(/\./g, '')
-      .replace(/\//g, '-') 
-      .replace(/[\[\]*~]/g, '') 
-      .replace(/\s+/g, '_');
+  if (typeof str !== 'string') return '';
+  return str.trim().toLowerCase()
+    .replace(/ç/g, 'c')
+    .replace(/ã/g, 'a')
+    .replace(/é/g, 'e')
+    .replace(/º/g, '')
+    .replace(/\./g, '')
+    .replace(/\//g, '-') 
+    .replace(/[\[\]*~]/g, '') 
+    .replace(/\s+/g, '_');
 };
 
 
@@ -125,7 +129,10 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
                             <td key={`${disciplina}-${serie}`} className="border border-black p-1 text-center">
                                 {isEditing ? (
                                     <Input
-                                        className="h-6 text-[9px] p-1 text-center border-dashed"
+                                        className={cn(
+                                            "h-6 text-[9px] p-1 text-center border-dashed",
+                                            "bg-white text-black border-blue-300 focus:border-blue-500 focus:ring-blue-500"
+                                        )}
                                         value={gradeData[disciplina]?.[serie] || ''}
                                         onChange={(e) => {
                                             // This requires a more complex state update logic
@@ -197,13 +204,7 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                     <DetailItem label="Pai" value={student.filiacao_2} isEditing={isEditing} onChange={handleDetailChange('filiacao_2')} />
                 </section>
                 
-                 {/* Notas e Frequência */}
-                 <section className="my-4 space-y-4">
-                     <h2 className="text-sm font-bold text-center mb-2">NOTAS E FREQUÊNCIA POR ANO/SÉRIE</h2>
-                     <GradeMatrix boletim={student.boletim} isEditing={isEditing} />
-                </section>
-
-                {/* Trajetória Escolar */}
+                 {/* Trajetória Escolar */}
                 <section className="my-4">
                     <h2 className="text-sm font-bold text-center mb-2">TRAJETÓRIA ESCOLAR</h2>
                     <table className="w-full text-[8px] border-collapse" style={{ border: '1px solid black' }}>
@@ -238,6 +239,12 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                             ))}
                         </tbody>
                     </table>
+                </section>
+                
+                {/* Notas e Frequência */}
+                 <section className="my-4 space-y-4">
+                     <h2 className="text-sm font-bold text-center mb-2">NOTAS E FREQUÊNCIA POR ANO/SÉRIE</h2>
+                     <GradeMatrix boletim={student.boletim} isEditing={isEditing} />
                 </section>
 
                  {/* Rodapé */}
