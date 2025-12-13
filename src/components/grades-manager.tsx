@@ -119,11 +119,13 @@ export default function GradesManager() {
 
     const disciplineId = useMemo(() => {
       if (!selectedDiscipline) return '';
+      // A chave é sempre o nome da disciplina em minúsculas e com espaços trocados por underscore.
+      // A barra em 'Arte/Literatura' é tratada como espaço.
       return selectedDiscipline
         .trim()
         .toLowerCase()
         .replace(/\s+/g, '_')
-        .replace(/[^\w-]/g, ''); // Remove non-alphanumeric chars except underscore and hyphen
+        .replace(/[^\w-]/g, '');
     }, [selectedDiscipline]);
 
     useEffect(() => {
