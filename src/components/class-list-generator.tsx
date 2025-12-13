@@ -73,6 +73,18 @@ export default function ClassListGenerator() {
   const [headerColor, setHeaderColor] = useState('#e6e6e6');
   const [useAlternateRowColors, setUseAlternateRowColors] = useState(true);
   const [oneClassPerPage, setOneClassPerPage] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+
+  const availableYears = useMemo(() => {
+    if (!allStudents) return [];
+    const years = new Set<string>();
+    allStudents.forEach(s => {
+      if (s.boletim) {
+        Object.keys(s.boletim).forEach(year => years.add(year));
+      }
+    });
+    return Array.from(years).sort((a,b) => parseInt(b) - parseInt(a));
+  }, [allStudents]);
 
 
   const [filters, setFilters] = useState({
@@ -303,37 +315,37 @@ export default function ClassListGenerator() {
     }
   };
 
-    const calculateAverage = (boletim: any): number => {
-        if (!boletim || typeof boletim !== 'object') {
-            return 0;
-        }
+  const calculateAverage = (boletimAno: any): number => {
+    if (!boletimAno || typeof boletimAno !== 'object') {
+        return 0;
+    }
 
-        const disciplineKeys = Object.keys(boletim);
-        const subjectAverages: number[] = [];
+    const disciplineKeys = Object.keys(boletimAno);
+    const subjectAverages: number[] = [];
 
-        disciplineKeys.forEach(key => {
-            const disciplina = boletim[key];
-            if (disciplina && typeof disciplina === 'object') {
-                const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
-                
-                const validGrades = etapaGrades.map(g => {
-                    if (g === null || g === undefined || String(g).trim() === '') return null;
-                    const numericGrade = parseFloat(String(g).replace(',', '.'));
-                    return isNaN(numericGrade) ? null : numericGrade;
-                }).filter((g): g is number => g !== null);
+    disciplineKeys.forEach(key => {
+        const disciplina = boletimAno[key];
+        if (disciplina && typeof disciplina === 'object') {
+            const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
+            
+            const validGrades = etapaGrades.map(g => {
+                if (g === null || g === undefined || String(g).trim() === '') return null;
+                const numericGrade = parseFloat(String(g).replace(',', '.'));
+                return isNaN(numericGrade) ? null : numericGrade;
+            }).filter((g): g is number => g !== null);
 
-                if (validGrades.length > 0) {
-                    const subjectAverage = validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length;
-                    subjectAverages.push(subjectAverage);
-                }
+            if (validGrades.length > 0) {
+                const subjectAverage = validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length;
+                subjectAverages.push(subjectAverage);
             }
-        });
+        }
+    });
 
-        if (subjectAverages.length === 0) return 0;
-        
-        const overallSum = subjectAverages.reduce((acc, curr) => acc + curr, 0);
-        return overallSum / subjectAverages.length;
-    };
+    if (subjectAverages.length === 0) return 0;
+    
+    const overallSum = subjectAverages.reduce((acc, curr) => acc + curr, 0);
+    return overallSum / subjectAverages.length;
+  };
 
   const handleDownloadWithAverages = async () => {
     if (students.length === 0) return;
@@ -345,7 +357,7 @@ export default function ClassListGenerator() {
         const processStudentGroup = (studentList: any[], isFirstPage: boolean) => {
             const studentsWithAverages = studentList.map(student => ({
                 ...student,
-                average: calculateAverage(student.boletim)
+                average: calculateAverage(student.boletim?.[selectedYear])
             })).sort((a, b) => b.average - a.average);
 
             const studentChunks = chunk(studentsWithAverages, 39);
@@ -367,7 +379,7 @@ export default function ClassListGenerator() {
                 
                 const studentSample = pageStudents[0] || {};
                 const dynamicTitleParts = [
-                    'Lista de Alunos com Média Final',
+                    `Lista de Alunos com Média Final (${selectedYear})`,
                     studentSample.ensino,
                     studentSample.serie,
                     studentSample.classe,
@@ -458,8 +470,13 @@ export default function ClassListGenerator() {
             
             const reactRoot = await import('react-dom/client').then(m => m.createRoot(elementToRender));
             
+            const studentsWithBoletimForYear = chunk.map(student => ({
+                ...student,
+                boletim: student.boletim?.[selectedYear] || {}
+            }));
+
             await new Promise<void>(resolve => {
-                reactRoot.render(<ReportCardGrid students={chunk} />);
+                reactRoot.render(<ReportCardGrid students={studentsWithBoletimForYear} />);
                 setTimeout(resolve, 500); 
             });
 
@@ -676,7 +693,7 @@ export default function ClassListGenerator() {
         console.error(e);
         toast({ variant: 'destructive', title: "Erro ao gerar PDF" });
     } finally {
-        setIsDownloadingSubjects(false);
+      setIsDownloadingSubjects(false);
     }
   };
 
@@ -844,10 +861,20 @@ export default function ClassListGenerator() {
                                                 {isDownloading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ClipboardList className="mr-2 h-4 w-4" />}
                                                 Lista Simples
                                             </Button>
-                                            <Button onClick={handleDownloadWithAverages} disabled={isDownloadingAverages} variant="secondary">
-                                                {isDownloadingAverages ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <TrendingUp className="mr-2 h-4 w-4" />}
-                                                Lista com Média Final
-                                            </Button>
+                                            <div className="space-y-2">
+                                              <Select value={selectedYear} onValueChange={setSelectedYear} disabled={isLoadingAllStudents || availableYears.length === 0}>
+                                                  <SelectTrigger>
+                                                      <SelectValue placeholder="Selecione o ano da média" />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                      {availableYears.map(y => <SelectItem key={y} value={y}>Usar médias de {y}</SelectItem>)}
+                                                  </SelectContent>
+                                              </Select>
+                                              <Button onClick={handleDownloadWithAverages} disabled={isDownloadingAverages || !selectedYear} variant="secondary" className="w-full">
+                                                  {isDownloadingAverages ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <TrendingUp className="mr-2 h-4 w-4" />}
+                                                  Lista com Média Final
+                                              </Button>
+                                            </div>
                                             <Button onClick={handleDownloadGrid} disabled={isDownloadingGrid} variant="secondary">
                                                 {isDownloadingGrid ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BookCheck className="mr-2 h-4 w-4" />}
                                                 Boletins em Grade

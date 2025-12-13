@@ -10,7 +10,7 @@ interface Boletim {
     etapa3?: number | null;
     etapa4?: number | null;
     mediaFinal?: number | null;
-  };
+  } | null;
 }
 
 interface ReportCardGridProps {

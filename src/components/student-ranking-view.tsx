@@ -21,16 +21,16 @@ interface RankedStudent {
   turno: string;
 }
 
-const calculateAverage = (boletim: any): number => {
-    if (!boletim || typeof boletim !== 'object') {
+const calculateAverage = (boletimAno: any): number => {
+    if (!boletimAno || typeof boletimAno !== 'object') {
         return 0;
     }
   
-    const disciplineKeys = Object.keys(boletim);
+    const disciplineKeys = Object.keys(boletimAno);
     const allSubjectAverages: number[] = [];
   
     disciplineKeys.forEach(key => {
-        const disciplina = boletim[key];
+        const disciplina = boletimAno[key];
         if (disciplina && typeof disciplina === 'object') {
             const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
             const validEtapaGrades = etapaGrades.map(g => {
@@ -83,16 +83,6 @@ const RankingTable = ({ title, students, isLoading }: { title: string, students:
                                 <TableRow key={student.id}>
                                     <TableCell className="text-center font-bold">
                                        <div className="flex items-center justify-center gap-2">
-                                          {index < 3 ? (
-                                             <Award 
-                                                size={18} 
-                                                className={
-                                                   index === 0 ? 'text-yellow-500' : 
-                                                   index === 1 ? 'text-gray-400' : 
-                                                   'text-yellow-700'
-                                                }
-                                             />
-                                          ) : <span className="w-[18px]"></span>}
                                           <span>{index + 1}º</span>
                                        </div>
                                     </TableCell>
@@ -122,6 +112,8 @@ export default function StudentRankingView() {
 
     const [filtersFund1, setFiltersFund1] = useState({ serie: 'all', classe: 'all', turno: 'all' });
     const [filtersFund2, setFiltersFund2] = useState({ serie: 'all', classe: 'all', turno: 'all' });
+    
+    const currentYear = new Date().getFullYear().toString();
 
     const seriesFund1 = useMemo(() => ["3º ANO", "4º ANO", "5º ANO"], []);
     const seriesFund2 = useMemo(() => ["6º ANO", "7º ANO", "8º ANO", "9º ANO"], []);
@@ -157,7 +149,7 @@ export default function StudentRankingView() {
             const studentSerie = student.serie?.toUpperCase();
             if (!studentSerie) return;
 
-            const average = calculateAverage(student.boletim);
+            const average = calculateAverage(student.boletim?.[currentYear]);
             if (average > 0) {
                 const rankedStudent: RankedStudent = {
                     id: student.id,
@@ -181,7 +173,7 @@ export default function StudentRankingView() {
         fund2.sort((a, b) => b.average - a.average);
 
         return { fundamental1: fund1, fundamental2: fund2 };
-    }, [allStudents, isLoading, seriesFund1, seriesFund2]);
+    }, [allStudents, isLoading, seriesFund1, seriesFund2, currentYear]);
 
     const filterOptionsFund1 = useMemo(() => {
         let students = fundamental1;

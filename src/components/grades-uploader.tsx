@@ -23,21 +23,26 @@ export default function GradesUploader() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [etapa, setEtapa] = useState<string>("");
+  const [year, setYear] = useState<string>(new Date().getFullYear().toString());
+
+
+  const availableYears = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString());
 
   const resetState = () => {
     setFileName(null);
     setFile(null);
     setEtapa("");
+    setYear(new Date().getFullYear().toString());
     setIsProcessing(false);
     if (inputRef.current) inputRef.current.value = "";
   };
 
   const processFile = async () => {
-    if (!file || !etapa) {
+    if (!file || !etapa || !year) {
       toast({
         variant: "destructive",
         title: "Informação em falta",
-        description: "Por favor, selecione um ficheiro e a etapa correspondente.",
+        description: "Por favor, selecione um ficheiro, o ano e a etapa correspondente.",
       });
       return;
     }
@@ -136,18 +141,21 @@ export default function GradesUploader() {
                 }
             }
             
-            gradeUpdate[`boletim.${subject}.${etapa}`] = grade;
+            // Constrói o caminho para a nota dentro do ano letivo
+            gradeUpdate[`boletim.${year}.${subject}.${etapa}`] = grade;
         });
         
-        batch.update(studentDocRef, gradeUpdate);
-        updatedCount++;
+        if (Object.keys(gradeUpdate).length > 0) {
+            batch.update(studentDocRef, gradeUpdate);
+            updatedCount++;
+        }
     }
 
     commitBatchNonBlocking(batch, 'alunos');
 
     toast({
         title: "Processamento Concluído!",
-        description: `${updatedCount} alunos atualizados.`,
+        description: `${updatedCount} alunos atualizados para o ano de ${year}.`,
     });
   };
 
@@ -222,23 +230,36 @@ export default function GradesUploader() {
               <p className="text-sm text-muted-foreground max-w-full truncate">{fileName}</p>
               
               <div className="space-y-4 py-4 w-full max-w-xs">
-                <Label htmlFor="etapa-select">Selecione a Etapa das Notas</Label>
-                <Select value={etapa} onValueChange={setEtapa}>
-                    <SelectTrigger id="etapa-select">
-                        <SelectValue placeholder="Selecione a etapa..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="etapa1">Etapa 1</SelectItem>
-                        <SelectItem value="etapa2">Etapa 2</SelectItem>
-                        <SelectItem value="etapa3">Etapa 3</SelectItem>
-                        <SelectItem value="etapa4">Etapa 4</SelectItem>
-                    </SelectContent>
-                </Select>
+                <div>
+                  <Label htmlFor="year-select">Selecione o Ano Letivo</Label>
+                  <Select value={year} onValueChange={setYear}>
+                      <SelectTrigger id="year-select">
+                          <SelectValue placeholder="Selecione o ano..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {availableYears.map(y => <SelectItem key={y} value={y}>Ano de {y}</SelectItem>)}
+                      </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="etapa-select">Selecione a Etapa das Notas</Label>
+                  <Select value={etapa} onValueChange={setEtapa}>
+                      <SelectTrigger id="etapa-select">
+                          <SelectValue placeholder="Selecione a etapa..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="etapa1">Etapa 1</SelectItem>
+                          <SelectItem value="etapa2">Etapa 2</SelectItem>
+                          <SelectItem value="etapa3">Etapa 3</SelectItem>
+                          <SelectItem value="etapa4">Etapa 4</SelectItem>
+                      </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="flex gap-2 pt-4">
                 <Button variant="secondary" onClick={resetState}>Cancelar</Button>
-                <Button onClick={processFile} disabled={!etapa}>Confirmar e Carregar Notas</Button>
+                <Button onClick={processFile} disabled={!etapa || !year}>Confirmar e Carregar Notas</Button>
               </div>
             </>
           ) : (
