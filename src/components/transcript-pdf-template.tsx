@@ -20,17 +20,17 @@ const DetailItem = ({ label, value }: { label: string, value: React.ReactNode })
 const normalizeString = (str: string): string => {
     if (typeof str !== 'string') return '';
     return str.trim().toLowerCase()
-        .replace(/[ç]/g, 'c')
-        .replace(/[áàâã]/g, 'a')
-        .replace(/[éèê]/g, 'e')
-        .replace(/[íìî]/g, 'i')
-        .replace(/[óòôõ]/g, 'o')
-        .replace(/[úùû]/g, 'u')
-        .replace(/º/g, '')
-        .replace(/\./g, '')
-        .replace(/\//g, '-')
-        .replace(/[\[\]*~]/g, '')
-        .replace(/\s+/g, '_');
+      .replace(/[ç]/g, 'c')
+      .replace(/[áàâã]/g, 'a')
+      .replace(/[éèê]/g, 'e')
+      .replace(/[íìî]/g, 'i')
+      .replace(/[óòôõ]/g, 'o')
+      .replace(/[úùû]/g, 'u')
+      .replace(/º/g, '')
+      .replace(/\./g, '')
+      .replace(/\//g, '-') 
+      .replace(/[\[\]*~]/g, '') 
+      .replace(/\s+/g, '_');
 };
 
 const GradeMatrix = ({ boletim }: { boletim: any }) => {
@@ -229,7 +229,7 @@ export default function TranscriptPDFTemplate({ student }: TranscriptPDFTemplate
                     
                     <div className="flex justify-around w-full mt-8">
                         <div className="text-center w-48 relative">
-                             <div className="relative h-16 w-full -mb-10">
+                             <div className="relative h-16 w-full -mb-10" style={{ right: '2cm' }}>
                                 <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized />
                             </div>
                             <div className="border-t border-black w-full pt-1">
@@ -240,7 +240,7 @@ export default function TranscriptPDFTemplate({ student }: TranscriptPDFTemplate
                         </div>
                         <div className="text-center w-48 relative">
                              <div className="relative h-16 w-full -mb-10">
-                                {/* Imagem da assinatura removida aqui */}
+                                {/* Signature removed from here */}
                             </div>
                              <div className="border-t border-black w-full pt-1">
                                 <p className="font-bold">SECRETÁRIO(A) ESCOLAR</p>
