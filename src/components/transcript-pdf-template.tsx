@@ -33,7 +33,6 @@ const normalizeString = (str: string): string => {
         .replace(/\s+/g, '_');
 };
 
-
 const GradeMatrix = ({ boletim }: { boletim: any }) => {
     const disciplinasBase = [
         "Arte/Literatura",
@@ -241,7 +240,7 @@ export default function TranscriptPDFTemplate({ student }: TranscriptPDFTemplate
                         </div>
                         <div className="text-center w-48 relative">
                              <div className="relative h-16 w-full -mb-10">
-                                <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized />
+                                {/* Imagem da assinatura removida aqui */}
                             </div>
                              <div className="border-t border-black w-full pt-1">
                                 <p className="font-bold">SECRETÁRIO(A) ESCOLAR</p>
