@@ -118,15 +118,14 @@ export default function GradesManager() {
 
 
     const disciplineId = useMemo(() => {
-      if (!selectedDiscipline) return '';
-      // A chave é sempre o nome da disciplina em minúsculas e com espaços trocados por underscore.
-      // A barra em 'Arte/Literatura' é tratada como espaço.
-      return selectedDiscipline
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, '_')
-        .replace(/[^\w-]/g, '');
-    }, [selectedDiscipline]);
+        if (!selectedDiscipline) return '';
+        // This logic ensures that names like "Língua Portuguesa" become "língua_portuguesa"
+        // and names like "Educação Física" become "educação_física".
+        return selectedDiscipline
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, '_');
+      }, [selectedDiscipline]);
 
     useEffect(() => {
         if (sortedStudentsInClass.length > 0 && disciplineId && selectedYear) {
@@ -155,7 +154,10 @@ export default function GradesManager() {
             else if (name === 'classe') { newFilters.turno = ''; }
             return newFilters;
         });
-        setSelectedDiscipline('');
+        // Do not reset discipline when only class/turno changes
+        if (['ensino', 'serie'].includes(name)) {
+            setSelectedDiscipline('');
+        }
     };
 
     const handleGradeChange = (studentId: string, etapa: keyof EtapaGrade, value: string) => {
