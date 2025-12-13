@@ -17,14 +17,18 @@ const DetailItem = ({ label, value }: { label: string, value: React.ReactNode })
     );
 };
 
-// Normalization function to handle special characters
-const normalizeString = (str: string) => {
+// Normalization function to handle special characters, matching the uploader logic
+const normalizeString = (str: string): string => {
     if (typeof str !== 'string') return '';
-    return str
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "") // Remove accents
-        .replace(/[^a-z0-9/]/g, ' '); // Keep letters, numbers, slash, and replace others with space
+    return str.trim().toLowerCase()
+        .replace(/ç/g, 'c')
+        .replace(/ã/g, 'a')
+        .replace(/é/g, 'e')
+        .replace(/º/g, '')
+        .replace(/\./g, '')
+        .replace(/\//g, '-')
+        .replace(/[\[\]*~]/g, '')
+        .replace(/\s+/g, '_');
 };
 
 
@@ -80,8 +84,7 @@ const GradeMatrix = ({ boletim }: { boletim: any }) => {
 
                     const formattedMedia = (mediaCalculada !== null && mediaCalculada !== undefined) ? mediaCalculada.toFixed(1).replace('.', ',') : '-';
                     
-                    const cleanedDiscKey = discKey.replace(/_/g, ' ');
-                    const normalizedDiscKey = normalizeString(cleanedDiscKey);
+                    const normalizedDiscKey = normalizeString(discKey);
 
                     const discDisplayName = disciplinasBase.find(d => 
                         normalizeString(d) === normalizedDiscKey
