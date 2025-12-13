@@ -28,10 +28,10 @@ const normalizeString = (str: string): string => {
       .replace(/[úùû]/g, 'u')
       .replace(/º/g, '')
       .replace(/\./g, '')
-      .replace(/\//g, '-') 
-      .replace(/[\[\]*~]/g, '') 
+      .replace(/\//g, '-')
       .replace(/\s+/g, '_');
 };
+
 
 const GradeMatrix = ({ boletim }: { boletim: any }) => {
     const disciplinasBase = [
@@ -67,12 +67,10 @@ const GradeMatrix = ({ boletim }: { boletim: any }) => {
                     const notas = yearData.notas[discKey];
                     if (!notas) return;
                     
-                    const mediaCalculada = (() => {
-                        const mediaFinalExistente = notas.mediaFinal;
-                        if (mediaFinalExistente !== null && mediaFinalExistente !== undefined && !isNaN(mediaFinalExistente)) {
-                            return mediaFinalExistente;
+                     const mediaCalculada = (() => {
+                        if (notas.mediaFinal !== null && notas.mediaFinal !== undefined && !isNaN(notas.mediaFinal)) {
+                            return notas.mediaFinal;
                         }
-
                         const etapaGrades = [notas.etapa1, notas.etapa2, notas.etapa3, notas.etapa4];
                         const validGrades = etapaGrades.map(g => {
                             if (g === null || g === undefined || String(g).trim() === '') return null;
@@ -229,7 +227,7 @@ export default function TranscriptPDFTemplate({ student }: TranscriptPDFTemplate
                     
                     <div className="flex justify-around w-full mt-8">
                         <div className="text-center w-48 relative">
-                             <div className="relative h-16 w-full -mb-10" style={{ right: '2cm' }}>
+                             <div className="relative h-16 w-full -mb-10" style={{ right: '1cm' }}>
                                 <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized />
                             </div>
                             <div className="border-t border-black w-full pt-1">
