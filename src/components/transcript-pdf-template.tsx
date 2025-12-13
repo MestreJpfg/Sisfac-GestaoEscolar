@@ -132,24 +132,42 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
 const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: any, isEditing?: boolean, onTrajectoryChange?: (index: number, field: string, value: string) => void }) => {
     
     const initialRows = React.useMemo(() => {
+        const anosSeriesTemplate = ["1º ANO", "2º ANO", "3º ANO", "4º ANO", "5º ANO", "6º ANO", "7º ANO", "8º ANO", "9º ANO"];
+        
+        // Create a base 9-row structure
+        const rows = anosSeriesTemplate.map((serie, index) => ({
+            anoSerie: serie,
+            anoCivil: '',
+            estabelecimento: student.trajectoryData?.[index]?.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES',
+            municipioUF: student.trajectoryData?.[index]?.municipioUF || 'Fortaleza/CE',
+            resultado: student.trajectoryData?.[index]?.resultado || ''
+        }));
+
+        // If editing, use the student's trajectoryData if it exists, otherwise the blank template is fine
         if (isEditing) {
-            return Array.from({ length: 9 }, (_, i) => {
-                return student.trajectoryData?.[i] || { anoSerie: `${i + 1}º ANO`, anoCivil: '', estabelecimento: 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', municipioUF: 'Fortaleza/CE', resultado: 'Aprovado' };
+             return student.trajectoryData || rows;
+        }
+
+        // For viewing, map existing student data onto the template
+        if (student.boletim) {
+            Object.keys(student.boletim).forEach(year => {
+                const yearInfo = student.boletim[year]?.info;
+                if (yearInfo?.serie) {
+                    const rowIndex = anosSeriesTemplate.indexOf(yearInfo.serie);
+                    if (rowIndex !== -1) {
+                        rows[rowIndex].anoCivil = year;
+                        rows[rowIndex].estabelecimento = yearInfo.estabelecimento || rows[rowIndex].estabelecimento;
+                        rows[rowIndex].municipioUF = yearInfo.municipioUF || rows[rowIndex].municipioUF;
+                        rows[rowIndex].resultado = yearInfo.resultado || 'Aprovado';
+                    }
+                }
             });
         }
         
-        if (!student.boletim) return [];
-
-        const allYears = Object.keys(student.boletim).sort((a, b) => parseInt(a) - parseInt(b));
-        return allYears.map(year => ({
-            anoCivil: year,
-            anoSerie: student.boletim[year]?.info?.serie || '',
-            estabelecimento: student.boletim[year]?.info?.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES',
-            municipioUF: student.boletim[year]?.info?.municipioUF || 'Fortaleza/CE',
-            resultado: student.boletim[year]?.info?.resultado || 'Aprovado'
-        }));
+        return rows;
 
     }, [student, isEditing]);
+
 
      if (initialRows.length === 0 && !isEditing) {
         return <p className="text-center text-[8px] text-gray-500">Nenhum dado de trajetória escolar encontrado.</p>
@@ -176,6 +194,7 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
                                         className={cn("h-6 text-[9px] p-1 text-center border-dashed rounded-none", "bg-white text-black border-blue-300 focus:border-blue-500 focus:ring-blue-500")}
                                         value={row[field] || ''}
                                         onChange={(e) => onTrajectoryChange?.(index, field, e.target.value)}
+                                        disabled={field === 'anoSerie'} // Make the series column non-editable
                                     />
                                 ) : ( row[field] )}
                             </td>
@@ -198,7 +217,8 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
     };
 
     const handleTrajectoryChange = (index: number, field: string, value: string) => {
-        const newSeriesData = [...(student.trajectoryData || Array.from({ length: 9 }, (_, i) => ({ anoSerie: `${i + 1}º ANO`, anoCivil: '', estabelecimento: 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', municipioUF: 'Fortaleza/CE', resultado: 'Aprovado' })))];
+        const defaultTrajectoryRow = { anoSerie: `${index + 1}º ANO`, anoCivil: '', estabelecimento: 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', municipioUF: 'Fortaleza/CE', resultado: 'Aprovado' };
+        const newSeriesData = [...(student.trajectoryData || Array.from({ length: 9 }, (_, i) => ({...defaultTrajectoryRow, anoSerie: `${i + 1}º ANO` })))];
         newSeriesData[index] = { ...newSeriesData[index], [field]: value };
         onStudentChange?.({ ...student, trajectoryData: newSeriesData });
     };
@@ -213,9 +233,14 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
         if (!targetYear) {
             const trajectoryRow = student.trajectoryData?.find((row: any) => row.anoSerie === serie);
             targetYear = trajectoryRow?.anoCivil || serie.replace(/\D/g,''); // fallback to just the number
+            if (!targetYear) { // If still no year, cannot proceed
+                console.warn(`Cannot save grade for ${serie} without a corresponding civil year.`);
+                return;
+            }
         }
 
         if (!newBoletim[targetYear]) newBoletim[targetYear] = { info: { serie }, notas: {} };
+        if (!newBoletim[targetYear].info) newBoletim[targetYear].info = { serie };
         if (!newBoletim[targetYear].notas) newBoletim[targetYear].notas = {};
         
         const normalizedDiscKey = normalizeString(disciplina);
