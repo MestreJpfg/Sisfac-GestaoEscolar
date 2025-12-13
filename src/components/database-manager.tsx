@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, getDocs, writeBatch, query, doc, updateDoc, deleteField } from 'firebase/firestore';
+import { collection, getDocs, writeBatch, query, doc, updateDoc, deleteField, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import FileUploaderSheet from './file-uploader-sheet';
 import GradesUploaderSheet from './grades-uploader-sheet';
@@ -84,7 +84,7 @@ export default function DatabaseManager() {
         }
     
         setIsCleaning(true);
-        toast({ title: "A iniciar limpeza...", description: "A verificar a estrutura dos boletins. Isto pode demorar." });
+        toast({ title: "A iniciar limpeza...", description: "A verificar a estrutura de todos os alunos. Isto pode demorar." });
     
         try {
             const studentsCollection = collection(firestore, 'alunos');
@@ -98,39 +98,42 @@ export default function DatabaseManager() {
             }
     
             let studentsAffectedCount = 0;
-            const promises = [];
+            const updatePromises = [];
     
             for (const studentDoc of snapshot.docs) {
                 const studentData = studentDoc.data();
-                const fieldsToDelete: { [key: string]: any } = {};
+                const cleanedData: { [key: string]: any } = {};
                 let hasFieldsToDelete = false;
-    
-                // Lógica para encontrar campos que começam com 'boletim.2025'
+
+                // Copia todos os campos para um novo objeto, exceto os que começam com "boletim."
                 for (const key in studentData) {
-                    if (key.startsWith('boletim.2025')) {
-                        fieldsToDelete[key] = deleteField();
+                    if (!key.startsWith('boletim.')) {
+                        cleanedData[key] = studentData[key];
+                    } else {
                         hasFieldsToDelete = true;
                     }
                 }
-    
+                
+                // Se o documento tinha algum campo "boletim.", reescrevemos o documento com os dados limpos.
                 if (hasFieldsToDelete) {
                     studentsAffectedCount++;
-                    // Usar updateDoc individualmente para maior fiabilidade com nomes de campos com pontos
-                    promises.push(updateDoc(studentDoc.ref, fieldsToDelete));
+                    // Usar setDoc para sobrescrever o documento com os dados limpos.
+                    // Isso remove efetivamente todos os campos que não foram incluídos em cleanedData.
+                    updatePromises.push(setDoc(studentDoc.ref, cleanedData));
                 }
             }
     
-            await Promise.all(promises);
+            await Promise.all(updatePromises);
     
             if (studentsAffectedCount > 0) {
                 toast({
                     title: "Limpeza Concluída!",
-                    description: `Os campos 'boletim.2025' foram removidos de ${studentsAffectedCount} alunos.`,
+                    description: `A estrutura de boletins foi removida de ${studentsAffectedCount} alunos.`,
                 });
             } else {
                 toast({
                     title: "Nenhuma Limpeza Necessária",
-                    description: "Nenhum aluno tinha campos de boletim para o ano de 2025 para serem limpos.",
+                    description: "Nenhum aluno tinha campos de boletim para serem limpos.",
                 });
             }
     
@@ -250,9 +253,8 @@ export default function DatabaseManager() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Confirmar Limpeza Completa dos Boletins?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Esta ação irá percorrer todos os alunos e <strong className="text-destructive">APAGARÁ permanentemente</strong> todos os campos que comecem com "boletim.2025".
-                             Isto prepara a base de dados para uma reimportação de dados limpa.
-                            <br /><br />
+                            Esta ação irá percorrer todos os alunos e <strong className="text-destructive">APAGARÁ permanentemente</strong> todos os campos de notas existentes ("boletim" e "boletim.ANO..."). Isto prepara a base de dados para uma reimportação de dados limpa.
+                             <br /><br />
                             A ação é <strong className="text-destructive">irreversível</strong>. Deseja continuar?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
