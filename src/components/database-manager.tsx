@@ -82,71 +82,57 @@ export default function DatabaseManager() {
             toast({ variant: "destructive", title: "Erro de Conexão" });
             return;
         }
-
+    
         setIsCleaning(true);
         toast({ title: "A iniciar limpeza...", description: "A verificar a estrutura dos boletins. Isto pode demorar." });
-
+    
         try {
             const studentsCollection = collection(firestore, 'alunos');
             const snapshot = await getDocs(query(studentsCollection));
-
+    
             if (snapshot.empty) {
                 toast({ title: "Nenhum aluno encontrado.", description: "A base de dados de alunos está vazia." });
                 setIsCleaning(false);
                 setIsCleanupAlertOpen(false);
                 return;
             }
-
+    
             let studentsAffectedCount = 0;
-            const batchSize = 100; // Smaller batch size due to more complex operations per doc
-
-            for (let i = 0; i < snapshot.docs.length; i += batchSize) {
-                const batch = writeBatch(firestore);
-                const chunk = snapshot.docs.slice(i, i + batchSize);
-                
-                chunk.forEach(studentDoc => {
-                    const studentData = studentDoc.data();
-                    let hasFieldsToDelete = false;
-                    const fieldsToDelete: { [key: string]: any } = {};
-
-                    // Find all top-level fields that start with "boletim."
-                    for (const key in studentData) {
-                        if (key.startsWith('boletim.')) {
-                            fieldsToDelete[key] = deleteField();
-                            hasFieldsToDelete = true;
-                        }
-                    }
-
-                    // Also check for a 'boletim' map field itself
-                    if ('boletim' in studentData) {
-                        fieldsToDelete['boletim'] = deleteField();
+            const promises = [];
+    
+            for (const studentDoc of snapshot.docs) {
+                const studentData = studentDoc.data();
+                const fieldsToDelete: { [key: string]: any } = {};
+                let hasFieldsToDelete = false;
+    
+                for (const key in studentData) {
+                    if (key.startsWith('boletim')) { // Captura "boletim" e "boletim.2025..."
+                        fieldsToDelete[key] = deleteField();
                         hasFieldsToDelete = true;
                     }
-
-                    if (hasFieldsToDelete) {
-                        batch.update(studentDoc.ref, fieldsToDelete);
-                        studentsAffectedCount++;
-                    }
-                });
-                
-                // Only commit if there are updates in the batch
-                if (studentsAffectedCount > (i / batchSize) * batchSize) {
-                  await batch.commit();
+                }
+    
+                if (hasFieldsToDelete) {
+                    studentsAffectedCount++;
+                    // Use updateDoc for each document to reliably delete fields with dots
+                    promises.push(updateDoc(studentDoc.ref, fieldsToDelete));
                 }
             }
-
+    
+            await Promise.all(promises);
+    
             if (studentsAffectedCount > 0) {
-                 toast({
+                toast({
                     title: "Limpeza Concluída!",
-                    description: `Todos os dados de boletim foram removidos de ${studentsAffectedCount} alunos, preparando para a reimportação.`,
+                    description: `Todos os dados de boletim (antigos e novos) foram removidos de ${studentsAffectedCount} alunos.`,
                 });
             } else {
-                 toast({
+                toast({
                     title: "Nenhuma Limpeza Necessária",
                     description: "Nenhum aluno tinha campos de boletim para serem limpos.",
                 });
             }
-           
+    
         } catch (error: any) {
             console.error("Error cleaning boletim structure:", error);
             toast({
@@ -263,7 +249,8 @@ export default function DatabaseManager() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Confirmar Limpeza Completa dos Boletins?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Esta ação irá percorrer todos os alunos e <strong className="text-destructive">APAGARÁ</strong> todo o campo 'boletim', incluindo todos os dados de notas de todos os anos, para preparar a base de dados para uma reimportação limpa.
+                            Esta ação irá percorrer todos os alunos e <strong className="text-destructive">APAGARÁ permanentemente</strong> todos os campos que comecem com "boletim" (incluindo estruturas antigas e novas, como 'boletim.2025...').
+                             Isto prepara a base de dados para uma reimportação de dados limpa.
                             <br /><br />
                             A ação é <strong className="text-destructive">irreversível</strong>. Deseja continuar?
                         </AlertDialogDescription>
