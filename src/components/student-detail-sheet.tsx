@@ -88,30 +88,31 @@ const calculateAverage = (boletim: any): number => {
     }
 
     const disciplineKeys = Object.keys(boletim);
-    const subjectAverages: number[] = [];
+    const allSubjectAverages: number[] = [];
 
     disciplineKeys.forEach(key => {
         const disciplina = boletim[key];
         if (disciplina && typeof disciplina === 'object') {
             const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
-            
-            const validGrades = etapaGrades.map(g => {
+            const validEtapaGrades = etapaGrades.map(g => {
                 if (g === null || g === undefined || String(g).trim() === '') return null;
                 const numericGrade = parseFloat(String(g).replace(',', '.'));
                 return isNaN(numericGrade) ? null : numericGrade;
             }).filter((g): g is number => g !== null);
 
-            if (validGrades.length > 0) {
-                const subjectAverage = validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length;
-                subjectAverages.push(subjectAverage);
+            if (validEtapaGrades.length > 0) {
+                const subjectAverage = validEtapaGrades.reduce((sum, grade) => sum + grade, 0) / validEtapaGrades.length;
+                allSubjectAverages.push(subjectAverage);
             }
         }
     });
 
-    if (subjectAverages.length === 0) return 0;
-    
-    const overallSum = subjectAverages.reduce((acc, curr) => acc + curr, 0);
-    return overallSum / subjectAverages.length;
+    if (allSubjectAverages.length === 0) {
+        return 0;
+    }
+
+    const overallSum = allSubjectAverages.reduce((acc, curr) => acc + curr, 0);
+    return overallSum / allSubjectAverages.length;
 };
 
 
