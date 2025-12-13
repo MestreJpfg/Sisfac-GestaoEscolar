@@ -28,7 +28,7 @@ const normalizeString = (str: string): string => {
       .replace(/[úùû]/g, 'u')
       .replace(/º/g, '')
       .replace(/\./g, '')
-      .replace(/\//g, '-')
+      .replace(/[\/]/g, '-')
       .replace(/\s+/g, '_');
 };
 
@@ -37,7 +37,7 @@ const GradeMatrix = ({ boletim }: { boletim: any }) => {
     const disciplinasBase = [
         "Arte/Literatura",
         "Ciências",
-        "Educação Física",
+        "Educacao fisica",
         "Ensino Religioso",
         "Geografia",
         "História",
@@ -238,7 +238,7 @@ export default function TranscriptPDFTemplate({ student }: TranscriptPDFTemplate
                         </div>
                         <div className="text-center w-48 relative">
                              <div className="relative h-16 w-full -mb-10">
-                                {/* Signature removed from here */}
+                                <Image src="/assinatura2.png" alt="Segunda Assinatura" layout="fill" objectFit="contain" unoptimized />
                             </div>
                              <div className="border-t border-black w-full pt-1">
                                 <p className="font-bold">SECRETÁRIO(A) ESCOLAR</p>
