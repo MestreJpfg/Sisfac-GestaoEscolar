@@ -119,11 +119,15 @@ export default function GradesManager() {
 
     const disciplineId = useMemo(() => {
         if (!selectedDiscipline) return '';
-        // This logic ensures that names like "Língua Portuguesa" become "língua_portuguesa"
-        // and names like "Educação Física" become "educação_física".
-        return selectedDiscipline
-          .trim()
-          .toLowerCase()
+        // This logic must exactly match the logic in grades-uploader.tsx
+        return selectedDiscipline.trim().toLowerCase()
+          .replace(/ç/g, 'c')
+          .replace(/ã/g, 'a')
+          .replace(/é/g, 'e')
+          .replace(/º/g, '')
+          .replace(/\./g, '')
+          .replace(/\//g, '-') 
+          .replace(/[\[\]*~]/g, '') 
           .replace(/\s+/g, '_');
       }, [selectedDiscipline]);
 
