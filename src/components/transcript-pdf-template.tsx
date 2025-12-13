@@ -176,6 +176,7 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
             });
         }
         
+        // Limpar dados se não houver ano civil
         rows = rows.map(row => {
             if (!row.anoCivil) {
                 return { ...row, estabelecimento: '', municipioUF: '', resultado: '' };
@@ -337,7 +338,7 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
     };
 
     return (
-        <div className="bg-white text-black font-sans" style={{ width: '210mm', minHeight: '297mm' }}>
+        <div className="bg-white text-black font-sans" style={{ width: '210mm', height: '297mm' }}>
             <div className="flex flex-col h-full" style={{padding: '10mm 15mm'}}>
                 <header className="flex flex-col items-center text-center text-[9px] font-bold mb-4">
                     <div className="flex items-center gap-4 mb-2"><Image src="/logoyuri.png" alt="Logo" width={60} height={60} unoptimized /></div>
