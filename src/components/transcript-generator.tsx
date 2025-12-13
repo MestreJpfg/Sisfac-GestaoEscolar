@@ -257,6 +257,7 @@ export default function TranscriptGenerator() {
                                     student={selectedStudent} 
                                     isEditing={isEditing}
                                     onStudentChange={setSelectedStudent}
+                                    allStudents={allStudents}
                                 />
                            </div>
                         </div>

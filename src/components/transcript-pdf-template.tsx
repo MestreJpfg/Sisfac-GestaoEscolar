@@ -12,6 +12,7 @@ interface TranscriptPDFTemplateProps {
     student: any | null;
     isEditing?: boolean;
     onStudentChange?: (student: any) => void;
+    allStudents?: any[];
 }
 
 const DetailItem = ({ label, value, isEditing, onChange }: { label: string, value: React.ReactNode, isEditing?: boolean, onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void }) => {
@@ -132,11 +133,27 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
     );
 };
 
-const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: any, isEditing?: boolean, onTrajectoryChange?: (index: number, field: string, value: string) => void }) => {
+const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }: { student: any, isEditing?: boolean, onTrajectoryChange?: (index: number, field: string, value: string) => void, allStudents?: any[] }) => {
     
     const [activeAutocomplete, setActiveAutocomplete] = useState<{ index: number, field: string } | null>(null);
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const wrapperRef = useRef<HTMLDivElement>(null);
+
+    const schoolSuggestions = React.useMemo(() => {
+        if (!allStudents || allStudents.length === 0) return [];
+        const schoolSet = new Set<string>();
+        allStudents.forEach(s => {
+            if (s.boletim) {
+                Object.values(s.boletim).forEach((yearData: any) => {
+                    if (yearData?.info?.estabelecimento) {
+                        schoolSet.add(yearData.info.estabelecimento);
+                    }
+                });
+            }
+        });
+        return Array.from(schoolSet);
+    }, [allStudents]);
+
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -164,18 +181,24 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
                 const yearInfo = student.boletim[year]?.info;
                 if (yearInfo?.serie) {
                     const rowIndex = anosSeriesTemplate.indexOf(yearInfo.serie);
-                    if (rowIndex !== -1) {
-                         if (year) {
-                            rows[rowIndex].anoCivil = year;
-                            rows[rowIndex].estabelecimento = yearInfo.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
-                            rows[rowIndex].municipioUF = yearInfo.municipioUF || 'Fortaleza/CE';
-                            rows[rowIndex].resultado = yearInfo.resultado || 'Aprovado';
-                        }
+                    if (rowIndex !== -1 && year) {
+                        rows[rowIndex].anoCivil = year;
+                        rows[rowIndex].estabelecimento = yearInfo.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
+                        rows[rowIndex].municipioUF = yearInfo.municipioUF || 'Fortaleza/CE';
+                        rows[rowIndex].resultado = yearInfo.resultado || 'Aprovado';
                     }
                 }
             });
         }
         
+        // Ensure empty fields if anoCivil is empty
+        rows = rows.map(row => {
+            if (!row.anoCivil) {
+                return { ...row, estabelecimento: '', municipioUF: '', resultado: '' };
+            }
+            return row;
+        });
+
         if (isEditing && student.trajectoryData) {
             return student.trajectoryData;
         }
@@ -194,24 +217,33 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
         onTrajectoryChange?.(index, 'resultado', finalValue);
     }
     
-    const handleMunicipioChange = (index: number, value: string) => {
-        onTrajectoryChange?.(index, 'municipioUF', value);
+    const handleInputChange = (index: number, field: string, value: string) => {
+        onTrajectoryChange?.(index, field, value);
+
         if (value.length > 2) {
-            const searchLower = value.toLowerCase();
-            const filtered = municipios
-                .map(m => `${m.nome}/${m.uf}`)
-                .filter(m => m.toLowerCase().includes(searchLower))
-                .slice(0, 5);
-            setSuggestions(filtered);
-            setActiveAutocomplete({ index, field: 'municipioUF' });
+            let filteredSuggestions: string[] = [];
+            if (field === 'municipioUF') {
+                const searchLower = value.toLowerCase();
+                filteredSuggestions = municipios
+                    .map(m => `${m.nome}/${m.uf}`)
+                    .filter(m => m.toLowerCase().includes(searchLower))
+                    .slice(0, 5);
+            } else if (field === 'estabelecimento') {
+                const searchLower = value.toLowerCase();
+                filteredSuggestions = schoolSuggestions
+                    .filter(s => s.toLowerCase().includes(searchLower))
+                    .slice(0, 5);
+            }
+            setSuggestions(filteredSuggestions);
+            setActiveAutocomplete({ index, field });
         } else {
             setSuggestions([]);
             setActiveAutocomplete(null);
         }
     };
     
-    const handleSelectSuggestion = (index: number, value: string) => {
-        onTrajectoryChange?.(index, 'municipioUF', value);
+    const handleSelectSuggestion = (index: number, field: string, value: string) => {
+        onTrajectoryChange?.(index, field, value);
         setActiveAutocomplete(null);
     };
 
@@ -239,11 +271,10 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
                                                 value={row[field as keyof typeof row] || ''}
                                                 onChange={(e) => {
                                                     if (field === 'resultado') handleResultadoChange(index, e.target.value);
-                                                    else if (field === 'municipioUF') handleMunicipioChange(index, e.target.value);
-                                                    else onTrajectoryChange?.(index, field, e.target.value);
+                                                    else handleInputChange(index, field, e.target.value);
                                                 }}
                                                 onFocus={() => {
-                                                    if(field === 'municipioUF') setActiveAutocomplete({index, field});
+                                                    if(field === 'municipioUF' || field === 'estabelecimento') setActiveAutocomplete({index, field});
                                                 }}
                                                 disabled={field === 'anoSerie'}
                                             />
@@ -254,7 +285,7 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
                                                             <div
                                                                 key={suggestion}
                                                                 className="p-1.5 text-xs hover:bg-gray-100 cursor-pointer text-left"
-                                                                onMouseDown={() => handleSelectSuggestion(index, suggestion)}
+                                                                onMouseDown={() => handleSelectSuggestion(index, field, suggestion)}
                                                             >
                                                                 {suggestion}
                                                             </div>
@@ -274,7 +305,7 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
     )
 }
 
-export default function TranscriptPDFTemplate({ student, isEditing = false, onStudentChange }: TranscriptPDFTemplateProps) {
+export default function TranscriptPDFTemplate({ student, isEditing = false, onStudentChange, allStudents }: TranscriptPDFTemplateProps) {
     if (!student) return null;
 
     const today = new Date();
@@ -300,8 +331,7 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
             const trajectoryRow = student.trajectoryData?.find((row: any) => row.anoSerie === serie);
             targetYear = trajectoryRow?.anoCivil;
             if (!targetYear) {
-                 console.warn(`Não é possível salvar a nota para ${serie} sem um ano civil correspondente na trajetória.`);
-                 const tempYear = serie.replace(/\D/g,'');
+                 const tempYear = new Date().getFullYear().toString();
                  if (!newBoletim[tempYear]) newBoletim[tempYear] = { info: { serie }, notas: {} };
                  targetYear = tempYear;
             }
@@ -348,7 +378,12 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                 
                 <section className="my-4">
                     <h2 className="text-sm font-bold text-center mb-2">TRAJETÓRIA ESCOLAR</h2>
-                    <TrajectoryTable student={student} isEditing={isEditing} onTrajectoryChange={handleTrajectoryChange} />
+                    <TrajectoryTable 
+                        student={student} 
+                        isEditing={isEditing} 
+                        onTrajectoryChange={handleTrajectoryChange}
+                        allStudents={allStudents}
+                    />
                 </section>
                 
                  <section className="my-4 space-y-4">
