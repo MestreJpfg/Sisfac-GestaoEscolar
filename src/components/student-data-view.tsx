@@ -184,6 +184,8 @@ export default function StudentDataView() {
         description: "As informações do aluno foram atualizadas na lista.",
     });
   };
+
+  const currentYear = new Date().getFullYear().toString();
     
   return (
     <div className="space-y-6">
@@ -304,7 +306,7 @@ export default function StudentDataView() {
         <StudentReportCardDialog
             isOpen={!!reportCardStudent}
             onClose={() => setReportCardStudent(null)}
-            boletim={reportCardStudent.boletim || {}}
+            boletim={reportCardStudent.boletim?.[currentYear]?.notas || {}}
             student={reportCardStudent}
         />
       )}
