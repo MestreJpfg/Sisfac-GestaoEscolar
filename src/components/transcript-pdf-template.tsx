@@ -4,7 +4,9 @@
 import Image from "next/image";
 import { Input } from "./ui/input";
 import { cn } from "@/lib/utils";
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { municipios } from "@/lib/municipios";
+import { Card, CardContent } from "./ui/card";
 
 interface TranscriptPDFTemplateProps {
     student: any | null;
@@ -36,15 +38,12 @@ const DetailItem = ({ label, value, isEditing, onChange }: { label: string, valu
 const normalizeString = (str: string): string => {
   if (typeof str !== 'string') return '';
   return str.trim().toLowerCase()
+    .replace(/[áàâã]/g, 'a')
+    .replace(/[éèê]/g, 'e')
+    .replace(/[íìî]/g, 'i')
+    .replace(/[óòôõ]/g, 'o')
+    .replace(/[úùû]/g, 'u')
     .replace(/ç/g, 'c')
-    .replace(/ã/g, 'a')
-    .replace(/é/g, 'e')
-    .replace(/í/g, 'i')
-    .replace(/ú/g, 'u')
-    .replace(/ó/g, 'o')
-    .replace(/â/g, 'a')
-    .replace(/ê/g, 'e')
-    .replace(/ô/g, 'o')
     .replace(/º/g, '')
     .replace(/\./g, '')
     .replace(/\//g, '-') 
@@ -60,7 +59,6 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
     ];
     
     const anosSeries = ["1º ANO", "2º ANO", "3º ANO", "4º ANO", "5º ANO", "6º ANO", "7º ANO", "8º ANO", "9º ANO"];
-
 
     const gradeData: { [disciplina: string]: { [serie: string]: string } } = {};
 
@@ -136,6 +134,20 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
 
 const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: any, isEditing?: boolean, onTrajectoryChange?: (index: number, field: string, value: string) => void }) => {
     
+    const [activeAutocomplete, setActiveAutocomplete] = useState<{ index: number, field: string } | null>(null);
+    const [suggestions, setSuggestions] = useState<string[]>([]);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+                setActiveAutocomplete(null);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [wrapperRef]);
+
     const initialRows = React.useMemo(() => {
         const anosSeriesTemplate = ["1º ANO", "2º ANO", "3º ANO", "4º ANO", "5º ANO", "6º ANO", "7º ANO", "8º ANO", "9º ANO"];
         
@@ -152,9 +164,9 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
                 const yearInfo = student.boletim[year]?.info;
                 if (yearInfo?.serie) {
                     const rowIndex = anosSeriesTemplate.indexOf(yearInfo.serie);
-                    if (rowIndex !== -1 && year) {
-                        rows[rowIndex].anoCivil = year;
-                        if(year) {
+                    if (rowIndex !== -1) {
+                         if (year) {
+                            rows[rowIndex].anoCivil = year;
                             rows[rowIndex].estabelecimento = yearInfo.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
                             rows[rowIndex].municipioUF = yearInfo.municipioUF || 'Fortaleza/CE';
                             rows[rowIndex].resultado = yearInfo.resultado || 'Aprovado';
@@ -163,8 +175,7 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
                 }
             });
         }
-
-        // Se estiver editando, usar os dados temporários de 'trajectoryData' se existirem
+        
         if (isEditing && student.trajectoryData) {
             return student.trajectoryData;
         }
@@ -182,43 +193,84 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
 
         onTrajectoryChange?.(index, 'resultado', finalValue);
     }
+    
+    const handleMunicipioChange = (index: number, value: string) => {
+        onTrajectoryChange?.(index, 'municipioUF', value);
+        if (value.length > 2) {
+            const searchLower = value.toLowerCase();
+            const filtered = municipios
+                .map(m => `${m.nome}/${m.uf}`)
+                .filter(m => m.toLowerCase().includes(searchLower))
+                .slice(0, 5);
+            setSuggestions(filtered);
+            setActiveAutocomplete({ index, field: 'municipioUF' });
+        } else {
+            setSuggestions([]);
+            setActiveAutocomplete(null);
+        }
+    };
+    
+    const handleSelectSuggestion = (index: number, value: string) => {
+        onTrajectoryChange?.(index, 'municipioUF', value);
+        setActiveAutocomplete(null);
+    };
 
     return (
-        <table className="w-full text-[8px] border-collapse" style={{ border: '1px solid black' }}>
-            <thead>
-               <tr className="bg-gray-200">
-                    <th className="border border-black p-1 font-bold">Ano/Série</th>
-                    <th className="border border-black p-1 font-bold">Ano Civil</th>
-                    <th className="border border-black p-1 font-bold">Estabelecimento de Ensino</th>
-                    <th className="border border-black p-1 font-bold">Município/UF</th>
-                    <th className="border border-black p-1 font-bold">Resultado</th>
-                </tr>
-            </thead>
-            <tbody>
-                {initialRows.map((row, index) => (
-                    <tr key={index}>
-                        {['anoSerie', 'anoCivil', 'estabelecimento', 'municipioUF', 'resultado'].map(field => (
-                             <td key={field} className="border border-black p-0 text-center">
-                                {isEditing ? (
-                                    <Input
-                                        className={cn("h-6 text-[9px] p-1 text-center border-dashed rounded-none", "bg-white text-black border-blue-300 focus:border-blue-500 focus:ring-blue-500")}
-                                        value={row[field as keyof typeof row] || ''}
-                                        onChange={(e) => {
-                                            if (field === 'resultado') {
-                                                handleResultadoChange(index, e.target.value);
-                                            } else {
-                                                onTrajectoryChange?.(index, field, e.target.value)
-                                            }
-                                        }}
-                                        disabled={field === 'anoSerie'}
-                                    />
-                                ) : ( row[field as keyof typeof row] )}
-                            </td>
-                        ))}
+        <div ref={wrapperRef}>
+             <table className="w-full text-[8px] border-collapse" style={{ border: '1px solid black' }}>
+                <thead>
+                   <tr className="bg-gray-200">
+                        <th className="border border-black p-1 font-bold">Ano/Série</th>
+                        <th className="border border-black p-1 font-bold">Ano Civil</th>
+                        <th className="border border-black p-1 font-bold">Estabelecimento de Ensino</th>
+                        <th className="border border-black p-1 font-bold">Município/UF</th>
+                        <th className="border border-black p-1 font-bold">Resultado</th>
                     </tr>
-                ))}
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    {initialRows.map((row, index) => (
+                        <tr key={index}>
+                            {['anoSerie', 'anoCivil', 'estabelecimento', 'municipioUF', 'resultado'].map(field => (
+                                 <td key={field} className="border border-black p-0 text-center relative">
+                                    {isEditing ? (
+                                        <>
+                                            <Input
+                                                className={cn("h-6 text-[9px] p-1 text-center border-dashed rounded-none", "bg-white text-black border-blue-300 focus:border-blue-500 focus:ring-blue-500")}
+                                                value={row[field as keyof typeof row] || ''}
+                                                onChange={(e) => {
+                                                    if (field === 'resultado') handleResultadoChange(index, e.target.value);
+                                                    else if (field === 'municipioUF') handleMunicipioChange(index, e.target.value);
+                                                    else onTrajectoryChange?.(index, field, e.target.value);
+                                                }}
+                                                onFocus={() => {
+                                                    if(field === 'municipioUF') setActiveAutocomplete({index, field});
+                                                }}
+                                                disabled={field === 'anoSerie'}
+                                            />
+                                            {activeAutocomplete?.index === index && activeAutocomplete?.field === field && suggestions.length > 0 && (
+                                                <Card className="absolute z-20 w-48 shadow-lg mt-1">
+                                                    <CardContent className="p-1">
+                                                        {suggestions.map(suggestion => (
+                                                            <div
+                                                                key={suggestion}
+                                                                className="p-1.5 text-xs hover:bg-gray-100 cursor-pointer text-left"
+                                                                onMouseDown={() => handleSelectSuggestion(index, suggestion)}
+                                                            >
+                                                                {suggestion}
+                                                            </div>
+                                                        ))}
+                                                    </CardContent>
+                                                </Card>
+                                            )}
+                                        </>
+                                    ) : ( row[field as keyof typeof row] )}
+                                </td>
+                            ))}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
     )
 }
 
