@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Image from "next/image";
@@ -56,7 +57,7 @@ const normalizeString = (str: string): string => {
 
 const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEditing?: boolean, onGradeChange?: (year: string, disc: string, value: string) => void }) => {
     const disciplinasBase = [
-        "Arte/Literatura", "Ciências", "Educação Física", "Ensino Religioso",
+        "Arte", "Ciências", "Educação Física", "Ensino Religioso",
         "Geografia", "História", "Inglês", "Língua Portuguesa", "Matemática",
     ];
     
@@ -338,8 +339,8 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
     };
 
     return (
-        <div className="bg-white text-black font-sans" style={{ width: '210mm', height: '297mm' }}>
-            <div className="flex flex-col h-full" style={{padding: '10mm 15mm'}}>
+        <div className="bg-white text-black font-sans p-8">
+            <div className="flex flex-col h-full">
                 <header className="flex flex-col items-center text-center text-[9px] font-bold mb-4">
                     <div className="flex items-center gap-4 mb-2"><Image src="/logoyuri.png" alt="Logo" width={60} height={60} unoptimized /></div>
                     <p className="text-[10px] font-bold">ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES - EI / EF</p>

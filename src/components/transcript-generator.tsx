@@ -163,11 +163,13 @@ export default function TranscriptGenerator() {
         try {
             const canvas = await html2canvas(element, { scale: 2, useCORS: true });
             const imgData = canvas.toDataURL('image/jpeg', 0.98);
+
             const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
             const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            
-            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+            const imgProps = pdf.getImageProperties(imgData);
+            const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, imgHeight);
             pdf.save(`Historico_Escolar_${selectedStudent.nome.replace(/\s+/g, '_')}.pdf`);
             
         } catch (error) {
@@ -252,7 +254,7 @@ export default function TranscriptGenerator() {
                     </CardHeader>
                     <CardContent>
                         <div className="border rounded-md p-4 bg-gray-200 overflow-auto">
-                           <div id="pdf-template-container" className="mx-auto">
+                           <div id="pdf-template-container" className="mx-auto bg-white" style={{ width: '210mm' }}>
                                 <TranscriptPDFTemplate 
                                     student={selectedStudent} 
                                     isEditing={isEditing}
