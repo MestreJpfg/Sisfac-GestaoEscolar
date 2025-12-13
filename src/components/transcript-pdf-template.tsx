@@ -133,39 +133,38 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
     const initialRows = React.useMemo(() => {
         const anosSeriesTemplate = ["1º ANO", "2º ANO", "3º ANO", "4º ANO", "5º ANO", "6º ANO", "7º ANO", "8º ANO", "9º ANO"];
         
-        const rows = anosSeriesTemplate.map((serie) => ({
-            anoSerie: serie,
-            anoCivil: '',
-            estabelecimento: '',
-            municipioUF: '',
-            resultado: ''
-        }));
-
+        let rows;
         if (isEditing) {
-            return student.trajectoryData || anosSeriesTemplate.map(serie => ({
+            rows = student.trajectoryData || anosSeriesTemplate.map(serie => ({
                 anoSerie: serie,
                 anoCivil: '',
                 estabelecimento: '',
                 municipioUF: '',
                 resultado: ''
             }));
-        }
+        } else {
+            rows = anosSeriesTemplate.map((serie) => ({
+                anoSerie: serie,
+                anoCivil: '',
+                estabelecimento: '',
+                municipioUF: '',
+                resultado: ''
+            }));
 
-        if (student.boletim) {
-            Object.keys(student.boletim).forEach(year => {
-                const yearInfo = student.boletim[year]?.info;
-                if (yearInfo?.serie) {
-                    const rowIndex = anosSeriesTemplate.indexOf(yearInfo.serie);
-                    if (rowIndex !== -1) {
-                        rows[rowIndex].anoCivil = year;
-                        if(year) {
+            if (student.boletim) {
+                Object.keys(student.boletim).forEach(year => {
+                    const yearInfo = student.boletim[year]?.info;
+                    if (yearInfo?.serie) {
+                        const rowIndex = anosSeriesTemplate.indexOf(yearInfo.serie);
+                        if (rowIndex !== -1 && year) {
+                            rows[rowIndex].anoCivil = year;
                             rows[rowIndex].estabelecimento = yearInfo.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
                             rows[rowIndex].municipioUF = yearInfo.municipioUF || 'Fortaleza/CE';
                             rows[rowIndex].resultado = yearInfo.resultado || 'Aprovado';
                         }
                     }
-                }
-            });
+                });
+            }
         }
         
         return rows;
@@ -292,6 +291,7 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                         <p className="font-bold">Base Legal:</p>
                         <p>Curso de Ensino Fundamental de 9 (nove) anos, com base na Lei Federal 9.394/96.</p>
                         <p>Escala de Avaliação: Notas de 0 a 10, com média para aprovação 6.0.</p>
+                        <p>Modelo de Avaliação para 1º e 2º ANO, uso de Relatório Pedagógico.</p>
                     </div>
                     <p className="my-4">Fortaleza, {formattedDate}.</p>
                     <div className="flex justify-around w-full mt-8">
