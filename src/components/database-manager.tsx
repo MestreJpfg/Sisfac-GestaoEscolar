@@ -105,8 +105,9 @@ export default function DatabaseManager() {
                 const fieldsToDelete: { [key: string]: any } = {};
                 let hasFieldsToDelete = false;
     
+                // Lógica para encontrar campos que começam com 'boletim.2025'
                 for (const key in studentData) {
-                    if (key.startsWith('boletim')) { // Captura "boletim" e "boletim.2025..."
+                    if (key.startsWith('boletim.2025')) {
                         fieldsToDelete[key] = deleteField();
                         hasFieldsToDelete = true;
                     }
@@ -114,7 +115,7 @@ export default function DatabaseManager() {
     
                 if (hasFieldsToDelete) {
                     studentsAffectedCount++;
-                    // Use updateDoc for each document to reliably delete fields with dots
+                    // Usar updateDoc individualmente para maior fiabilidade com nomes de campos com pontos
                     promises.push(updateDoc(studentDoc.ref, fieldsToDelete));
                 }
             }
@@ -124,12 +125,12 @@ export default function DatabaseManager() {
             if (studentsAffectedCount > 0) {
                 toast({
                     title: "Limpeza Concluída!",
-                    description: `Todos os dados de boletim (antigos e novos) foram removidos de ${studentsAffectedCount} alunos.`,
+                    description: `Os campos 'boletim.2025' foram removidos de ${studentsAffectedCount} alunos.`,
                 });
             } else {
                 toast({
                     title: "Nenhuma Limpeza Necessária",
-                    description: "Nenhum aluno tinha campos de boletim para serem limpos.",
+                    description: "Nenhum aluno tinha campos de boletim para o ano de 2025 para serem limpos.",
                 });
             }
     
@@ -249,7 +250,7 @@ export default function DatabaseManager() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Confirmar Limpeza Completa dos Boletins?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Esta ação irá percorrer todos os alunos e <strong className="text-destructive">APAGARÁ permanentemente</strong> todos os campos que comecem com "boletim" (incluindo estruturas antigas e novas, como 'boletim.2025...').
+                            Esta ação irá percorrer todos os alunos e <strong className="text-destructive">APAGARÁ permanentemente</strong> todos os campos que comecem com "boletim.2025".
                              Isto prepara a base de dados para uma reimportação de dados limpa.
                             <br /><br />
                             A ação é <strong className="text-destructive">irreversível</strong>. Deseja continuar?
