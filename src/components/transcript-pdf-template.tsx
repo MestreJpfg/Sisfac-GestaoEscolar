@@ -89,9 +89,15 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
                     })();
 
                     const formattedMedia = (mediaCalculada !== null) ? mediaCalculada.toFixed(1).replace('.', ',') : '';
-                    const normalizedDiscKey = normalizeString(discKey);
                     
-                    const foundDisciplina = disciplinasBase.find(d => normalizeString(d) === normalizedDiscKey);
+                    let foundDisciplina: string | undefined;
+                    const normalizedDiscKey = normalizeString(discKey);
+
+                    if (normalizedDiscKey === 'arte-literatura') {
+                        foundDisciplina = 'Arte';
+                    } else {
+                        foundDisciplina = disciplinasBase.find(d => normalizeString(d) === normalizedDiscKey);
+                    }
                     
                     if (foundDisciplina && anosSeries.includes(serieDoAno)) {
                          gradeData[foundDisciplina][serieDoAno] = formattedMedia;
@@ -125,7 +131,7 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
                                         value={gradeData[disciplina]?.[serie] || ''}
                                         onChange={(e) => onGradeChange?.(serie, disciplina, e.target.value)}
                                     />
-                                ) : ( gradeData[disciplina]?.[serie] || '-' )}
+                                ) : ( <div className="p-1 text-center w-full">{gradeData[disciplina]?.[serie] || '-'}</div> )}
                             </td>
                         ))}
                     </tr>
@@ -169,29 +175,32 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
                     const rowIndex = anosSeriesTemplate.indexOf(yearInfo.serie);
                     if (rowIndex !== -1 && year) {
                         rows[rowIndex].anoCivil = year;
-                        rows[rowIndex].estabelecimento = yearInfo.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
-                        rows[rowIndex].municipioUF = yearInfo.municipioUF || 'Fortaleza/CE';
-                        rows[rowIndex].resultado = yearInfo.resultado || 'Aprovado';
+                        if(year) {
+                            rows[rowIndex].estabelecimento = yearInfo.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
+                            rows[rowIndex].municipioUF = yearInfo.municipioUF || 'Fortaleza/CE';
+                            rows[rowIndex].resultado = yearInfo.resultado || 'Aprovado';
+                        }
                     }
                 }
             });
         }
         
-        // Limpar dados se não houver ano civil
-        rows = rows.map(row => {
-            if (!row.anoCivil) {
-                return { anoSerie: row.anoSerie, anoCivil: '', estabelecimento: '', municipioUF: '', resultado: '' };
-            }
-            return row;
-        });
-
-        if (isEditing && student.trajectoryData) {
-            return student.trajectoryData;
+        if (student.trajectoryData) {
+            student.trajectoryData.forEach((dbRow: any, index: number) => {
+                if (index < rows.length) {
+                    rows[index] = { ...rows[index], ...dbRow };
+                     if (!dbRow.anoCivil) {
+                        rows[index].estabelecimento = '';
+                        rows[index].municipioUF = '';
+                        rows[index].resultado = '';
+                    }
+                }
+            });
         }
         
         return rows;
 
-    }, [student, isEditing]);
+    }, [student]);
 
     const handleResultadoChange = (index: number, value: string) => {
         let finalValue = value;
@@ -280,7 +289,7 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
                                                 </Card>
                                             )}
                                         </>
-                                    ) : ( <div className="p-1">{row[field as keyof typeof row]}</div> )}
+                                    ) : ( <div className="p-1 text-center w-full">{row[field as keyof typeof row]}</div> )}
                                 </td>
                             ))}
                         </tr>
@@ -339,7 +348,7 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
     };
 
     return (
-        <div className="bg-white text-black font-sans">
+        <div className="bg-white text-black font-sans" style={{ width: '210mm', minHeight: '297mm' }}>
             <div className="flex flex-col h-full p-8">
                 <header className="flex flex-col items-center text-center text-[9px] font-bold mb-4">
                     <div className="flex items-center gap-4 mb-2"><Image src="/logoyuri.png" alt="Logo" width={60} height={60} unoptimized /></div>
