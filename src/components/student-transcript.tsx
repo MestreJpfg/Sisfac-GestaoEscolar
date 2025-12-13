@@ -69,12 +69,18 @@ export default function StudentTranscript({ student }: StudentTranscriptProps) {
                 
                 {/* Histórico de Notas */}
                 <div className="flex-grow space-y-6">
-                    {years.map(year => (
-                        <div key={year}>
-                            <h2 className="text-lg font-bold text-center mb-2">Ano Letivo: {year}</h2>
-                            <StudentReportCard boletim={student.boletim[year]} isPrintMode={true} />
-                        </div>
-                    ))}
+                    {years.map(year => {
+                        const yearData = student.boletim[year];
+                        const classInfo = yearData.info ? `${yearData.info.serie || ''} ${yearData.info.classe || ''} - ${yearData.info.turno || ''}` : 'Informação não disponível';
+                        return (
+                            <div key={year}>
+                                <h2 className="text-lg font-bold text-center mb-2">
+                                    Ano Letivo: {year} <span className="font-normal text-base">- Turma: {classInfo}</span>
+                                </h2>
+                                <StudentReportCard boletim={yearData.notas || {}} isPrintMode={true} />
+                            </div>
+                        )
+                    })}
                 </div>
 
                 {/* Rodapé */}

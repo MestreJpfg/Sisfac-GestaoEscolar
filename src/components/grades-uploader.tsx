@@ -9,7 +9,7 @@ import { UploadCloud, FileCheck2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { useFirestore } from "@/firebase";
-import { writeBatch, doc, collection } from "firebase/firestore";
+import { writeBatch, doc, collection, getDoc } from "firebase/firestore";
 import { commitBatchNonBlocking } from "@/firebase/non-blocking-updates";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Label } from "./ui/label";
@@ -103,12 +103,12 @@ export default function GradesUploader() {
           .replace(/é/g, 'e')
           .replace(/º/g, '')
           .replace(/\./g, '')
-          .replace(/\//g, '-') // Substitui / por -
-          .replace(/[\[\]*~]/g, '') // Remove caracteres inválidos do firestore
+          .replace(/\//g, '-') 
+          .replace(/[\[\]*~]/g, '') 
           .replace(/\s+/g, '_')
     );
     const rmIndex = headers.findIndex(h => h === 'matricula' || h === 'rm');
-    const nameIndex = headers.findIndex(h => h === 'nome' || h === 'nome_do_aluno' || h === 'aluno');
+    const nameIndex = headers.findIndex(h => h === 'aluno' || h === 'nome_do_aluno' || h === 'nome');
 
     if (rmIndex === -1) {
         throw new Error("A coluna 'Matrícula' ou 'RM' é obrigatória na planilha de notas.");
@@ -127,9 +127,20 @@ export default function GradesUploader() {
         
         const gradeUpdate: { [key: string]: any } = {};
 
+        // Fetch student's current class info to store historically
+        const studentDoc = await getDoc(studentDocRef);
+        if (studentDoc.exists()) {
+            const studentData = studentDoc.data();
+            gradeUpdate[`boletim.${year}.info`] = {
+                serie: studentData.serie || null,
+                classe: studentData.classe || null,
+                turno: studentData.turno || null,
+            };
+        }
+
+
         headers.forEach((header, index) => {
-            // Ignora colunas de identificação e cabeçalhos vazios
-            if (index === rmIndex || index === nameIndex || !header || header === 'aluno' || header ==='nome' || header === 'rm' || header === 'matricula') return;
+            if (index === rmIndex || index === nameIndex || !header) return;
 
             const subject = header;
             const gradeValue = row[index];
@@ -142,13 +153,11 @@ export default function GradesUploader() {
                 }
             }
             
-            // Constrói o caminho para a nota dentro do ano letivo
-            // Isso garante que estamos escrevendo em boletim.2024.matematica.etapa1, por exemplo.
-            gradeUpdate[`boletim.${year}.${subject}.${etapa}`] = grade;
+            gradeUpdate[`boletim.${year}.notas.${subject}.${etapa}`] = grade;
         });
         
         if (Object.keys(gradeUpdate).length > 0) {
-            batch.update(studentDocRef, gradeUpdate);
+            batch.set(studentDocRef, gradeUpdate, { merge: true });
             updatedCount++;
         }
     }
@@ -157,7 +166,7 @@ export default function GradesUploader() {
 
     toast({
         title: "Processamento Concluído!",
-        description: `${updatedCount} alunos atualizados para o ano de ${year}.`,
+        description: `${updatedCount} alunos tiveram as notas da ${etapa} atualizadas para o ano de ${year}.`,
     });
   };
 

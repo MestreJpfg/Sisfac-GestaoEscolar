@@ -194,12 +194,31 @@
         "mediaFinal": { "type": ["number", "null"], "description": "Média final da disciplina." }
       }
     },
+    "InfoTurma": {
+        "title": "Info Turma",
+        "type": "object",
+        "description": "Armazena a série, classe e turno de um aluno para um ano letivo específico.",
+        "properties": {
+            "serie": { "type": "string" },
+            "classe": { "type": "string" },
+            "turno": { "type": "string" }
+        }
+    },
     "Boletim": {
       "title": "Boletim",
       "type": "object",
-      "description": "Um mapa de disciplinas e suas respectivas notas para um aluno em um ano específico.",
-      "additionalProperties": {
-        "$ref": "#/entities/Nota"
+      "description": "Agrupa as informações da turma e as notas de um aluno para um ano específico.",
+      "properties": {
+          "info": {
+              "$ref": "#/entities/InfoTurma"
+          },
+          "notas": {
+              "type": "object",
+              "description": "Um mapa de disciplinas e suas respectivas notas para o ano.",
+              "additionalProperties": {
+                "$ref": "#/entities/Nota"
+              }
+          }
       }
     }
   },
