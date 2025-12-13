@@ -142,7 +142,7 @@ export default function TranscriptPDFTemplate({ student }: TranscriptPDFTemplate
     }));
 
     return (
-        <div className="bg-white text-black font-sans" style={{ width: '210mm', minHeight: '297mm', fontFamily: 'Arial, sans-serif' }}>
+        <div className="bg-white text-black font-sans" style={{ width: '210mm', minHeight: '297mm' }}>
             <div className="flex flex-col h-full" style={{padding: '10mm 15mm'}}>
                 {/* Cabeçalho */}
                 <header className="flex flex-col items-center text-center text-[9px] font-bold mb-4">
@@ -237,7 +237,7 @@ export default function TranscriptPDFTemplate({ student }: TranscriptPDFTemplate
                             </div>
                         </div>
                         <div className="text-center w-48 relative">
-                             <div className="relative h-16 w-full -mb-10">
+                             <div className="relative h-16 w-full -mb-10" style={{ left: '-0.5cm', bottom: '0.5cm' }}>
                                 <Image src="/assinatura2.png" alt="Segunda Assinatura" layout="fill" objectFit="contain" unoptimized />
                             </div>
                              <div className="border-t border-black w-full pt-1">
