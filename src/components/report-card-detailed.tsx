@@ -39,6 +39,7 @@ export default function ReportCardDetailed({ student, boletim, ranking }: Report
     if (!student) return null;
 
     const today = new Date();
+    const currentYear = today.getFullYear().toString();
     const formattedDate = new Intl.DateTimeFormat('pt-BR', {
         day: '2-digit',
         month: 'long',
@@ -47,6 +48,7 @@ export default function ReportCardDetailed({ student, boletim, ranking }: Report
 
     const subjectsInRecovery = Object.entries(boletim)
       .map(([disciplina, notas]) => {
+        if (!notas) return { disciplina, media: null };
         const validGrades = [notas.etapa1, notas.etapa2, notas.etapa3, notas.etapa4].filter(
           (nota): nota is number => nota !== null && nota !== undefined && !isNaN(nota)
         );
@@ -76,7 +78,7 @@ export default function ReportCardDetailed({ student, boletim, ranking }: Report
                 
                 {/* Título */}
                 <div className="text-center my-4">
-                    <h1 className="text-2xl font-bold tracking-wider uppercase">Boletim Escolar {today.getFullYear()}</h1>
+                    <h1 className="text-2xl font-bold tracking-wider uppercase">Boletim Escolar {currentYear}</h1>
                 </div>
 
                 {/* Informações do Aluno */}

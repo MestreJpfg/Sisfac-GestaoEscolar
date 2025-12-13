@@ -84,37 +84,35 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, lab
 
 const calculateAverage = (boletim: any): number => {
     if (!boletim || typeof boletim !== 'object') {
-      return 0;
+        return 0;
     }
 
     const disciplineKeys = Object.keys(boletim);
-    const allSubjectAverages: number[] = [];
+    const subjectAverages: number[] = [];
 
     disciplineKeys.forEach(key => {
         const disciplina = boletim[key];
         if (disciplina && typeof disciplina === 'object') {
-            
             const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
-            const validEtapaGrades = etapaGrades.map(g => {
+            
+            const validGrades = etapaGrades.map(g => {
                 if (g === null || g === undefined || String(g).trim() === '') return null;
                 const numericGrade = parseFloat(String(g).replace(',', '.'));
                 return isNaN(numericGrade) ? null : numericGrade;
             }).filter((g): g is number => g !== null);
 
-            if (validEtapaGrades.length > 0) {
-                const subjectAverage = validEtapaGrades.reduce((sum, grade) => sum + grade, 0) / validEtapaGrades.length;
-                allSubjectAverages.push(subjectAverage);
+            if (validGrades.length > 0) {
+                const subjectAverage = validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length;
+                subjectAverages.push(subjectAverage);
             }
         }
     });
 
-    if (allSubjectAverages.length === 0) {
-        return 0;
-    }
-
-    const overallSum = allSubjectAverages.reduce((acc, curr) => acc + curr, 0);
-    return overallSum / allSubjectAverages.length;
-  };
+    if (subjectAverages.length === 0) return 0;
+    
+    const overallSum = subjectAverages.reduce((acc, curr) => acc + curr, 0);
+    return overallSum / subjectAverages.length;
+};
 
 
 export default function StudentDetailSheet({ student, allStudents, isOpen, onClose, onUpdate }: StudentDetailSheetProps) {
@@ -138,6 +136,7 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
     if (!studentClass.ensino || !studentClass.serie || !studentClass.classe || !studentClass.turno) {
         return null;
     }
+    const currentYear = new Date().getFullYear().toString();
     const classmates = allStudents
       .filter(s => 
         s.ensino === studentClass.ensino &&
@@ -147,7 +146,7 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
       )
       .map(s => ({
         id: s.id,
-        average: calculateAverage(s.boletim?.[new Date().getFullYear()])
+        average: calculateAverage(s.boletim?.[currentYear])
       }))
       .filter(s => s.average > 0)
       .sort((a, b) => b.average - a.average);
@@ -198,7 +197,7 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
     
     let componentToRender;
     let pdfOptions: any = { orientation: 'p', unit: 'mm', format: 'a4' };
-    const currentYear = new Date().getFullYear();
+    const currentYear = new Date().getFullYear().toString();
     const currentBoletim = student.boletim?.[currentYear] || {};
     
     switch (type) {
@@ -392,7 +391,7 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
   const address = parseAddress(student.endereco);
   
   const studentPhones = student.telefones || (student.telefone ? [student.telefone] : []);
-  const currentYear = new Date().getFullYear();
+  const currentYear = new Date().getFullYear().toString();
   const currentBoletim = student.boletim?.[currentYear] || {};
 
 
