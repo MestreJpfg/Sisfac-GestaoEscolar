@@ -11,8 +11,6 @@ import { Loader2, Save, Users, NotebookPen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-
 
 type EtapaGrade = {
     etapa1?: number | null;
@@ -90,7 +88,7 @@ export default function GradesManager() {
         if(filters.classe) filteredForOptions = filteredForOptions.filter(s => s.classe === filters.classe);
         const turnos = getUniqueValues('turno', filteredForOptions);
 
-        const disciplines = [...new Set(allStudents.flatMap(s => s.boletim && s.boletim[selectedYear] ? Object.keys(s.boletim[selectedYear]) : []))]
+        const disciplines = [...new Set(allStudents.flatMap(s => s.boletim?.[selectedYear]?.notas ? Object.keys(s.boletim[selectedYear].notas) : []))]
             .map(d => d.replace(/_/g, ' ').replace(/-/g, '/'))
             .sort((a, b) => a.localeCompare(b));
         
@@ -129,7 +127,7 @@ export default function GradesManager() {
         if (sortedStudentsInClass && disciplineId && selectedYear) {
             const newGrades: Grades = {};
             sortedStudentsInClass.forEach(student => {
-                const disciplineGrades = student.boletim?.[selectedYear]?.[disciplineId];
+                const disciplineGrades = student.boletim?.[selectedYear]?.notas?.[disciplineId];
                 newGrades[student.id] = {
                     etapa1: disciplineGrades?.etapa1 ?? null,
                     etapa2: disciplineGrades?.etapa2 ?? null,
@@ -207,11 +205,11 @@ export default function GradesManager() {
                 const average = validGrades.length > 0 ? validGrades.reduce((a, b) => a + b, 0) / validGrades.length : null;
 
                 const updatePayload: { [key: string]: any } = {
-                    [`boletim.${selectedYear}.${disciplineId}.etapa1`]: studentGrades.etapa1,
-                    [`boletim.${selectedYear}.${disciplineId}.etapa2`]: studentGrades.etapa2,
-                    [`boletim.${selectedYear}.${disciplineId}.etapa3`]: studentGrades.etapa3,
-                    [`boletim.${selectedYear}.${disciplineId}.etapa4`]: studentGrades.etapa4,
-                    [`boletim.${selectedYear}.${disciplineId}.mediaFinal`]: average !== null ? parseFloat(average.toFixed(1)) : null,
+                    [`boletim.${selectedYear}.notas.${disciplineId}.etapa1`]: studentGrades.etapa1,
+                    [`boletim.${selectedYear}.notas.${disciplineId}.etapa2`]: studentGrades.etapa2,
+                    [`boletim.${selectedYear}.notas.${disciplineId}.etapa3`]: studentGrades.etapa3,
+                    [`boletim.${selectedYear}.notas.${disciplineId}.etapa4`]: studentGrades.etapa4,
+                    [`boletim.${selectedYear}.notas.${disciplineId}.mediaFinal`]: average !== null ? parseFloat(average.toFixed(1)) : null,
                 };
     
                 batch.update(studentDocRef, updatePayload);

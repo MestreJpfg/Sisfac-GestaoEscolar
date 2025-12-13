@@ -22,15 +22,15 @@ interface RankedStudent {
 }
 
 const calculateAverage = (boletimAno: any): number => {
-    if (!boletimAno || typeof boletimAno !== 'object') {
+    if (!boletimAno || !boletimAno.notas || typeof boletimAno.notas !== 'object') {
         return 0;
     }
   
-    const disciplineKeys = Object.keys(boletimAno);
+    const disciplineKeys = Object.keys(boletimAno.notas);
     const allSubjectAverages: number[] = [];
   
     disciplineKeys.forEach(key => {
-        const disciplina = boletimAno[key];
+        const disciplina = boletimAno.notas[key];
         if (disciplina && typeof disciplina === 'object') {
             const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
             const validEtapaGrades = etapaGrades.map(g => {

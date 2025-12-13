@@ -83,15 +83,15 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, lab
 };
 
 const calculateAverage = (boletimAno: any): number => {
-    if (!boletimAno || typeof boletimAno !== 'object') {
+    if (!boletimAno || !boletimAno.notas || typeof boletimAno.notas !== 'object') {
         return 0;
     }
 
-    const disciplineKeys = Object.keys(boletimAno);
+    const disciplineKeys = Object.keys(boletimAno.notas);
     const allSubjectAverages: number[] = [];
 
     disciplineKeys.forEach(key => {
-        const disciplina = boletimAno[key];
+        const disciplina = boletimAno.notas[key];
         if (disciplina && typeof disciplina === 'object') {
             const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
             const validEtapaGrades = etapaGrades.map(g => {
@@ -203,7 +203,7 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
     
     let componentToRender;
     let pdfOptions: any = { orientation: 'p', unit: 'mm', format: 'a4' };
-    const currentBoletim = student.boletim?.[currentYear] || {};
+    const currentBoletim = student.boletim?.[currentYear]?.notas || {};
     
     switch (type) {
         case 'declaration':
@@ -396,7 +396,7 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
   const address = parseAddress(student.endereco);
   
   const studentPhones = student.telefones || (student.telefone ? [student.telefone] : []);
-  const currentBoletim = student.boletim?.[currentYear] || {};
+  const currentBoletim = student.boletim?.[currentYear]?.notas || {};
   const hasAnyBoletim = student.boletim && Object.keys(student.boletim).length > 0;
 
 
@@ -608,14 +608,14 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
       <StudentReportCardDialog
           isOpen={isReportCardOpen}
           onClose={() => setIsReportCardOpen(false)}
-          boletim={currentBoletim}
+          boletim={student.boletim?.[currentYear]?.notas || {}}
           student={student}
       />
       
       <StudentReportCardDialog
           isOpen={isTranscriptOpen}
           onClose={() => setIsTranscriptOpen(false)}
-          boletim={student.boletim} // Passa todos os anos
+          boletim={student.boletim || {}}
           student={student}
       />
 

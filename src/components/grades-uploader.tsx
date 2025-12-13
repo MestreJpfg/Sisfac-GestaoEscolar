@@ -124,50 +124,62 @@ export default function GradesUploader() {
         if (!rm) continue;
 
         const studentDocRef = doc(collectionRef, rm);
-        
-        const gradeUpdate: { [key: string]: any } = {};
-
-        // Fetch student's current class info to store historically
         const studentDoc = await getDoc(studentDocRef);
+
         if (studentDoc.exists()) {
             const studentData = studentDoc.data();
-            gradeUpdate[`boletim.${year}.info`] = {
+            const boletim = studentData.boletim || {};
+            const yearData = boletim[year] || { info: {}, notas: {} };
+            
+            // Set student info for that year
+            yearData.info = {
                 serie: studentData.serie || null,
                 classe: studentData.classe || null,
                 turno: studentData.turno || null,
             };
-        }
 
+            // Update grades
+            headers.forEach((header, index) => {
+                if (index === rmIndex || index === nameIndex || !header) return;
 
-        headers.forEach((header, index) => {
-            if (index === rmIndex || index === nameIndex || !header) return;
-
-            const subject = header;
-            const gradeValue = row[index];
-            
-            let grade: number | null = null;
-            if (gradeValue !== null && gradeValue !== undefined && String(gradeValue).trim() !== '') {
-                const numericGrade = Number(String(gradeValue).replace(',', '.'));
-                if (!isNaN(numericGrade)) {
-                    grade = numericGrade;
+                const subject = header;
+                if (!yearData.notas[subject]) {
+                    yearData.notas[subject] = {};
                 }
-            }
+
+                const gradeValue = row[index];
+                let grade: number | null = null;
+                if (gradeValue !== null && gradeValue !== undefined && String(gradeValue).trim() !== '') {
+                    const numericGrade = Number(String(gradeValue).replace(',', '.'));
+                    if (!isNaN(numericGrade)) {
+                        grade = numericGrade;
+                    }
+                }
+                
+                yearData.notas[subject][etapa] = grade;
+            });
+
+            // Update the main boletim object
+            boletim[year] = yearData;
             
-            gradeUpdate[`boletim.${year}.notas.${subject}.${etapa}`] = grade;
-        });
-        
-        if (Object.keys(gradeUpdate).length > 0) {
-            batch.set(studentDocRef, gradeUpdate, { merge: true });
+            batch.set(studentDocRef, { boletim }, { merge: true });
             updatedCount++;
         }
     }
-
-    commitBatchNonBlocking(batch, 'alunos');
-
-    toast({
-        title: "Processamento Concluído!",
-        description: `${updatedCount} alunos tiveram as notas da ${etapa} atualizadas para o ano de ${year}.`,
-    });
+    
+    if (updatedCount > 0) {
+        commitBatchNonBlocking(batch, 'alunos');
+        toast({
+            title: "Processamento Concluído!",
+            description: `${updatedCount} alunos tiveram as notas da ${etapa} atualizadas para o ano de ${year}.`,
+        });
+    } else {
+        toast({
+            variant: "destructive",
+            title: "Nenhum aluno encontrado",
+            description: "Nenhum dos RMs da planilha corresponde a um aluno na base de dados.",
+        });
+    }
   };
 
   const handleFileSelect = (selectedFile: File | null) => {

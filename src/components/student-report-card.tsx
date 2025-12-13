@@ -54,7 +54,7 @@ export default function StudentReportCard({ boletim, isPrintMode = false, compac
   }
 
   const processedBoletim = Object.entries(boletim)
-    .filter(([disciplina]) => !['aluno', 'nome_do_aluno', 'matricula', 'rm', 'nome'].includes(disciplina.toLowerCase()))
+    .filter(([disciplina, notas]) => notas && !['aluno', 'nome_do_aluno', 'matricula', 'rm', 'nome'].includes(disciplina.toLowerCase()))
     .map(([disciplina, notas]) => {
       const mediaCalculada = (() => {
         if (!notas) return null;
