@@ -87,6 +87,7 @@ const GradeMatrix = ({ boletim }: { boletim: any }) => {
                     const formattedMedia = (mediaCalculada !== null && mediaCalculada !== undefined) ? mediaCalculada.toFixed(1).replace('.', ',') : '-';
                     
                     const normalizedDiscKey = normalizeString(discKey);
+                    
                     const discDisplayName = disciplinasBase.find(d => 
                         normalizeString(d) === normalizedDiscKey
                     );
@@ -228,17 +229,25 @@ export default function TranscriptPDFTemplate({ student }: TranscriptPDFTemplate
                     <p className="my-4">Fortaleza, {formattedDate}.</p>
                     
                     <div className="flex justify-around w-full mt-8">
-                        <div className="text-center">
-                            <div className="border-t border-black w-48 mx-auto"></div>
-                            <p className="mt-1 font-bold">DIRETOR(A)</p>
-                            <p>Nome Completo</p>
-                            <p>RG: XXXXXXX</p>
+                        <div className="text-center w-48 relative">
+                             <div className="relative h-16 w-full -mb-10">
+                                <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized />
+                            </div>
+                            <div className="border-t border-black w-full pt-1">
+                                <p className="font-bold">DIRETOR(A)</p>
+                                <p>Nome Completo</p>
+                                <p>RG: XXXXXXX</p>
+                            </div>
                         </div>
-                        <div className="text-center">
-                             <div className="border-t border-black w-48 mx-auto"></div>
-                            <p className="mt-1 font-bold">SECRETÁRIO(A) ESCOLAR</p>
-                            <p>Nome Completo</p>
-                            <p>RG: XXXXXXX</p>
+                        <div className="text-center w-48 relative">
+                             <div className="relative h-16 w-full -mb-10">
+                                <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized />
+                            </div>
+                             <div className="border-t border-black w-full pt-1">
+                                <p className="font-bold">SECRETÁRIO(A) ESCOLAR</p>
+                                <p>Nome Completo</p>
+                                <p>RG: XXXXXXX</p>
+                            </div>
                         </div>
                     </div>
                 </footer>
