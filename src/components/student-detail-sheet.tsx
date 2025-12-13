@@ -120,13 +120,15 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
   const [isSharing, setIsSharing] = useState<PdfType | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isReportCardOpen, setIsReportCardOpen] = useState(false);
+  const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
 
+  const currentYear = useMemo(() => new Date().getFullYear().toString(), []);
+
   const classRanking = useMemo(() => {
-    if (!student || !allStudents || allStudents.length === 0) {
-      return null;
-    }
+    if (!student || !allStudents || allStudents.length === 0) return null;
+    
     const studentClass = {
         ensino: student.ensino,
         serie: student.serie,
@@ -136,7 +138,10 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
     if (!studentClass.ensino || !studentClass.serie || !studentClass.classe || !studentClass.turno) {
         return null;
     }
-    const currentYear = new Date().getFullYear().toString();
+
+    const currentBoletim = student.boletim?.[currentYear];
+    if (!currentBoletim) return null;
+
     const classmates = allStudents
       .filter(s => 
         s.ensino === studentClass.ensino &&
@@ -161,7 +166,7 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
     }
     
     return null;
-  }, [student, allStudents]);
+  }, [student, allStudents, currentYear]);
 
   if (!student) return null;
 
@@ -197,7 +202,6 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
     
     let componentToRender;
     let pdfOptions: any = { orientation: 'p', unit: 'mm', format: 'a4' };
-    const currentYear = new Date().getFullYear().toString();
     const currentBoletim = student.boletim?.[currentYear] || {};
     
     switch (type) {
@@ -391,8 +395,8 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
   const address = parseAddress(student.endereco);
   
   const studentPhones = student.telefones || (student.telefone ? [student.telefone] : []);
-  const currentYear = new Date().getFullYear().toString();
   const currentBoletim = student.boletim?.[currentYear] || {};
+  const hasAnyBoletim = student.boletim && Object.keys(student.boletim).length > 0;
 
 
   const studentDetails = [
@@ -433,10 +437,7 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
     { label: "Carteira de Estudante", value: student.carteira_estudante, icon: CreditCard },
     { label: "Necessidades Especiais (NEE)", value: student.nee, icon: AlertTriangle },
   ];
-
-  const hasBoletim = student.boletim && Object.keys(student.boletim).length > 0;
-  const hasCurrentYearBoletim = currentBoletim && Object.keys(currentBoletim).length > 0;
-
+  
   return (
     <>
       <Sheet open={isOpen} onOpenChange={onClose}>
@@ -465,11 +466,15 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
                 <AccordionTrigger className="text-lg font-semibold text-foreground">Dados Acadêmicos</AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-4">
                   {academicDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                   {hasCurrentYearBoletim && (
-                    <div className="pt-2">
+                   {hasAnyBoletim && (
+                    <div className="pt-2 grid grid-cols-2 gap-2">
                         <Button onClick={() => setIsReportCardOpen(true)} variant="outline" className="w-full">
                             <BookCheck className="mr-2 h-4 w-4" />
-                            Visualizar Boletim ({currentYear})
+                            Boletim ({currentYear})
+                        </Button>
+                        <Button onClick={() => setIsTranscriptOpen(true)} variant="outline" className="w-full">
+                            <GraduationCap className="mr-2 h-4 w-4" />
+                            Histórico
                         </Button>
                     </div>
                   )}
@@ -530,7 +535,7 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
                         </TooltipContent>
                     </Tooltip>
                     <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleGeneratePdf('transcript')} disabled={!hasBoletim}>
+                        <DropdownMenuItem onClick={() => handleGeneratePdf('transcript')} disabled={!hasAnyBoletim}>
                             <GraduationCap className="mr-2 h-4 w-4"/> Histórico Escolar
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleGeneratePdf('declaration')}>
@@ -539,16 +544,16 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
                         <DropdownMenuItem onClick={() => handleGeneratePdf('transfer')}>
                             Declaração de Transferência
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleGeneratePdf('declarationWithReport')} disabled={!hasCurrentYearBoletim}>
+                        <DropdownMenuItem onClick={() => handleGeneratePdf('declarationWithReport')} disabled={!currentBoletim || Object.keys(currentBoletim).length === 0}>
                             Declaração com Boletim ({currentYear})
                         </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleGeneratePdf('detailedReport')} disabled={!hasCurrentYearBoletim}>
+                         <DropdownMenuItem onClick={() => handleGeneratePdf('detailedReport')} disabled={!currentBoletim || Object.keys(currentBoletim).length === 0}>
                             Boletim Detalhado ({currentYear})
                         </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleGeneratePdf('compact')} disabled={!hasCurrentYearBoletim}>
+                         <DropdownMenuItem onClick={() => handleGeneratePdf('compact')} disabled={!currentBoletim || Object.keys(currentBoletim).length === 0}>
                             Boletim Compacto (1 por folha)
                         </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleGeneratePdf('grid')} disabled={!hasCurrentYearBoletim}>
+                         <DropdownMenuItem onClick={() => handleGeneratePdf('grid')} disabled={!currentBoletim || Object.keys(currentBoletim).length === 0}>
                             Boletim em Grade (4 por folha)
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -569,7 +574,7 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
                         </TooltipContent>
                     </Tooltip>
                     <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleShare('transcript')} disabled={!hasBoletim}>
+                        <DropdownMenuItem onClick={() => handleShare('transcript')} disabled={!hasAnyBoletim}>
                            <GraduationCap className="mr-2 h-4 w-4"/> Histórico Escolar
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleShare('declaration')}>
@@ -578,16 +583,16 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
                         <DropdownMenuItem onClick={() => handleShare('transfer')}>
                             Declaração de Transferência
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleShare('declarationWithReport')} disabled={!hasCurrentYearBoletim}>
+                        <DropdownMenuItem onClick={() => handleShare('declarationWithReport')} disabled={!currentBoletim || Object.keys(currentBoletim).length === 0}>
                             Declaração com Boletim ({currentYear})
                         </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleShare('detailedReport')} disabled={!hasCurrentYearBoletim}>
+                         <DropdownMenuItem onClick={() => handleShare('detailedReport')} disabled={!currentBoletim || Object.keys(currentBoletim).length === 0}>
                             Boletim Detalhado ({currentYear})
                         </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleShare('compact')} disabled={!hasCurrentYearBoletim}>
+                         <DropdownMenuItem onClick={() => handleShare('compact')} disabled={!currentBoletim || Object.keys(currentBoletim).length === 0}>
                             Boletim Compacto (1 por folha)
                         </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleShare('grid')} disabled={!hasCurrentYearBoletim}>
+                         <DropdownMenuItem onClick={() => handleShare('grid')} disabled={!currentBoletim || Object.keys(currentBoletim).length === 0}>
                             Boletim em Grade (4 por folha)
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -598,15 +603,21 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
         </SheetContent>
       </Sheet>
       
-      {hasCurrentYearBoletim && (
-        <StudentReportCardDialog
-            isOpen={isReportCardOpen}
-            onClose={() => setIsReportCardOpen(false)}
-            boletim={currentBoletim}
-            student={student}
-        />
-      )}
       
+      <StudentReportCardDialog
+          isOpen={isReportCardOpen}
+          onClose={() => setIsReportCardOpen(false)}
+          boletim={currentBoletim}
+          student={student}
+      />
+      
+      <StudentReportCardDialog
+          isOpen={isTranscriptOpen}
+          onClose={() => setIsTranscriptOpen(false)}
+          boletim={student.boletim} // Passa todos os anos
+          student={student}
+      />
+
       <StudentEditDialog
         isOpen={isEditDialogOpen}
         onClose={() => setIsEditDialogOpen(false)}

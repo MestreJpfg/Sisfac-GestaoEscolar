@@ -29,6 +29,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
+import { ScrollArea } from "./ui/scroll-area";
+import StudentTranscript from "./student-transcript";
 
 
 interface Boletim {
@@ -44,7 +46,7 @@ interface Boletim {
 interface StudentReportCardDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  boletim: Boletim;
+  boletim: Boletim | { [year: string]: Boletim }; // Can be single year or all years
   student: any;
 }
 
@@ -60,7 +62,15 @@ export default function StudentReportCardDialog({
   const firestore = useFirestore();
   const [isProcessing, setIsProcessing] = useState<PdfType | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editableBoletim, setEditableBoletim] = useState<Boletim>({});
+  const [editableBoletim, setEditableBoletim] = useState<any>({});
+  
+  const currentYear = useMemo(() => new Date().getFullYear().toString(), []);
+
+  const isTranscriptView = useMemo(() => {
+    // Se o primeiro nível de chaves do boletim forem anos (ex: "2023", "2024"), é um histórico.
+    const keys = Object.keys(initialBoletim || {});
+    return keys.length > 0 && /^\d{4}$/.test(keys[0]);
+  }, [initialBoletim]);
 
   useEffect(() => {
     if (isOpen) {
@@ -69,9 +79,11 @@ export default function StudentReportCardDialog({
   }, [isOpen, initialBoletim]);
 
   const subjectsInRecovery = useMemo(() => {
-    if (!editableBoletim) return [];
-    return Object.entries(editableBoletim)
-      .map(([disciplina, notas]) => {
+    const boletimForCurrentYear = isTranscriptView ? editableBoletim[currentYear] : editableBoletim;
+    if (!boletimForCurrentYear) return [];
+    
+    return Object.entries(boletimForCurrentYear)
+      .map(([disciplina, notas]: [string, any]) => {
         const validGrades = [notas.etapa1, notas.etapa2, notas.etapa3, notas.etapa4].filter(
           (nota): nota is number => nota !== null && nota !== undefined && !isNaN(nota)
         );
@@ -84,18 +96,24 @@ export default function StudentReportCardDialog({
       })
       .filter(item => item.media !== null && item.media < 6.0)
       .map(item => item.disciplina);
-  }, [editableBoletim]);
+  }, [editableBoletim, currentYear, isTranscriptView]);
 
-  const handleGradeChange = (disciplina: string, etapa: string, value: string) => {
+
+  const handleGradeChange = (disciplina: string, etapa: string, value: string, year?: string) => {
     const numericValue = value === '' ? null : parseFloat(value.replace(',', '.'));
     
-    setEditableBoletim(prev => ({
-      ...prev,
-      [disciplina]: {
-        ...prev[disciplina],
-        [etapa]: isNaN(numericValue!) ? null : numericValue,
-      },
-    }));
+    setEditableBoletim((prev: any) => {
+        const newBoletim = JSON.parse(JSON.stringify(prev));
+        if (year) { // Transcript view
+            if (!newBoletim[year]) newBoletim[year] = {};
+            if (!newBoletim[year][disciplina]) newBoletim[year][disciplina] = {};
+            newBoletim[year][disciplina][etapa] = isNaN(numericValue!) ? null : numericValue;
+        } else { // Single year view
+            if (!newBoletim[disciplina]) newBoletim[disciplina] = {};
+            newBoletim[disciplina][etapa] = isNaN(numericValue!) ? null : numericValue;
+        }
+        return newBoletim;
+    });
   };
   
   const handleSaveChanges = () => {
@@ -125,18 +143,20 @@ export default function StudentReportCardDialog({
     let componentToRender;
     let fileName = `Boletim_${student.nome.replace(/\s+/g, '_')}.pdf`;
     let pdfOptions: any = { orientation: 'p', unit: 'mm', format: 'a4' };
+    const boletimToRender = isTranscriptView ? editableBoletim[currentYear] : editableBoletim;
+
 
     switch (type) {
         case 'declaration':
-            componentToRender = <ReportCardWithDeclaration student={student} boletim={editableBoletim} />;
+            componentToRender = <ReportCardWithDeclaration student={student} boletim={boletimToRender} />;
             fileName = `Declaracao_com_Boletim_${student.nome.replace(/\s+/g, '_')}.pdf`;
             break;
         case 'detailed':
-            componentToRender = <ReportCardDetailed student={student} boletim={editableBoletim} />;
+            componentToRender = <ReportCardDetailed student={student} boletim={boletimToRender} ranking={null} />;
             fileName = `Boletim_Detalhado_${student.nome.replace(/\s+/g, '_')}.pdf`;
             break;
         case 'compact':
-            componentToRender = <ReportCardCompact student={student} boletim={editableBoletim} />;
+            componentToRender = <ReportCardCompact student={student} boletim={boletimToRender} />;
             fileName = `Boletim_Compacto_${student.nome.replace(/\s+/g, '_')}.pdf`;
             pdfOptions.orientation = 'l';
             break;
@@ -177,6 +197,35 @@ export default function StudentReportCardDialog({
     }
   };
 
+  const renderContent = () => {
+    if (isTranscriptView) {
+        const years = Object.keys(editableBoletim).sort((a,b) => parseInt(b) - parseInt(a));
+        return (
+            <div className="space-y-8">
+                {years.map(year => (
+                    <div key={year}>
+                        <h3 className="text-xl font-bold mb-2 text-center">Ano Letivo: {year}</h3>
+                        <StudentReportCard
+                            boletim={editableBoletim[year]}
+                            isEditing={isEditing}
+                            onGradeChange={(disciplina, etapa, value) => handleGradeChange(disciplina, etapa, value, year)}
+                        />
+                    </div>
+                ))}
+            </div>
+        );
+    }
+    
+    // Single year view
+    return (
+        <StudentReportCard
+            boletim={editableBoletim}
+            isEditing={isEditing}
+            onGradeChange={handleGradeChange}
+        />
+    );
+  }
+
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -185,18 +234,18 @@ export default function StudentReportCardDialog({
           onClose();
         }
     }}>
-      <DialogContent className="max-w-4xl w-full flex flex-col">
+      <DialogContent className="max-w-4xl w-full flex flex-col h-[90vh]">
         <DialogHeader>
           <DialogTitle>
-            Boletim de Notas
+            {isTranscriptView ? "Histórico Escolar" : "Boletim de Notas"}
             <span className="block text-base font-normal text-muted-foreground mt-1">{student?.nome}</span>
           </DialogTitle>
         </DialogHeader>
-        <div className="relative w-full overflow-auto my-4 flex-1">
-            <StudentReportCard boletim={editableBoletim} isEditing={isEditing} onGradeChange={handleGradeChange} />
-        </div>
+        <ScrollArea className="relative w-full my-4 flex-1">
+            {renderContent()}
+        </ScrollArea>
 
-        {subjectsInRecovery.length > 0 && !isEditing && (
+        {!isTranscriptView && subjectsInRecovery.length > 0 && !isEditing && (
             <Alert variant="destructive" className="mt-4">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Atenção: Aluno em Recuperação</AlertTitle>
@@ -240,13 +289,13 @@ export default function StudentReportCardDialog({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" disabled={!!isProcessing}>
+                            <Button variant="ghost" size="icon" disabled={!!isProcessing || isTranscriptView}>
                               {isProcessing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
                             </Button>
                           </DropdownMenuTrigger>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Fazer Download</p>
+                          <p>{isTranscriptView ? "Downloads disponíveis na ficha do aluno" : "Fazer Download"}</p>
                         </TooltipContent>
                       </Tooltip>
                       <DropdownMenuContent>
@@ -270,5 +319,3 @@ export default function StudentReportCardDialog({
     </Dialog>
   );
 }
-
-    
