@@ -14,6 +14,12 @@ import { commitBatchNonBlocking } from "@/firebase/non-blocking-updates";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Label } from "./ui/label";
 
+interface ClassInfo {
+  serie: string | null;
+  classe: string | null;
+  turno: string | null;
+}
+
 export default function GradesUploader() {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -92,11 +98,51 @@ export default function GradesUploader() {
 
     reader.readAsArrayBuffer(file);
   };
+  
+  const parseClassInfo = (data: any[][]): { classInfo: ClassInfo, headerRowIndex: number } => {
+    let classInfo: ClassInfo = { serie: null, classe: null, turno: null };
+    let headerRowIndex = -1;
+
+    for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        const rowString = row.join(' ').toLowerCase();
+
+        // Check for class info line
+        if (rowString.includes('série') || rowString.includes('turma') || rowString.includes('turno')) {
+            const serieMatch = rowString.match(/série:\s*([^|]+)/);
+            const classMatch = rowString.match(/turma:\s*([^|]+)/);
+            const turnoMatch = rowString.match(/turno:\s*([^|]+)/);
+            
+            if (serieMatch) classInfo.serie = serieMatch[1].trim().toUpperCase();
+            if (classMatch) classInfo.classe = classMatch[1].trim().toUpperCase();
+            if (turnoMatch) classInfo.turno = turnoMatch[1].trim().toUpperCase();
+        }
+
+        // Check for header row (contains 'matricula' or 'rm')
+        const normalizedHeaders = row.map(h => String(h).toLowerCase());
+        if (normalizedHeaders.includes('matricula') || normalizedHeaders.includes('rm')) {
+            headerRowIndex = i;
+            // If we found the header, we can stop searching for class info in subsequent rows
+            if (classInfo.serie || classInfo.classe || classInfo.turno) {
+                break;
+            }
+        }
+    }
+    
+    if (headerRowIndex === -1) {
+        throw new Error("Não foi possível encontrar a linha de cabeçalho com 'Matrícula' ou 'RM' na planilha.");
+    }
+
+    return { classInfo, headerRowIndex };
+  };
+
 
   const updateGradesInFirestore = async (data: any[][]) => {
     if (!firestore) return;
 
-    const headers: string[] = data[0].map((header: any) => 
+    const { classInfo, headerRowIndex } = parseClassInfo(data);
+    
+    const headers: string[] = data[headerRowIndex].map((header: any) => 
         String(header).trim().toLowerCase()
           .replace(/ç/g, 'c')
           .replace(/ã/g, 'a')
@@ -108,13 +154,12 @@ export default function GradesUploader() {
           .replace(/\s+/g, '_')
     );
     const rmIndex = headers.findIndex(h => h === 'matricula' || h === 'rm');
-    const nameIndex = headers.findIndex(h => h === 'aluno' || h === 'nome_do_aluno' || h === 'nome');
 
     if (rmIndex === -1) {
         throw new Error("A coluna 'Matrícula' ou 'RM' é obrigatória na planilha de notas.");
     }
 
-    const gradesData = data.slice(1);
+    const gradesData = data.slice(headerRowIndex + 1);
     const batch = writeBatch(firestore);
     const collectionRef = collection(firestore, 'alunos');
     let updatedCount = 0;
@@ -131,16 +176,16 @@ export default function GradesUploader() {
             const boletim = studentData.boletim || {};
             const yearData = boletim[year] || { info: {}, notas: {} };
             
-            // Set student info for that year
+            // Set student info for that year from parsed class info
             yearData.info = {
-                serie: studentData.serie || null,
-                classe: studentData.classe || null,
-                turno: studentData.turno || null,
+                serie: classInfo.serie || studentData.serie || null,
+                classe: classInfo.classe || studentData.classe || null,
+                turno: classInfo.turno || studentData.turno || null,
             };
 
             // Update grades
             headers.forEach((header, index) => {
-                if (index === rmIndex || index === nameIndex || !header) return;
+                if (index === rmIndex || !header) return;
 
                 const subject = header;
                 if (!yearData.notas[subject]) {
@@ -312,3 +357,5 @@ export default function GradesUploader() {
     </Card>
   );
 }
+
+    
