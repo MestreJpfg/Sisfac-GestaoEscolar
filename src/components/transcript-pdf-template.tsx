@@ -192,11 +192,10 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
 
     useEffect(() => {
         if (!isEditing) return;
-
+    
+        // Encontrar o ano mais recente e seu índice
         let latestYear = 0;
         let latestYearIndex = -1;
-
-        // Find the latest year and its index from the current state of tableRows
         tableRows.forEach((row, index) => {
             const year = parseInt(row.anoCivil, 10);
             if (!isNaN(year) && year > latestYear) {
@@ -204,19 +203,18 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
                 latestYearIndex = index;
             }
         });
-        
-        // If a valid latest year was found
-        if (latestYear > 0 && latestYearIndex !== -1) {
-            // Iterate backwards from the row before the latest year
+    
+        // Se um ano foi encontrado, preencher os anos anteriores
+        if (latestYearIndex !== -1) {
             for (let i = latestYearIndex - 1; i >= 0; i--) {
-                // Only fill if the 'anoCivil' for that row is empty
+                // Preencher apenas se estiver vazio para não sobrescrever dados
                 if (!tableRows[i].anoCivil) {
                     const newYear = String(latestYear - (latestYearIndex - i));
                     onTrajectoryChange?.(i, 'anoCivil', newYear);
                 }
             }
         }
-    }, [isEditing]); // Only run when entering edit mode
+    }, [isEditing]);
 
 
     useEffect(() => {
@@ -252,7 +250,7 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
                     .filter(m => m.toLowerCase().includes(searchLower))
                     .slice(0, 5);
             } else if (field === 'estabelecimento') {
-                filteredSuggestions = escolasData
+                filteredSuggestions = escolasData.escolas
                     .map(e => e.nome)
                     .filter(s => s.toLowerCase().includes(searchLower))
                     .slice(0, 5);
