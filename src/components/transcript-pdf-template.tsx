@@ -131,7 +131,7 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
                     <tr key={disciplina}>
                         <td className="border border-black p-1 font-medium align-middle">{disciplina}</td>
                         {anosSeries.map(serie => (
-                            <td key={`${disciplina}-${serie}`} className="border border-black p-0 text-center align-middle">
+                            <td key={`${disciplina}-${serie}`} className="border border-black p-0 text-center align-middle" style={{ verticalAlign: 'middle' }}>
                                 {isEditing ? (
                                     <Input
                                         className={cn("h-6 text-[9px] p-1 text-center border-dashed rounded-none", "bg-white text-black border-blue-300 focus:border-blue-500 focus:ring-blue-500")}
@@ -284,7 +284,7 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
                     {tableRows.map((row, index) => (
                         <tr key={index}>
                             {['anoSerie', 'anoCivil', 'estabelecimento', 'municipioUF', 'resultado'].map(field => (
-                                 <td key={field} className="border border-black p-0 text-center align-middle relative">
+                                 <td key={field} className="border border-black p-0 text-center align-middle relative" style={{ verticalAlign: 'middle' }}>
                                     {isEditing ? (
                                         <>
                                             <Input
