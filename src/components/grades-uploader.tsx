@@ -163,62 +163,74 @@ export default function GradesUploader() {
 
     const gradesData = data.slice(headerRowIndex + 1);
     const batch = writeBatch(firestore);
-    const collectionRef = collection(firestore, 'alunos');
     let updatedCount = 0;
+    let newExAlunosCount = 0;
 
     for (const row of gradesData) {
         const rm = String(row[rmIndex]);
         if (!rm) continue;
 
-        const studentDocRef = doc(collectionRef, rm);
+        const studentDocRef = doc(firestore, 'alunos', rm);
         const studentDoc = await getDoc(studentDocRef);
 
+        let targetCollectionRef;
+        let docData;
+
         if (studentDoc.exists()) {
-            const studentData = studentDoc.data();
-            const boletim = studentData.boletim || {};
-            const yearData = boletim[year] || { info: {}, notas: {} };
-            
-            // Set student info for that year from parsed class info
-            yearData.info = {
-                serie: classInfo.serie || studentData.serie || null,
-                classe: classInfo.classe || studentData.classe || null,
-                turno: classInfo.turno || studentData.turno || null,
-            };
-
-            // Update grades
-            headers.forEach((header, index) => {
-                if (index === rmIndex || !header) return;
-
-                const subject = header;
-                if (!yearData.notas[subject]) {
-                    yearData.notas[subject] = {};
-                }
-
-                const gradeValue = row[index];
-                let grade: number | null = null;
-                if (gradeValue !== null && gradeValue !== undefined && String(gradeValue).trim() !== '') {
-                    const numericGrade = Number(String(gradeValue).replace(',', '.'));
-                    if (!isNaN(numericGrade)) {
-                        grade = numericGrade;
-                    }
-                }
-                
-                yearData.notas[subject][etapa] = grade;
-            });
-
-            // Update the main boletim object
-            boletim[year] = yearData;
-            
-            batch.set(studentDocRef, { boletim }, { merge: true });
-            updatedCount++;
+            targetCollectionRef = doc(firestore, 'alunos', rm);
+            docData = studentDoc.data();
+        } else {
+            // Student not found, add to 'exalunos' collection
+            targetCollectionRef = doc(firestore, 'exalunos', rm);
+            const exAlunoDoc = await getDoc(targetCollectionRef);
+            docData = exAlunoDoc.exists() ? exAlunoDoc.data() : { id: rm, rm: rm, nome: row[headers.indexOf('nome')] || `Ex-Aluno ${rm}`};
+            if (!exAlunoDoc.exists()) {
+                newExAlunosCount++;
+            }
         }
+
+        const boletim = docData.boletim || {};
+        const yearData = boletim[year] || { info: {}, notas: {} };
+        
+        // Set student info for that year from parsed class info
+        yearData.info = {
+            serie: classInfo.serie || docData.serie || null,
+            classe: classInfo.classe || docData.classe || null,
+            turno: classInfo.turno || docData.turno || null,
+        };
+
+        // Update grades
+        headers.forEach((header, index) => {
+            if (index === rmIndex || !header || header === 'nome') return;
+
+            const subject = header;
+            if (!yearData.notas[subject]) {
+                yearData.notas[subject] = {};
+            }
+
+            const gradeValue = row[index];
+            let grade: number | null = null;
+            if (gradeValue !== null && gradeValue !== undefined && String(gradeValue).trim() !== '') {
+                const numericGrade = Number(String(gradeValue).replace(',', '.'));
+                if (!isNaN(numericGrade)) {
+                    grade = numericGrade;
+                }
+            }
+            
+            yearData.notas[subject][etapa] = grade;
+        });
+
+        boletim[year] = yearData;
+        
+        batch.set(targetCollectionRef, { ...docData, boletim }, { merge: true });
+        updatedCount++;
     }
     
     if (updatedCount > 0) {
-        commitBatchNonBlocking(batch, 'alunos');
+        commitBatchNonBlocking(batch, 'alunos'); // Use a representative path
         toast({
             title: "Processamento Concluído!",
-            description: `${updatedCount} alunos tiveram as notas da ${etapa} atualizadas para o ano de ${year}.`,
+            description: `${updatedCount} registos de notas foram processados. ${newExAlunosCount > 0 ? `${newExAlunosCount} novos ex-alunos foram criados.` : ''}`.trim(),
         });
     } else {
         toast({

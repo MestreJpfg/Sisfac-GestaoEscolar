@@ -64,6 +64,18 @@ service cloud.firestore {
         allow write: if hasPermission('manage:profiles');
     }
 
+    match /alunos/{alunoId} {
+      allow read, list: if hasPermission('view:students') || hasPermission('manage:students');
+      allow write: if hasPermission('manage:students') || hasPermission('manage:grades');
+      allow delete: if hasPermission('manage:students');
+    }
+
+    match /exalunos/{alunoId} {
+      allow read, list: if hasPermission('view:students') || hasPermission('manage:students');
+      allow write: if hasPermission('manage:students') || hasPermission('manage:grades');
+      allow delete: if hasPermission('manage:students');
+    }
+
     // Permissions for grades.
     match /grades/{gradeId} {
        allow read, list: if hasPermission('view:grades') || hasPermission('manage:grades');
