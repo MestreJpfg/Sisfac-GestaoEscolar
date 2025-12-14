@@ -105,27 +105,29 @@ export default function GradesUploader() {
 
     for (let i = 0; i < data.length; i++) {
         const row = data[i];
-        const rowString = row.join(' ').toLowerCase();
-
-        // Check for class info line
-        if (rowString.includes('série') || rowString.includes('turma') || rowString.includes('turno')) {
-            const serieMatch = rowString.match(/série:\s*([^|]+)/);
-            const classMatch = rowString.match(/turma:\s*([^|]+)/);
-            const turnoMatch = rowString.match(/turno:\s*([^|]+)/);
-            
-            if (serieMatch) classInfo.serie = serieMatch[1].trim().toUpperCase();
-            if (classMatch) classInfo.classe = classMatch[1].trim().toUpperCase();
-            if (turnoMatch) classInfo.turno = turnoMatch[1].trim().toUpperCase();
-        }
-
-        // Check for header row (contains 'matricula' or 'rm')
+        
+        // Find header row first
         const normalizedHeaders = row.map(h => String(h).toLowerCase());
         if (normalizedHeaders.includes('matricula') || normalizedHeaders.includes('rm')) {
             headerRowIndex = i;
-            // If we found the header, we can stop searching for class info in subsequent rows
-            if (classInfo.serie || classInfo.classe || classInfo.turno) {
-                break;
-            }
+        }
+
+        // Find "INFO" line for class details
+        const infoCellIndex = row.findIndex(cell => String(cell).trim().toUpperCase() === 'INFO');
+        if (infoCellIndex !== -1) {
+            // INFO | Série | Turma | Turno
+            const serie = row[infoCellIndex + 1];
+            const classe = row[infoCellIndex + 2];
+            const turno = row[infoCellIndex + 3];
+
+            if (serie) classInfo.serie = String(serie).trim().toUpperCase();
+            if (classe) classInfo.classe = String(classe).trim().toUpperCase();
+            if (turno) classInfo.turno = String(turno).trim().toUpperCase();
+        }
+
+        // If we found both, we can stop.
+        if (headerRowIndex !== -1 && classInfo.serie && classInfo.classe && classInfo.turno) {
+            break;
         }
     }
     
@@ -357,5 +359,3 @@ export default function GradesUploader() {
     </Card>
   );
 }
-
-    
