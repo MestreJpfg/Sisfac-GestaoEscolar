@@ -7,7 +7,7 @@ import { Input } from "./ui/input";
 import { cn } from "@/lib/utils";
 import React, { useState, useEffect, useRef } from "react";
 import { municipios } from "@/lib/municipios";
-import { escolas as escolasData } from "@/lib/escolas";
+import escolasData from "@/lib/escolas.json";
 import { Card, CardContent } from "./ui/card";
 
 interface TranscriptPDFTemplateProps {
@@ -121,8 +121,8 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
         <table className="w-full text-[8px] border-collapse" style={{ border: '1px solid black' }}>
             <thead>
                 <tr className="bg-gray-200">
-                    <th className="border border-black p-1 font-bold w-[25%]">Componente Curricular</th>
-                    {anosSeries.map(serie => <th key={serie} className="border border-black p-1 font-bold align-middle">{serie}</th>)}
+                    <th className="border border-black p-1 font-bold w-[25%] align-middle text-center">Componente Curricular</th>
+                    {anosSeries.map(serie => <th key={serie} className="border border-black p-1 font-bold align-middle text-center">{serie}</th>)}
                 </tr>
             </thead>
             <tbody>
@@ -253,11 +253,11 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
              <table className="w-full text-[8px] border-collapse" style={{ border: '1px solid black' }}>
                 <thead>
                    <tr className="bg-gray-200">
-                        <th className="border border-black p-1 font-bold align-middle">Ano/Série</th>
-                        <th className="border border-black p-1 font-bold align-middle">Ano Civil</th>
-                        <th className="border border-black p-1 font-bold align-middle">Estabelecimento de Ensino</th>
-                        <th className="border border-black p-1 font-bold align-middle">Município/UF</th>
-                        <th className="border border-black p-1 font-bold align-middle">Resultado</th>
+                        <th className="border border-black p-1 font-bold align-middle text-center">Ano/Série</th>
+                        <th className="border border-black p-1 font-bold align-middle text-center">Ano Civil</th>
+                        <th className="border border-black p-1 font-bold align-middle text-center">Estabelecimento de Ensino</th>
+                        <th className="border border-black p-1 font-bold align-middle text-center">Município/UF</th>
+                        <th className="border border-black p-1 font-bold align-middle text-center">Resultado</th>
                     </tr>
                 </thead>
                 <tbody>
