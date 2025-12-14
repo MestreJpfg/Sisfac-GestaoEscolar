@@ -97,6 +97,7 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
                         'arte-literatura': 'Arte',
                         'lingua_portuguesa': 'Língua Portuguesa',
                         'educacao_fisica': 'Educação Física',
+                        'ensino_religioso': 'Ensino Religioso'
                     };
 
                     if (specialMapping[normalizedDiscKey]) {
@@ -174,39 +175,48 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
             resultado: ''
         }));
 
-        if (student.boletim) {
-            Object.keys(student.boletim).forEach(year => {
-                const yearInfo = student.boletim[year]?.info;
-                if (yearInfo?.serie) {
-                    const rowIndex = anosSeriesTemplate.indexOf(yearInfo.serie);
-                    if (rowIndex !== -1 && year) {
-                        rows[rowIndex].anoCivil = year;
-                        if(year) {
-                            rows[rowIndex].estabelecimento = yearInfo.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
-                            rows[rowIndex].municipioUF = yearInfo.municipioUF || 'Fortaleza/CE';
-                            rows[rowIndex].resultado = yearInfo.resultado || 'Aprovado';
-                        }
+        if (student?.boletim) {
+            let processedYears = new Set<string>();
+
+            // Recursive function to process years backwards
+            const processYear = (year: number) => {
+                if (processedYears.has(String(year))) return;
+
+                const studentDataForYear = allStudents?.find(s => s.rm === student.rm && s.boletim?.[year]);
+                const yearData = studentDataForYear?.boletim?.[year];
+                
+                if (yearData?.info?.serie) {
+                    const rowIndex = anosSeriesTemplate.indexOf(yearData.info.serie);
+                    if (rowIndex !== -1) {
+                        rows[rowIndex].anoCivil = String(year);
+                        rows[rowIndex].estabelecimento = yearData.info.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
+                        rows[rowIndex].municipioUF = yearData.info.municipioUF || 'Fortaleza/CE';
+                        rows[rowIndex].resultado = yearData.info.resultado || 'Aprovado';
+                        processedYears.add(String(year));
+                        
+                        // Recursively look for the previous year
+                        processYear(year - 1);
                     }
                 }
+            };
+            
+            // Start processing from all available years in the main student record
+            Object.keys(student.boletim).sort((a, b) => parseInt(b) - parseInt(a)).forEach(yearStr => {
+                processYear(parseInt(yearStr));
             });
         }
         
-        if (student.trajectoryData) {
+        if (student?.trajectoryData) {
             student.trajectoryData.forEach((dbRow: any, index: number) => {
                 if (index < rows.length) {
                     rows[index] = { ...rows[index], ...dbRow };
-                     if (!dbRow.anoCivil) {
-                        rows[index].estabelecimento = '';
-                        rows[index].municipioUF = '';
-                        rows[index].resultado = '';
-                    }
                 }
             });
         }
         
         return rows;
 
-    }, [student]);
+    }, [student, allStudents]);
 
     const handleResultadoChange = (index: number, value: string) => {
         let finalValue = value;
