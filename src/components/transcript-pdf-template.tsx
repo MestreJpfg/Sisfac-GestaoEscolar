@@ -154,19 +154,8 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const wrapperRef = useRef<HTMLDivElement>(null);
     
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-                setActiveAutocomplete(null);
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [wrapperRef]);
-
-    const initialRows = React.useMemo(() => {
+    const tableRows = React.useMemo(() => {
         const anosSeriesTemplate = ["1º ANO", "2º ANO", "3º ANO", "4º ANO", "5º ANO", "6º ANO", "7º ANO", "8º ANO", "9º ANO"];
-        
         let rows = anosSeriesTemplate.map((serie) => ({
             anoSerie: serie,
             anoCivil: '',
@@ -176,33 +165,17 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
         }));
 
         if (student?.boletim) {
-            let processedYears = new Set<string>();
-
-            // Recursive function to process years backwards
-            const processYear = (year: number) => {
-                if (processedYears.has(String(year))) return;
-
-                const studentDataForYear = allStudents?.find(s => s.rm === student.rm && s.boletim?.[year]);
-                const yearData = studentDataForYear?.boletim?.[year];
-                
+            Object.keys(student.boletim).forEach(yearStr => {
+                const yearData = student.boletim[yearStr];
                 if (yearData?.info?.serie) {
                     const rowIndex = anosSeriesTemplate.indexOf(yearData.info.serie);
                     if (rowIndex !== -1) {
-                        rows[rowIndex].anoCivil = String(year);
+                        rows[rowIndex].anoCivil = String(yearStr);
                         rows[rowIndex].estabelecimento = yearData.info.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
                         rows[rowIndex].municipioUF = yearData.info.municipioUF || 'Fortaleza/CE';
                         rows[rowIndex].resultado = yearData.info.resultado || 'Aprovado';
-                        processedYears.add(String(year));
-                        
-                        // Recursively look for the previous year
-                        processYear(year - 1);
                     }
                 }
-            };
-            
-            // Start processing from all available years in the main student record
-            Object.keys(student.boletim).sort((a, b) => parseInt(b) - parseInt(a)).forEach(yearStr => {
-                processYear(parseInt(yearStr));
             });
         }
         
@@ -215,8 +188,42 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
         }
         
         return rows;
+    }, [student]);
 
-    }, [student, allStudents]);
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+                setActiveAutocomplete(null);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [wrapperRef]);
+
+    useEffect(() => {
+        if (isEditing) {
+            let latestYear = 0;
+            let latestYearIndex = -1;
+
+            tableRows.forEach((row, index) => {
+                const year = parseInt(row.anoCivil, 10);
+                if (!isNaN(year) && year > latestYear) {
+                    latestYear = year;
+                    latestYearIndex = index;
+                }
+            });
+
+            if (latestYear > 0 && latestYearIndex > 0) {
+                for (let i = latestYearIndex - 1; i >= 0; i--) {
+                    const currentYearInRow = tableRows[i].anoCivil;
+                    if (!currentYearInRow) {
+                        const newYear = String(latestYear - (latestYearIndex - i));
+                        onTrajectoryChange?.(i, 'anoCivil', newYear);
+                    }
+                }
+            }
+        }
+    }, [isEditing, tableRows, onTrajectoryChange]);
 
     const handleResultadoChange = (index: number, value: string) => {
         let finalValue = value;
@@ -271,7 +278,7 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
                     </tr>
                 </thead>
                 <tbody>
-                    {initialRows.map((row, index) => (
+                    {tableRows.map((row, index) => (
                         <tr key={index}>
                             {['anoSerie', 'anoCivil', 'estabelecimento', 'municipioUF', 'resultado'].map(field => (
                                  <td key={field} className="border border-black p-0 text-center align-middle relative">
