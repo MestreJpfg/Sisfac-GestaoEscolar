@@ -93,8 +93,14 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
                     let foundDisciplina: string | undefined;
                     const normalizedDiscKey = normalizeString(discKey);
 
-                    if (normalizedDiscKey === 'arte-literatura') {
-                        foundDisciplina = 'Arte';
+                    const specialMapping: { [key: string]: string } = {
+                        'arte-literatura': 'Arte',
+                        'lingua_portuguesa': 'Língua Portuguesa',
+                        'educacao_fisica': 'Educação Física',
+                    };
+
+                    if (specialMapping[normalizedDiscKey]) {
+                        foundDisciplina = specialMapping[normalizedDiscKey];
                     } else {
                         foundDisciplina = disciplinasBase.find(d => normalizeString(d) === normalizedDiscKey);
                     }
@@ -116,15 +122,15 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
             <thead>
                 <tr className="bg-gray-200">
                     <th className="border border-black p-1 font-bold w-[25%]">Componente Curricular</th>
-                    {anosSeries.map(serie => <th key={serie} className="border border-black p-1 font-bold">{serie}</th>)}
+                    {anosSeries.map(serie => <th key={serie} className="border border-black p-1 font-bold align-middle">{serie}</th>)}
                 </tr>
             </thead>
             <tbody>
                 {disciplinasBase.map(disciplina => (
                     <tr key={disciplina}>
-                        <td className="border border-black p-1 font-medium">{disciplina}</td>
+                        <td className="border border-black p-1 font-medium align-middle">{disciplina}</td>
                         {anosSeries.map(serie => (
-                            <td key={`${disciplina}-${serie}`} className="border border-black p-0 text-center">
+                            <td key={`${disciplina}-${serie}`} className="border border-black p-0 text-center align-middle">
                                 {isEditing ? (
                                     <Input
                                         className={cn("h-6 text-[9px] p-1 text-center border-dashed rounded-none", "bg-white text-black border-blue-300 focus:border-blue-500 focus:ring-blue-500")}
@@ -247,18 +253,18 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
              <table className="w-full text-[8px] border-collapse" style={{ border: '1px solid black' }}>
                 <thead>
                    <tr className="bg-gray-200">
-                        <th className="border border-black p-1 font-bold">Ano/Série</th>
-                        <th className="border border-black p-1 font-bold">Ano Civil</th>
-                        <th className="border border-black p-1 font-bold">Estabelecimento de Ensino</th>
-                        <th className="border border-black p-1 font-bold">Município/UF</th>
-                        <th className="border border-black p-1 font-bold">Resultado</th>
+                        <th className="border border-black p-1 font-bold align-middle">Ano/Série</th>
+                        <th className="border border-black p-1 font-bold align-middle">Ano Civil</th>
+                        <th className="border border-black p-1 font-bold align-middle">Estabelecimento de Ensino</th>
+                        <th className="border border-black p-1 font-bold align-middle">Município/UF</th>
+                        <th className="border border-black p-1 font-bold align-middle">Resultado</th>
                     </tr>
                 </thead>
                 <tbody>
                     {initialRows.map((row, index) => (
                         <tr key={index}>
                             {['anoSerie', 'anoCivil', 'estabelecimento', 'municipioUF', 'resultado'].map(field => (
-                                 <td key={field} className="border border-black p-0 text-center relative">
+                                 <td key={field} className="border border-black p-0 text-center align-middle relative">
                                     {isEditing ? (
                                         <>
                                             <Input
