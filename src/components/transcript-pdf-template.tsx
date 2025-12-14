@@ -191,6 +191,35 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
     }, [student]);
 
     useEffect(() => {
+        if (!isEditing) return;
+
+        let latestYear = 0;
+        let latestYearIndex = -1;
+
+        // Find the latest year and its index from the current state of tableRows
+        tableRows.forEach((row, index) => {
+            const year = parseInt(row.anoCivil, 10);
+            if (!isNaN(year) && year > latestYear) {
+                latestYear = year;
+                latestYearIndex = index;
+            }
+        });
+        
+        // If a valid latest year was found
+        if (latestYear > 0 && latestYearIndex !== -1) {
+            // Iterate backwards from the row before the latest year
+            for (let i = latestYearIndex - 1; i >= 0; i--) {
+                // Only fill if the 'anoCivil' for that row is empty
+                if (!tableRows[i].anoCivil) {
+                    const newYear = String(latestYear - (latestYearIndex - i));
+                    onTrajectoryChange?.(i, 'anoCivil', newYear);
+                }
+            }
+        }
+    }, [isEditing]); // Only run when entering edit mode
+
+
+    useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
                 setActiveAutocomplete(null);
@@ -200,30 +229,6 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [wrapperRef]);
 
-    useEffect(() => {
-        if (isEditing) {
-            let latestYear = 0;
-            let latestYearIndex = -1;
-
-            tableRows.forEach((row, index) => {
-                const year = parseInt(row.anoCivil, 10);
-                if (!isNaN(year) && year > latestYear) {
-                    latestYear = year;
-                    latestYearIndex = index;
-                }
-            });
-
-            if (latestYear > 0 && latestYearIndex > 0) {
-                for (let i = latestYearIndex - 1; i >= 0; i--) {
-                    const currentYearInRow = tableRows[i].anoCivil;
-                    if (!currentYearInRow) {
-                        const newYear = String(latestYear - (latestYearIndex - i));
-                        onTrajectoryChange?.(i, 'anoCivil', newYear);
-                    }
-                }
-            }
-        }
-    }, [isEditing, tableRows, onTrajectoryChange]);
 
     const handleResultadoChange = (index: number, value: string) => {
         let finalValue = value;
@@ -247,7 +252,7 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
                     .filter(m => m.toLowerCase().includes(searchLower))
                     .slice(0, 5);
             } else if (field === 'estabelecimento') {
-                filteredSuggestions = escolasData.escolas
+                filteredSuggestions = escolasData
                     .map(e => e.nome)
                     .filter(s => s.toLowerCase().includes(searchLower))
                     .slice(0, 5);
