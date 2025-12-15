@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Image from "next/image";
@@ -444,18 +443,18 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
     return (
         <div>
             <div id="transcript-page" className="bg-white text-black font-sans" style={{ width: '210mm', minHeight: '297mm' }}>
-                <div className="flex flex-col h-full p-8">
-                    <header className="flex flex-col items-center text-center text-[9px] font-bold mb-4">
-                        <div className="flex items-center gap-4 mb-2"><Image src="/logoyuri.png" alt="Logo" width={60} height={60} unoptimized /></div>
+                <div className="flex flex-col h-full p-8 space-y-2">
+                    <header className="flex flex-col items-center text-center text-[9px] font-bold mb-1">
+                        <div className="flex items-center gap-4 mb-1"><Image src="/logoyuri.png" alt="Logo" width={60} height={60} unoptimized /></div>
                         <p className="text-[10px] font-bold">ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES - EI / EF</p>
                         <p className="text-[8px] font-bold">Ato de Criação: Portaria Nº 105/2021 de 31/12/2021</p>
                         <p className="text-[8px]">AVENIDA PROFESSOR JOSE ARTHUR DE CARVALHO, Nº 1540, LAGOA REDONDA - CEP: 60831-600</p>
                         <p className="text-[8px]">Fortaleza - CE | Fone: (85) 3488-3209 | E-mail: efernandacollares@institutoassumcao.org.br</p>
                     </header>
 
-                    <div className="text-center my-4"><h1 className="text-base font-bold tracking-wider uppercase">HISTÓRICO ESCOLAR DO ENSINO FUNDAMENTAL DE 9 (NOVE) ANOS</h1></div>
+                    <div className="text-center my-2"><h1 className="text-base font-bold tracking-wider uppercase">HISTÓRICO ESCOLAR DO ENSINO FUNDAMENTAL DE 9 (NOVE) ANOS</h1></div>
 
-                    <section className="border-t border-b border-black py-2 grid grid-cols-2 gap-x-4 gap-y-1">
+                    <section className="border-t border-b border-black py-1 grid grid-cols-2 gap-x-4 gap-y-1">
                         <DetailItem label="Nome do Aluno(a)" value={student.nome} isEditing={isEditing} onChange={handleDetailChange('nome')} />
                         <DetailItem label="Registro Acadêmico (RM)" value={student.rm} isEditing={isEditing} onChange={handleDetailChange('rm')} />
                         <DetailItem label="Data de Nascimento" value={student.data_nascimento} isEditing={isEditing} onChange={handleDetailChange('data_nascimento')} />
@@ -464,8 +463,8 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                         <DetailItem label="Pai" value={student.filiacao_2} isEditing={isEditing} onChange={handleDetailChange('filiacao_2')} />
                     </section>
                     
-                    <section className="my-4">
-                        <h2 className="text-sm font-bold text-center mb-2">UNIDADE ESCOLAR</h2>
+                    <section className="my-2">
+                        <h2 className="text-sm font-bold text-center mb-1">UNIDADE ESCOLAR</h2>
                         <TrajectoryTable 
                             student={student} 
                             isEditing={isEditing} 
@@ -473,26 +472,25 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                         />
                     </section>
                     
-                    <section className="my-4 space-y-4">
-                        <h2 className="text-sm font-bold text-center mb-2">NOTAS E FREQUÊNCIA POR ANO/SÉRIE</h2>
+                    <section className="my-2">
+                        <h2 className="text-sm font-bold text-center mb-1">NOTAS E FREQUÊNCIA POR ANO/SÉRIE</h2>
                         <GradeMatrix boletim={student.boletim} isEditing={isEditing} onGradeChange={handleGradeChange} />
                     </section>
 
                     {isNinthGradeApproved && (
-                        <section className="my-4 text-center text-[10px] font-semibold">
+                        <section className="my-2 text-center text-[10px] font-semibold">
                             <p>Certificamos que o(a) aluno(a) acima qualificado(a) concluiu o Ensino Fundamental e está apto(a) a cursar o Ensino Médio.</p>
                         </section>
                     )}
 
                     <footer className="flex flex-col items-center justify-center text-center pt-2 mt-auto text-[9px]">
-                        <div className="text-center w-full mb-4">
+                        <div className="text-center w-full mb-2">
                             <p className="font-bold">Base Legal:</p>
-                            <p>Curso de Ensino Fundamental de 9 (nove) anos, com base na Lei Federal 9.394/96.</p>
-                            <p>Escala de Avaliação: Notas de 0 a 10, com média para aprovação 6.0.</p>
+                            <p>Curso de Ensino Fundamental de 9 (nove) anos, com base na Lei Federal 9.394/96. Escala de Avaliação: Notas de 0 a 10, com média para aprovação 6.0.</p>
                             <p>Modelo de Avaliação para 1º e 2º ANO, uso de Relatório Pedagógico.</p>
                         </div>
-                        <p className="my-4 text-[12px]">Fortaleza, {formattedDate}.</p>
-                        <div className="flex justify-around w-full mt-8 items-end">
+                        <p className="text-[10px]">Fortaleza, {formattedDate}.</p>
+                        <div className="flex justify-around w-full mt-2 items-end">
                             <div className="text-center w-48 relative">
                                 <div className="relative h-16 w-full -mb-10" style={{ right: '0.5cm' }}>
                                     <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized />
