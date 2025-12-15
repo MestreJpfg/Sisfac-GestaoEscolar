@@ -316,43 +316,61 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
     )
 }
 
-const ConclusionCertificate = ({ student, date }: { student: any, date: string }) => (
-    <div className="bg-white text-black font-sans p-8 flex flex-col justify-between" style={{ width: '210mm', height: '297mm', fontFamily: 'Georgia, serif', border: '10px solid #00564d' }}>
-        <div>
-            <header className="flex flex-col items-center text-center text-black mb-8">
-                <Image src="/logoyuri.png" alt="Logo" width={80} height={80} unoptimized />
-                <h1 className="text-2xl font-bold mt-2" style={{ color: '#00564d' }}>ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES</h1>
-            </header>
-            <div className="text-center space-y-6">
-                <h2 className="text-4xl font-bold tracking-widest uppercase" style={{ color: '#b2945b' }}>Certificado de Conclusão</h2>
-                <p className="text-lg">Certificamos que</p>
-                <p className="text-3xl font-semibold italic" style={{ fontFamily: 'Brush Script MT, cursive' }}>{student?.nome || '________________'}</p>
-                <p className="text-lg">
-                    concluiu com aproveitamento o <strong className="font-semibold">Ensino Fundamental</strong> nesta instituição de ensino no ano letivo de {student?.trajectoryData?.find((t:any) => t.anoSerie === '9º ANO')?.anoCivil || new Date().getFullYear()}.
-                </p>
-            </div>
-        </div>
-        <footer className="flex justify-between items-end text-center text-xs">
-            <div className="w-1/3">
-                <p className="mt-2 text-sm">{date}</p>
-                <p className="font-semibold" style={{ color: '#00564d' }}>Data</p>
-            </div>
-            <div className="w-1/3 flex justify-center">
-                 <div className="relative h-24 w-24">
+const ConclusionCertificate = ({ student, date }: { student: any, date: string }) => {
+    const ninthGradeYear = student?.trajectoryData?.find((t: any) => t.anoSerie === '9º ANO')?.anoCivil || new Date().getFullYear();
+
+    return (
+        <div 
+            className="bg-white text-black font-serif p-8 flex flex-col justify-between" 
+            style={{ 
+                width: '297mm', 
+                height: '210mm', 
+                border: '10px solid #00564d', 
+                boxSizing: 'border-box'
+            }}
+        >
+            <header className="flex justify-between items-center text-black">
+                <div className="w-24 h-24 relative">
+                     <Image src="/logoyuri.png" alt="Logo" layout="fill" objectFit="contain" unoptimized />
+                </div>
+                <div className="text-center">
+                    <h1 className="text-2xl font-bold" style={{ color: '#00564d' }}>ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES</h1>
+                    <p className="text-sm">Reconhecida pela Portaria Nº 105/2021 de 31/12/2021</p>
+                </div>
+                <div className="w-24 h-24 relative">
                     <Image src="/selo.png" alt="Selo da Escola" layout="fill" objectFit="contain" unoptimized />
                 </div>
-            </div>
-            <div className="w-1/3">
-                <div className="relative h-20 w-48 mx-auto -mb-8">
-                    <Image src="/assinatura.png" alt="Assinatura" layout="fill" objectFit="contain" unoptimized />
+            </header>
+            <main className="text-center flex-grow flex flex-col justify-center items-center -mt-8">
+                <h2 className="text-5xl font-bold tracking-widest uppercase" style={{ color: '#b2945b' }}>Certificado</h2>
+                <p className="text-xl mt-4">Certificamos que</p>
+                <p className="text-4xl font-semibold italic my-4" style={{ fontFamily: 'Brush Script MT, cursive' }}>
+                    {student?.nome || '________________'}
+                </p>
+                <p className="text-lg max-w-2xl mx-auto">
+                    concluiu com aproveitamento o <strong className="font-semibold">Ensino Fundamental</strong>,
+                    em conformidade com a legislação vigente, nesta instituição de ensino no ano letivo de {ninthGradeYear}.
+                </p>
+            </main>
+            <footer className="flex justify-between items-end text-center text-xs mt-8">
+                <div className="w-1/3">
+                     <div className="border-t-2 border-dashed border-gray-500 w-full pt-1">
+                        <p className="mt-2 text-sm">{date}</p>
+                        <p className="font-semibold text-sm" style={{ color: '#00564d' }}>Data de Emissão</p>
+                    </div>
                 </div>
-                <div className="border-t-2 border-dashed border-gray-400 w-full pt-1">
-                    <p className="font-semibold" style={{ color: '#00564d' }}>Direção Escolar</p>
+                <div className="w-1/3">
+                    <div className="relative h-24 w-48 mx-auto -mb-8">
+                        <Image src="/assinatura.png" alt="Assinatura" layout="fill" objectFit="contain" unoptimized />
+                    </div>
+                     <div className="border-t-2 border-dashed border-gray-500 w-full pt-1">
+                        <p className="font-semibold text-sm" style={{ color: '#00564d' }}>Direção Escolar</p>
+                    </div>
                 </div>
-            </div>
-        </footer>
-    </div>
-);
+            </footer>
+        </div>
+    );
+};
 
 
 export default function TranscriptPDFTemplate({ student, isEditing = false, onStudentChange, allStudents }: TranscriptPDFTemplateProps) {
@@ -365,7 +383,11 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
     const isNinthGradeApproved = ninthGradeRow?.resultado?.toLowerCase() === 'aprovado';
 
     const handleDetailChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-        onStudentChange?.({ ...student, [field]: e.target.value });
+        let value = e.target.value;
+        if (field === 'data_nascimento') {
+            value = value.replace(/\D/g, '').replace(/(\d{2})(\d)/, '$1/$2').replace(/(\d{2})\/(\d{2})(\d)/, '$1/$2/$3').slice(0, 10);
+        }
+        onStudentChange?.({ ...student, [field]: value });
     };
 
     const handleTrajectoryChange = (index: number, field: string, value: string) => {
@@ -458,7 +480,7 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                             <p>Escala de Avaliação: Notas de 0 a 10, com média para aprovação 6.0.</p>
                             <p>Modelo de Avaliação para 1º e 2º ANO, uso de Relatório Pedagógico.</p>
                         </div>
-                        <p className="my-4 text-base">Fortaleza, {formattedDate}.</p>
+                        <p className="my-4 text-sm">Fortaleza, {formattedDate}.</p>
                         <div className="flex justify-around w-full mt-8 items-end">
                             <div className="text-center w-48 relative">
                                 <div className="relative h-16 w-full -mb-10" style={{ right: '0.5cm' }}>
