@@ -459,8 +459,6 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                         <DetailItem label="Nome do Aluno(a)" value={student.nome} isEditing={isEditing} onChange={handleDetailChange('nome')} />
                         <DetailItem label="Registro Acadêmico (RM)" value={student.rm} isEditing={isEditing} onChange={handleDetailChange('rm')} />
                         <DetailItem label="Data de Nascimento" value={student.data_nascimento} isEditing={isEditing} onChange={handleDetailChange('data_nascimento')} />
-                        <DetailItem label="Município de Nascimento" value={student.municipio_nascimento} isEditing={isEditing} onChange={handleDetailChange('municipio_nascimento')} />
-                        <DetailItem label="UF" value={student.uf_nascimento} isEditing={isEditing} onChange={handleDetailChange('uf_nascimento')} />
                         <DetailItem label="CPF" value={student.cpf_aluno} isEditing={isEditing} onChange={handleDetailChange('cpf_aluno')} />
                         <DetailItem label="Mãe" value={student.filiacao_1} isEditing={isEditing} onChange={handleDetailChange('filiacao_1')} />
                         <DetailItem label="Pai" value={student.filiacao_2} isEditing={isEditing} onChange={handleDetailChange('filiacao_2')} />
@@ -504,7 +502,7 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                                 </div>
                             </div>
                             <div className="text-center w-48 relative">
-                                 <div className="relative h-16 w-full -mb-10" style={{ right: '0.5cm' }}>
+                                <div className="relative h-16 w-full -mb-8" style={{ right: '0.5cm' }}>
                                     <Image src="/secretaria.png" alt="Assinatura Secretaria" layout="fill" objectFit="contain" unoptimized />
                                 </div>
                                 <div className="border-t border-black w-full pt-1">
@@ -534,3 +532,4 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
         </div>
     );
 }
+
