@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Image from "next/image";
@@ -13,7 +14,6 @@ interface TranscriptPDFTemplateProps {
     student: any | null;
     isEditing?: boolean;
     onStudentChange?: (student: any) => void;
-    allStudents?: any[];
 }
 
 const DetailItem = ({ label, value, isEditing, onChange }: { label: string, value: React.ReactNode, isEditing?: boolean, onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void }) => {
@@ -133,7 +133,7 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
                             <td key={`${disciplina}-${serie}`} className="border border-black p-0 text-center align-middle" style={{ verticalAlign: 'middle' }}>
                                 {isEditing ? (
                                     <Input
-                                        className={cn("h-6 text-[10px] p-1 text-center border-dashed rounded-none", "bg-white text-black border-blue-300 focus:border-blue-500 focus:ring-blue-500")}
+                                        className={cn("h-6 text-[11px] p-1 text-center border-dashed rounded-none", "bg-white text-black border-blue-300 focus:border-blue-500 focus:ring-blue-500")}
                                         value={gradeData[disciplina]?.[serie] || ''}
                                         onChange={(e) => onGradeChange?.(serie, disciplina, e.target.value)}
                                     />
@@ -147,7 +147,7 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
     );
 };
 
-const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }: { student: any, isEditing?: boolean, onTrajectoryChange?: (index: number, field: string, value: string) => void, allStudents?: any[] }) => {
+const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: any, isEditing?: boolean, onTrajectoryChange?: (index: number, field: string, value: string) => void }) => {
     
     const [activeAutocomplete, setActiveAutocomplete] = useState<{ index: number, field: string } | null>(null);
     const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -184,6 +184,13 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
                     rows[index] = { ...rows[index], ...dbRow };
                 }
             });
+        } else {
+            // Pre-fill default values if no trajectoryData exists
+            rows.forEach(row => {
+                if (!row.estabelecimento) row.estabelecimento = 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
+                if (!row.municipioUF) row.municipioUF = 'Fortaleza/CE';
+                if (!row.resultado) row.resultado = 'Aprovado';
+            })
         }
         
         return rows;
@@ -193,7 +200,7 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
         onTrajectoryChange?.(index, 'anoCivil', value);
     
         const startYear = parseInt(value, 10);
-        if (!isNaN(startYear) && index === 0) { // Only auto-fill if the first year is changed
+        if (!isNaN(startYear) && index === 0) {
             for (let i = 1; i < 9; i++) {
                 const nextYear = String(startYear + i);
                 onTrajectoryChange?.(i, 'anoCivil', nextYear);
@@ -278,7 +285,7 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
                                     {isEditing ? (
                                         <>
                                             <Input
-                                                className={cn("h-6 text-[10px] p-1 text-center border-dashed rounded-none", "bg-white text-black border-blue-300 focus:border-blue-500 focus:ring-blue-500")}
+                                                className={cn("h-6 text-[11px] p-1 text-center border-dashed rounded-none", "bg-white text-black border-blue-300 focus:border-blue-500 focus:ring-blue-500")}
                                                 value={row[field as keyof typeof row] || ''}
                                                 onChange={(e) => {
                                                     if (field === 'resultado') handleResultadoChange(index, e.target.value);
@@ -321,59 +328,64 @@ const ConclusionCertificate = ({ student, date }: { student: any, date: string }
 
     return (
         <div 
-            className="bg-white text-black font-serif p-8 flex flex-col justify-between" 
+            className="bg-white text-black font-serif p-8 flex flex-col justify-between relative" 
             style={{ 
                 width: '297mm', 
                 height: '210mm', 
-                border: '10px solid #00564d', 
                 boxSizing: 'border-box'
             }}
         >
-            <header className="flex justify-between items-center text-black">
-                <div className="w-24 h-24 relative">
-                     <Image src="/logoyuri.png" alt="Logo" layout="fill" objectFit="contain" unoptimized />
-                </div>
-                <div className="text-center">
-                    <h1 className="text-2xl font-bold" style={{ color: '#00564d' }}>ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES</h1>
-                    <p className="text-sm">Reconhecida pela Portaria Nº 105/2021 de 31/12/2021</p>
-                </div>
-                <div className="w-24 h-24 relative">
-                    <Image src="/selo.png" alt="Selo da Escola" layout="fill" objectFit="contain" unoptimized />
-                </div>
-            </header>
-            <main className="text-center flex-grow flex flex-col justify-center items-center -mt-8">
-                <h2 className="text-5xl font-bold tracking-widest uppercase" style={{ color: '#b2945b' }}>Certificado</h2>
-                <p className="text-xl mt-4">Certificamos que</p>
-                <p className="text-4xl font-semibold italic my-4" style={{ fontFamily: 'Brush Script MT, cursive' }}>
-                    {student?.nome || '________________'}
-                </p>
-                <p className="text-lg max-w-2xl mx-auto">
-                    concluiu com aproveitamento o <strong className="font-semibold">Ensino Fundamental</strong>,
-                    em conformidade com a legislação vigente, nesta instituição de ensino no ano letivo de {ninthGradeYear}.
-                </p>
-            </main>
-            <footer className="flex justify-between items-end text-center text-xs mt-8">
-                <div className="w-1/3">
-                     <div className="border-t-2 border-dashed border-gray-500 w-full pt-1">
-                        <p className="mt-2 text-sm">{date}</p>
-                        <p className="font-semibold text-sm" style={{ color: '#00564d' }}>Data de Emissão</p>
+            <div className="absolute inset-0 border-[10px]" style={{ borderColor: '#00564d' }}>
+                 <div className="absolute inset-2 border-2" style={{ borderColor: '#b2945b' }}></div>
+            </div>
+
+            <div className="relative z-10 flex flex-col h-full">
+                <header className="flex justify-between items-center text-black">
+                    <div className="w-24 h-24 relative">
+                        <Image src="/logoyuri.png" alt="Logo" layout="fill" objectFit="contain" unoptimized />
                     </div>
-                </div>
-                <div className="w-1/3">
-                    <div className="relative h-24 w-48 mx-auto -mb-8">
-                        <Image src="/assinatura.png" alt="Assinatura" layout="fill" objectFit="contain" unoptimized />
+                    <div className="text-center">
+                        <h1 className="text-xl font-bold" style={{ color: '#00564d' }}>ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES</h1>
+                        <p className="text-xs">Reconhecida pela Portaria Nº 105/2021 de 31/12/2021</p>
                     </div>
-                     <div className="border-t-2 border-dashed border-gray-500 w-full pt-1">
-                        <p className="font-semibold text-sm" style={{ color: '#00564d' }}>Direção Escolar</p>
+                    <div className="w-24 h-24 relative">
+                        <Image src="/selo.png" alt="Selo da Escola" layout="fill" objectFit="contain" unoptimized />
                     </div>
-                </div>
-            </footer>
+                </header>
+                <main className="text-center flex-grow flex flex-col justify-center items-center -mt-8">
+                    <h2 className="text-5xl font-bold tracking-widest uppercase" style={{ color: '#b2945b' }}>Certificado</h2>
+                    <p className="text-lg mt-4">Certificamos que</p>
+                    <p className="text-4xl font-semibold italic my-4" style={{ fontFamily: 'Brush Script MT, cursive' }}>
+                        {student?.nome || '________________'}
+                    </p>
+                    <p className="text-base max-w-2xl mx-auto">
+                        concluiu com aproveitamento o <strong className="font-semibold">Ensino Fundamental</strong>,
+                        em conformidade com a legislação vigente, nesta instituição de ensino no ano letivo de {ninthGradeYear}.
+                    </p>
+                </main>
+                <footer className="flex justify-between items-end text-center text-xs mt-8">
+                    <div className="w-1/3">
+                        <div className="border-t-2 border-dashed border-gray-500 mx-auto w-4/5 pt-1">
+                            <p className="mt-2 text-sm">{date}</p>
+                            <p className="font-semibold text-sm" style={{ color: '#00564d' }}>Data de Emissão</p>
+                        </div>
+                    </div>
+                    <div className="w-1/3">
+                        <div className="relative h-24 w-48 mx-auto -mb-8">
+                            <Image src="/assinatura.png" alt="Assinatura" layout="fill" objectFit="contain" unoptimized />
+                        </div>
+                        <div className="border-t-2 border-dashed border-gray-500 mx-auto w-4/5 pt-1">
+                            <p className="font-semibold text-sm" style={{ color: '#00564d' }}>Direção Escolar</p>
+                        </div>
+                    </div>
+                </footer>
+            </div>
         </div>
     );
 };
 
 
-export default function TranscriptPDFTemplate({ student, isEditing = false, onStudentChange, allStudents }: TranscriptPDFTemplateProps) {
+export default function TranscriptPDFTemplate({ student, isEditing = false, onStudentChange }: TranscriptPDFTemplateProps) {
     if (!student) return null;
 
     const today = new Date();
@@ -429,7 +441,7 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
 
     return (
         <div>
-            <div className="bg-white text-black font-sans" style={{ width: '210mm', minHeight: '297mm' }}>
+            <div id="transcript-page" className="bg-white text-black font-sans" style={{ width: '210mm', minHeight: '297mm' }}>
                 <div className="flex flex-col h-full p-8">
                     <header className="flex flex-col items-center text-center text-[9px] font-bold mb-4">
                         <div className="flex items-center gap-4 mb-2"><Image src="/logoyuri.png" alt="Logo" width={60} height={60} unoptimized /></div>
@@ -458,7 +470,6 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                             student={student} 
                             isEditing={isEditing} 
                             onTrajectoryChange={handleTrajectoryChange}
-                            allStudents={allStudents}
                         />
                     </section>
                     
@@ -480,7 +491,7 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                             <p>Escala de Avaliação: Notas de 0 a 10, com média para aprovação 6.0.</p>
                             <p>Modelo de Avaliação para 1º e 2º ANO, uso de Relatório Pedagógico.</p>
                         </div>
-                        <p className="my-4 text-sm">Fortaleza, {formattedDate}.</p>
+                        <p className="my-4 text-[11px]">Fortaleza, {formattedDate}.</p>
                         <div className="flex justify-around w-full mt-8 items-end">
                             <div className="text-center w-48 relative">
                                 <div className="relative h-16 w-full -mb-10" style={{ right: '0.5cm' }}>
@@ -500,8 +511,19 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                 </div>
             </div>
             {isNinthGradeApproved && (
-                 <div style={{ pageBreakBefore: 'always' }}>
-                    <ConclusionCertificate student={student} date={formattedDate} />
+                <div id="certificate-page-wrapper" className="relative mt-4 mx-auto" style={{ width: '297mm', height: '210mm' }}>
+                    <div 
+                        id="certificate-page" 
+                        className="origin-top-left"
+                        style={{
+                            width: '297mm', 
+                            height: '210mm',
+                            transform: 'rotate(-90deg) translateX(-100%)',
+                            transformOrigin: 'top left',
+                        }}
+                    >
+                        <ConclusionCertificate student={student} date={formattedDate} />
+                    </div>
                 </div>
             )}
         </div>

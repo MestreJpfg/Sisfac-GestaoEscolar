@@ -4,14 +4,13 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, getDocs, query, doc } from 'firebase/firestore';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, getDocs, query } from 'firebase/firestore';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { UserPlus, Search, Loader2, Edit, Save, X, Download } from 'lucide-react';
+import { UserPlus, Search, Loader2, Edit, Download } from 'lucide-react';
 import TranscriptPDFTemplate from './transcript-pdf-template';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -40,6 +39,9 @@ export default function TranscriptGenerator() {
                 const alunosData = alunosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
                 setAllStudents(alunosData);
+                // Pre-fill the search results with all students initially
+                setSearchResults(alunosData.slice(0, 50)); 
+
             } catch (error) {
                 console.error("Error fetching students:", error);
                 toast({ variant: 'destructive', title: 'Erro ao carregar dados' });
@@ -52,9 +54,15 @@ export default function TranscriptGenerator() {
 
     useEffect(() => {
         if (debouncedSearchTerm.length < 3) {
-            setSearchResults([]);
+             if (allStudents.length > 0) {
+                // Show initial list if search is cleared
+                setSearchResults(allStudents.slice(0, 50));
+            } else {
+                setSearchResults([]);
+            }
             return;
         }
+
         if (allStudents.length > 0) {
             const lowercasedTerm = debouncedSearchTerm.toLowerCase();
             const results = allStudents.filter(student =>
@@ -108,24 +116,40 @@ export default function TranscriptGenerator() {
     
         setIsGenerating(true);
     
-        const element = document.getElementById('pdf-template-container');
-        if (!element) {
-            toast({ variant: 'destructive', title: 'Erro ao gerar PDF', description: 'Template não encontrado.' });
+        const transcriptElement = document.getElementById('transcript-page');
+        const certificateElement = document.getElementById('certificate-page');
+    
+        if (!transcriptElement) {
+            toast({ variant: 'destructive', title: 'Erro ao gerar PDF', description: 'Template do histórico não encontrado.' });
             setIsGenerating(false);
             if (wasEditing) setIsEditing(true);
             return;
         }
     
         try {
-            const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-            const imgData = canvas.toDataURL('image/jpeg', 0.98);
-    
+            // 1. Gerar o Histórico (Página 1)
+            const transcriptCanvas = await html2canvas(transcriptElement, { scale: 2, useCORS: true });
+            const transcriptImgData = transcriptCanvas.toDataURL('image/jpeg', 0.98);
+            
             const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
             const pdfWidth = pdf.internal.pageSize.getWidth();
-            const imgProps = pdf.getImageProperties(imgData);
-            const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            const transcriptImgProps = pdf.getImageProperties(transcriptImgData);
+            const transcriptImgHeight = (transcriptImgProps.height * pdfWidth) / transcriptImgProps.width;
+            
+            pdf.addImage(transcriptImgData, 'JPEG', 0, 0, pdfWidth, transcriptImgHeight);
     
-            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, imgHeight);
+            // 2. Gerar o Certificado (Página 2), se existir
+            if (certificateElement) {
+                const certificateCanvas = await html2canvas(certificateElement, { scale: 2, useCORS: true });
+                const certificateImgData = certificateCanvas.toDataURL('image/jpeg', 0.98);
+                
+                pdf.addPage('a4', 'l'); // Adiciona página em modo paisagem
+                const certPdfWidth = pdf.internal.pageSize.getWidth();
+                const certPdfHeight = pdf.internal.pageSize.getHeight();
+
+                pdf.addImage(certificateImgData, 'JPEG', 0, 0, certPdfWidth, certPdfHeight);
+            }
+    
             pdf.save(`Historico_Escolar_${selectedStudent.nome.replace(/\s+/g, '_')}.pdf`);
             
         } catch (error) {
@@ -162,7 +186,7 @@ export default function TranscriptGenerator() {
                         {isLoadingStudents && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 animate-spin" />}
                         {searchResults.length > 0 && (
                             <Card className="absolute z-10 w-full mt-1">
-                                <CardContent className="p-2">
+                                <CardContent className="p-2 max-h-60 overflow-y-auto">
                                     {searchResults.map(s => (
                                         <div key={s.id} onClick={() => handleSelectStudent(s)} className="p-2 hover:bg-accent rounded-md cursor-pointer">
                                             <p className="font-medium">{s.nome}</p>
@@ -203,12 +227,11 @@ export default function TranscriptGenerator() {
                     </CardHeader>
                     <CardContent>
                         <div className="border rounded-md p-4 bg-gray-200 overflow-auto">
-                           <div id="pdf-template-container" className="mx-auto bg-white" style={{ width: '210mm' }}>
+                           <div id="pdf-template-container" className="mx-auto">
                                 <TranscriptPDFTemplate 
                                     student={selectedStudent} 
                                     isEditing={isEditing}
                                     onStudentChange={setSelectedStudent}
-                                    allStudents={allStudents}
                                 />
                            </div>
                         </div>
