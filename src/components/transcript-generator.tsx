@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { UserPlus, Search, Loader2, Edit, Download } from 'lucide-react';
+import { UserPlus, Search, Loader2, Edit, Download, X } from 'lucide-react';
 import TranscriptPDFTemplate from './transcript-pdf-template';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -39,8 +39,6 @@ export default function TranscriptGenerator() {
                 const alunosData = alunosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
                 setAllStudents(alunosData);
-                // Pre-fill the search results with all students initially
-                setSearchResults(alunosData.slice(0, 50)); 
 
             } catch (error) {
                 console.error("Error fetching students:", error);
@@ -54,12 +52,7 @@ export default function TranscriptGenerator() {
 
     useEffect(() => {
         if (debouncedSearchTerm.length < 3) {
-             if (allStudents.length > 0) {
-                // Show initial list if search is cleared
-                setSearchResults(allStudents.slice(0, 50));
-            } else {
-                setSearchResults([]);
-            }
+            setSearchResults([]);
             return;
         }
 
@@ -79,9 +72,9 @@ export default function TranscriptGenerator() {
         let trajectoryData = anosSeriesTemplate.map(serie => ({
             anoSerie: serie,
             anoCivil: '',
-            estabelecimento: 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES',
-            municipioUF: 'Fortaleza/CE',
-            resultado: 'Aprovado' // Default
+            estabelecimento: '',
+            municipioUF: '',
+            resultado: ''
         }));
 
         if (studentWithData.boletim) {
@@ -121,9 +114,9 @@ export default function TranscriptGenerator() {
             trajectoryData: Array.from({ length: 9 }, (_, i) => ({
                 anoSerie: `${i + 1}º ANO`,
                 anoCivil: '',
-                estabelecimento: 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES',
-                municipioUF: 'Fortaleza/CE',
-                resultado: 'Aprovado'
+                estabelecimento: '',
+                municipioUF: '',
+                resultado: ''
             }))
         };
         setSelectedStudent(newStudentTemplate);
@@ -154,7 +147,6 @@ export default function TranscriptGenerator() {
         }
     
         try {
-            // 1. Gerar o Histórico (Página 1)
             const transcriptCanvas = await html2canvas(transcriptElement, { scale: 2, useCORS: true });
             const transcriptImgData = transcriptCanvas.toDataURL('image/jpeg', 0.98);
             
@@ -165,12 +157,11 @@ export default function TranscriptGenerator() {
             
             pdf.addImage(transcriptImgData, 'JPEG', 0, 0, pdfWidth, transcriptImgHeight);
     
-            // 2. Gerar o Certificado (Página 2), se existir
             if (certificateElement) {
                 const certificateCanvas = await html2canvas(certificateElement, { scale: 2, useCORS: true });
                 const certificateImgData = certificateCanvas.toDataURL('image/jpeg', 0.98);
                 
-                pdf.addPage('a4', 'l'); // Adiciona página em modo paisagem
+                pdf.addPage('a4', 'l'); 
                 const certPdfWidth = pdf.internal.pageSize.getWidth();
                 const certPdfHeight = pdf.internal.pageSize.getHeight();
 
@@ -240,7 +231,19 @@ export default function TranscriptGenerator() {
                                 <CardDescription>Aluno: {selectedStudent.nome || "Novo Histórico"}</CardDescription>
                             </div>
                             <div className="flex items-center gap-2">
-                                {!isEditing && (
+                                {isEditing ? (
+                                    <Button variant="outline" onClick={() => {
+                                        setIsEditing(false);
+                                        // If it's a new record, clear it. Otherwise, reload original.
+                                        if (selectedStudent.rm.startsWith('NOVO_HISTORICO')) {
+                                            setSelectedStudent(null);
+                                        } else {
+                                            handleSelectStudent(selectedStudent); // Reload original data
+                                        }
+                                    }}>
+                                        <X className="mr-2 h-4 w-4" /> Cancelar Edição
+                                    </Button>
+                                ) : (
                                      <Button variant="secondary" onClick={() => setIsEditing(true)}>
                                         <Edit className="mr-2 h-4 w-4" /> Editar Histórico
                                     </Button>
@@ -268,4 +271,3 @@ export default function TranscriptGenerator() {
         </div>
     );
 }
-
