@@ -432,9 +432,6 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                             </div>
                         </div>
                         <div className="text-center w-48 relative">
-                             <div className="relative h-16 w-full -mb-10" style={{ right: '0.5cm', bottom: '0.2cm' }}>
-                                <Image src="/assinatura2.png" alt="Segunda Assinatura" layout="fill" objectFit="contain" unoptimized />
-                            </div>
                              <div className="border-t border-black w-full pt-1">
                                 <p className="font-bold">SECRETÁRIO(A) ESCOLAR</p>
                                 <p>Nome Completo</p>
