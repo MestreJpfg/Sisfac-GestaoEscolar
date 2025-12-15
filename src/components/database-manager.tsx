@@ -15,6 +15,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Loader2, Upload, NotebookText, HardDriveDownload, Trash2, Users, Shield, Sparkles } from 'lucide-react';
 import UserManager from './user-manager';
 import ProfileManager from './profile-manager';
+import ExAlunoUploaderSheet from './ex-aluno-uploader-sheet';
 
 export default function DatabaseManager() {
     const firestore = useFirestore();
@@ -169,6 +170,16 @@ export default function DatabaseManager() {
                                 </CardFooter>
                             </Card>
 
+                             <Card>
+                                <CardHeader>
+                                    <CardTitle className='flex items-center gap-2'><Upload /> Carregar Ex-Alunos</CardTitle>
+                                    <CardDescription>Adicionar ou atualizar a lista de ex-alunos a partir de um ficheiro (XLSX, CSV, JSON).</CardDescription>
+                                </CardHeader>
+                                <CardFooter>
+                                    <ExAlunoUploaderSheet onUploadSuccess={onUploadSuccess} />
+                                </CardFooter>
+                            </Card>
+
                             <Card>
                                 <CardHeader>
                                     <CardTitle className='flex items-center gap-2'><NotebookText /> Carregar Notas</CardTitle>
@@ -269,3 +280,5 @@ export default function DatabaseManager() {
        </div>
     );
 }
+
+    
