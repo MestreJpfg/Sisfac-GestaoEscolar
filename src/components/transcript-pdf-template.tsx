@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Image from "next/image";
@@ -21,18 +20,18 @@ const DetailItem = ({ label, value, isEditing, onChange }: { label: string, valu
     if (!isEditing && (value === null || value === undefined || value === '')) return null;
     return (
         <div>
-            <span className="font-bold text-[8px] uppercase">{label}:</span>
+            <span className="font-bold text-[9px] uppercase">{label}:</span>
             {isEditing ? (
                 <Input
                     className={cn(
-                        "h-6 text-[9px] p-1 border-dashed",
+                        "h-6 text-[10px] p-1 border-dashed",
                         "bg-white text-black border-blue-300 focus:border-blue-500 focus:ring-blue-500"
                     )}
                     value={value as string || ''}
                     onChange={onChange}
                 />
             ) : (
-                <p className="text-[9px] leading-tight">{value}</p>
+                <p className="text-[10px] leading-tight">{value}</p>
             )}
         </div>
     );
@@ -119,7 +118,7 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
     }
 
     return (
-        <table className="w-full text-[8px] border-collapse" style={{ border: '1px solid black' }}>
+        <table className="w-full text-[9px] border-collapse" style={{ border: '1px solid black' }}>
             <thead>
                 <tr className="bg-gray-200">
                     <th className="border border-black p-1 font-bold w-[25%] align-middle text-center">Componente Curricular</th>
@@ -134,7 +133,7 @@ const GradeMatrix = ({ boletim, isEditing, onGradeChange }: { boletim: any, isEd
                             <td key={`${disciplina}-${serie}`} className="border border-black p-0 text-center align-middle" style={{ verticalAlign: 'middle' }}>
                                 {isEditing ? (
                                     <Input
-                                        className={cn("h-6 text-[9px] p-1 text-center border-dashed rounded-none", "bg-white text-black border-blue-300 focus:border-blue-500 focus:ring-blue-500")}
+                                        className={cn("h-6 text-[10px] p-1 text-center border-dashed rounded-none", "bg-white text-black border-blue-300 focus:border-blue-500 focus:ring-blue-500")}
                                         value={gradeData[disciplina]?.[serie] || ''}
                                         onChange={(e) => onGradeChange?.(serie, disciplina, e.target.value)}
                                     />
@@ -190,31 +189,17 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
         return rows;
     }, [student]);
 
-    useEffect(() => {
-        if (!isEditing) return;
+    const handleAnoCivilChange = (index: number, value: string) => {
+        onTrajectoryChange?.(index, 'anoCivil', value);
     
-        // Encontrar o ano mais recente e seu índice
-        let latestYear = 0;
-        let latestYearIndex = -1;
-        tableRows.forEach((row, index) => {
-            const year = parseInt(row.anoCivil, 10);
-            if (!isNaN(year) && year > latestYear) {
-                latestYear = year;
-                latestYearIndex = index;
-            }
-        });
-    
-        // Se um ano foi encontrado, preencher os anos anteriores
-        if (latestYearIndex !== -1) {
-            for (let i = latestYearIndex - 1; i >= 0; i--) {
-                // Preencher apenas se estiver vazio para não sobrescrever dados
-                if (!tableRows[i].anoCivil) {
-                    const newYear = String(latestYear - (latestYearIndex - i));
-                    onTrajectoryChange?.(i, 'anoCivil', newYear);
-                }
+        const startYear = parseInt(value, 10);
+        if (!isNaN(startYear) && index === 0) { // Only auto-fill if the first year is changed
+            for (let i = 1; i < 9; i++) {
+                const nextYear = String(startYear + i);
+                onTrajectoryChange?.(i, 'anoCivil', nextYear);
             }
         }
-    }, [isEditing]);
+    };
 
 
     useEffect(() => {
@@ -239,6 +224,11 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
     }
     
     const handleInputChange = (index: number, field: string, value: string) => {
+        if (field === 'anoCivil') {
+            handleAnoCivilChange(index, value);
+            return;
+        }
+
         onTrajectoryChange?.(index, field, value);
 
         if (value.length > 2) {
@@ -270,7 +260,7 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
 
     return (
         <div ref={wrapperRef}>
-             <table className="w-full text-[8px] border-collapse" style={{ border: '1px solid black' }}>
+             <table className="w-full text-[9px] border-collapse" style={{ border: '1px solid black' }}>
                 <thead>
                    <tr className="bg-gray-200">
                         <th className="border border-black p-1 font-bold align-middle text-center">Ano/Série</th>
@@ -288,7 +278,7 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
                                     {isEditing ? (
                                         <>
                                             <Input
-                                                className={cn("h-6 text-[9px] p-1 text-center border-dashed rounded-none", "bg-white text-black border-blue-300 focus:border-blue-500 focus:ring-blue-500")}
+                                                className={cn("h-6 text-[10px] p-1 text-center border-dashed rounded-none", "bg-white text-black border-blue-300 focus:border-blue-500 focus:ring-blue-500")}
                                                 value={row[field as keyof typeof row] || ''}
                                                 onChange={(e) => {
                                                     if (field === 'resultado') handleResultadoChange(index, e.target.value);
@@ -326,12 +316,54 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange, allStudents }
     )
 }
 
+const ConclusionCertificate = ({ student, date }: { student: any, date: string }) => (
+    <div className="bg-white text-black font-sans p-8 flex flex-col justify-between" style={{ width: '210mm', height: '297mm', fontFamily: 'Georgia, serif', border: '10px solid #00564d' }}>
+        <div>
+            <header className="flex flex-col items-center text-center text-black mb-8">
+                <Image src="/logoyuri.png" alt="Logo" width={80} height={80} unoptimized />
+                <h1 className="text-2xl font-bold mt-2" style={{ color: '#00564d' }}>ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES</h1>
+            </header>
+            <div className="text-center space-y-6">
+                <h2 className="text-4xl font-bold tracking-widest uppercase" style={{ color: '#b2945b' }}>Certificado de Conclusão</h2>
+                <p className="text-lg">Certificamos que</p>
+                <p className="text-3xl font-semibold italic" style={{ fontFamily: 'Brush Script MT, cursive' }}>{student?.nome || '________________'}</p>
+                <p className="text-lg">
+                    concluiu com aproveitamento o <strong className="font-semibold">Ensino Fundamental</strong> nesta instituição de ensino no ano letivo de {student?.trajectoryData?.find((t:any) => t.anoSerie === '9º ANO')?.anoCivil || new Date().getFullYear()}.
+                </p>
+            </div>
+        </div>
+        <footer className="flex justify-between items-end text-center text-xs">
+            <div className="w-1/3">
+                <p className="mt-2 text-sm">{date}</p>
+                <p className="font-semibold" style={{ color: '#00564d' }}>Data</p>
+            </div>
+            <div className="w-1/3 flex justify-center">
+                 <div className="relative h-24 w-24">
+                    <Image src="/selo.png" alt="Selo da Escola" layout="fill" objectFit="contain" unoptimized />
+                </div>
+            </div>
+            <div className="w-1/3">
+                <div className="relative h-20 w-48 mx-auto -mb-8">
+                    <Image src="/assinatura.png" alt="Assinatura" layout="fill" objectFit="contain" unoptimized />
+                </div>
+                <div className="border-t-2 border-dashed border-gray-400 w-full pt-1">
+                    <p className="font-semibold" style={{ color: '#00564d' }}>Direção Escolar</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+);
+
+
 export default function TranscriptPDFTemplate({ student, isEditing = false, onStudentChange, allStudents }: TranscriptPDFTemplateProps) {
     if (!student) return null;
 
     const today = new Date();
     const formattedDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(today);
     
+    const ninthGradeRow = student.trajectoryData?.find((row: any) => row.anoSerie === '9º ANO');
+    const isNinthGradeApproved = ninthGradeRow?.resultado?.toLowerCase() === 'aprovado';
+
     const handleDetailChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
         onStudentChange?.({ ...student, [field]: e.target.value });
     };
@@ -374,73 +406,82 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
     };
 
     return (
-        <div className="bg-white text-black font-sans" style={{ width: '210mm', minHeight: '297mm' }}>
-            <div className="flex flex-col h-full p-8">
-                <header className="flex flex-col items-center text-center text-[9px] font-bold mb-4">
-                    <div className="flex items-center gap-4 mb-2"><Image src="/logoyuri.png" alt="Logo" width={60} height={60} unoptimized /></div>
-                    <p className="text-[10px] font-bold">ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES - EI / EF</p>
-                    <p className="text-[8px] font-bold">Ato de Criação: Portaria Nº 105/2021 de 31/12/2021</p>
-                    <p className="text-[8px]">AVENIDA PROFESSOR JOSE ARTHUR DE CARVALHO, Nº 1540, LAGOA REDONDA - CEP: 60831-600</p>
-                    <p className="text-[8px]">Fortaleza - CE | Fone: (85) 3488-3209 | E-mail: efernandacollares@institutoassumcao.org.br</p>
-                </header>
+        <div>
+            <div className="bg-white text-black font-sans" style={{ width: '210mm', minHeight: '297mm' }}>
+                <div className="flex flex-col h-full p-8">
+                    <header className="flex flex-col items-center text-center text-[9px] font-bold mb-4">
+                        <div className="flex items-center gap-4 mb-2"><Image src="/logoyuri.png" alt="Logo" width={60} height={60} unoptimized /></div>
+                        <p className="text-[10px] font-bold">ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES - EI / EF</p>
+                        <p className="text-[8px] font-bold">Ato de Criação: Portaria Nº 105/2021 de 31/12/2021</p>
+                        <p className="text-[8px]">AVENIDA PROFESSOR JOSE ARTHUR DE CARVALHO, Nº 1540, LAGOA REDONDA - CEP: 60831-600</p>
+                        <p className="text-[8px]">Fortaleza - CE | Fone: (85) 3488-3209 | E-mail: efernandacollares@institutoassumcao.org.br</p>
+                    </header>
 
-                <div className="text-center my-4"><h1 className="text-base font-bold tracking-wider uppercase">HISTÓRICO ESCOLAR DO ENSINO FUNDAMENTAL DE 9 (NOVE) ANOS</h1></div>
+                    <div className="text-center my-4"><h1 className="text-base font-bold tracking-wider uppercase">HISTÓRICO ESCOLAR DO ENSINO FUNDAMENTAL DE 9 (NOVE) ANOS</h1></div>
 
-                <section className="border-t border-b border-black py-2 grid grid-cols-2 gap-x-4 gap-y-1 text-[9px]">
-                    <DetailItem label="Nome do Aluno(a)" value={student.nome} isEditing={isEditing} onChange={handleDetailChange('nome')} />
-                    <DetailItem label="Registro Acadêmico (RM)" value={student.rm} isEditing={isEditing} onChange={handleDetailChange('rm')} />
-                    <DetailItem label="Data de Nascimento" value={student.data_nascimento} isEditing={isEditing} onChange={handleDetailChange('data_nascimento')} />
-                    <DetailItem label="Município de Nascimento" value={student.municipio_nascimento || (isEditing ? '' : 'FORTALEZA')} isEditing={isEditing} onChange={handleDetailChange('municipio_nascimento')} />
-                    <DetailItem label="UF" value={student.uf_nascimento || (isEditing ? '' : 'CE')} isEditing={isEditing} onChange={handleDetailChange('uf_nascimento')} />
-                    <DetailItem label="RG" value={student.rg} isEditing={isEditing} onChange={handleDetailChange('rg')} />
-                    <DetailItem label="Mãe" value={student.filiacao_1} isEditing={isEditing} onChange={handleDetailChange('filiacao_1')} />
-                    <DetailItem label="Pai" value={student.filiacao_2} isEditing={isEditing} onChange={handleDetailChange('filiacao_2')} />
-                </section>
-                
-                <section className="my-4">
-                    <h2 className="text-sm font-bold text-center mb-2">TRAJETÓRIA ESCOLAR</h2>
-                    <TrajectoryTable 
-                        student={student} 
-                        isEditing={isEditing} 
-                        onTrajectoryChange={handleTrajectoryChange}
-                        allStudents={allStudents}
-                    />
-                </section>
-                
-                 <section className="my-4 space-y-4">
-                     <h2 className="text-sm font-bold text-center mb-2">NOTAS E FREQUÊNCIA POR ANO/SÉRIE</h2>
-                     <GradeMatrix boletim={student.boletim} isEditing={isEditing} onGradeChange={handleGradeChange} />
-                </section>
+                    <section className="border-t border-b border-black py-2 grid grid-cols-2 gap-x-4 gap-y-1">
+                        <DetailItem label="Nome do Aluno(a)" value={student.nome} isEditing={isEditing} onChange={handleDetailChange('nome')} />
+                        <DetailItem label="Registro Acadêmico (RM)" value={student.rm} isEditing={isEditing} onChange={handleDetailChange('rm')} />
+                        <DetailItem label="Data de Nascimento" value={student.data_nascimento} isEditing={isEditing} onChange={handleDetailChange('data_nascimento')} />
+                        <DetailItem label="Município de Nascimento" value={student.municipio_nascimento || (isEditing ? '' : 'FORTALEZA')} isEditing={isEditing} onChange={handleDetailChange('municipio_nascimento')} />
+                        <DetailItem label="UF" value={student.uf_nascimento || (isEditing ? '' : 'CE')} isEditing={isEditing} onChange={handleDetailChange('uf_nascimento')} />
+                        <DetailItem label="CPF" value={student.cpf_aluno} isEditing={isEditing} onChange={handleDetailChange('cpf_aluno')} />
+                        <DetailItem label="Mãe" value={student.filiacao_1} isEditing={isEditing} onChange={handleDetailChange('filiacao_1')} />
+                        <DetailItem label="Pai" value={student.filiacao_2} isEditing={isEditing} onChange={handleDetailChange('filiacao_2')} />
+                    </section>
+                    
+                    <section className="my-4">
+                        <h2 className="text-sm font-bold text-center mb-2">UNIDADE ESCOLAR</h2>
+                        <TrajectoryTable 
+                            student={student} 
+                            isEditing={isEditing} 
+                            onTrajectoryChange={handleTrajectoryChange}
+                            allStudents={allStudents}
+                        />
+                    </section>
+                    
+                    <section className="my-4 space-y-4">
+                        <h2 className="text-sm font-bold text-center mb-2">NOTAS E FREQUÊNCIA POR ANO/SÉRIE</h2>
+                        <GradeMatrix boletim={student.boletim} isEditing={isEditing} onGradeChange={handleGradeChange} />
+                    </section>
 
-                 <footer className="flex flex-col items-center justify-center text-center pt-2 mt-auto text-[9px]">
-                    <div className="text-center w-full mb-4">
-                        <p className="font-bold">Base Legal:</p>
-                        <p>Curso de Ensino Fundamental de 9 (nove) anos, com base na Lei Federal 9.394/96.</p>
-                        <p>Escala de Avaliação: Notas de 0 a 10, com média para aprovação 6.0.</p>
-                        <p>Modelo de Avaliação para 1º e 2º ANO, uso de Relatório Pedagógico.</p>
-                    </div>
-                    <p className="my-4">Fortaleza, {formattedDate}.</p>
-                    <div className="flex justify-around w-full mt-8">
-                         <div className="text-center w-48 relative">
-                             <div className="relative h-16 w-full -mb-10" style={{ right: '0.5cm' }}>
-                                <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized />
+                    {isNinthGradeApproved && (
+                        <section className="my-4 text-center text-[10px] font-semibold">
+                            <p>Certificamos que o(a) aluno(a) acima qualificado(a) concluiu o Ensino Fundamental e está apto(a) a cursar o Ensino Médio.</p>
+                        </section>
+                    )}
+
+                    <footer className="flex flex-col items-center justify-center text-center pt-2 mt-auto text-[9px]">
+                        <div className="text-center w-full mb-4">
+                            <p className="font-bold">Base Legal:</p>
+                            <p>Curso de Ensino Fundamental de 9 (nove) anos, com base na Lei Federal 9.394/96.</p>
+                            <p>Escala de Avaliação: Notas de 0 a 10, com média para aprovação 6.0.</p>
+                            <p>Modelo de Avaliação para 1º e 2º ANO, uso de Relatório Pedagógico.</p>
+                        </div>
+                        <p className="my-4 text-base">Fortaleza, {formattedDate}.</p>
+                        <div className="flex justify-around w-full mt-8 items-end">
+                            <div className="text-center w-48 relative">
+                                <div className="relative h-16 w-full -mb-10" style={{ right: '0.5cm' }}>
+                                    <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized />
+                                </div>
+                                <div className="border-t border-black w-full pt-1">
+                                    <p className="font-bold">DIRETOR(A)</p>
+                                </div>
                             </div>
-                            <div className="border-t border-black w-full pt-1">
-                                <p className="font-bold">DIRETOR(A)</p>
-                                <p>Nome Completo</p>
-                                <p>RG: XXXXXXX</p>
+                            <div className="text-center w-48 relative">
+                                <div className="border-t border-black w-full pt-1">
+                                    <p className="font-bold">SECRETÁRIO(A) ESCOLAR</p>
+                                </div>
                             </div>
                         </div>
-                        <div className="text-center w-48 relative">
-                             <div className="border-t border-black w-full pt-1">
-                                <p className="font-bold">SECRETÁRIO(A) ESCOLAR</p>
-                                <p>Nome Completo</p>
-                                <p>RG: XXXXXXX</p>
-                            </div>
-                        </div>
-                    </div>
-                </footer>
+                    </footer>
+                </div>
             </div>
+            {isNinthGradeApproved && (
+                 <div style={{ pageBreakBefore: 'always' }}>
+                    <ConclusionCertificate student={student} date={formattedDate} />
+                </div>
+            )}
         </div>
     );
 }
