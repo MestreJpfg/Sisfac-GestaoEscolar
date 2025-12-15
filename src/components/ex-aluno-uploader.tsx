@@ -18,6 +18,17 @@ interface ExAlunoUploaderProps {
   isLoading: boolean;
 }
 
+const normalizeHeader = (header: any): string => {
+    if (typeof header !== 'string') return '';
+    return header.trim().toLowerCase()
+        .replace(/ç/g, 'c')
+        .replace(/ã/g, 'a')
+        .replace(/é/g, 'e')
+        .replace(/º/g, '')
+        .replace(/\./g, '')
+        .replace(/\s+/g, '_');
+};
+
 export default function ExAlunoUploader({ onUploadComplete, setIsLoading, isLoading }: ExAlunoUploaderProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -40,8 +51,10 @@ export default function ExAlunoUploader({ onUploadComplete, setIsLoading, isLoad
     const batch = writeBatch(firestore);
     let count = 0;
 
-    const headers: string[] = data[0].map((h: any) => String(h).trim().toLowerCase());
-    const rmIndex = headers.findIndex(h => ['rm', 'matricula', 'registro do aluno'].includes(h));
+    const headers: string[] = data[0].map(normalizeHeader);
+    const possibleRmHeaders = ['rm', 'matricula', 'registro_do_aluno'];
+    const rmIndex = headers.findIndex(h => possibleRmHeaders.includes(h));
+
 
     if (rmIndex === -1) {
         throw new Error("Coluna 'RM', 'Matricula' ou 'Registro do Aluno' não encontrada.");
@@ -53,9 +66,8 @@ export default function ExAlunoUploader({ onUploadComplete, setIsLoading, isLoad
             const docRef = doc(firestore, 'exalunos', String(rm));
             const studentData: { [key: string]: any } = { id: String(rm) };
             headers.forEach((header, index) => {
-                let key = header.replace(/\s+/g, '_');
-                if (key === 'registro_do_aluno') key = 'rm';
-                studentData[key] = row[index];
+                if (!header) return;
+                studentData[header] = row[index];
             });
             batch.set(docRef, studentData, { merge: true });
             count++;
@@ -224,5 +236,3 @@ export default function ExAlunoUploader({ onUploadComplete, setIsLoading, isLoad
     </Card>
   );
 }
-
-    
