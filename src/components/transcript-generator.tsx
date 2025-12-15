@@ -74,6 +74,33 @@ export default function TranscriptGenerator() {
 
     const handleSelectStudent = (student: any) => {
         const studentWithData = JSON.parse(JSON.stringify(student));
+
+        const anosSeriesTemplate = ["1º ANO", "2º ANO", "3º ANO", "4º ANO", "5º ANO", "6º ANO", "7º ANO", "8º ANO", "9º ANO"];
+        let trajectoryData = anosSeriesTemplate.map(serie => ({
+            anoSerie: serie,
+            anoCivil: '',
+            estabelecimento: 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES',
+            municipioUF: 'Fortaleza/CE',
+            resultado: 'Aprovado' // Default
+        }));
+
+        if (studentWithData.boletim) {
+            Object.keys(studentWithData.boletim).forEach(yearStr => {
+                const yearData = studentWithData.boletim[yearStr];
+                if (yearData?.info?.serie) {
+                    const rowIndex = anosSeriesTemplate.indexOf(yearData.info.serie);
+                    if (rowIndex !== -1) {
+                        trajectoryData[rowIndex].anoCivil = String(yearStr);
+                        trajectoryData[rowIndex].estabelecimento = yearData.info.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
+                        trajectoryData[rowIndex].municipioUF = yearData.info.municipioUF || 'Fortaleza/CE';
+                        trajectoryData[rowIndex].resultado = yearData.info.resultado || 'Aprovado';
+                    }
+                }
+            });
+        }
+        
+        studentWithData.trajectoryData = trajectoryData;
+
         setSelectedStudent(studentWithData);
         setSearchTerm(student.nome);
         setSearchResults([]);
@@ -117,7 +144,7 @@ export default function TranscriptGenerator() {
         setIsGenerating(true);
     
         const transcriptElement = document.getElementById('transcript-page');
-        const certificateElement = document.getElementById('certificate-page');
+        const certificateElement = document.getElementById('certificate-page-wrapper');
     
         if (!transcriptElement) {
             toast({ variant: 'destructive', title: 'Erro ao gerar PDF', description: 'Template do histórico não encontrado.' });
@@ -241,3 +268,4 @@ export default function TranscriptGenerator() {
         </div>
     );
 }
+
