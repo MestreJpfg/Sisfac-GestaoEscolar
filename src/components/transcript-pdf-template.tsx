@@ -170,9 +170,9 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
                     const rowIndex = anosSeriesTemplate.indexOf(yearData.info.serie);
                     if (rowIndex !== -1) {
                         rows[rowIndex].anoCivil = String(yearStr);
-                        rows[rowIndex].estabelecimento = yearData.info.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
-                        rows[rowIndex].municipioUF = yearData.info.municipioUF || 'Fortaleza/CE';
-                        rows[rowIndex].resultado = yearData.info.resultado || 'Aprovado';
+                        if (!rows[rowIndex].estabelecimento) rows[rowIndex].estabelecimento = yearData.info.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
+                        if (!rows[rowIndex].municipioUF) rows[rowIndex].municipioUF = yearData.info.municipioUF || 'Fortaleza/CE';
+                        if (!rows[rowIndex].resultado) rows[rowIndex].resultado = yearData.info.resultado || 'Aprovado';
                     }
                 }
             });
@@ -185,11 +185,13 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
                 }
             });
         } else {
-            // Pre-fill default values if no trajectoryData exists
+            // Pre-fill default values if no trajectoryData exists and no boletim data was found for that row
             rows.forEach(row => {
-                if (!row.estabelecimento) row.estabelecimento = 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
-                if (!row.municipioUF) row.municipioUF = 'Fortaleza/CE';
-                if (!row.resultado) row.resultado = 'Aprovado';
+                if (!row.anoCivil) { // Only if not filled by boletim
+                    if (!row.estabelecimento) row.estabelecimento = 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
+                    if (!row.municipioUF) row.municipioUF = 'Fortaleza/CE';
+                    if (!row.resultado) row.resultado = 'Aprovado';
+                }
             })
         }
         
@@ -457,8 +459,8 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                         <DetailItem label="Nome do Aluno(a)" value={student.nome} isEditing={isEditing} onChange={handleDetailChange('nome')} />
                         <DetailItem label="Registro Acadêmico (RM)" value={student.rm} isEditing={isEditing} onChange={handleDetailChange('rm')} />
                         <DetailItem label="Data de Nascimento" value={student.data_nascimento} isEditing={isEditing} onChange={handleDetailChange('data_nascimento')} />
-                        <DetailItem label="Município de Nascimento" value={student.municipio_nascimento || (isEditing ? '' : 'FORTALEZA')} isEditing={isEditing} onChange={handleDetailChange('municipio_nascimento')} />
-                        <DetailItem label="UF" value={student.uf_nascimento || (isEditing ? '' : 'CE')} isEditing={isEditing} onChange={handleDetailChange('uf_nascimento')} />
+                        <DetailItem label="Município de Nascimento" value={student.municipio_nascimento} isEditing={isEditing} onChange={handleDetailChange('municipio_nascimento')} />
+                        <DetailItem label="UF" value={student.uf_nascimento} isEditing={isEditing} onChange={handleDetailChange('uf_nascimento')} />
                         <DetailItem label="CPF" value={student.cpf_aluno} isEditing={isEditing} onChange={handleDetailChange('cpf_aluno')} />
                         <DetailItem label="Mãe" value={student.filiacao_1} isEditing={isEditing} onChange={handleDetailChange('filiacao_1')} />
                         <DetailItem label="Pai" value={student.filiacao_2} isEditing={isEditing} onChange={handleDetailChange('filiacao_2')} />
@@ -491,7 +493,7 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                             <p>Escala de Avaliação: Notas de 0 a 10, com média para aprovação 6.0.</p>
                             <p>Modelo de Avaliação para 1º e 2º ANO, uso de Relatório Pedagógico.</p>
                         </div>
-                        <p className="my-4 text-[11px]">Fortaleza, {formattedDate}.</p>
+                        <p className="my-4 text-[12px]">Fortaleza, {formattedDate}.</p>
                         <div className="flex justify-around w-full mt-8 items-end">
                             <div className="text-center w-48 relative">
                                 <div className="relative h-16 w-full -mb-10" style={{ right: '0.5cm' }}>
@@ -502,6 +504,9 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                                 </div>
                             </div>
                             <div className="text-center w-48 relative">
+                                 <div className="relative h-16 w-full -mb-10" style={{ right: '0.5cm' }}>
+                                    <Image src="/secretaria.png" alt="Assinatura Secretaria" layout="fill" objectFit="contain" unoptimized />
+                                </div>
                                 <div className="border-t border-black w-full pt-1">
                                     <p className="font-bold">SECRETÁRIO(A) ESCOLAR</p>
                                 </div>
@@ -518,7 +523,7 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                         style={{
                             width: '297mm', 
                             height: '210mm',
-                            transform: 'rotate(-90deg) translateX(-100%)',
+                            transform: isEditing ? '' : 'rotate(-90deg) translateX(-100%)',
                             transformOrigin: 'top left',
                         }}
                     >
