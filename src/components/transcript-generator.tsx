@@ -25,7 +25,6 @@ export default function TranscriptGenerator() {
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
-    const [originalStudentData, setOriginalStudentData] = useState<any | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
 
@@ -37,20 +36,10 @@ export default function TranscriptGenerator() {
             setIsLoadingStudents(true);
             try {
                 const alunosQuery = query(collection(firestore, 'alunos'));
-                const historicosQuery = query(collection(firestore, 'historicos'));
-                
-                const [alunosSnapshot, historicosSnapshot] = await Promise.all([
-                    getDocs(alunosQuery),
-                    getDocs(historicosQuery)
-                ]);
-
+                const alunosSnapshot = await getDocs(alunosQuery);
                 const alunosData = alunosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                const historicosData = historicosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-                const combinedData = [...alunosData, ...historicosData];
-                const uniqueData = Array.from(new Map(combinedData.map(item => [item.id, item])).values());
-
-                setAllStudents(uniqueData);
+                setAllStudents(alunosData);
             } catch (error) {
                 console.error("Error fetching students:", error);
                 toast({ variant: 'destructive', title: 'Erro ao carregar dados' });
@@ -70,15 +59,14 @@ export default function TranscriptGenerator() {
             const lowercasedTerm = debouncedSearchTerm.toLowerCase();
             const results = allStudents.filter(student =>
                 student.nome?.toLowerCase().includes(lowercasedTerm)
-            ).slice(0, 5); // Limit results for performance
+            ).slice(0, 5);
             setSearchResults(results);
         }
     }, [debouncedSearchTerm, allStudents]);
 
     const handleSelectStudent = (student: any) => {
-        const studentWithData = JSON.parse(JSON.stringify(student)); // Deep copy
+        const studentWithData = JSON.parse(JSON.stringify(student));
         setSelectedStudent(studentWithData);
-        setOriginalStudentData(studentWithData);
         setSearchTerm(student.nome);
         setSearchResults([]);
         setIsEditing(false);
@@ -86,7 +74,7 @@ export default function TranscriptGenerator() {
 
     const handleCreateNew = () => {
         const newStudentTemplate = {
-            rm: `TEMPORARIO_${Date.now()}`,
+            rm: `NOVO_HISTORICO_${Date.now()}`,
             nome: '',
             data_nascimento: '',
             municipio_nascimento: 'FORTALEZA',
@@ -104,83 +92,17 @@ export default function TranscriptGenerator() {
             }))
         };
         setSelectedStudent(newStudentTemplate);
-        setOriginalStudentData(newStudentTemplate);
         setIsEditing(true);
         setSearchTerm('');
         setSearchResults([]);
     };
     
-    const handleSaveChanges = () => {
-        if (!firestore || !selectedStudent) return;
-        
-        const isNewRecord = originalStudentData?.rm.startsWith('TEMPORARIO_');
-        const docId = isNewRecord ? selectedStudent.rm : selectedStudent.id;
-        
-        if (!docId) {
-             toast({
-                variant: 'destructive',
-                title: 'Erro',
-                description: 'O RM (Registro de Matrícula) é obrigatório para salvar.'
-            });
-            return;
-        }
-
-        const collectionName = isNewRecord || !allStudents.some(s => s.id === docId) ? 'historicos' : 'alunos';
-        const studentDocRef = doc(firestore, collectionName, docId);
-        
-        const { id, trajectoryData, ...dataToSave } = selectedStudent;
-        
-        if (trajectoryData) {
-            trajectoryData.forEach((row: any) => {
-                if (row.anoCivil && dataToSave.boletim[row.anoCivil]) {
-                    if (!dataToSave.boletim[row.anoCivil].info) dataToSave.boletim[row.anoCivil].info = {};
-                    dataToSave.boletim[row.anoCivil].info.estabelecimento = row.estabelecimento;
-                    dataToSave.boletim[row.anoCivil].info.municipioUF = row.municipioUF;
-                    dataToSave.boletim[row.anoCivil].info.resultado = row.resultado;
-                }
-            });
-        }
-        
-        setDocumentNonBlocking(studentDocRef, dataToSave, { merge: !isNewRecord });
-
-        toast({
-            title: "Histórico Salvo",
-            description: "As informações do histórico foram salvas com sucesso.",
-        });
-        
-        const newStudentData = { ...selectedStudent, id: docId };
-        
-        setAllStudents(prev => {
-            const existingIndex = prev.findIndex(s => s.id === docId);
-            if (existingIndex !== -1) {
-                const updated = [...prev];
-                updated[existingIndex] = newStudentData;
-                return updated;
-            }
-            return [...prev, newStudentData];
-        });
-        
-        handleSelectStudent(newStudentData);
-        setIsEditing(false);
-    };
-
-    const handleCancelEdit = () => {
-        if (originalStudentData?.rm.startsWith('TEMPORARIO')) {
-            setSelectedStudent(null);
-            setOriginalStudentData(null);
-        } else {
-            setSelectedStudent(originalStudentData);
-        }
-        setIsEditing(false);
-    }
-
     const handleGeneratePDF = async () => {
         if (!selectedStudent) return;
     
         const wasEditing = isEditing;
         if (wasEditing) {
             setIsEditing(false);
-            // Dá um pequeno tempo para o React re-renderizar o componente no modo de visualização
             await new Promise(resolve => setTimeout(resolve, 100)); 
         }
     
@@ -190,7 +112,7 @@ export default function TranscriptGenerator() {
         if (!element) {
             toast({ variant: 'destructive', title: 'Erro ao gerar PDF', description: 'Template não encontrado.' });
             setIsGenerating(false);
-            if (wasEditing) setIsEditing(true); // Reverte se falhar
+            if (wasEditing) setIsEditing(true);
             return;
         }
     
@@ -212,7 +134,6 @@ export default function TranscriptGenerator() {
         } finally {
             setIsGenerating(false);
             if (wasEditing) {
-                // Devolve para o modo de edição após a geração do PDF
                 setIsEditing(true);
             }
         }
@@ -268,16 +189,7 @@ export default function TranscriptGenerator() {
                                 <CardDescription>Aluno: {selectedStudent.nome || "Novo Histórico"}</CardDescription>
                             </div>
                             <div className="flex items-center gap-2">
-                                {isEditing ? (
-                                    <>
-                                        <Button variant="outline" onClick={handleCancelEdit}>
-                                            <X className="mr-2 h-4 w-4" /> Cancelar
-                                        </Button>
-                                        <Button onClick={handleSaveChanges}>
-                                            <Save className="mr-2 h-4 w-4" /> Salvar
-                                        </Button>
-                                    </>
-                                ) : (
+                                {!isEditing && (
                                      <Button variant="secondary" onClick={() => setIsEditing(true)}>
                                         <Edit className="mr-2 h-4 w-4" /> Editar Histórico
                                     </Button>
