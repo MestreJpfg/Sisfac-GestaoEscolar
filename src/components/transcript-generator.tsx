@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { UserPlus, Search, Loader2, Edit, Save, X } from 'lucide-react';
+import { UserPlus, Search, Loader2, Edit, Save, X, Download } from 'lucide-react';
 import TranscriptPDFTemplate from './transcript-pdf-template';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -36,13 +36,24 @@ export default function TranscriptGenerator() {
             if (!firestore) return;
             setIsLoadingStudents(true);
             try {
-                const q = query(collection(firestore, 'alunos'));
-                const snapshot = await getDocs(q);
-                const studentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setAllStudents(studentsData);
+                const alunosQuery = query(collection(firestore, 'alunos'));
+                const historicosQuery = query(collection(firestore, 'historicos'));
+                
+                const [alunosSnapshot, historicosSnapshot] = await Promise.all([
+                    getDocs(alunosQuery),
+                    getDocs(historicosQuery)
+                ]);
+
+                const alunosData = alunosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const historicosData = historicosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                const combinedData = [...alunosData, ...historicosData];
+                const uniqueData = Array.from(new Map(combinedData.map(item => [item.id, item])).values());
+
+                setAllStudents(uniqueData);
             } catch (error) {
                 console.error("Error fetching students:", error);
-                toast({ variant: 'destructive', title: 'Erro ao carregar alunos' });
+                toast({ variant: 'destructive', title: 'Erro ao carregar dados' });
             } finally {
                 setIsLoadingStudents(false);
             }
@@ -100,25 +111,29 @@ export default function TranscriptGenerator() {
     };
     
     const handleSaveChanges = () => {
-        if (!firestore || !selectedStudent || !originalStudentData || originalStudentData.rm.startsWith('TEMPORARIO')) {
-            toast({
+        if (!firestore || !selectedStudent) return;
+        
+        const isNewRecord = originalStudentData?.rm.startsWith('TEMPORARIO_');
+        const docId = isNewRecord ? selectedStudent.rm : selectedStudent.id;
+        
+        if (!docId) {
+             toast({
                 variant: 'destructive',
-                title: 'Ação Inválida',
-                description: 'Não é possível salvar um histórico temporário.'
+                title: 'Erro',
+                description: 'O RM (Registro de Matrícula) é obrigatório para salvar.'
             });
             return;
         }
 
-        const studentDocRef = doc(firestore, 'alunos', selectedStudent.id);
+        const collectionName = isNewRecord || !allStudents.some(s => s.id === docId) ? 'historicos' : 'alunos';
+        const studentDocRef = doc(firestore, collectionName, docId);
+        
         const { id, trajectoryData, ...dataToSave } = selectedStudent;
         
-        // Save trajectory data inside boletim info for persistence
         if (trajectoryData) {
             trajectoryData.forEach((row: any) => {
                 if (row.anoCivil && dataToSave.boletim[row.anoCivil]) {
-                    if (!dataToSave.boletim[row.anoCivil].info) {
-                        dataToSave.boletim[row.anoCivil].info = {};
-                    }
+                    if (!dataToSave.boletim[row.anoCivil].info) dataToSave.boletim[row.anoCivil].info = {};
                     dataToSave.boletim[row.anoCivil].info.estabelecimento = row.estabelecimento;
                     dataToSave.boletim[row.anoCivil].info.municipioUF = row.municipioUF;
                     dataToSave.boletim[row.anoCivil].info.resultado = row.resultado;
@@ -126,16 +141,26 @@ export default function TranscriptGenerator() {
             });
         }
         
-        setDocumentNonBlocking(studentDocRef, dataToSave, { merge: true });
+        setDocumentNonBlocking(studentDocRef, dataToSave, { merge: !isNewRecord });
 
         toast({
-            title: "Histórico Atualizado",
+            title: "Histórico Salvo",
             description: "As informações do histórico foram salvas com sucesso.",
         });
         
-        // Update local state to reflect saved changes
-        setAllStudents(prev => prev.map(s => s.id === selectedStudent.id ? selectedStudent : s));
-        setOriginalStudentData(selectedStudent);
+        const newStudentData = { ...selectedStudent, id: docId };
+        
+        setAllStudents(prev => {
+            const existingIndex = prev.findIndex(s => s.id === docId);
+            if (existingIndex !== -1) {
+                const updated = [...prev];
+                updated[existingIndex] = newStudentData;
+                return updated;
+            }
+            return [...prev, newStudentData];
+        });
+        
+        handleSelectStudent(newStudentData);
         setIsEditing(false);
     };
 
@@ -151,24 +176,33 @@ export default function TranscriptGenerator() {
 
     const handleGeneratePDF = async () => {
         if (!selectedStudent) return;
+    
+        const wasEditing = isEditing;
+        if (wasEditing) {
+            setIsEditing(false);
+            // Dá um pequeno tempo para o React re-renderizar o componente no modo de visualização
+            await new Promise(resolve => setTimeout(resolve, 100)); 
+        }
+    
         setIsGenerating(true);
-
+    
         const element = document.getElementById('pdf-template-container');
         if (!element) {
             toast({ variant: 'destructive', title: 'Erro ao gerar PDF', description: 'Template não encontrado.' });
             setIsGenerating(false);
+            if (wasEditing) setIsEditing(true); // Reverte se falhar
             return;
         }
-
+    
         try {
             const canvas = await html2canvas(element, { scale: 2, useCORS: true });
             const imgData = canvas.toDataURL('image/jpeg', 0.98);
-
+    
             const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const imgProps = pdf.getImageProperties(imgData);
             const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
+    
             pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, imgHeight);
             pdf.save(`Historico_Escolar_${selectedStudent.nome.replace(/\s+/g, '_')}.pdf`);
             
@@ -177,14 +211,19 @@ export default function TranscriptGenerator() {
             toast({ variant: "destructive", title: "Erro ao Gerar PDF" });
         } finally {
             setIsGenerating(false);
+            if (wasEditing) {
+                // Devolve para o modo de edição após a geração do PDF
+                setIsEditing(true);
+            }
         }
     };
+    
 
     return (
         <div className="space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>Gerar Histórico Escolar</CardTitle>
+                    <CardTitle>Gerador de Histórico Escolar</CardTitle>
                     <CardDescription>
                         Pesquise por um aluno para gerar o seu histórico escolar completo ou crie um novo do zero.
                     </CardDescription>
@@ -234,11 +273,9 @@ export default function TranscriptGenerator() {
                                         <Button variant="outline" onClick={handleCancelEdit}>
                                             <X className="mr-2 h-4 w-4" /> Cancelar
                                         </Button>
-                                        {!selectedStudent.rm.startsWith('TEMPORARIO_') && (
-                                            <Button onClick={handleSaveChanges}>
-                                                <Save className="mr-2 h-4 w-4" /> Salvar Alterações
-                                            </Button>
-                                        )}
+                                        <Button onClick={handleSaveChanges}>
+                                            <Save className="mr-2 h-4 w-4" /> Salvar
+                                        </Button>
                                     </>
                                 ) : (
                                      <Button variant="secondary" onClick={() => setIsEditing(true)}>
@@ -246,7 +283,7 @@ export default function TranscriptGenerator() {
                                     </Button>
                                 )}
                                 <Button onClick={handleGeneratePDF} disabled={isGenerating}>
-                                    {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4"/>}
+                                    {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4"/>}
                                     Gerar PDF
                                 </Button>
                             </div>
