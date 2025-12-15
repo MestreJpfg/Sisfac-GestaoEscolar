@@ -83,10 +83,13 @@ export default function TranscriptGenerator() {
                 if (yearData?.info?.serie) {
                     const rowIndex = anosSeriesTemplate.indexOf(yearData.info.serie);
                     if (rowIndex !== -1) {
-                        trajectoryData[rowIndex].anoCivil = String(yearStr);
-                        trajectoryData[rowIndex].estabelecimento = yearData.info.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
-                        trajectoryData[rowIndex].municipioUF = yearData.info.municipioUF || 'Fortaleza/CE';
-                        trajectoryData[rowIndex].resultado = yearData.info.resultado || 'Aprovado';
+                         // Only fill if anoCivil is also present
+                        if(yearData.anoCivil || yearStr) {
+                             trajectoryData[rowIndex].anoCivil = yearData.anoCivil || String(yearStr);
+                             trajectoryData[rowIndex].estabelecimento = yearData.info.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
+                             trajectoryData[rowIndex].municipioUF = yearData.info.municipioUF || 'Fortaleza/CE';
+                             trajectoryData[rowIndex].resultado = yearData.info.resultado || 'Aprovado';
+                        }
                     }
                 }
             });
@@ -161,7 +164,7 @@ export default function TranscriptGenerator() {
                 const certificateCanvas = await html2canvas(certificateElement, { scale: 2, useCORS: true });
                 const certificateImgData = certificateCanvas.toDataURL('image/jpeg', 0.98);
                 
-                pdf.addPage('a4', 'l'); 
+                pdf.addPage([297, 210], 'l'); // Add landscape page
                 const certPdfWidth = pdf.internal.pageSize.getWidth();
                 const certPdfHeight = pdf.internal.pageSize.getHeight();
 
@@ -206,7 +209,7 @@ export default function TranscriptGenerator() {
                             <Card className="absolute z-10 w-full mt-1">
                                 <CardContent className="p-2 max-h-60 overflow-y-auto">
                                     {searchResults.map(s => (
-                                        <div key={s.id} onClick={() => handleSelectStudent(s)} className="p-2 hover:bg-accent rounded-md cursor-pointer">
+                                        <div key={s.id} onMouseDown={() => handleSelectStudent(s)} className="p-2 hover:bg-accent rounded-md cursor-pointer">
                                             <p className="font-medium">{s.nome}</p>
                                             <p className="text-sm text-muted-foreground">{s.serie} {s.classe} - {s.turno}</p>
                                         </div>
@@ -234,11 +237,10 @@ export default function TranscriptGenerator() {
                                 {isEditing ? (
                                     <Button variant="outline" onClick={() => {
                                         setIsEditing(false);
-                                        // If it's a new record, clear it. Otherwise, reload original.
                                         if (selectedStudent.rm.startsWith('NOVO_HISTORICO')) {
                                             setSelectedStudent(null);
                                         } else {
-                                            handleSelectStudent(selectedStudent); // Reload original data
+                                            handleSelectStudent(allStudents.find(s => s.id === selectedStudent.id) || selectedStudent); 
                                         }
                                     }}>
                                         <X className="mr-2 h-4 w-4" /> Cancelar Edição

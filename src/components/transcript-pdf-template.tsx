@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Image from "next/image";
@@ -167,8 +168,8 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
                 const yearData = student.boletim[yearStr];
                 if (yearData?.info?.serie) {
                     const rowIndex = anosSeriesTemplate.indexOf(yearData.info.serie);
-                    if (rowIndex !== -1) {
-                        rows[rowIndex].anoCivil = String(yearStr);
+                    if (rowIndex !== -1 && (yearData.anoCivil || yearStr)) {
+                        rows[rowIndex].anoCivil = yearData.anoCivil || String(yearStr);
                         if (!rows[rowIndex].estabelecimento) rows[rowIndex].estabelecimento = yearData.info.estabelecimento || 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
                         if (!rows[rowIndex].municipioUF) rows[rowIndex].municipioUF = yearData.info.municipioUF || 'Fortaleza/CE';
                         if (!rows[rowIndex].resultado) rows[rowIndex].resultado = yearData.info.resultado || 'Aprovado';
@@ -183,15 +184,6 @@ const TrajectoryTable = ({ student, isEditing, onTrajectoryChange }: { student: 
                     rows[index] = { ...rows[index], ...dbRow };
                 }
             });
-        } else {
-            // Pre-fill default values if no trajectoryData exists and no boletim data was found for that row
-            rows.forEach(row => {
-                if (!row.anoCivil) { // Only if not filled by boletim
-                    if (!row.estabelecimento) row.estabelecimento = 'E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES';
-                    if (!row.municipioUF) row.municipioUF = 'Fortaleza/CE';
-                    if (!row.resultado) row.resultado = 'Aprovado';
-                }
-            })
         }
         
         return rows;
@@ -379,6 +371,14 @@ const ConclusionCertificate = ({ student, date }: { student: any, date: string }
                             <p className="font-semibold text-sm" style={{ color: '#00564d' }}>Direção Escolar</p>
                         </div>
                     </div>
+                    <div className="w-1/3">
+                        <div className="relative h-16 w-48 mx-auto -mb-6" style={{ right: '0.5cm' }}>
+                            <Image src="/secretaria.png" alt="Assinatura Secretaria" layout="fill" objectFit="contain" unoptimized />
+                        </div>
+                         <div className="border-t-2 border-dashed border-gray-500 mx-auto w-4/5 pt-1">
+                            <p className="font-semibold text-sm" style={{ color: '#00564d' }}>Secretário(a) Escolar</p>
+                        </div>
+                    </div>
                 </footer>
             </div>
         </div>
@@ -443,7 +443,7 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
     return (
         <div>
             <div id="transcript-page" className="bg-white text-black font-sans" style={{ width: '210mm', minHeight: '297mm' }}>
-                <div className="flex flex-col h-full p-8 space-y-2">
+                <div className="flex flex-col h-full p-6 space-y-1">
                     <header className="flex flex-col items-center text-center text-[9px] font-bold mb-1">
                         <div className="flex items-center gap-4 mb-1"><Image src="/logoyuri.png" alt="Logo" width={60} height={60} unoptimized /></div>
                         <p className="text-[10px] font-bold">ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES - EI / EF</p>
@@ -452,9 +452,9 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                         <p className="text-[8px]">Fortaleza - CE | Fone: (85) 3488-3209 | E-mail: efernandacollares@institutoassumcao.org.br</p>
                     </header>
 
-                    <div className="text-center my-2"><h1 className="text-base font-bold tracking-wider uppercase">HISTÓRICO ESCOLAR DO ENSINO FUNDAMENTAL DE 9 (NOVE) ANOS</h1></div>
+                    <div className="text-center my-1"><h1 className="text-base font-bold tracking-wider uppercase">HISTÓRICO ESCOLAR DO ENSINO FUNDAMENTAL DE 9 (NOVE) ANOS</h1></div>
 
-                    <section className="border-t border-b border-black py-1 grid grid-cols-2 gap-x-4 gap-y-1">
+                    <section className="border-t border-b border-black py-1 grid grid-cols-2 gap-x-4 gap-y-0.5">
                         <DetailItem label="Nome do Aluno(a)" value={student.nome} isEditing={isEditing} onChange={handleDetailChange('nome')} />
                         <DetailItem label="Registro Acadêmico (RM)" value={student.rm} isEditing={isEditing} onChange={handleDetailChange('rm')} />
                         <DetailItem label="Data de Nascimento" value={student.data_nascimento} isEditing={isEditing} onChange={handleDetailChange('data_nascimento')} />
@@ -463,7 +463,7 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                         <DetailItem label="Pai" value={student.filiacao_2} isEditing={isEditing} onChange={handleDetailChange('filiacao_2')} />
                     </section>
                     
-                    <section className="my-2">
+                    <section className="my-1">
                         <h2 className="text-sm font-bold text-center mb-1">UNIDADE ESCOLAR</h2>
                         <TrajectoryTable 
                             student={student} 
@@ -472,22 +472,20 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                         />
                     </section>
                     
-                    <section className="my-2">
+                    <section className="my-1">
                         <h2 className="text-sm font-bold text-center mb-1">NOTAS E FREQUÊNCIA POR ANO/SÉRIE</h2>
                         <GradeMatrix boletim={student.boletim} isEditing={isEditing} onGradeChange={handleGradeChange} />
                     </section>
 
                     {isNinthGradeApproved && (
-                        <section className="my-2 text-center text-[10px] font-semibold">
+                        <section className="my-1 text-center text-[10px] font-semibold">
                             <p>Certificamos que o(a) aluno(a) acima qualificado(a) concluiu o Ensino Fundamental e está apto(a) a cursar o Ensino Médio.</p>
                         </section>
                     )}
 
-                    <footer className="flex flex-col items-center justify-center text-center pt-2 mt-auto text-[9px]">
-                        <div className="text-center w-full mb-2">
-                            <p className="font-bold">Base Legal:</p>
-                            <p>Curso de Ensino Fundamental de 9 (nove) anos, com base na Lei Federal 9.394/96. Escala de Avaliação: Notas de 0 a 10, com média para aprovação 6.0.</p>
-                            <p>Modelo de Avaliação para 1º e 2º ANO, uso de Relatório Pedagógico.</p>
+                    <footer className="flex flex-col items-center justify-center text-center pt-1 mt-auto text-[9px]">
+                        <div className="text-center w-full mb-1">
+                            <p><span className="font-bold">Base Legal:</span> Curso de Ensino Fundamental de 9 (nove) anos, com base na Lei Federal 9.394/96. Escala de Avaliação: Notas de 0 a 10, com média para aprovação 6.0. Modelo de Avaliação para 1º e 2º ANO, uso de Relatório Pedagógico.</p>
                         </div>
                         <p className="text-[10px]">Fortaleza, {formattedDate}.</p>
                         <div className="flex justify-around w-full mt-2 items-end">
@@ -500,10 +498,10 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                                 </div>
                             </div>
                             <div className="text-center w-48 relative">
-                                <div className="relative h-16 w-full -mb-8" style={{ right: '0.5cm' }}>
+                                <div className="relative h-16 w-full -mb-6" style={{ right: '0.5cm' }}>
                                     <Image src="/secretaria.png" alt="Assinatura Secretaria" layout="fill" objectFit="contain" unoptimized />
                                 </div>
-                                <div className="border-t border-black w-full pt-1">
+                                 <div className="border-t border-black w-full pt-1">
                                     <p className="font-bold">SECRETÁRIO(A) ESCOLAR</p>
                                 </div>
                             </div>
@@ -513,21 +511,9 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
             </div>
             {isNinthGradeApproved && (
                 <div id="certificate-page-wrapper" className="relative mt-4 mx-auto" style={{ width: '297mm', height: '210mm' }}>
-                    <div 
-                        id="certificate-page" 
-                        className="origin-top-left"
-                        style={{
-                            width: '297mm', 
-                            height: '210mm',
-                            transform: isEditing ? '' : 'rotate(-90deg) translateX(-100%)',
-                            transformOrigin: 'top left',
-                        }}
-                    >
-                        <ConclusionCertificate student={student} date={formattedDate} />
-                    </div>
+                    <ConclusionCertificate student={student} date={formattedDate} />
                 </div>
             )}
         </div>
     );
 }
-
