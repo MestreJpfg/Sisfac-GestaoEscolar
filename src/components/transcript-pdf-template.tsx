@@ -364,7 +364,7 @@ const ConclusionCertificate = ({ student, date }: { student: any, date: string }
                         </div>
                     </div>
                     <div className="w-1/3">
-                        <div className="relative h-24 w-48 mx-auto -mb-8">
+                        <div className="relative h-20 w-48 mx-auto -mb-8">
                             <Image src="/assinatura.png" alt="Assinatura" layout="fill" objectFit="contain" unoptimized />
                         </div>
                         <div className="border-t-2 border-dashed border-gray-500 mx-auto w-4/5 pt-1">
@@ -372,7 +372,7 @@ const ConclusionCertificate = ({ student, date }: { student: any, date: string }
                         </div>
                     </div>
                     <div className="w-1/3">
-                        <div className="relative h-16 w-48 mx-auto -mb-6" style={{ right: '0.5cm' }}>
+                        <div className="relative h-16 w-48 mx-auto -mb-6">
                             <Image src="/secretaria.png" alt="Assinatura Secretaria" layout="fill" objectFit="contain" unoptimized />
                         </div>
                          <div className="border-t-2 border-dashed border-gray-500 mx-auto w-4/5 pt-1">
@@ -485,23 +485,23 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
 
                     <footer className="flex flex-col items-center justify-center text-center pt-1 mt-auto text-[9px]">
                         <div className="text-center w-full mb-1">
-                            <p><span className="font-bold">Base Legal:</span> Curso de Ensino Fundamental de 9 (nove) anos, com base na Lei Federal 9.394/96. Escala de Avaliação: Notas de 0 a 10, com média para aprovação 6.0. Modelo de Avaliação para 1º e 2º ANO, uso de Relatório Pedagógico.</p>
+                            <p className="text-[8px] leading-tight"><span className="font-bold">Base Legal:</span> Curso de Ensino Fundamental de 9 (nove) anos, com base na Lei Federal 9.394/96. Escala de Avaliação: Notas de 0 a 10, com média para aprovação 6.0. Modelo de Avaliação para 1º e 2º ANO, uso de Relatório Pedagógico.</p>
                         </div>
                         <p className="text-[10px]">Fortaleza, {formattedDate}.</p>
                         <div className="flex justify-around w-full mt-2 items-end">
-                            <div className="text-center w-48 relative">
-                                <div className="relative h-16 w-full -mb-10" style={{ right: '0.5cm' }}>
+                            <div className="text-center w-56 relative">
+                                <div className="relative h-20 w-full -mb-8">
                                     <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized />
                                 </div>
                                 <div className="border-t border-black w-full pt-1">
                                     <p className="font-bold">DIRETOR(A)</p>
                                 </div>
                             </div>
-                            <div className="text-center w-48 relative">
-                                <div className="relative h-16 w-full -mb-6" style={{ right: '0.5cm' }}>
+                            <div className="text-center w-56 relative">
+                                <div className="relative h-20 w-full -mb-8">
                                     <Image src="/secretaria.png" alt="Assinatura Secretaria" layout="fill" objectFit="contain" unoptimized />
                                 </div>
-                                 <div className="border-t border-black w-full pt-1">
+                                <div className="border-t border-black w-full pt-1">
                                     <p className="font-bold">SECRETÁRIO(A) ESCOLAR</p>
                                 </div>
                             </div>
