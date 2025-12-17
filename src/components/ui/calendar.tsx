@@ -7,6 +7,7 @@ import { DayPicker, DropdownProps } from "react-day-picker"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
@@ -100,8 +101,5 @@ function Calendar({
   )
 }
 Calendar.displayName = "Calendar"
-
-// Add ScrollArea to dependencies, as it is used in the Calendar component
-import { ScrollArea } from "@/components/ui/scroll-area"
 
 export { Calendar }
