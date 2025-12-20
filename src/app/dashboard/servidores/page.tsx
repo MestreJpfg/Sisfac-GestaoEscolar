@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Briefcase } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
 import ServidorForm from '@/components/servidor-form';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ServidorDataView from '@/components/servidor-data-view';
 
 export default function ServidoresPage() {
     const router = useRouter();
@@ -24,7 +26,7 @@ export default function ServidoresPage() {
                             </Button>
                             <div className="flex items-center gap-2">
                                 <Briefcase className="h-6 w-6 text-primary" />
-                                <h1 className="text-xl font-bold text-primary hidden sm:block">Cadastro de Servidores</h1>
+                                <h1 className="text-xl font-bold text-primary hidden sm:block">Gestão de Servidores</h1>
                             </div>
                         </div>
                         <div className="flex flex-1 items-center justify-end space-x-4">
@@ -37,8 +39,21 @@ export default function ServidoresPage() {
                 </header>
 
                 <main className="flex-1 py-8">
-                    <div className="container max-w-4xl">
-                       <ServidorForm />
+                    <div className="container">
+                       <Tabs defaultValue="visualizar" className="w-full">
+                          <TabsList className="grid w-full grid-cols-2 max-w-lg mx-auto">
+                            <TabsTrigger value="visualizar">Visualizar Servidores</TabsTrigger>
+                            <TabsTrigger value="cadastrar">Novo Cadastro</TabsTrigger>
+                          </TabsList>
+                          <TabsContent value="visualizar" className="mt-6">
+                            <ServidorDataView />
+                          </TabsContent>
+                           <TabsContent value="cadastrar" className="mt-6">
+                            <div className="max-w-4xl mx-auto">
+                                <ServidorForm />
+                            </div>
+                          </TabsContent>
+                        </Tabs>
                     </div>
                 </main>
                 <AppFooter />
