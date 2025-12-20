@@ -28,10 +28,23 @@ interface MigrationClass {
 }
 
 const getNextSerie = (currentSerie: string): string | null => {
-    const match = currentSerie.match(/(\d+)/);
+    const upperCaseSerie = currentSerie.toUpperCase();
+
+    if (upperCaseSerie.includes('INFANTIL IV')) {
+        return 'INFANTIL V';
+    }
+    if (upperCaseSerie.includes('INFANTIL V')) {
+        return '1º ANO';
+    }
+
+    const match = upperCaseSerie.match(/(\d+)/);
     if (!match) return null;
+
     const currentNumber = parseInt(match[0], 10);
-    if (currentNumber >= 9) return null; // 9th graders graduate, they don't migrate to 10th
+    if (currentNumber >= 9) {
+        return null; // 9th graders graduate
+    }
+    
     return `${currentNumber + 1}º ANO`;
 };
 
