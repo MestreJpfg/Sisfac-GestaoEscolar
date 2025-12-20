@@ -72,7 +72,7 @@ service cloud.firestore {
     }
 
     match /exalunos/{alunoId} {
-      allow read, list: if hasPermission('view:students') || hasPermission('manage:students');
+      allow read, list: if hasPermission('view:students') || hasPermission('manage:students') || hasPermission('manage:migration');
       allow write: if hasPermission('manage:migration');
     }
 
