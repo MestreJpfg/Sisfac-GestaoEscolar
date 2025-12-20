@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, writeBatch, doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -114,37 +114,45 @@ export default function MigrationTool({ fromYear, toYear }: MigrationToolProps) 
     
         setMigrationClasses(prev => prev.map(c => c.id === classId ? { ...c, status: 'graduating' } : c));
         
-        const chunkSize = 30;
-        for (let i = 0; i < targetClass.studentIds.length; i += chunkSize) {
-            const chunk = targetClass.studentIds.slice(i, i + chunkSize);
-            const batch = writeBatch(firestore);
-            
-            const studentsQuery = query(collection(firestore, 'alunos'), where('__name__', 'in', chunk));
+        let successCount = 0;
+        let hasError = false;
 
-            getDocs(studentsQuery).then(studentDocs => {
-                studentDocs.forEach(studentDoc => {
-                    const studentData = studentDoc.data();
-                    const exAlunoRef = doc(firestore, 'exalunos', studentDoc.id);
-                    batch.set(exAlunoRef, { ...studentData, status: 'FORMADO' });
-                    batch.delete(studentDoc.ref);
-                });
+        for (const studentId of targetClass.studentIds) {
+            try {
+                const studentRef = doc(firestore, 'alunos', studentId);
+                const studentSnap = await getDoc(studentRef);
 
-                commitBatchNonBlocking(batch, 'exalunos');
-                
-                // Only show toast and set status on the last batch
-                if (i + chunkSize >= targetClass.studentIds.length) {
-                    setMigrationClasses(prev => prev.map(c => c.id === classId ? { ...c, status: 'done' } : c));
-                    toast({
-                        title: 'Turma Formada com Sucesso!',
-                        description: `${targetClass.studentCount} alunos da turma ${targetClass.fromSerie} ${targetClass.turma} foram movidos para ex-alunos.`
-                    });
+                if (studentSnap.exists()) {
+                    const studentData = studentSnap.data();
+                    const exAlunoRef = doc(firestore, 'exalunos', studentId);
+
+                    await setDoc(exAlunoRef, { ...studentData, status: 'FORMADO' });
+                    await deleteDoc(studentRef);
+                    successCount++;
                 }
-            }).catch(error => {
+            } catch (error) {
+                console.error(`Failed to graduate student ${studentId}:`, error);
+                hasError = true;
                 errorEmitter.emit('permission-error', new FirestorePermissionError({
-                    path: 'alunos',
-                    operation: 'list',
+                    path: `alunos/${studentId}`,
+                    operation: 'delete',
                 }));
-                 setMigrationClasses(prev => prev.map(c => c.id === classId ? { ...c, status: 'error' } : c));
+                break; // Stop on first error
+            }
+        }
+
+        if (hasError) {
+             setMigrationClasses(prev => prev.map(c => c.id === classId ? { ...c, status: 'error' } : c));
+             toast({
+                variant: 'destructive',
+                title: 'Erro na Formatura',
+                description: 'Não foi possível formar todos os alunos. Verifique as permissões e tente novamente.'
+            });
+        } else {
+             setMigrationClasses(prev => prev.map(c => c.id === classId ? { ...c, status: 'done' } : c));
+            toast({
+                title: 'Turma Formada com Sucesso!',
+                description: `${successCount} alunos da turma ${targetClass.fromSerie} ${targetClass.turma} foram movidos para ex-alunos.`
             });
         }
     
