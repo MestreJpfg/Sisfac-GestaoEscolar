@@ -33,7 +33,7 @@ service cloud.firestore {
 
     match /exalunos/{alunoId} {
       allow read, list: if hasPermission('view:students');
-      allow write: if isSignedIn();
+      allow write: if hasPermission('manage:migration');
     }
     
     // NOVA REGRA: Integrada no sistema de permissões existente
