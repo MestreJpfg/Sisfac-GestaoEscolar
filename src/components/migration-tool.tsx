@@ -3,13 +3,17 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs, writeBatch, doc, deleteDoc, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, GitBranch, ArrowRight, CheckCircle, XCircle, GraduationCap } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { commitBatchNonBlocking } from '@/firebase/non-blocking-updates';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+
 
 interface MigrationToolProps {
     fromYear: number;
@@ -104,21 +108,20 @@ export default function MigrationTool({ fromYear, toYear }: MigrationToolProps) 
 
     const handleGraduateClass = async (classId: string) => {
         if (!firestore) return;
-
+    
         const targetClass = migrationClasses.find(c => c.id === classId);
         if (!targetClass) return;
-
+    
         setMigrationClasses(prev => prev.map(c => c.id === classId ? { ...c, status: 'graduating' } : c));
         
-        try {
-            // Process students in chunks to avoid Firestore limits
-            const chunkSize = 30;
-            for (let i = 0; i < targetClass.studentIds.length; i += chunkSize) {
-                const chunk = targetClass.studentIds.slice(i, i + chunkSize);
-                const batch = writeBatch(firestore);
-                
-                const studentDocs = await getDocs(query(collection(firestore, 'alunos'), where('__name__', 'in', chunk)));
+        const chunkSize = 30;
+        for (let i = 0; i < targetClass.studentIds.length; i += chunkSize) {
+            const chunk = targetClass.studentIds.slice(i, i + chunkSize);
+            const batch = writeBatch(firestore);
+            
+            const studentsQuery = query(collection(firestore, 'alunos'), where('__name__', 'in', chunk));
 
+            getDocs(studentsQuery).then(studentDocs => {
                 studentDocs.forEach(studentDoc => {
                     const studentData = studentDoc.data();
                     const exAlunoRef = doc(firestore, 'exalunos', studentDoc.id);
@@ -126,22 +129,26 @@ export default function MigrationTool({ fromYear, toYear }: MigrationToolProps) 
                     batch.delete(studentDoc.ref);
                 });
 
-                await batch.commit();
-            }
-
-            setMigrationClasses(prev => prev.map(c => c.id === classId ? { ...c, status: 'done' } : c));
-            toast({
-                title: 'Turma Formada com Sucesso!',
-                description: `${targetClass.studentCount} alunos da turma ${targetClass.fromSerie} ${targetClass.turma} foram movidos para ex-alunos.`
+                commitBatchNonBlocking(batch, 'exalunos');
+                
+                // Only show toast and set status on the last batch
+                if (i + chunkSize >= targetClass.studentIds.length) {
+                    setMigrationClasses(prev => prev.map(c => c.id === classId ? { ...c, status: 'done' } : c));
+                    toast({
+                        title: 'Turma Formada com Sucesso!',
+                        description: `${targetClass.studentCount} alunos da turma ${targetClass.fromSerie} ${targetClass.turma} foram movidos para ex-alunos.`
+                    });
+                }
+            }).catch(error => {
+                errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: 'alunos',
+                    operation: 'list',
+                }));
+                 setMigrationClasses(prev => prev.map(c => c.id === classId ? { ...c, status: 'error' } : c));
             });
-
-        } catch (error) {
-            console.error("Error graduating class:", error);
-            setMigrationClasses(prev => prev.map(c => c.id === classId ? { ...c, status: 'error' } : c));
-            toast({ variant: 'destructive', title: 'Erro ao formar turma.', description: 'Não foi possível mover os alunos.' });
-        } finally {
-            setAlertInfo(null);
         }
+    
+        setAlertInfo(null);
     };
 
 
