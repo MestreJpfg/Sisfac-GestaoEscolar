@@ -4,7 +4,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
@@ -45,6 +45,7 @@ type ServidorFormValues = z.infer<typeof servidorSchema>;
 export default function ServidorForm() {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { user } = useUser();
   const [isSaving, setIsSaving] = useState(false);
 
   const form = useForm<ServidorFormValues>({
@@ -85,15 +86,17 @@ export default function ServidorForm() {
 
 
   const onSubmit = async (data: ServidorFormValues) => {
-    if (!firestore) {
-      toast({ variant: 'destructive', title: 'Erro de conexão.' });
+    if (!firestore || !user) {
+      toast({ variant: 'destructive', title: 'Erro de conexão.', description: 'Utilizador não autenticado.' });
       return;
     }
     
     setIsSaving(true);
     
     try {
-      const id = doc(collection(firestore, 'servidores')).id;
+      const servidorCollectionRef = collection(firestore, 'users', user.uid, 'servidores');
+      const id = doc(servidorCollectionRef).id;
+
       const servidorData = {
         ...data,
         id,
@@ -108,12 +111,11 @@ export default function ServidorForm() {
         }
       };
 
-      // Remover campos bancarios do objeto principal
       delete (servidorData as any).banco;
       delete (servidorData as any).agencia;
       delete (servidorData as any).conta;
       
-      const docRef = doc(firestore, 'servidores', id);
+      const docRef = doc(servidorCollectionRef, id);
       setDocumentNonBlocking(docRef, servidorData);
 
       toast({

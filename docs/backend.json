@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -261,13 +262,13 @@
         "path": "/users/{userId}",
         "definition": { "schema": { "$ref": "#/entities/User" } }
       },
+       {
+        "path": "/users/{userId}/servidores/{servidorId}",
+        "definition": { "schema": { "$ref": "#/entities/Servidor" } }
+      },
       {
         "path": "/alunos/{alunoId}",
         "definition": { "schema": { "$ref": "#/entities/Aluno" } }
-      },
-      {
-        "path": "/servidores/{servidorId}",
-        "definition": { "schema": { "$ref": "#/entities/Servidor" } }
       },
       {
         "path": "/profiles/{profileId}",

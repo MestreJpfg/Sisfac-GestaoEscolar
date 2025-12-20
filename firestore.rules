@@ -1,9 +1,9 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // --- Helper Functions ---
     function isSignedIn() {
       return request.auth != null;
     }
@@ -12,83 +12,69 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
-    // --- Collection Rules ---
-
-    // REGRA PARA SERVIDORES: Acesso total para qualquer utilizador autenticado.
-    match /servidores/{servidorId} {
-      allow read, write: if isSignedIn();
+    // REGRA PARA SERVIDORES: Acesso total para o dono do documento.
+    match /users/{userId}/servidores/{servidorId} {
+      allow read, write: if isOwner(userId);
     }
     
-    // Users can read/list profiles and update their own data.
-    // Admins (defined by hasPermission) can manage users.
     match /users/{userId} {
       allow read, list: if isSignedIn();
       allow create, update: if isOwner(userId) || hasPermission('manage:users');
       allow delete: if hasPermission('manage:users');
     }
     
-    // All authenticated users can read/list profiles.
-    // Only admins can write.
     match /profiles/{profileId} {
         allow read, list: if isSignedIn();
         allow write: if hasPermission('manage:profiles');
     }
 
-    // Rules for students
     match /alunos/{alunoId} {
       allow read, list: if hasPermission('view:students');
       allow update: if hasPermission('manage:students') || hasPermission('manage:grades');
       allow create, delete: if hasPermission('manage:students') || hasPermission('manage:migration');
     }
 
-    // Rules for ex-students
     match /exalunos/{alunoId} {
       allow read, list: if hasPermission('view:students');
-      // Allow write for migration purposes, protected by app logic.
       allow write: if isSignedIn();
     }
 
-    // Permissions for grades.
     match /grades/{gradeId} {
        allow read, list: if hasPermission('view:grades');
        allow write: if hasPermission('manage:grades');
     }
 
-    // Permissions for attendance.
     match /attendance/{attendanceId} {
        allow read, list: if hasPermission('view:attendance');
        allow write: if hasPermission('manage:attendance');
     }
     
-    // Permissions for announcements.
     match /announcements/{announcementId} {
       allow read, list: if hasPermission('view:announcements');
       allow write: if hasPermission('manage:announcements');
     }
 
-    // Complex hasPermission function - to be used by other rules.
     function hasPermission(permission) {
       if (!isSignedIn()) {
         return false;
       }
 
-      let userProfile = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
       
-      // Admin override (checks for both variations)
-      if (userProfile.profileId == 'Administrador' || userProfile.profileId == 'Administrador(a)') {
+      if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
         return true;
       }
       
-      if (userProfile == null || !('profileId' in userProfile)) {
+      if (userData == null || !('profileId' in userData)) {
         return false;
       }
       
-      let profileDoc = get(/databases/$(database)/documents/profiles/$(userProfile.profileId)).data;
+      let profileDoc = get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
+      
       if (profileDoc == null || !('permissions' in profileDoc)) {
          return false;
       }
       
-      // Check if the required permission is in the profile's list.
       return permission in profileDoc.permissions;
     }
   }
