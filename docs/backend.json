@@ -263,7 +263,7 @@
         "definition": { "schema": { "$ref": "#/entities/User" } }
       },
        {
-        "path": "/users/{userId}/servidores/{servidorId}",
+        "path": "/servidores/{servidorId}",
         "definition": { "schema": { "$ref": "#/entities/Servidor" } }
       },
       {

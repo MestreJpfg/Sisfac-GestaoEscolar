@@ -4,7 +4,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
@@ -45,7 +45,6 @@ type ServidorFormValues = z.infer<typeof servidorSchema>;
 export default function ServidorForm() {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { user } = useUser();
   const [isSaving, setIsSaving] = useState(false);
 
   const form = useForm<ServidorFormValues>({
@@ -86,15 +85,15 @@ export default function ServidorForm() {
 
 
   const onSubmit = async (data: ServidorFormValues) => {
-    if (!firestore || !user) {
-      toast({ variant: 'destructive', title: 'Erro de conexão.', description: 'Utilizador não autenticado.' });
+    if (!firestore) {
+      toast({ variant: 'destructive', title: 'Erro de conexão.', description: 'Serviço de base de dados não encontrado.' });
       return;
     }
     
     setIsSaving(true);
     
     try {
-      const servidorCollectionRef = collection(firestore, 'users', user.uid, 'servidores');
+      const servidorCollectionRef = collection(firestore, 'servidores');
       const id = doc(servidorCollectionRef).id;
 
       const servidorData = {

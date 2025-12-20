@@ -12,11 +12,7 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
-    // REGRA PARA SERVIDORES: Acesso total para o dono do documento.
-    match /users/{userId}/servidores/{servidorId} {
-      allow read, write: if isOwner(userId);
-    }
-    
+    // As regras de utilizador e perfil permanecem as mesmas
     match /users/{userId} {
       allow read, list: if isSignedIn();
       allow create, update: if isOwner(userId) || hasPermission('manage:users');
@@ -28,6 +24,7 @@ service cloud.firestore {
         allow write: if hasPermission('manage:profiles');
     }
 
+    // Regras para coleções principais da aplicação
     match /alunos/{alunoId} {
       allow read, list: if hasPermission('view:students');
       allow update: if hasPermission('manage:students') || hasPermission('manage:grades');
@@ -37,6 +34,11 @@ service cloud.firestore {
     match /exalunos/{alunoId} {
       allow read, list: if hasPermission('view:students');
       allow write: if isSignedIn();
+    }
+    
+    // NOVA REGRA: Integrada no sistema de permissões existente
+    match /servidores/{servidorId} {
+      allow read, write: if hasPermission('manage:cadastros');
     }
 
     match /grades/{gradeId} {
@@ -61,6 +63,7 @@ service cloud.firestore {
 
       let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
       
+      // A verificação de Administrador é a forma mais alta de permissão
       if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
         return true;
       }
@@ -71,10 +74,11 @@ service cloud.firestore {
       
       let profileDoc = get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
       
-      if (profileDoc == null || !('permissions' in profileDoc)) {
+      if (profileDoc == null || !('permissions' in profileDoc) || profileDoc.permissions == null) {
          return false;
       }
       
+      // Verifica se a permissão está na lista de permissões do perfil
       return permission in profileDoc.permissions;
     }
   }
