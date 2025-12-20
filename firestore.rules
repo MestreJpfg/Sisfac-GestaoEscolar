@@ -71,6 +71,10 @@ service cloud.firestore {
       allow write: if isSignedIn();
     }
 
+    match /servidores/{servidorId} {
+      allow read, write: if isSignedIn();
+    }
+
     // Permissions for grades.
     match /grades/{gradeId} {
        allow read, list: if hasPermission('view:grades') || hasPermission('manage:grades');

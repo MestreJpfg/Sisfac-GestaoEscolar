@@ -96,6 +96,35 @@
       },
        "required": ["id", "rm", "nome"]
     },
+    "Servidor": {
+      "title": "Servidor",
+      "type": "object",
+      "description": "Representa um funcionário ou servidor da instituição.",
+      "properties": {
+        "id": { "type": "string", "description": "Identificador único do servidor." },
+        "nomeCompleto": { "type": "string", "description": "Nome completo do servidor." },
+        "dataNascimento": { "type": "string", "format": "date", "description": "Data de nascimento." },
+        "cpf": { "type": "string", "description": "CPF do servidor." },
+        "rg": { "type": "string", "description": "RG do servidor." },
+        "endereco": { "type": "string", "description": "Endereço completo." },
+        "telefone": { "type": "string", "description": "Número de telefone para contato." },
+        "email": { "type": "string", "format": "email", "description": "E-mail de contato." },
+        "cargo": { "type": "string", "description": "Cargo atual do servidor." },
+        "departamento": { "type": "string", "description": "Departamento de atuação." },
+        "dataAdmissao": { "type": "string", "format": "date", "description": "Data de admissão." },
+        "salario": { "type": "number", "description": "Salário bruto." },
+        "dadosBancarios": {
+          "type": "object",
+          "properties": {
+            "banco": { "type": "string" },
+            "agencia": { "type": "string" },
+            "conta": { "type": "string" }
+          }
+        },
+        "status": { "type": "string", "enum": ["Ativo", "Inativo", "Férias", "Licença"] }
+      },
+      "required": ["id", "nomeCompleto", "cpf", "cargo", "dataAdmissao"]
+    },
     "Profile": {
       "title": "Profile",
       "type": "object",
@@ -126,7 +155,9 @@
                 "manage:grades",
                 "manage:attendance",
                 "manage:announcements",
-                "manage:cadastros"
+                "manage:cadastros",
+                "manage:transcript",
+                "manage:migration"
             ]
           },
           "description": "A list of permission keys granted to this profile."
@@ -193,12 +224,31 @@
         "mediaFinal": { "type": ["number", "null"], "description": "Média final da disciplina." }
       }
     },
+    "InfoTurma": {
+        "title": "Info Turma",
+        "type": "object",
+        "description": "Armazena a série, classe e turno de um aluno para um ano letivo específico.",
+        "properties": {
+            "serie": { "type": "string" },
+            "classe": { "type": "string" },
+            "turno": { "type": "string" }
+        }
+    },
     "Boletim": {
       "title": "Boletim",
       "type": "object",
-      "description": "Um mapa de disciplinas e suas respectivas notas para um aluno.",
-      "additionalProperties": {
-        "$ref": "#/entities/Nota"
+      "description": "Agrupa as informações da turma e as notas de um aluno para um ano específico.",
+      "properties": {
+          "info": {
+              "$ref": "#/entities/InfoTurma"
+          },
+          "notas": {
+              "type": "object",
+              "description": "Um mapa de disciplinas e suas respectivas notas para o ano.",
+              "additionalProperties": {
+                "$ref": "#/entities/Nota"
+              }
+          }
       }
     }
   },
@@ -214,6 +264,10 @@
       {
         "path": "/alunos/{alunoId}",
         "definition": { "schema": { "$ref": "#/entities/Aluno" } }
+      },
+      {
+        "path": "/servidores/{servidorId}",
+        "definition": { "schema": { "$ref": "#/entities/Servidor" } }
       },
       {
         "path": "/profiles/{profileId}",

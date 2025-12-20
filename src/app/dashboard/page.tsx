@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, doc, getCountFromServer, getDocs } from 'firebase/firestore';
-import { Loader2, Users, UserCog, Shield, Database, ClipboardList, Megaphone, CalendarCheck, ArrowLeft, NotebookText, Gamepad2, Award, FileText, GitBranch } from 'lucide-react';
+import { Loader2, Users, UserCog, Shield, Database, ClipboardList, Megaphone, CalendarCheck, ArrowLeft, NotebookText, Gamepad2, Award, FileText, GitBranch, Briefcase } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -180,6 +180,13 @@ export default function DashboardPage() {
                       <StatCard title="..." value={<Loader2 className="h-5 w-5 animate-spin"/>} icon={Users} />
                   ) : (
                       <>
+                          <StatCard
+                            title="Servidores"
+                            value={"Cadastro"}
+                            icon={Briefcase}
+                            description="Gerir o cadastro de servidores"
+                            action={<Button onClick={() => router.push('/dashboard/servidores')}>Aceder</Button>}
+                          />
                           {(canViewAttendance || canManageAttendance) && (
                             <StatCard
                                 title="Registo de Frequência"
@@ -294,5 +301,3 @@ export default function DashboardPage() {
     </AuthGuard>
   );
 }
-
-    
