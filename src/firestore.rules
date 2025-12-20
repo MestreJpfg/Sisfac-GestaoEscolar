@@ -12,8 +12,10 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
+    // As regras de utilizador e perfil permanecem as mesmas
     match /users/{userId} {
-      allow read, list: if isSignedIn();
+      allow read: if isOwner(userId) || hasPermission('view:users');
+      allow list: if hasPermission('view:users');
       allow create, update: if isOwner(userId) || hasPermission('manage:users');
       allow delete: if hasPermission('manage:users');
     }
@@ -23,6 +25,7 @@ service cloud.firestore {
         allow write: if hasPermission('manage:profiles');
     }
 
+    // Regras para coleções principais da aplicação
     match /alunos/{alunoId} {
       allow read, list: if hasPermission('view:students');
       allow update: if hasPermission('manage:students') || hasPermission('manage:grades');
@@ -34,6 +37,7 @@ service cloud.firestore {
       allow write: if hasPermission('manage:migration');
     }
     
+    // NOVA REGRA: Integrada no sistema de permissões existente
     match /servidores/{servidorId} {
       allow read, write: if hasPermission('manage:cadastros');
     }
@@ -58,13 +62,16 @@ service cloud.firestore {
         return false;
       }
 
+      // First, get the user's document data.
       let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
       
+      // Super admin check
       if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
         return true;
       }
       
-      if (userData == null || !('profileId' in userData)) {
+      // Check for profile and permissions existence
+      if (userData == null || !('profileId' in userData) || userData.profileId == null) {
         return false;
       }
       
@@ -74,7 +81,7 @@ service cloud.firestore {
          return false;
       }
       
-      // Correct way to check for a key in a map
+      // Check if the permission key exists and is true in the permissions map
       return profileDoc.permissions[permission] == true;
     }
   }
