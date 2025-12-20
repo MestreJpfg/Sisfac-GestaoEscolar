@@ -21,29 +21,25 @@ service cloud.firestore {
         return false;
       }
 
-      // 2. Get the user's data from the /users collection.
-      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      
-      // If user document doesn't exist, they have no permissions.
-      if (userData == null || !('profileId' in userData)) {
-        return false;
-      }
-      
-      // 3. Check for Admin override.
-      if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
+      // 2. Check for Admin override via Custom Claims.
+      if (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador(a)' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador') {
         return true;
       }
 
-      // 4. Check for permissions granted by the user's profile.
-      let profilePath = /databases/$(database)/documents/profiles/$(userData.profileId);
-      if (exists(profilePath)) {
-        let profileData = get(profilePath).data;
-        if ('permissions' in profileData && permission in profileData.permissions) {
-          return true;
-        }
+      // 3. Get the user's profile data.
+      let userProfile = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      if (userProfile == null || !('profileId' in userProfile)) {
+        return false;
       }
-        
-      return false;
+      
+      // 4. Get the profile's permissions list.
+      let profileDoc = get(/databases/$(database)/documents/profiles/$(userProfile.profileId)).data;
+      if (profileDoc == null || !('permissions' in profileDoc)) {
+         return false;
+      }
+      
+      // 5. Check if the required permission is in the profile's list.
+      return permission in profileDoc.permissions;
     }
 
     // --- Collection Rules ---
