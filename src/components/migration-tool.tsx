@@ -47,7 +47,9 @@ export default function MigrationTool({ fromYear, toYear }: MigrationToolProps) 
             if (!firestore) return;
             setIsLoading(true);
             try {
-                const q = query(collection(firestore, 'alunos'), where('status', '==', 'ATIVO'));
+                // REMOVED: where('status', '==', 'ATIVO') because the field does not exist.
+                // All students in the 'alunos' collection are considered active.
+                const q = query(collection(firestore, 'alunos'));
                 const snapshot = await getDocs(q);
                 const students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
