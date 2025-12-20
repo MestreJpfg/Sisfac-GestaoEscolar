@@ -22,7 +22,7 @@ service cloud.firestore {
       }
 
       // 2. Check for Admin override via Custom Claims.
-      if (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador(a)' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador') {
+      if (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileId == 'Administrador(a)') {
         return true;
       }
 
@@ -68,7 +68,7 @@ service cloud.firestore {
 
     match /exalunos/{alunoId} {
       allow read, list: if hasPermission('view:students') || hasPermission('manage:students') || hasPermission('manage:migration');
-      allow write: if hasPermission('manage:migration');
+      allow write: if isSignedIn();
     }
 
     // Permissions for grades.
