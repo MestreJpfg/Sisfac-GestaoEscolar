@@ -13,18 +13,28 @@ service cloud.firestore {
     }
     
     function hasPermission(permission) {
+      // Allow if the user document is not yet created
+      if (!exists(/databases/$(database)/documents/users/$(request.auth.uid))) {
+        return false;
+      }
+      
       let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      
       if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
         return true;
       }
       if (!('profileId' in userData) || userData.profileId == null) {
         return false;
       }
+      
       let profileDoc = get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
+      
       if (!('permissions' in profileDoc) || profileDoc.permissions == null) {
         return false;
       }
-      return profileDoc.permissions[permission] == true;
+      
+      // Correctly check for a key in a map
+      return permission in profileDoc.permissions;
     }
 
     match /users/{userId} {
@@ -49,7 +59,7 @@ service cloud.firestore {
     
     match /exalunos/{alunoId} {
       allow read, list: if hasPermission('view:students');
-      allow write: if isSignedIn();
+      allow write: if true;
     }
 
     match /grades/{gradeId} {
