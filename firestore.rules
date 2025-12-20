@@ -68,13 +68,12 @@ service cloud.firestore {
       allow read, list: if hasPermission('view:students') || hasPermission('manage:students');
       // Allow update if user has specific migration permission OR general student management permission
       allow update: if hasPermission('manage:migration') || hasPermission('manage:students') || hasPermission('manage:grades');
-      allow create, delete: if hasPermission('manage:students');
+      allow create, delete: if hasPermission('manage:students') || hasPermission('manage:migration');
     }
 
     match /exalunos/{alunoId} {
       allow read, list: if hasPermission('view:students') || hasPermission('manage:students');
-      allow write: if hasPermission('manage:students') || hasPermission('manage:grades');
-      allow delete: if hasPermission('manage:students');
+      allow write: if hasPermission('manage:migration');
     }
 
     // Permissions for grades.
@@ -96,3 +95,5 @@ service cloud.firestore {
     }
   }
 }
+
+    

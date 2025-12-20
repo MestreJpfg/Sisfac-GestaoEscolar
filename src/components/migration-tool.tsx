@@ -2,13 +2,13 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useFirestore, useUser } from '@/firebase';
-import { collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { collection, query, where, getDocs, writeBatch, doc, deleteDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, GitBranch, ArrowRight, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, GitBranch, ArrowRight, CheckCircle, XCircle, GraduationCap } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface MigrationToolProps {
@@ -19,19 +19,19 @@ interface MigrationToolProps {
 interface MigrationClass {
     id: string;
     fromSerie: string;
-    toSerie: string;
+    toSerie: string | null; // Can be null for 9th graders
     turma: string;
     turno: string;
     studentCount: number;
     studentIds: string[];
-    status: 'pending' | 'migrating' | 'done' | 'error';
+    status: 'pending' | 'migrating' | 'graduating' | 'done' | 'error';
 }
 
 const getNextSerie = (currentSerie: string): string | null => {
     const match = currentSerie.match(/(\d+)/);
     if (!match) return null;
     const currentNumber = parseInt(match[0], 10);
-    if (currentNumber >= 9) return null; // Não há migração para 9º ano
+    if (currentNumber >= 9) return null; // 9th graders graduate, they don't migrate to 10th
     return `${currentNumber + 1}º ANO`;
 };
 
@@ -40,7 +40,7 @@ export default function MigrationTool({ fromYear, toYear }: MigrationToolProps) 
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
     const [migrationClasses, setMigrationClasses] = useState<MigrationClass[]>([]);
-    const [alertInfo, setAlertInfo] = useState<{ classId: string; studentCount: number } | null>(null);
+    const [alertInfo, setAlertInfo] = useState<{ classId: string; studentCount: number; isGraduating: boolean } | null>(null);
 
     useEffect(() => {
         const fetchStudents = async () => {
@@ -56,9 +56,8 @@ export default function MigrationTool({ fromYear, toYear }: MigrationToolProps) 
                     if (!serie || !classe || !turno) return acc;
                     
                     const toSerie = getNextSerie(serie);
-                    if (!toSerie) return acc;
-
                     const classKey = `${serie}-${classe}-${turno}`;
+
                     if (!acc[classKey]) {
                         acc[classKey] = {
                             id: classKey,
@@ -76,7 +75,7 @@ export default function MigrationTool({ fromYear, toYear }: MigrationToolProps) 
                     return acc;
                 }, {} as { [key: string]: MigrationClass });
 
-                const sortedClasses = Object.values(classes).sort((a, b) => a.fromSerie.localeCompare(b.fromSerie) || a.turma.localeCompare(b.turma));
+                const sortedClasses = Object.values(classes).sort((a, b) => a.fromSerie.localeCompare(b.fromSerie, 'pt-BR', { numeric: true }) || a.turma.localeCompare(b.turma));
                 setMigrationClasses(sortedClasses);
 
             } catch (error) {
@@ -90,11 +89,51 @@ export default function MigrationTool({ fromYear, toYear }: MigrationToolProps) 
         fetchStudents();
     }, [firestore, toast]);
 
+    const handleGraduateClass = async (classId: string) => {
+        if (!firestore) return;
+
+        const targetClass = migrationClasses.find(c => c.id === classId);
+        if (!targetClass) return;
+
+        setMigrationClasses(prev => prev.map(c => c.id === classId ? { ...c, status: 'graduating' } : c));
+        
+        try {
+            const batch = writeBatch(firestore);
+            const studentDocs = await getDocs(query(collection(firestore, 'alunos'), where('__name__', 'in', targetClass.studentIds)));
+
+            studentDocs.forEach(studentDoc => {
+                const studentData = studentDoc.data();
+                // Create a new document in 'exalunos' with the same ID and data
+                const exAlunoRef = doc(firestore, 'exalunos', studentDoc.id);
+                batch.set(exAlunoRef, { ...studentData, status: 'FORMADO' });
+                
+                // Delete the old document from 'alunos'
+                batch.delete(studentDoc.ref);
+            });
+
+            await batch.commit();
+
+            setMigrationClasses(prev => prev.map(c => c.id === classId ? { ...c, status: 'done' } : c));
+            toast({
+                title: 'Turma Formada com Sucesso!',
+                description: `${targetClass.studentCount} alunos da turma ${targetClass.fromSerie} ${targetClass.turma} foram movidos para ex-alunos.`
+            });
+
+        } catch (error) {
+            console.error("Error graduating class:", error);
+            setMigrationClasses(prev => prev.map(c => c.id === classId ? { ...c, status: 'error' } : c));
+            toast({ variant: 'destructive', title: 'Erro ao formar turma.', description: 'Não foi possível mover os alunos.' });
+        } finally {
+            setAlertInfo(null);
+        }
+    };
+
+
     const handleMigrateClass = async (classId: string) => {
         if (!firestore) return;
         
         const targetClass = migrationClasses.find(c => c.id === classId);
-        if (!targetClass) return;
+        if (!targetClass || !targetClass.toSerie) return;
 
         setMigrationClasses(prev => prev.map(c => c.id === classId ? { ...c, status: 'migrating' } : c));
 
@@ -135,8 +174,8 @@ export default function MigrationTool({ fromYear, toYear }: MigrationToolProps) 
                 <CardHeader>
                     <CardTitle>Migração de Ano Letivo: {fromYear} para {toYear}</CardTitle>
                     <CardDescription>
-                        Esta ferramenta promove os alunos para a próxima série. Alunos do 9º ano não são migrados. 
-                        A operação atualiza o campo 'serie' de cada aluno na turma selecionada. Esta ação não pode ser desfeita facilmente.
+                        Esta ferramenta promove os alunos para a próxima série. Alunos do 9º ano são movidos para a base de dados de ex-alunos. 
+                        A operação é díficil de reverter.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -144,7 +183,7 @@ export default function MigrationTool({ fromYear, toYear }: MigrationToolProps) 
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Turma Atual</TableHead>
-                                <TableHead>Nova Turma</TableHead>
+                                <TableHead>Nova Situação</TableHead>
                                 <TableHead className="text-center">Nº de Alunos</TableHead>
                                 <TableHead className="text-right">Ação</TableHead>
                             </TableRow>
@@ -154,21 +193,37 @@ export default function MigrationTool({ fromYear, toYear }: MigrationToolProps) 
                                 <TableRow key={mc.id}>
                                     <TableCell className="font-medium">{`${mc.fromSerie} ${mc.turma} (${mc.turno})`}</TableCell>
                                     <TableCell className="font-medium flex items-center gap-2">
-                                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                                        <span>{`${mc.toSerie} ${mc.turma} (${mc.turno})`}</span>
+                                        {mc.toSerie ? (
+                                            <>
+                                                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                                                <span>{`${mc.toSerie} ${mc.turma} (${mc.turno})`}</span>
+                                            </>
+                                        ) : (
+                                            <div className="flex items-center gap-2 text-blue-600">
+                                                <GraduationCap className="h-4 w-4" />
+                                                <span>Formandos (Ex-alunos)</span>
+                                            </div>
+                                        )}
                                     </TableCell>
                                     <TableCell className="text-center">{mc.studentCount}</TableCell>
                                     <TableCell className="text-right">
                                         {mc.status === 'pending' && (
-                                             <Button onClick={() => setAlertInfo({ classId: mc.id, studentCount: mc.studentCount })}>
-                                                <GitBranch className="mr-2 h-4 w-4" />
-                                                Migrar Turma
-                                            </Button>
+                                             mc.toSerie ? (
+                                                <Button onClick={() => setAlertInfo({ classId: mc.id, studentCount: mc.studentCount, isGraduating: false })}>
+                                                    <GitBranch className="mr-2 h-4 w-4" />
+                                                    Migrar Turma
+                                                </Button>
+                                             ) : (
+                                                <Button variant="secondary" onClick={() => setAlertInfo({ classId: mc.id, studentCount: mc.studentCount, isGraduating: true })}>
+                                                    <GraduationCap className="mr-2 h-4 w-4" />
+                                                    Formar Turma
+                                                </Button>
+                                             )
                                         )}
-                                        {mc.status === 'migrating' && (
+                                        {(mc.status === 'migrating' || mc.status === 'graduating') && (
                                             <Button disabled>
                                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                A migrar...
+                                                A processar...
                                             </Button>
                                         )}
                                         {mc.status === 'done' && (
@@ -200,15 +255,23 @@ export default function MigrationTool({ fromYear, toYear }: MigrationToolProps) 
                 <AlertDialog open={!!alertInfo} onOpenChange={() => setAlertInfo(null)}>
                     <AlertDialogContent>
                         <AlertDialogHeader>
-                            <AlertDialogTitle>Confirmar Migração de Turma?</AlertDialogTitle>
+                            <AlertDialogTitle>
+                                {alertInfo.isGraduating ? 'Confirmar Formatura da Turma?' : 'Confirmar Migração de Turma?'}
+                            </AlertDialogTitle>
                             <AlertDialogDescription>
-                                Tem a certeza que deseja migrar <strong className='text-foreground'>{alertInfo.studentCount} alunos</strong>? A série deles será atualizada.
+                                {alertInfo.isGraduating
+                                    ? <>Tem a certeza que deseja formar <strong className='text-foreground'>{alertInfo.studentCount} alunos</strong>? Eles serão movidos para a base de dados de ex-alunos e o seu estado será alterado para "FORMADO".</>
+                                    : <>Tem a certeza que deseja migrar <strong className='text-foreground'>{alertInfo.studentCount} alunos</strong>? A série deles será atualizada.</>
+                                }
+                                <br/><br/>
                                 Esta ação é difícil de reverter.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleMigrateClass(alertInfo.classId)}>Sim, migrar</AlertDialogAction>
+                            <AlertDialogAction onClick={() => alertInfo.isGraduating ? handleGraduateClass(alertInfo.classId) : handleMigrateClass(alertInfo.classId)}>
+                                {alertInfo.isGraduating ? 'Sim, formar turma' : 'Sim, migrar'}
+                            </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
