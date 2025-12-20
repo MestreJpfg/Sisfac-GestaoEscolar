@@ -181,20 +181,26 @@ export default function StudentRankingView() {
 
         return { fundamental1: fund1, fundamental2: fund2 };
     }, [allStudents, isLoading, seriesFund1, seriesFund2, currentYear]);
+    
+    const getUniqueValues = (key: string, data: any[]) =>
+        [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
+
 
     const filterOptionsFund1 = useMemo(() => {
         let students = fundamental1;
         if (filtersFund1.serie !== 'all') {
             students = students.filter(s => s.serie === filtersFund1.serie);
         }
-        const classes = [...new Set(students.map(s => s.classe))].sort();
+        const classes = getUniqueValues('classe', students);
 
         if (filtersFund1.classe !== 'all') {
             students = students.filter(s => s.classe === filtersFund1.classe);
         }
-        const turnos = [...new Set(students.map(s => s.turno))].sort();
+        const turnos = getUniqueValues('turno', students);
         
-        return { classes, turnos };
+        const series = getUniqueValues('serie', fundamental1);
+
+        return { series, classes, turnos };
     }, [fundamental1, filtersFund1]);
 
     const filterOptionsFund2 = useMemo(() => {
@@ -202,14 +208,16 @@ export default function StudentRankingView() {
         if (filtersFund2.serie !== 'all') {
             students = students.filter(s => s.serie === filtersFund2.serie);
         }
-        const classes = [...new Set(students.map(s => s.classe))].sort();
+        const classes = getUniqueValues('classe', students);
 
         if (filtersFund2.classe !== 'all') {
             students = students.filter(s => s.classe === filtersFund2.classe);
         }
-        const turnos = [...new Set(students.map(s => s.turno))].sort();
+        const turnos = getUniqueValues('turno', students);
         
-        return { classes, turnos };
+        const series = getUniqueValues('serie', fundamental2);
+
+        return { series, classes, turnos };
     }, [fundamental2, filtersFund2]);
 
     const filteredFund1 = useMemo(() => {
@@ -228,10 +236,6 @@ export default function StudentRankingView() {
         );
     }, [fundamental2, filtersFund2]);
 
-    const displaySeriesFund1 = useMemo(() => [...new Set(fundamental1.map(s => s.serie))].sort((a,b) => a.localeCompare(b, undefined, {numeric: true})), [fundamental1]);
-    const displaySeriesFund2 = useMemo(() => [...new Set(fundamental2.map(s => s.serie))].sort((a,b) => a.localeCompare(b, undefined, {numeric: true})), [fundamental2]);
-
-
     return (
         <Tabs defaultValue="fund1" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
@@ -244,7 +248,7 @@ export default function StudentRankingView() {
                         <SelectTrigger><SelectValue placeholder="Filtrar por série..." /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Todas as Séries (3º ao 5º)</SelectItem>
-                            {displaySeriesFund1.map(serie => <SelectItem key={serie} value={serie}>{serie}</SelectItem>)}
+                            {filterOptionsFund1.series.map(serie => <SelectItem key={serie} value={serie}>{serie}</SelectItem>)}
                         </SelectContent>
                     </Select>
                     <Select value={filtersFund1.classe} onValueChange={v => setFiltersFund1(f => ({...f, classe: v, turno: 'all'}))} disabled={filtersFund1.serie === 'all'}>
@@ -270,7 +274,7 @@ export default function StudentRankingView() {
                         <SelectTrigger><SelectValue placeholder="Filtrar por série..." /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Todas as Séries (6º ao 9º)</SelectItem>
-                            {displaySeriesFund2.map(serie => <SelectItem key={serie} value={serie}>{serie}</SelectItem>)}
+                            {filterOptionsFund2.series.map(serie => <SelectItem key={serie} value={serie}>{serie}</SelectItem>)}
                         </SelectContent>
                     </Select>
                      <Select value={filtersFund2.classe} onValueChange={v => setFiltersFund2(f => ({...f, classe: v, turno: 'all'}))} disabled={filtersFund2.serie === 'all'}>

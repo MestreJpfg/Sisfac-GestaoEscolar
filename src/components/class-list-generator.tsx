@@ -131,26 +131,31 @@ export default function ClassListGenerator() {
 
 
   const uniqueOptions = useMemo(() => {
-    if (!allStudents) return { ensinos: [], series: [], turnos: [], classes: [] };
-    
-    const getUniqueValues = (key: string, data: any[]) => 
-      [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
+      if (!allStudents) return { ensinos: [], series: [], turnos: [], classes: [] };
+      const getUniqueValues = (key: string, data: any[]) =>
+        [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
-    let filteredForOptions = allStudents;
+      let filteredForOptions = allStudents;
+      const ensinos = getUniqueValues('ensino', filteredForOptions);
 
-    const ensinos = getUniqueValues('ensino', filteredForOptions);
+      if (filters.ensino) {
+        filteredForOptions = filteredForOptions.filter(s => s.ensino === filters.ensino);
+      }
+      const series = getUniqueValues('serie', filteredForOptions);
 
-    if(filters.ensino) filteredForOptions = filteredForOptions.filter(s => s.ensino === filters.ensino);
-    const series = getUniqueValues('serie', filteredForOptions);
+      if (filters.serie) {
+        filteredForOptions = filteredForOptions.filter(s => s.serie === filters.serie);
+      }
+      const turnos = getUniqueValues('turno', filteredForOptions);
+      
+      if (filters.turno) {
+        filteredForOptions = filteredForOptions.filter(s => s.turno === filters.turno);
+      }
+      const classes = getUniqueValues('classe', filteredForOptions);
 
-    if(filters.serie) filteredForOptions = filteredForOptions.filter(s => s.serie === filters.serie);
-    const turnos = getUniqueValues('turno', filteredForOptions);
+      return { ensinos, series, turnos, classes };
+  }, [allStudents, filters]);
 
-    if(filters.turno) filteredForOptions = filteredForOptions.filter(s => s.turno === filters.turno);
-    const classes = getUniqueValues('classe', filteredForOptions);
-    
-    return { ensinos, series, turnos, classes };
-}, [allStudents, filters]);
 
 
   const handleFilterChange = (name: string, value: string) => {

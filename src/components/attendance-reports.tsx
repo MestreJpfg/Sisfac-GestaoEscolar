@@ -89,18 +89,28 @@ export default function AttendanceReports() {
 
     // Common filter logic
     const uniqueFilterOptions = useMemo(() => {
+        if (!allStudents) return { ensinos: [], series: [], classes: [], turnos: [] };
         const getUniqueValues = (key: string, data: any[]) =>
-            [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
-
-        let filteredForOptions = allStudents || [];
+          [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
+  
+        let filteredForOptions = allStudents;
         const ensinos = getUniqueValues('ensino', filteredForOptions);
-        if(dailyFilters.ensino) filteredForOptions = filteredForOptions.filter(s => s.ensino === dailyFilters.ensino);
+  
+        if (dailyFilters.ensino) {
+          filteredForOptions = filteredForOptions.filter(s => s.ensino === dailyFilters.ensino);
+        }
         const series = getUniqueValues('serie', filteredForOptions);
-        if(dailyFilters.serie) filteredForOptions = filteredForOptions.filter(s => s.serie === dailyFilters.serie);
+  
+        if (dailyFilters.serie) {
+          filteredForOptions = filteredForOptions.filter(s => s.serie === dailyFilters.serie);
+        }
         const classes = getUniqueValues('classe', filteredForOptions);
-        if(dailyFilters.classe) filteredForOptions = filteredForOptions.filter(s => s.classe === dailyFilters.classe);
+  
+        if (dailyFilters.classe) {
+            filteredForOptions = filteredForOptions.filter(s => s.classe === dailyFilters.classe);
+        }
         const turnos = getUniqueValues('turno', filteredForOptions);
-        
+  
         return { ensinos, series, classes, turnos };
     }, [allStudents, dailyFilters]);
 
@@ -337,5 +347,3 @@ export default function AttendanceReports() {
         </Tabs>
     );
 }
-
-    
