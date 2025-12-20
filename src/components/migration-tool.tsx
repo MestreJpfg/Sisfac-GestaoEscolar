@@ -60,8 +60,6 @@ export default function MigrationTool({ fromYear, toYear }: MigrationToolProps) 
             if (!firestore) return;
             setIsLoading(true);
             try {
-                // REMOVED: where('status', '==', 'ATIVO') because the field does not exist.
-                // All students in the 'alunos' collection are considered active.
                 const q = query(collection(firestore, 'alunos'));
                 const snapshot = await getDocs(q);
                 const students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -113,20 +111,23 @@ export default function MigrationTool({ fromYear, toYear }: MigrationToolProps) 
         setMigrationClasses(prev => prev.map(c => c.id === classId ? { ...c, status: 'graduating' } : c));
         
         try {
-            const batch = writeBatch(firestore);
-            const studentDocs = await getDocs(query(collection(firestore, 'alunos'), where('__name__', 'in', targetClass.studentIds)));
-
-            studentDocs.forEach(studentDoc => {
-                const studentData = studentDoc.data();
-                // Create a new document in 'exalunos' with the same ID and data
-                const exAlunoRef = doc(firestore, 'exalunos', studentDoc.id);
-                batch.set(exAlunoRef, { ...studentData, status: 'FORMADO' });
+            // Process students in chunks to avoid Firestore limits
+            const chunkSize = 30;
+            for (let i = 0; i < targetClass.studentIds.length; i += chunkSize) {
+                const chunk = targetClass.studentIds.slice(i, i + chunkSize);
+                const batch = writeBatch(firestore);
                 
-                // Delete the old document from 'alunos'
-                batch.delete(studentDoc.ref);
-            });
+                const studentDocs = await getDocs(query(collection(firestore, 'alunos'), where('__name__', 'in', chunk)));
 
-            await batch.commit();
+                studentDocs.forEach(studentDoc => {
+                    const studentData = studentDoc.data();
+                    const exAlunoRef = doc(firestore, 'exalunos', studentDoc.id);
+                    batch.set(exAlunoRef, { ...studentData, status: 'FORMADO' });
+                    batch.delete(studentDoc.ref);
+                });
+
+                await batch.commit();
+            }
 
             setMigrationClasses(prev => prev.map(c => c.id === classId ? { ...c, status: 'done' } : c));
             toast({
