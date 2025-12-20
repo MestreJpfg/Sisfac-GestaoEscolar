@@ -39,7 +39,7 @@ service cloud.firestore {
       if (exists(profilePath)) {
         let profileData = get(profilePath).data;
         // CORRECT WAY TO CHECK IF A VALUE EXISTS IN AN ARRAY
-        if ('permissions' in profileData && permission in profileData.permissions.toSet()) {
+        if ('permissions' in profileData && permission in profileData.permissions) {
           return true;
         }
       }
