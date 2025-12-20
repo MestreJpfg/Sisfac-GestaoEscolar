@@ -81,18 +81,22 @@ export default function StudentDataView() {
     const getUniqueValues = (key: string, data: any[]) =>
       [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
+    // Nível 1: Ensino (baseado em todos os alunos)
     const ensinos = getUniqueValues('ensino', allStudents);
-
+    
+    // Nível 2: Série (baseado apenas no ensino selecionado)
     const studentsForSeries = filters.ensino
         ? allStudents.filter(s => s.ensino === filters.ensino)
         : allStudents;
     const series = getUniqueValues('serie', studentsForSeries);
-
+    
+    // Nível 3: Classe (baseado no ensino E série selecionados)
     const studentsForClasses = filters.serie
         ? studentsForSeries.filter(s => s.serie === filters.serie)
         : studentsForSeries;
     const classes = getUniqueValues('classe', studentsForClasses);
     
+    // Nível 4: Turno (baseado em ensino, série E classe selecionados)
     const studentsForTurnos = filters.classe
         ? studentsForClasses.filter(s => s.classe === filters.classe)
         : studentsForClasses;
