@@ -30,7 +30,7 @@ service cloud.firestore {
       }
       
       // 3. Check for Admin override.
-      if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
+      if (userData.profileId in ['Administrador', 'Administrador(a)']) {
         return true;
       }
 
