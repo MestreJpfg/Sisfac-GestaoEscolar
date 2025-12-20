@@ -78,8 +78,8 @@ service cloud.firestore {
          return false;
       }
       
-      // Verifica se a permissão está na lista de permissões do perfil
-      return permission in profileDoc.permissions;
+      // Verifica se a chave de permissão existe e é `true` no mapa de permissões
+      return profileDoc.permissions[permission] == true;
     }
   }
 }
