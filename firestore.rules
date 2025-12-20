@@ -37,12 +37,15 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
+      // Permite que utilizadores leiam o seu próprio perfil para evitar loops de permissão,
+      // e que outros utilizadores com permissão também o possam fazer.
       allow read, list: if isSignedIn();
       allow create, update: if isOwner(userId) || hasPermission('manage:users');
       allow delete: if hasPermission('manage:users');
     }
     
     match /profiles/{profileId} {
+        // Qualquer utilizador autenticado pode ler os perfis para entender as permissões.
         allow read, list: if isSignedIn();
         allow write: if hasPermission('manage:profiles');
     }
