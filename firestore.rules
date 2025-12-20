@@ -49,7 +49,7 @@ service cloud.firestore {
     
     match /exalunos/{alunoId} {
       allow read, list: if hasPermission('view:students');
-      allow write: if hasPermission('manage:migration');
+      allow write: if isSignedIn();
     }
 
     match /grades/{gradeId} {
