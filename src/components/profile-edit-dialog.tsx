@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from "react";
@@ -44,6 +45,8 @@ const allPermissions = [
     { id: 'manage:announcements', label: 'Gerir Comunicados (Criar, Editar, Apagar)' },
     { id: 'view:database', label: 'Visualizar Ferramentas de Base de Dados' },
     { id: 'manage:database', label: 'Gerir Base de Dados (Importar, Exportar, Apagar)' },
+    { id: 'manage:migration', label: 'Gerir Migração de Ano Letivo' },
+    { id: 'manage:transcript', label: 'Gerir Históricos Escolares' },
 ];
 
 
