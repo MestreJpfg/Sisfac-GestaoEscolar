@@ -44,6 +44,11 @@ service cloud.firestore {
 
     // --- Collection Rules ---
 
+    // Allow full access to 'servidores' for any signed-in user.
+    match /servidores/{servidorId} {
+      allow read, write: if isSignedIn();
+    }
+
     // Users can update their own data.
     // Any authenticated user can READ another user's profile (needed for `hasPermission`).
     match /users/{userId} {
@@ -69,10 +74,6 @@ service cloud.firestore {
     match /exalunos/{alunoId} {
       allow read, list: if hasPermission('view:students') || hasPermission('manage:students') || hasPermission('manage:migration');
       allow write: if isSignedIn();
-    }
-
-    match /servidores/{servidorId} {
-      allow read, write: if isSignedIn();
     }
 
     // Permissions for grades.
