@@ -97,10 +97,11 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
         }
         
         if (header === 'data_nascimento' && value) {
-          if (typeof value === 'number') {
-            const date = new Date(Math.round((value - 25569) * 86400 * 1000));
+          if (typeof value === 'number') { // Excel date serial number
+            // Convert Excel serial date to JS Date, accounting for timezone issues.
+            const date = new Date(Date.UTC(0, 0, value - 1));
             if (!isNaN(date.getTime())) {
-              processedValue = ('0' + date.getDate()).slice(-2) + '/' + ('0' + (date.getMonth() + 1)).slice(-2) + '/' + date.getFullYear();
+              processedValue = ('0' + date.getUTCDate()).slice(-2) + '/' + ('0' + (date.getUTCMonth() + 1)).slice(-2) + '/' + date.getUTCFullYear();
             } else {
               processedValue = String(value);
             }
