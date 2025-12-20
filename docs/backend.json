@@ -145,23 +145,20 @@
             "description": "A hex color code to associate with the profile for UI elements."
         },
         "permissions": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": [
-                "manage:database",
-                "manage:students",
-                "view:students",
-                "manage:users",
-                "manage:grades",
-                "manage:attendance",
-                "manage:announcements",
-                "manage:cadastros",
-                "manage:transcript",
-                "manage:migration"
-            ]
-          },
-          "description": "A list of permission keys granted to this profile."
+          "type": "object",
+          "description": "A map of permission keys granted to this profile.",
+          "properties": {
+            "manage:database": { "type": "boolean" },
+            "manage:students": { "type": "boolean" },
+            "view:students": { "type": "boolean" },
+            "manage:users": { "type": "boolean" },
+            "manage:grades": { "type": "boolean" },
+            "manage:attendance": { "type": "boolean" },
+            "manage:announcements": { "type": "boolean" },
+            "manage:cadastros": { "type": "boolean" },
+            "manage:transcript": { "type": "boolean" },
+            "manage:migration": { "type": "boolean" }
+          }
         }
       },
       "required": ["id", "name", "permissions"]

@@ -81,9 +81,12 @@ export default function ProfileTable({ profiles, onEdit, onDelete }: ProfileTabl
                     <TableCell className="whitespace-nowrap text-muted-foreground hidden md:table-cell">{profile.description}</TableCell>
                     <TableCell className="whitespace-nowrap">
                             <div className="flex flex-wrap gap-1 max-w-xs">
-                                {profile.permissions?.map((perm: string) => (
-                                    <Badge key={perm} variant="secondary">{perm.split(':')[1]}</Badge>
-                                )) || <span className="text-xs text-muted-foreground">Nenhuma</span>}
+                                {profile.permissions && typeof profile.permissions === 'object' ? 
+                                    Object.keys(profile.permissions).filter(p => profile.permissions[p]).map((perm: string) => (
+                                        <Badge key={perm} variant="secondary">{perm.split(':')[1]}</Badge>
+                                    )) : 
+                                    <span className="text-xs text-muted-foreground">Nenhuma</span>
+                                }
                             </div>
                     </TableCell>
                     <TableCell className="text-right">

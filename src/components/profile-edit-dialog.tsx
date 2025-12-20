@@ -14,10 +14,23 @@ import { ScrollArea } from "./ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "./ui/checkbox";
 
+const permissionSchema = z.object({
+    'manage:database': z.boolean().optional(),
+    'manage:students': z.boolean().optional(),
+    'view:students': z.boolean().optional(),
+    'manage:users': z.boolean().optional(),
+    'manage:grades': z.boolean().optional(),
+    'manage:attendance': z.boolean().optional(),
+    'manage:announcements': z.boolean().optional(),
+    'manage:cadastros': z.boolean().optional(),
+    'manage:transcript': z.boolean().optional(),
+    'manage:migration': z.boolean().optional(),
+});
+
 const profileSchema = z.object({
   name: z.string().min(1, "O nome do perfil é obrigatório."),
   description: z.string().optional(),
-  permissions: z.array(z.string()).default([]),
+  permissions: permissionSchema,
   color: z.string().optional(),
 });
 
@@ -45,6 +58,7 @@ const allPermissions = [
     { id: 'manage:announcements', label: 'Gerir Comunicados (Criar, Editar, Apagar)' },
     { id: 'view:database', label: 'Visualizar Ferramentas de Base de Dados' },
     { id: 'manage:database', label: 'Gerir Base de Dados (Importar, Exportar, Apagar)' },
+    { id: 'manage:cadastros', label: 'Gerir Cadastro de Servidores' },
     { id: 'manage:migration', label: 'Gerir Migração de Ano Letivo' },
     { id: 'manage:transcript', label: 'Gerir Históricos Escolares' },
 ];
@@ -58,7 +72,7 @@ export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: 
     defaultValues: {
       name: '',
       description: '',
-      permissions: [],
+      permissions: {},
       color: '#808080', // Cor padrão (cinza)
     },
   });
@@ -68,14 +82,14 @@ export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: 
       form.reset({
         name: profile.name || '',
         description: profile.description || '',
-        permissions: profile.permissions || [],
+        permissions: profile.permissions || {},
         color: profile.color || '#808080',
       });
     } else {
       form.reset({
         name: '',
         description: '',
-        permissions: [],
+        permissions: {},
         color: '#808080',
       });
     }
@@ -146,58 +160,37 @@ export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: 
                     )}
                   />
 
-                <FormField
-                    control={form.control}
-                    name="permissions"
-                    render={() => (
-                        <FormItem>
-                        <div className="mb-4">
-                            <FormLabel className="text-base">Permissões</FormLabel>
-                            <p className="text-sm text-muted-foreground">
-                            Selecione as ações que os utilizadores com este perfil podem realizar.
-                            </p>
-                        </div>
-                        <div className="space-y-2">
-                        {allPermissions.map((item) => (
-                            <FormField
+                <FormItem>
+                    <div className="mb-4">
+                        <FormLabel className="text-base">Permissões</FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                        Selecione as ações que os utilizadores com este perfil podem realizar.
+                        </p>
+                    </div>
+                    <div className="space-y-2">
+                    {allPermissions.map((item) => (
+                        <FormField
                             key={item.id}
                             control={form.control}
-                            name="permissions"
-                            render={({ field }) => {
-                                return (
-                                <FormItem
-                                    key={item.id}
-                                    className="flex flex-row items-start space-x-3 space-y-0"
-                                >
+                            name={`permissions.${item.id as keyof typeof permissionSchema.shape}`}
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                                     <FormControl>
-                                    <Checkbox
-                                        checked={field.value?.includes(item.id)}
-                                        onCheckedChange={(checked) => {
-                                        return checked
-                                            ? field.onChange([...(field.value || []), item.id])
-                                            : field.onChange(
-                                                field.value?.filter(
-                                                (value) => value !== item.id
-                                                )
-                                            )
-                                        }}
-                                    />
+                                        <Checkbox
+                                            checked={field.value}
+                                            onCheckedChange={field.onChange}
+                                        />
                                     </FormControl>
                                     <FormLabel className="font-normal">
-                                    {item.label}
+                                        {item.label}
                                     </FormLabel>
                                 </FormItem>
-                                )
-                            }}
-                            />
-                        ))}
-                        </div>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-
-
+                            )}
+                        />
+                    ))}
+                    </div>
+                    <FormMessage />
+                </FormItem>
                </div>
              </ScrollArea>
              <DialogFooter className="pt-6 border-t mt-auto">
