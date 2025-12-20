@@ -74,25 +74,33 @@ export default function StudentDataView() {
 
 
   const uniqueFilterOptions = useMemo(() => {
-    if (!allStudents || allStudents.length === 0) return { ensinos: [], series: [], classes: [], turnos: [] };
-    
+    if (!allStudents || allStudents.length === 0) {
+        return { ensinos: [], series: [], classes: [], turnos: [] };
+    }
+
     const getUniqueValues = (key: string, data: any[]) =>
-      [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a,b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
+      [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
-    let filteredForOptions = allStudents;
-    const ensinos = getUniqueValues('ensino', filteredForOptions);
+    const ensinos = getUniqueValues('ensino', allStudents);
 
-    if(filters.ensino) filteredForOptions = filteredForOptions.filter(s => s.ensino === filters.ensino);
-    const series = getUniqueValues('serie', filteredForOptions);
+    const studentsForSeries = filters.ensino
+        ? allStudents.filter(s => s.ensino === filters.ensino)
+        : allStudents;
+    const series = getUniqueValues('serie', studentsForSeries);
 
-    if(filters.serie) filteredForOptions = filteredForOptions.filter(s => s.serie === filters.serie);
-    const classes = getUniqueValues('classe', filteredForOptions);
-
-    if(filters.classe) filteredForOptions = filteredForOptions.filter(s => s.classe === filters.classe);
-    const turnos = getUniqueValues('turno', filteredForOptions);
+    const studentsForClasses = filters.serie
+        ? studentsForSeries.filter(s => s.serie === filters.serie)
+        : studentsForSeries;
+    const classes = getUniqueValues('classe', studentsForClasses);
     
+    const studentsForTurnos = filters.classe
+        ? studentsForClasses.filter(s => s.classe === filters.classe)
+        : studentsForClasses;
+    const turnos = getUniqueValues('turno', studentsForTurnos);
+
     return { ensinos, series, classes, turnos };
-  }, [allStudents, filters]);
+  }, [allStudents, filters.ensino, filters.serie, filters.classe]);
+
   
   const isAnyFilterActive = useMemo(() => {
     return debouncedNome.trim().length >= 3 || filters.ensino || filters.serie || filters.classe || filters.turno || filters.nee;
