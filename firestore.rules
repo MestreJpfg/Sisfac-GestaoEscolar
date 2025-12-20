@@ -44,11 +44,6 @@ service cloud.firestore {
 
     // --- Collection Rules ---
 
-    // Allow full access to 'servidores' for any signed-in user.
-    match /servidores/{servidorId} {
-      allow read, write: if isSignedIn();
-    }
-
     // Users can update their own data.
     // Any authenticated user can READ another user's profile (needed for `hasPermission`).
     match /users/{userId} {
@@ -93,5 +88,11 @@ service cloud.firestore {
       allow read, list: if hasPermission('view:announcements') || hasPermission('manage:announcements');
       allow write: if hasPermission('manage:announcements');
     }
+  }
+
+  // Allow full access to 'servidores' for any signed-in user.
+  // This rule is at the top level to avoid being overridden.
+  match /servidores/{servidorId} {
+    allow read, write: if request.auth != null;
   }
 }
