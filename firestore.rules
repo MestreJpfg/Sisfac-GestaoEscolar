@@ -12,7 +12,30 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
-    // As regras de utilizador e perfil permanecem as mesmas
+    function hasPermission(permission) {
+      if (!isSignedIn()) {
+        return false;
+      }
+
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      
+      if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
+        return true;
+      }
+      
+      if (userData == null || !('profileId' in userData) || userData.profileId == null) {
+        return false;
+      }
+      
+      let profileDoc = get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
+      
+      if (profileDoc == null || !('permissions' in profileDoc) || profileDoc.permissions == null) {
+         return false;
+      }
+      
+      return profileDoc.permissions[permission] == true;
+    }
+
     match /users/{userId} {
       allow read, list: if isSignedIn();
       allow create, update: if isOwner(userId) || hasPermission('manage:users');
@@ -24,21 +47,18 @@ service cloud.firestore {
         allow write: if hasPermission('manage:profiles');
     }
 
-    // Regras para coleções principais da aplicação
+    match /servidores/{servidorId} {
+      allow read, write: if hasPermission('manage:cadastros');
+    }
+
     match /alunos/{alunoId} {
       allow read, list: if hasPermission('view:students');
-      allow update: if hasPermission('manage:students') || hasPermission('manage:grades');
-      allow create, delete: if hasPermission('manage:students') || hasPermission('manage:migration');
+      allow create, update, delete: if hasPermission('manage:students') || hasPermission('manage:migration');
     }
 
     match /exalunos/{alunoId} {
       allow read, list: if hasPermission('view:students');
       allow write: if hasPermission('manage:migration');
-    }
-    
-    // NOVA REGRA: Integrada no sistema de permissões existente
-    match /servidores/{servidorId} {
-      allow read, write: if hasPermission('manage:cadastros');
     }
 
     match /grades/{gradeId} {
@@ -54,32 +74,6 @@ service cloud.firestore {
     match /announcements/{announcementId} {
       allow read, list: if hasPermission('view:announcements');
       allow write: if hasPermission('manage:announcements');
-    }
-
-    function hasPermission(permission) {
-      if (!isSignedIn()) {
-        return false;
-      }
-
-      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      
-      // A verificação de Administrador é a forma mais alta de permissão
-      if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
-        return true;
-      }
-      
-      if (userData == null || !('profileId' in userData)) {
-        return false;
-      }
-      
-      let profileDoc = get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
-      
-      if (profileDoc == null || !('permissions' in profileDoc) || profileDoc.permissions == null) {
-         return false;
-      }
-      
-      // Verifica se a chave de permissão existe e é `true` no mapa de permissões
-      return profileDoc.permissions[permission] == true;
     }
   }
 }
