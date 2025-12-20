@@ -1,129 +1,69 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // =============================================
-    // Funções de Apoio (Helper Functions)
-    // =============================================
-
     function isSignedIn() {
       return request.auth != null;
     }
 
     function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return request.auth.uid == userId;
     }
-
-    // Função central para verificar permissões com base em perfis de utilizador.
-    // Permite uma gestão de acesso centralizada e flexível.
+    
     function hasPermission(permission) {
-      // 1. O utilizador tem de estar autenticado para ter qualquer permissão.
-      if (!isSignedIn()) {
-        return false;
-      }
-      
-      // 2. Obtém os dados do utilizador que está a fazer o pedido.
-      // O acesso ao próprio documento do utilizador ('users/{userId}') é permitido
-      // na regra específica dessa coleção para que esta função possa operar.
       let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-
-      // 3. O perfil 'Administrador' tem acesso irrestrito a todas as funcionalidades.
       if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
         return true;
       }
-
-      // 4. Se o utilizador não tiver um perfil definido, não tem permissões.
       if (!('profileId' in userData) || userData.profileId == null) {
         return false;
       }
-
-      // 5. Obtém o documento do perfil associado ao utilizador.
       let profileDoc = get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
-      
-      // 6. Verifica se o perfil e o mapa de permissões existem.
       if (!('permissions' in profileDoc) || profileDoc.permissions == null) {
         return false;
       }
-
-      // 7. Retorna 'true' se a permissão existir e for 'true' no mapa de permissões do perfil.
       return profileDoc.permissions[permission] == true;
     }
 
-
-    // =============================================
-    // Regras de Acesso às Coleções
-    // =============================================
-
-    // --- Gestão de Utilizadores e Perfis ---
-    
     match /users/{userId} {
-      // Leitura: Um utilizador pode ler o seu próprio perfil. Apenas quem tem a permissão 'view:users'
-      // pode listar ou ler outros perfis.
-      allow read: if isOwner(userId) || hasPermission('view:users');
-      allow list: if hasPermission('view:users');
-
-      // Escrita: Um utilizador pode criar/atualizar o seu próprio perfil.
-      // Apenas quem tem a permissão 'manage:users' pode gerir outros utilizadores.
+      allow read, list: if isSignedIn();
       allow create, update: if isOwner(userId) || hasPermission('manage:users');
-
-      // Apagar: Apenas quem tem a permissão 'manage:users' pode apagar utilizadores.
       allow delete: if hasPermission('manage:users');
     }
     
     match /profiles/{profileId} {
-        // Leitura: Qualquer utilizador autenticado pode ler os perfis para que a UI funcione corretamente.
         allow read, list: if isSignedIn();
-        // Escrita: Apenas quem tem a permissão 'manage:profiles' pode criar, editar ou apagar perfis.
         allow write: if hasPermission('manage:profiles');
     }
 
-    // --- Gestão de Servidores ---
-
     match /servidores/{servidorId} {
-      // Acesso total (leitura e escrita) para quem tem a permissão 'manage:cadastros'.
       allow read, list, write: if hasPermission('manage:cadastros');
     }
 
-    // --- Gestão de Alunos ---
-
     match /alunos/{alunoId} {
-      // Leitura: Acesso permitido a quem tem a permissão 'view:students'.
       allow read, list: if hasPermission('view:students');
-      
-      // Escrita: Acesso permitido a quem pode gerir alunos ('manage:students')
-      // ou a quem pode realizar migrações ('manage:migration').
       allow write: if hasPermission('manage:students') || hasPermission('manage:migration');
     }
-
-    // --- Gestão de Ex-Alunos (Apenas para Migração) ---
-
+    
     match /exalunos/{alunoId} {
-      // Apenas para leitura por quem pode ver alunos e escrita por quem pode migrar.
       allow read, list: if hasPermission('view:students');
       allow write: if hasPermission('manage:migration');
     }
 
-    // --- Gestão Académica ---
-
     match /grades/{gradeId} {
-       // Leitura para quem pode ver notas, escrita para quem pode gerir notas.
        allow read, list: if hasPermission('view:grades');
        allow write: if hasPermission('manage:grades');
     }
 
     match /attendance/{attendanceId} {
-       // Leitura para quem pode ver frequência, escrita para quem pode gerir frequência.
        allow read, list: if hasPermission('view:attendance');
        allow write: if hasPermission('manage:attendance');
     }
     
-    // --- Comunicação ---
-    
     match /announcements/{announcementId} {
-      // Leitura: Qualquer utilizador autenticado pode ler os comunicados.
       allow read, list: if isSignedIn();
-      // Escrita: Apenas quem tem a permissão 'manage:announcements' pode gerir comunicados.
       allow write: if hasPermission('manage:announcements');
     }
   }

@@ -3,14 +3,14 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs, writeBatch, doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, getDocs, writeBatch, doc, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, GitBranch, ArrowRight, CheckCircle, XCircle, GraduationCap } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { commitBatchNonBlocking } from '@/firebase/non-blocking-updates';
+import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -125,36 +125,41 @@ export default function MigrationTool({ fromYear, toYear }: MigrationToolProps) 
                 if (studentSnap.exists()) {
                     const studentData = studentSnap.data();
                     const exAlunoRef = doc(firestore, 'exalunos', studentId);
+                    
+                    // Non-blocking writes
+                    setDocumentNonBlocking(exAlunoRef, { ...studentData, status: 'FORMADO' });
+                    deleteDocumentNonBlocking(studentRef);
 
-                    await setDoc(exAlunoRef, { ...studentData, status: 'FORMADO' });
-                    await deleteDoc(studentRef);
                     successCount++;
                 }
             } catch (error) {
-                console.error(`Failed to graduate student ${studentId}:`, error);
+                console.error(`Failed to prepare graduation for student ${studentId}:`, error);
                 hasError = true;
+                // Emit error for debugging, but don't block the loop
                 errorEmitter.emit('permission-error', new FirestorePermissionError({
                     path: `alunos/${studentId}`,
                     operation: 'delete',
                 }));
-                break; // Stop on first error
             }
         }
-
-        if (hasError) {
-             setMigrationClasses(prev => prev.map(c => c.id === classId ? { ...c, status: 'error' } : c));
-             toast({
-                variant: 'destructive',
-                title: 'Erro na Formatura',
-                description: 'Não foi possível formar todos os alunos. Verifique as permissões e tente novamente.'
-            });
-        } else {
-             setMigrationClasses(prev => prev.map(c => c.id === classId ? { ...c, status: 'done' } : c));
-            toast({
-                title: 'Turma Formada com Sucesso!',
-                description: `${successCount} alunos da turma ${targetClass.fromSerie} ${targetClass.turma} foram movidos para ex-alunos.`
-            });
-        }
+        
+        // Give time for non-blocking operations to be processed by the UI
+        setTimeout(() => {
+            if (hasError) {
+                setMigrationClasses(prev => prev.map(c => c.id === classId ? { ...c, status: 'error' } : c));
+                toast({
+                    variant: 'destructive',
+                    title: 'Erro na Formatura',
+                    description: 'Não foi possível formar todos os alunos. Verifique as permissões e tente novamente.'
+                });
+            } else {
+                setMigrationClasses(prev => prev.map(c => c.id === classId ? { ...c, status: 'done' } : c));
+                toast({
+                    title: 'Processo de Formatura Iniciado!',
+                    description: `${successCount} alunos da turma ${targetClass.fromSerie} ${targetClass.turma} foram movidos para ex-alunos.`
+                });
+            }
+        }, 1500); // Delay to allow visual feedback
     
         setAlertInfo(null);
     };
@@ -182,6 +187,11 @@ export default function MigrationTool({ fromYear, toYear }: MigrationToolProps) 
             });
         } catch (error) {
             console.error("Error migrating class:", error);
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                    path: `alunos/${targetClass.studentIds[0]}`, // representative path
+                    operation: 'update',
+                    requestResourceData: { serie: targetClass.toSerie }
+            }));
             setMigrationClasses(prev => prev.map(c => c.id === classId ? { ...c, status: 'error' } : c));
             toast({ variant: 'destructive', title: 'Erro na migração.', description: 'Não foi possível migrar a turma.' });
         } finally {
