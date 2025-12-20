@@ -128,7 +128,8 @@
                 "manage:attendance",
                 "manage:announcements",
                 "manage:cadastros",
-                "manage:transcript"
+                "manage:transcript",
+                "manage:migration"
             ]
           },
           "description": "A list of permission keys granted to this profile."
@@ -255,3 +256,5 @@
     ]
   }
 }
+
+    

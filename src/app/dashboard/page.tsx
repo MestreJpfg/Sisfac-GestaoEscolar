@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, doc, getCountFromServer, getDocs } from 'firebase/firestore';
-import { Loader2, Users, UserCog, Shield, Database, ClipboardList, Megaphone, CalendarCheck, ArrowLeft, NotebookText, Gamepad2, Award, FileText } from 'lucide-react';
+import { Loader2, Users, UserCog, Shield, Database, ClipboardList, Megaphone, CalendarCheck, ArrowLeft, NotebookText, Gamepad2, Award, FileText, GitBranch } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -80,6 +80,7 @@ export default function DashboardPage() {
   const canViewGrades = useMemo(() => hasPermission('view:grades'), [userProfile, profileDetails, isPermissionsLoading]);
   const canManageGrades = useMemo(() => hasPermission('manage:grades'), [userProfile, profileDetails, isPermissionsLoading]);
   const canManageTranscripts = useMemo(() => hasPermission('manage:transcript'), [userProfile, profileDetails, isPermissionsLoading]);
+  const canManageMigration = useMemo(() => hasPermission('manage:migration'), [userProfile, profileDetails, isPermissionsLoading]);
 
   useEffect(() => {
     const fetchCountsAndStudents = async () => {
@@ -224,6 +225,15 @@ export default function DashboardPage() {
                                 action={<Button onClick={() => router.push('/dashboard/transcript')}>Aceder</Button>}
                             />
                           )}
+                          {canManageMigration && (
+                            <StatCard
+                                title="Migração de Ano"
+                                value={"2025 -> 2026"}
+                                icon={GitBranch}
+                                description="Ferramenta para migração de ano letivo"
+                                action={<Button onClick={() => router.push('/dashboard/migration')}>Aceder</Button>}
+                            />
+                          )}
                           {(canViewDatabase || canManageDatabase) && (
                             <StatCard
                               title="Base de Dados"
@@ -284,3 +294,5 @@ export default function DashboardPage() {
     </AuthGuard>
   );
 }
+
+    
