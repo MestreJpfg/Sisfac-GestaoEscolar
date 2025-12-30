@@ -14,12 +14,6 @@ import { commitBatchNonBlocking } from "@/firebase/non-blocking-updates";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Label } from "./ui/label";
 
-interface ClassInfo {
-  serie: string | null;
-  classe: string | null;
-  turno: string | null;
-}
-
 export default function GradesUploader() {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -68,7 +62,7 @@ export default function GradesUploader() {
         const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
         if (jsonData.length < 2) {
-          throw new Error("A planilha de notas está vazia ou tem apenas cabeçalhos.");
+          throw new Error("A planilha de notas está vazia ou contém apenas cabeçalhos.");
         }
         
         await updateGradesInFirestore(jsonData);
@@ -99,50 +93,20 @@ export default function GradesUploader() {
     reader.readAsArrayBuffer(file);
   };
   
-  const parseClassInfo = (data: any[][]): { classInfo: ClassInfo, headerRowIndex: number } => {
-    let classInfo: ClassInfo = { serie: null, classe: null, turno: null };
-    let headerRowIndex = -1;
-
-    for (let i = 0; i < data.length; i++) {
-        const row = data[i];
-        
-        // Find header row first
-        const normalizedHeaders = row.map(h => String(h).toLowerCase());
-        if (normalizedHeaders.includes('matricula') || normalizedHeaders.includes('rm')) {
-            headerRowIndex = i;
-        }
-
-        // Find "INFO" line for class details
-        const infoCellIndex = row.findIndex(cell => String(cell).trim().toUpperCase() === 'INFO');
-        if (infoCellIndex !== -1) {
-            // INFO | Série | Turma | Turno
-            const serie = row[infoCellIndex + 1];
-            const classe = row[infoCellIndex + 2];
-            const turno = row[infoCellIndex + 3];
-
-            if (serie) classInfo.serie = String(serie).trim().toUpperCase();
-            if (classe) classInfo.classe = String(classe).trim().toUpperCase();
-            if (turno) classInfo.turno = String(turno).trim().toUpperCase();
-        }
-
-        // If we found both, we can stop.
-        if (headerRowIndex !== -1 && classInfo.serie && classInfo.classe && classInfo.turno) {
-            break;
-        }
-    }
-    
-    if (headerRowIndex === -1) {
-        throw new Error("Não foi possível encontrar a linha de cabeçalho com 'Matrícula' ou 'RM' na planilha.");
-    }
-
-    return { classInfo, headerRowIndex };
-  };
-
 
   const updateGradesInFirestore = async (data: any[][]) => {
     if (!firestore) return;
 
-    const { classInfo, headerRowIndex } = parseClassInfo(data);
+    const headerRowIndex = data.findIndex(row => 
+        row.some(cell => {
+            const lowerCell = String(cell).toLowerCase();
+            return lowerCell === 'matricula' || lowerCell === 'rm';
+        })
+    );
+
+    if (headerRowIndex === -1) {
+        throw new Error("A linha de cabeçalho com 'Matricula' ou 'RM' não foi encontrada.");
+    }
     
     const headers: string[] = data[headerRowIndex].map((header: any) => 
         String(header).trim().toLowerCase()
@@ -155,6 +119,7 @@ export default function GradesUploader() {
           .replace(/[\[\]*~]/g, '') 
           .replace(/\s+/g, '_')
     );
+
     const rmIndex = headers.findIndex(h => h === 'matricula' || h === 'rm');
 
     if (rmIndex === -1) {
@@ -170,6 +135,17 @@ export default function GradesUploader() {
         const rm = String(row[rmIndex]);
         if (!rm) continue;
 
+        const classInfo = {
+            serie: String(row[headers.indexOf('serie')]).trim().toUpperCase() || null,
+            classe: String(row[headers.indexOf('turma')]).trim().toUpperCase() || null,
+            turno: String(row[headers.indexOf('turno')]).trim().toUpperCase() || null,
+        }
+
+        if (!classInfo.serie || !classInfo.classe || !classInfo.turno) {
+            console.warn(`Informação de turma incompleta para a matrícula ${rm}. A linha será ignorada.`);
+            continue;
+        }
+
         const studentDocRef = doc(firestore, 'alunos', rm);
         const studentDoc = await getDoc(studentDocRef);
 
@@ -183,7 +159,8 @@ export default function GradesUploader() {
             // Student not found, add to 'exalunos' collection
             targetCollectionRef = doc(firestore, 'exalunos', rm);
             const exAlunoDoc = await getDoc(targetCollectionRef);
-            docData = exAlunoDoc.exists() ? exAlunoDoc.data() : { id: rm, rm: rm, nome: row[headers.indexOf('nome')] || `Ex-Aluno ${rm}`};
+            const studentNameIndex = headers.indexOf('nome');
+            docData = exAlunoDoc.exists() ? exAlunoDoc.data() : { id: rm, rm: rm, nome: row[studentNameIndex] || `Ex-Aluno ${rm}`};
             if (!exAlunoDoc.exists()) {
                 newExAlunosCount++;
             }
@@ -192,16 +169,14 @@ export default function GradesUploader() {
         const boletim = docData.boletim || {};
         const yearData = boletim[year] || { info: {}, notas: {} };
         
-        // Set student info for that year from parsed class info
         yearData.info = {
             serie: classInfo.serie || docData.serie || null,
             classe: classInfo.classe || docData.classe || null,
             turno: classInfo.turno || docData.turno || null,
         };
 
-        // Update grades
         headers.forEach((header, index) => {
-            if (index === rmIndex || !header || header === 'nome') return;
+            if (!header || ['serie', 'turma', 'turno', 'matricula', 'rm', 'nome_do_aluno', 'nome'].includes(header)) return;
 
             const subject = header;
             if (!yearData.notas[subject]) {
@@ -371,3 +346,5 @@ export default function GradesUploader() {
     </Card>
   );
 }
+
+    
