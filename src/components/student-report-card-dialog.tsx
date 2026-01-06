@@ -306,13 +306,13 @@ export default function StudentReportCardDialog({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" disabled={!!isProcessing || isTranscriptView}>
+                            <Button variant="ghost" size="icon" disabled={!!isProcessing}>
                               {isProcessing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
                             </Button>
                           </DropdownMenuTrigger>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>{isTranscriptView ? "Downloads disponíveis na ficha do aluno" : "Fazer Download"}</p>
+                          <p>Fazer Download</p>
                         </TooltipContent>
                       </Tooltip>
                       <DropdownMenuContent>
