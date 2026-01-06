@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -46,7 +47,7 @@ interface Boletim {
 interface StudentReportCardDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  boletim: Boletim | { [year: string]: Boletim }; // Can be single year or all years
+  boletim: Boletim | { [year: string]: { notas: Boletim, info: any } }; 
   student: any;
 }
 
@@ -64,25 +65,39 @@ export default function StudentReportCardDialog({
   const [isEditing, setIsEditing] = useState(false);
   const [editableBoletim, setEditableBoletim] = useState<any>({});
   
-  const currentYear = useMemo(() => new Date().getFullYear().toString(), []);
+  const [viewedYear, setViewedYear] = useState<string>('');
 
-  const isTranscriptView = useMemo(() => {
-    // Se o primeiro nível de chaves do boletim forem anos (ex: "2023", "2024"), é um histórico.
+  const { isTranscriptView, availableYears, mostRecentYear } = useMemo(() => {
     const keys = Object.keys(initialBoletim || {});
-    return keys.length > 0 && /^\d{4}$/.test(keys[0]);
+    const years = keys.filter(key => /^\d{4}$/.test(key)).sort((a, b) => parseInt(b) - parseInt(a));
+    const isTranscript = years.length > 0;
+    return {
+        isTranscriptView: isTranscript,
+        availableYears: years,
+        mostRecentYear: isTranscript ? years[0] : ''
+    };
   }, [initialBoletim]);
 
   useEffect(() => {
     if (isOpen) {
       setEditableBoletim(JSON.parse(JSON.stringify(initialBoletim || {})));
+      if (isTranscriptView) {
+        setViewedYear(mostRecentYear);
+      } else {
+        // Find the year for the single boletim object
+        const year = Object.keys(student.boletim || {}).find(y => student.boletim[y].notas === initialBoletim);
+        setViewedYear(year || mostRecentYear);
+      }
     }
-  }, [isOpen, initialBoletim]);
+  }, [isOpen, initialBoletim, isTranscriptView, mostRecentYear, student.boletim]);
+
 
   const subjectsInRecovery = useMemo(() => {
-    const boletimForCurrentYear = isTranscriptView ? editableBoletim[currentYear] : editableBoletim;
-    if (!boletimForCurrentYear) return [];
+    if (!viewedYear) return [];
+    const boletimForYear = editableBoletim[viewedYear]?.notas || editableBoletim;
+    if (!boletimForYear) return [];
     
-    return Object.entries(boletimForCurrentYear)
+    return Object.entries(boletimForYear)
       .map(([disciplina, notas]: [string, any]) => {
         const validGrades = [notas.etapa1, notas.etapa2, notas.etapa3, notas.etapa4].filter(
           (nota): nota is number => nota !== null && nota !== undefined && !isNaN(nota)
@@ -96,22 +111,22 @@ export default function StudentReportCardDialog({
       })
       .filter(item => item.media !== null && item.media < 6.0)
       .map(item => item.disciplina);
-  }, [editableBoletim, currentYear, isTranscriptView]);
+  }, [editableBoletim, viewedYear]);
 
 
   const handleGradeChange = (disciplina: string, etapa: string, value: string, year?: string) => {
     const numericValue = value === '' ? null : parseFloat(value.replace(',', '.'));
-    
+    const targetYear = year || viewedYear;
+
     setEditableBoletim((prev: any) => {
         const newBoletim = JSON.parse(JSON.stringify(prev));
-        if (year) { // Transcript view
-            if (!newBoletim[year]) newBoletim[year] = {};
-            if (!newBoletim[year][disciplina]) newBoletim[year][disciplina] = {};
-            newBoletim[year][disciplina][etapa] = isNaN(numericValue!) ? null : numericValue;
-        } else { // Single year view
-            if (!newBoletim[disciplina]) newBoletim[disciplina] = {};
-            newBoletim[disciplina][etapa] = isNaN(numericValue!) ? null : numericValue;
-        }
+
+        if (!newBoletim[targetYear]) newBoletim[targetYear] = { info: {}, notas: {} };
+        if (!newBoletim[targetYear].notas) newBoletim[targetYear].notas = {};
+        if (!newBoletim[targetYear].notas[disciplina]) newBoletim[targetYear].notas[disciplina] = {};
+        
+        newBoletim[targetYear].notas[disciplina][etapa] = isNaN(numericValue!) ? null : numericValue;
+
         return newBoletim;
     });
   };
@@ -143,7 +158,7 @@ export default function StudentReportCardDialog({
     let componentToRender;
     let fileName = `Boletim_${student.nome.replace(/\s+/g, '_')}.pdf`;
     let pdfOptions: any = { orientation: 'p', unit: 'mm', format: 'a4' };
-    const boletimToRender = isTranscriptView ? editableBoletim[currentYear] : editableBoletim;
+    const boletimToRender = editableBoletim[viewedYear]?.notas || editableBoletim;
 
 
     switch (type) {
@@ -199,14 +214,13 @@ export default function StudentReportCardDialog({
 
   const renderContent = () => {
     if (isTranscriptView) {
-        const years = Object.keys(editableBoletim).sort((a,b) => parseInt(b) - parseInt(a));
         return (
             <div className="space-y-8">
-                {years.map(year => (
+                {availableYears.map(year => (
                     <div key={year}>
                         <h3 className="text-xl font-bold mb-2 text-center">Ano Letivo: {year}</h3>
                         <StudentReportCard
-                            boletim={editableBoletim[year]}
+                            boletim={editableBoletim[year]?.notas || {}}
                             isEditing={isEditing}
                             onGradeChange={(disciplina, etapa, value) => handleGradeChange(disciplina, etapa, value, year)}
                         />
@@ -219,7 +233,7 @@ export default function StudentReportCardDialog({
     // Single year view
     return (
         <StudentReportCard
-            boletim={editableBoletim}
+            boletim={editableBoletim.notas || editableBoletim}
             isEditing={isEditing}
             onGradeChange={handleGradeChange}
         />
@@ -237,7 +251,7 @@ export default function StudentReportCardDialog({
       <DialogContent className="max-w-4xl w-full flex flex-col h-[90vh]">
         <DialogHeader>
           <DialogTitle>
-            {isTranscriptView ? "Histórico Escolar" : "Boletim de Notas"}
+            {isTranscriptView ? "Histórico Escolar" : `Boletim de Notas (${viewedYear})`}
             <span className="block text-base font-normal text-muted-foreground mt-1">{student?.nome}</span>
           </DialogTitle>
         </DialogHeader>

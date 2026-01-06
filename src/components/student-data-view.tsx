@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -82,24 +83,28 @@ export default function StudentDataView() {
       [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
     // Nível 1: Ensino (baseado em todos os alunos)
-    const ensinos = getUniqueValues('ensino', allStudents);
+    let studentsForEnsinos = allStudents;
+    const ensinos = getUniqueValues('ensino', studentsForEnsinos);
     
     // Nível 2: Série (baseado apenas no ensino selecionado)
-    const studentsForSeries = filters.ensino
-        ? allStudents.filter(s => s.ensino === filters.ensino)
-        : allStudents;
+    let studentsForSeries = allStudents;
+    if (filters.ensino) {
+        studentsForSeries = studentsForSeries.filter(s => s.ensino === filters.ensino);
+    }
     const series = getUniqueValues('serie', studentsForSeries);
     
     // Nível 3: Classe (baseado no ensino E série selecionados)
-    const studentsForClasses = filters.serie
-        ? studentsForSeries.filter(s => s.serie === filters.serie)
-        : studentsForSeries;
+    let studentsForClasses = studentsForSeries;
+    if (filters.serie) {
+        studentsForClasses = studentsForClasses.filter(s => s.serie === filters.serie);
+    }
     const classes = getUniqueValues('classe', studentsForClasses);
     
     // Nível 4: Turno (baseado em ensino, série E classe selecionados)
-    const studentsForTurnos = filters.classe
-        ? studentsForClasses.filter(s => s.classe === filters.classe)
-        : studentsForClasses;
+    let studentsForTurnos = studentsForClasses;
+    if (filters.classe) {
+        studentsForTurnos = studentsForTurnos.filter(s => s.classe === filters.classe);
+    }
     const turnos = getUniqueValues('turno', studentsForTurnos);
 
     return { ensinos, series, classes, turnos };
@@ -196,8 +201,6 @@ export default function StudentDataView() {
         description: "As informações do aluno foram atualizadas na lista.",
     });
   };
-
-  const currentYear = new Date().getFullYear().toString();
     
   return (
     <div className="space-y-6">
@@ -318,7 +321,7 @@ export default function StudentDataView() {
         <StudentReportCardDialog
             isOpen={!!reportCardStudent}
             onClose={() => setReportCardStudent(null)}
-            boletim={reportCardStudent.boletim?.[currentYear]?.notas || {}}
+            boletim={reportCardStudent.boletim || {}}
             student={reportCardStudent}
         />
       )}
