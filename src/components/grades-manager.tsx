@@ -119,11 +119,13 @@ export default function GradesManager() {
 
     const disciplineId = useMemo(() => {
         if (!selectedDiscipline) return '';
-        // This logic must exactly match the logic in grades-uploader.tsx
         return selectedDiscipline.trim().toLowerCase()
           .replace(/ç/g, 'c')
-          .replace(/ã/g, 'a')
-          .replace(/é/g, 'e')
+          .replace(/[áàâã]/g, 'a')
+          .replace(/[éê]/g, 'e')
+          .replace(/[í]/g, 'i')
+          .replace(/[óôõ]/g, 'o')
+          .replace(/[ú]/g, 'u')
           .replace(/º/g, '')
           .replace(/\./g, '')
           .replace(/\//g, '-') 

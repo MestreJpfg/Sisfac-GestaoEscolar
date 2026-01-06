@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import {
@@ -48,6 +49,10 @@ const getGradeColor = (grade: number | null | undefined, isPrintMode?: boolean) 
     if (grade < 6.0) return "text-red-500";
     return "text-blue-600";
 };
+
+const normalizeKey = (key: string) => {
+    return key.toLowerCase().replace(/_/g, ' ').replace(/-/g, '/');
+}
 
 export default function StudentReportCard({ boletim, isPrintMode = false, compact = false, isEditing = false, onGradeChange = () => {}, showRecoveryStatus = false }: StudentReportCardProps) {
   if (!boletim || Object.keys(boletim).length === 0) {
