@@ -40,7 +40,7 @@ export default function MigrationPage() {
 
                 <main className="flex-1 py-8">
                     <div className="container space-y-8">
-                       <MigrationTool fromYear={2025} toYear={2026} />
+                       <MigrationTool fromYear={2024} toYear={2025} />
                        
                         <Card>
                             <CardHeader>
