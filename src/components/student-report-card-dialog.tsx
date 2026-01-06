@@ -80,13 +80,13 @@ export default function StudentReportCardDialog({
 
   useEffect(() => {
     if (isOpen) {
-      setEditableBoletim(JSON.parse(JSON.stringify(initialBoletim || {})));
+      const boletimCopy = JSON.parse(JSON.stringify(initialBoletim || {}));
+      setEditableBoletim(boletimCopy);
       if (isTranscriptView) {
         setViewedYear(mostRecentYear);
       } else {
-        // Find the year for the single boletim object
-        const year = Object.keys(student.boletim || {}).find(y => student.boletim[y].notas === initialBoletim);
-        setViewedYear(year || mostRecentYear);
+        const singleYear = Object.keys(student.boletim || {}).find(y => student.boletim[y].notas === initialBoletim);
+        setViewedYear(singleYear || new Date().getFullYear().toString());
       }
     }
   }, [isOpen, initialBoletim, isTranscriptView, mostRecentYear, student.boletim]);
@@ -94,7 +94,7 @@ export default function StudentReportCardDialog({
 
   const subjectsInRecovery = useMemo(() => {
     if (!viewedYear) return [];
-    const boletimForYear = editableBoletim[viewedYear]?.notas || editableBoletim;
+    const boletimForYear = isTranscriptView ? editableBoletim[viewedYear]?.notas : editableBoletim;
     if (!boletimForYear) return [];
     
     return Object.entries(boletimForYear)
@@ -111,7 +111,7 @@ export default function StudentReportCardDialog({
       })
       .filter(item => item.media !== null && item.media < 6.0)
       .map(item => item.disciplina);
-  }, [editableBoletim, viewedYear]);
+  }, [editableBoletim, viewedYear, isTranscriptView]);
 
 
   const handleGradeChange = (disciplina: string, etapa: string, value: string, year?: string) => {
@@ -121,12 +121,16 @@ export default function StudentReportCardDialog({
     setEditableBoletim((prev: any) => {
         const newBoletim = JSON.parse(JSON.stringify(prev));
 
-        if (!newBoletim[targetYear]) newBoletim[targetYear] = { info: {}, notas: {} };
-        if (!newBoletim[targetYear].notas) newBoletim[targetYear].notas = {};
-        if (!newBoletim[targetYear].notas[disciplina]) newBoletim[targetYear].notas[disciplina] = {};
+        if(isTranscriptView) {
+            if (!newBoletim[targetYear]) newBoletim[targetYear] = { info: {}, notas: {} };
+            if (!newBoletim[targetYear].notas) newBoletim[targetYear].notas = {};
+            if (!newBoletim[targetYear].notas[disciplina]) newBoletim[targetYear].notas[disciplina] = {};
+            newBoletim[targetYear].notas[disciplina][etapa] = isNaN(numericValue!) ? null : numericValue;
+        } else {
+             if (!newBoletim[disciplina]) newBoletim[disciplina] = {};
+             newBoletim[disciplina][etapa] = isNaN(numericValue!) ? null : numericValue;
+        }
         
-        newBoletim[targetYear].notas[disciplina][etapa] = isNaN(numericValue!) ? null : numericValue;
-
         return newBoletim;
     });
   };
@@ -158,7 +162,7 @@ export default function StudentReportCardDialog({
     let componentToRender;
     let fileName = `Boletim_${student.nome.replace(/\s+/g, '_')}.pdf`;
     let pdfOptions: any = { orientation: 'p', unit: 'mm', format: 'a4' };
-    const boletimToRender = editableBoletim[viewedYear]?.notas || editableBoletim;
+    const boletimToRender = isTranscriptView ? editableBoletim[viewedYear]?.notas || {} : editableBoletim;
 
 
     switch (type) {
@@ -230,10 +234,9 @@ export default function StudentReportCardDialog({
         );
     }
     
-    // Single year view
     return (
         <StudentReportCard
-            boletim={editableBoletim.notas || editableBoletim}
+            boletim={editableBoletim}
             isEditing={isEditing}
             onGradeChange={handleGradeChange}
         />
