@@ -65,7 +65,7 @@ export default function ReportCardDetailed({ student, boletim, ranking }: Report
                 {/* Cabeçalho */}
                 <header className="flex flex-col items-center text-center text-xs font-bold mb-4">
                      <div className="flex items-center gap-4 mb-2">
-                       <Image src="/logoyuri.png" alt="Logo da Prefeitura de Fortaleza" width={70} height={70} unoptimized />
+                       <Image src="/logoyuri.png" alt="Logo da Prefeitura de Fortaleza" width={70} height={70} crossOrigin="anonymous" />
                        <div className="h-10 border-l border-gray-400"></div>
                        <span className="text-xl font-semibold">EDUCAÇÃO</span>
                     </div>
@@ -108,7 +108,7 @@ export default function ReportCardDetailed({ student, boletim, ranking }: Report
                     <p className="text-xs my-4">Gerado em: {formattedDate}</p>
                     <div className="w-full max-w-xs mx-auto text-center">
                         <div className="relative h-24 w-full">
-                            <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" unoptimized />
+                            <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" crossOrigin="anonymous" />
                         </div>
                     </div>
                     <div className="w-full mt-2">
