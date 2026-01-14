@@ -51,7 +51,7 @@ interface StudentDetailSheetProps {
   allStudents: any[];
   isOpen: boolean;
   onClose: () => void;
-  onUpdate: () => void;
+  onUpdate: (updatedStudent: any) => void;
 }
 
 const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) => {
@@ -183,7 +183,7 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
         description: "Os dados do aluno estão a ser salvos.",
     });
 
-    onUpdate();
+    onUpdate(updatedData);
     setIsEditDialogOpen(false);
     onClose(); 
   };

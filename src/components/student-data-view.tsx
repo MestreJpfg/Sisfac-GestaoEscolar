@@ -193,13 +193,9 @@ export default function StudentDataView() {
   const handleStudentUpdate = (updatedStudentData: any) => {
     setAllStudents(prevStudents => 
         prevStudents.map(student => 
-            student.id === updatedStudentData.id ? { ...student, ...updatedStudentData } : student
+            student.id === updatedStudentData.id ? updatedStudentData : student
         )
     );
-    toast({
-        title: "Dados Atualizados",
-        description: "As informações do aluno foram atualizadas na lista.",
-    });
   };
     
   return (
@@ -307,14 +303,7 @@ export default function StudentDataView() {
         allStudents={allStudents}
         isOpen={!!selectedStudent}
         onClose={handleCloseSheet}
-        onUpdate={() => {
-            if(selectedStudent) {
-              const updatedStudent = allStudents.find(s => s.id === selectedStudent.id);
-              if (updatedStudent) {
-                setSelectedStudent(updatedStudent);
-              }
-            }
-        }}
+        onUpdate={handleStudentUpdate}
       />
 
       {reportCardStudent && (

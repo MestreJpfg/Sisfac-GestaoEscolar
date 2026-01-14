@@ -161,7 +161,8 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
     }
 
     const finalData = {
-        ...uppercasedData,
+        ...student, // Preserve all original student data
+        ...uppercasedData, // Overwrite with form data
         endereco: enderecoCompleto.toUpperCase() || null,
     };
     onSave(cleanData(finalData));
