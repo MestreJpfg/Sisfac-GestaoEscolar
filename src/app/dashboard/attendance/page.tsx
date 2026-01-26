@@ -39,8 +39,8 @@ export default function AttendancePage() {
             return true;
         }
         // Check for specific permission 'view:attendance' or the managing one 'manage:attendance'
-        const hasViewPermission = profileDetails?.permissions?.includes('view:attendance') || userProfile.customPermissions?.includes('view:attendance');
-        const hasManagePermission = profileDetails?.permissions?.includes('manage:attendance') || userProfile.customPermissions?.includes('manage:attendance');
+        const hasViewPermission = profileDetails?.permissions?.['view:attendance'] || userProfile.customPermissions?.includes('view:attendance');
+        const hasManagePermission = profileDetails?.permissions?.['manage:attendance'] || userProfile.customPermissions?.includes('manage:attendance');
         return hasViewPermission || hasManagePermission;
     }, [userProfile, profileDetails, firestore]);
     

@@ -15,16 +15,23 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "./ui/checkbox";
 
 const permissionSchema = z.object({
-    'manage:database': z.boolean().optional(),
-    'manage:students': z.boolean().optional(),
     'view:students': z.boolean().optional(),
+    'manage:students': z.boolean().optional(),
+    'view:users': z.boolean().optional(),
     'manage:users': z.boolean().optional(),
+    'view:profiles': z.boolean().optional(),
+    'manage:profiles': z.boolean().optional(),
+    'view:grades': z.boolean().optional(),
     'manage:grades': z.boolean().optional(),
+    'view:attendance': z.boolean().optional(),
     'manage:attendance': z.boolean().optional(),
+    'view:announcements': z.boolean().optional(),
     'manage:announcements': z.boolean().optional(),
+    'view:database': z.boolean().optional(),
+    'manage:database': z.boolean().optional(),
     'manage:cadastros': z.boolean().optional(),
-    'manage:transcript': z.boolean().optional(),
     'manage:migration': z.boolean().optional(),
+    'manage:transcript': z.boolean().optional(),
 });
 
 const profileSchema = z.object({

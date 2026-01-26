@@ -97,6 +97,35 @@
       },
        "required": ["id", "rm", "nome"]
     },
+    "Servidor": {
+      "title": "Servidor",
+      "type": "object",
+      "description": "Representa um funcionário ou servidor da instituição.",
+      "properties": {
+        "id": { "type": "string", "description": "Identificador único do servidor." },
+        "nomeCompleto": { "type": "string", "description": "Nome completo do servidor." },
+        "dataNascimento": { "type": "string", "format": "date", "description": "Data de nascimento." },
+        "cpf": { "type": "string", "description": "CPF do servidor." },
+        "rg": { "type": "string", "description": "RG do servidor." },
+        "endereco": { "type": "string", "description": "Endereço completo." },
+        "telefone": { "type": "string", "description": "Número de telefone para contato." },
+        "email": { "type": "string", "format": "email", "description": "E-mail de contato." },
+        "cargo": { "type": "string", "description": "Cargo atual do servidor." },
+        "departamento": { "type": "string", "description": "Departamento de atuação." },
+        "dataAdmissao": { "type": "string", "format": "date", "description": "Data de admissão." },
+        "salario": { "type": "number", "description": "Salário bruto." },
+        "dadosBancarios": {
+          "type": "object",
+          "properties": {
+            "banco": { "type": "string" },
+            "agencia": { "type": "string" },
+            "conta": { "type": "string" }
+          }
+        },
+        "status": { "type": "string", "enum": ["Ativo", "Inativo", "Férias", "Licença"] }
+      },
+      "required": ["id", "nomeCompleto", "cpf", "cargo", "dataAdmissao"]
+    },
     "Profile": {
       "title": "Profile",
       "type": "object",
@@ -116,23 +145,28 @@
             "description": "A hex color code to associate with the profile for UI elements."
         },
         "permissions": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": [
-                "manage:database",
-                "manage:students",
-                "view:students",
-                "manage:users",
-                "manage:grades",
-                "manage:attendance",
-                "manage:announcements",
-                "manage:cadastros",
-                "manage:transcript",
-                "manage:migration"
-            ]
+          "type": "object",
+          "description": "A map of permission keys granted to this profile.",
+          "properties": {
+            "view:students": { "type": "boolean" },
+            "manage:students": { "type": "boolean" },
+            "view:users": { "type": "boolean" },
+            "manage:users": { "type": "boolean" },
+            "view:profiles": { "type": "boolean" },
+            "manage:profiles": { "type": "boolean" },
+            "view:grades": { "type": "boolean" },
+            "manage:grades": { "type": "boolean" },
+            "view:attendance": { "type": "boolean" },
+            "manage:attendance": { "type": "boolean" },
+            "view:announcements": { "type": "boolean" },
+            "manage:announcements": { "type": "boolean" },
+            "view:database": { "type": "boolean" },
+            "manage:database": { "type": "boolean" },
+            "manage:cadastros": { "type": "boolean" },
+            "manage:migration": { "type": "boolean" },
+            "manage:transcript": { "type": "boolean" }
           },
-          "description": "A list of permission keys granted to this profile."
+          "additionalProperties": false
         }
       },
       "required": ["id", "name", "permissions"]
@@ -232,6 +266,10 @@
       {
         "path": "/users/{userId}",
         "definition": { "schema": { "$ref": "#/entities/User" } }
+      },
+       {
+        "path": "/servidores/{servidorId}",
+        "definition": { "schema": { "$ref": "#/entities/Servidor" } }
       },
       {
         "path": "/alunos/{alunoId}",
