@@ -148,17 +148,25 @@
           "type": "object",
           "description": "A map of permission keys granted to this profile.",
           "properties": {
-            "manage:database": { "type": "boolean" },
-            "manage:students": { "type": "boolean" },
             "view:students": { "type": "boolean" },
+            "manage:students": { "type": "boolean" },
+            "view:users": { "type": "boolean" },
             "manage:users": { "type": "boolean" },
+            "view:profiles": { "type": "boolean" },
+            "manage:profiles": { "type": "boolean" },
+            "view:grades": { "type": "boolean" },
             "manage:grades": { "type": "boolean" },
+            "view:attendance": { "type": "boolean" },
             "manage:attendance": { "type": "boolean" },
+            "view:announcements": { "type": "boolean" },
             "manage:announcements": { "type": "boolean" },
+            "view:database": { "type": "boolean" },
+            "manage:database": { "type": "boolean" },
             "manage:cadastros": { "type": "boolean" },
-            "manage:transcript": { "type": "boolean" },
-            "manage:migration": { "type": "boolean" }
-          }
+            "manage:migration": { "type": "boolean" },
+            "manage:transcript": { "type": "boolean" }
+          },
+          "additionalProperties": false
         }
       },
       "required": ["id", "name", "permissions"]

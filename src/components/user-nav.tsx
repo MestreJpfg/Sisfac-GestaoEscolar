@@ -58,12 +58,12 @@ export function UserNav() {
     
     if (permission.startsWith('view:')) {
         const managePermission = permission.replace('view:', 'manage:');
-        if (profileDetails?.permissions?.includes(managePermission) || userProfile.customPermissions?.includes(managePermission)) {
+        if (profileDetails?.permissions?.[managePermission] || userProfile.customPermissions?.includes(managePermission)) {
             return true;
         }
     }
     
-    if (profileDetails?.permissions?.includes(permission)) {
+    if (profileDetails?.permissions?.[permission]) {
       return true;
     }
     
