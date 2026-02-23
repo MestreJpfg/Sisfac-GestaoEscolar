@@ -334,14 +334,14 @@ const ConclusionCertificate = ({ student, date }: { student: any, date: string }
 
             <div className="relative z-10 flex flex-col h-full">
                 <header className="flex justify-between items-center text-black">
-                    <div className="w-24 h-24 relative">
+                    <div className="w-20 h-20 relative">
                         <Image src="/logoyuri.png" alt="Logo" layout="fill" objectFit="contain" crossOrigin="anonymous" />
                     </div>
                     <div className="text-center">
                         <h1 className="text-xl font-bold" style={{ color: '#00564d' }}>ESCOLA MUNICIPAL PROFESSORA FERNANDA MARIA DE ALENCAR COLARES</h1>
                         <p className="text-xs">Reconhecida pela Portaria Nº 105/2021 de 31/12/2021</p>
                     </div>
-                    <div className="w-24 h-24 relative">
+                    <div className="w-20 h-20 relative">
                         <Image src="/selo.png" alt="Selo da Escola" layout="fill" objectFit="contain" crossOrigin="anonymous" />
                     </div>
                 </header>
@@ -356,27 +356,19 @@ const ConclusionCertificate = ({ student, date }: { student: any, date: string }
                         em conformidade com a legislação vigente, nesta instituição de ensino no ano letivo de {ninthGradeYear}.
                     </p>
                 </main>
-                <footer className="flex justify-between items-end text-center text-xs mt-8">
-                    <div className="w-1/3">
+                <footer className="flex justify-around items-end text-center text-xs mt-8">
+                    <div className="w-1/2">
                         <div className="border-t-2 border-dashed border-gray-500 mx-auto w-4/5 pt-1">
                             <p className="mt-2 text-sm">{date}</p>
                             <p className="font-semibold text-sm" style={{ color: '#00564d' }}>Data de Emissão</p>
                         </div>
                     </div>
-                    <div className="w-1/3">
+                    <div className="w-1/2">
                         <div className="relative h-20 w-48 mx-auto -mb-8">
                             <Image src="/assinatura.png" alt="Assinatura" layout="fill" objectFit="contain" crossOrigin="anonymous" />
                         </div>
                         <div className="border-t-2 border-dashed border-gray-500 mx-auto w-4/5 pt-1">
                             <p className="font-semibold text-sm" style={{ color: '#00564d' }}>Direção Escolar</p>
-                        </div>
-                    </div>
-                    <div className="w-1/3">
-                        <div className="relative h-16 w-48 mx-auto -mb-6">
-                            <Image src="/secretaria.png" alt="Assinatura Secretaria" layout="fill" objectFit="contain" crossOrigin="anonymous" />
-                        </div>
-                         <div className="border-t-2 border-dashed border-gray-500 mx-auto w-4/5 pt-1">
-                            <p className="font-semibold text-sm" style={{ color: '#00564d' }}>Secretário(a) Escolar</p>
                         </div>
                     </div>
                 </footer>
@@ -488,21 +480,13 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
                             <p className="text-[8px] leading-tight"><span className="font-bold">Base Legal:</span> Curso de Ensino Fundamental de 9 (nove) anos, com base na Lei Federal 9.394/96. Escala de Avaliação: Notas de 0 a 10, com média para aprovação 6.0. Modelo de Avaliação para 1º e 2º ANO, uso de Relatório Pedagógico.</p>
                         </div>
                         <p className="text-[10px]">Fortaleza, {formattedDate}.</p>
-                        <div className="flex justify-around w-full mt-2 items-end">
+                        <div className="flex justify-center w-full mt-2 items-end">
                             <div className="text-center w-56 relative">
                                 <div className="relative h-20 w-full -mb-8">
                                     <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" crossOrigin="anonymous" />
                                 </div>
                                 <div className="border-t border-black w-full pt-1">
                                     <p className="font-bold">DIRETOR(A)</p>
-                                </div>
-                            </div>
-                            <div className="text-center w-56 relative">
-                                <div className="relative h-20 w-full -mb-8">
-                                    <Image src="/secretaria.png" alt="Assinatura Secretaria" layout="fill" objectFit="contain" crossOrigin="anonymous" />
-                                </div>
-                                <div className="border-t border-black w-full pt-1">
-                                    <p className="font-bold">SECRETÁRIO(A) ESCOLAR</p>
                                 </div>
                             </div>
                         </div>

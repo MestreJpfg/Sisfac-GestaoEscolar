@@ -24,7 +24,7 @@ export default function StudentTransferDeclaration({ student }: StudentTransferD
                 {/* Cabeçalho */}
                 <header className="flex flex-col items-center text-center text-[9px] font-bold mb-4">
                     <div className="flex items-center gap-4 mb-4">
-                       <Image src="/logoyuri.png" alt="Logo da Prefeitura de Fortaleza" width={80} height={80} crossOrigin="anonymous" />
+                       <Image src="/logoyuri.png" alt="Logo da Prefeitura de Fortaleza" width={60} height={60} crossOrigin="anonymous" />
                        <div className="h-10 border-l border-gray-400"></div>
                        <span className="text-xl font-semibold">EDUCAÇÃO</span>
                     </div>
@@ -62,21 +62,13 @@ export default function StudentTransferDeclaration({ student }: StudentTransferD
 
                 {/* Rodapé */}
                 <footer className="flex flex-col items-center justify-center text-center pt-2 mt-auto text-[9px]">
-                    <div className="flex justify-around w-full mt-8 items-end">
+                    <div className="flex justify-center w-full mt-8 items-end">
                         <div className="text-center w-56 relative">
                              <div className="relative h-20 w-full -mb-8">
                                 <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" crossOrigin="anonymous" />
                             </div>
                             <div className="border-t border-black w-full pt-1">
                                 <p className="font-bold">DIRETOR(A)</p>
-                            </div>
-                        </div>
-                        <div className="text-center w-56 relative">
-                             <div className="relative h-20 w-full -mb-8">
-                                <Image src="/secretaria.png" alt="Assinatura Secretaria" layout="fill" objectFit="contain" crossOrigin="anonymous" />
-                            </div>
-                            <div className="border-t border-black w-full pt-1">
-                                <p className="font-bold">SECRETÁRIO(A) ESCOLAR</p>
                             </div>
                         </div>
                     </div>
