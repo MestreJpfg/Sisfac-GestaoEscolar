@@ -70,11 +70,11 @@ export default function ReportCardWithDeclaration({ student, boletim }: ReportCa
                      <p className="text-center text-[9px] my-8">
                         Fortaleza, {formattedDate}.
                     </p>
-                     <div className="w-full max-w-[200px] mx-auto text-center">
-                        <div className="relative h-12 w-full">
+                     <div className="w-full max-w-[150px] mx-auto text-center">
+                        <div className="relative h-10 w-full mb-1">
                             <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" crossOrigin="anonymous" />
                         </div>
-                        <div className="border-t border-black w-full pt-1 mt-1">
+                        <div className="border-t border-black w-full pt-1">
                             <p className="font-bold text-xs">DIRETOR(A)</p>
                         </div>
                     </div>
