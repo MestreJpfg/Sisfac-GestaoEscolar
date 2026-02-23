@@ -35,7 +35,7 @@ export default function ReportCardWithDeclaration({ student, boletim }: ReportCa
                 {/* Cabeçalho */}
                 <header className="flex flex-col items-center text-center text-[9px] font-bold mb-4">
                     <div className="flex items-center gap-4 mb-2">
-                       <Image src="/logoyuri.png" alt="Logo da Prefeitura de Fortaleza" width={60} height={60} crossOrigin="anonymous" />
+                       <Image src="/logoyuri.png" alt="Logo da Prefeitura de Fortaleza" width={50} height={50} crossOrigin="anonymous" />
                        <div className="h-8 border-l border-gray-400"></div>
                        <span className="text-lg font-semibold">EDUCAÇÃO</span>
                     </div>
@@ -67,12 +67,15 @@ export default function ReportCardWithDeclaration({ student, boletim }: ReportCa
 
                 {/* Rodapé */}
                 <footer className="flex flex-col items-center justify-center text-center pt-2 mt-auto">
-                     <p className="text-center text-[9px] my-4">
+                     <p className="text-center text-[9px] my-8">
                         Fortaleza, {formattedDate}.
                     </p>
-                     <div className="w-full max-w-xs mx-auto text-center">
-                        <div className="relative h-24 w-full">
+                     <div className="w-full max-w-[200px] mx-auto text-center">
+                        <div className="relative h-12 w-full">
                             <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" crossOrigin="anonymous" />
+                        </div>
+                        <div className="border-t border-black w-full pt-1 mt-1">
+                            <p className="font-bold text-xs">DIRETOR(A)</p>
                         </div>
                     </div>
                     <div className="w-full mt-2">

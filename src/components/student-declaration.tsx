@@ -23,7 +23,7 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
                 {/* Cabeçalho */}
                 <header className="flex flex-col items-center text-center text-[9px] font-bold mb-4">
                     <div className="flex items-center gap-4 mb-4">
-                       <Image src="/logoyuri.png" alt="Logo da Prefeitura de Fortaleza" width={60} height={60} crossOrigin="anonymous" />
+                       <Image src="/logoyuri.png" alt="Logo da Prefeitura de Fortaleza" width={50} height={50} crossOrigin="anonymous" />
                        <div className="h-10 border-l border-gray-400"></div>
                        <span className="text-xl font-semibold">EDUCAÇÃO</span>
                     </div>
@@ -63,7 +63,7 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
                             Observações: Frequência Bimestral em 100%
                         </p>
                     </div>
-                    <p className="mt-10 text-right">
+                    <p className="mt-16 mb-8 text-center text-base">
                         Fortaleza, {formattedDate}.
                     </p>
                 </main>
@@ -71,14 +71,12 @@ export default function StudentDeclaration({ student }: StudentDeclarationProps)
 
                 {/* Rodapé */}
                 <footer className="flex flex-col items-center justify-center text-center pt-2 mt-auto text-[9px]">
-                    <div className="flex justify-center w-full mt-8 items-end">
-                        <div className="text-center w-56 relative">
-                             <div className="relative h-20 w-full -mb-8">
-                                <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" crossOrigin="anonymous" />
-                            </div>
-                            <div className="border-t border-black w-full pt-1">
-                                <p className="font-bold">DIRETOR(A)</p>
-                            </div>
+                    <div className="w-full max-w-[200px] mx-auto text-center">
+                        <div className="relative h-12 w-full">
+                            <Image src="/assinatura.png" alt="Assinatura Gestão Escolar" layout="fill" objectFit="contain" crossOrigin="anonymous" />
+                        </div>
+                        <div className="border-t border-black w-full pt-1 mt-1">
+                            <p className="font-bold text-xs">DIRETOR(A)</p>
                         </div>
                     </div>
                     <div className="w-full mt-4">
