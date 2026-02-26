@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useEffect, useState } from 'react';
@@ -15,6 +14,7 @@ import AuthGuard from '@/components/auth-guard';
 import AppFooter from '@/components/app-footer';
 import StudentDistributionChart from '@/components/student-distribution-chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import NeeDistributionChart from '@/components/nee-distribution-chart';
 
 
@@ -84,6 +84,7 @@ export default function DashboardPage() {
   const canManageGrades = useMemo(() => hasPermission('manage:grades'), [userProfile, profileDetails, isPermissionsLoading]);
   const canManageTranscripts = useMemo(() => hasPermission('manage:transcript'), [userProfile, profileDetails, isPermissionsLoading]);
   const canManageMigration = useMemo(() => hasPermission('manage:migration'), [userProfile, profileDetails, isPermissionsLoading]);
+  const canManageCadastros = useMemo(() => hasPermission('manage:cadastros'), [userProfile, profileDetails, isPermissionsLoading]);
 
   useEffect(() => {
     const fetchCountsAndStudents = async () => {
@@ -183,13 +184,15 @@ export default function DashboardPage() {
                       <StatCard title="..." value={<Loader2 className="h-5 w-5 animate-spin"/>} icon={Users} />
                   ) : (
                       <>
-                          <StatCard
-                            title="Servidores"
-                            value={"Cadastro"}
-                            icon={Briefcase}
-                            description="Gerir o cadastro de servidores"
-                            action={<Button onClick={() => router.push('/dashboard/servidores')}>Aceder</Button>}
-                          />
+                          {canManageCadastros && (
+                            <StatCard
+                                title="Servidores"
+                                value={"Cadastro"}
+                                icon={Briefcase}
+                                description="Gerir o cadastro de servidores"
+                                action={<Button onClick={() => router.push('/dashboard/servidores')}>Aceder</Button>}
+                            />
+                          )}
                           {(canViewAttendance || canManageAttendance) && (
                             <StatCard
                                 title="Registo de Frequência"

@@ -1,19 +1,50 @@
-
 'use client';
 
+import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthGuard from "@/components/auth-guard";
 import { ThemeToggle } from '@/components/theme-toggle';
 import { UserNav } from '@/components/user-nav';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Briefcase } from 'lucide-react';
+import { ArrowLeft, Briefcase, ShieldAlert, Loader2 } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
 import ServidorForm from '@/components/servidor-form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ServidorDataView from '@/components/servidor-data-view';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 export default function ServidoresPage() {
     const router = useRouter();
+    const { user, isUserLoading } = useUser();
+    const firestore = useFirestore();
+
+    const userDocRef = useMemoFirebase(() => {
+        if (!user || !firestore) return null;
+        return doc(firestore, 'users', user.uid);
+    }, [user, firestore]);
+    const { data: userProfile, isLoading: isProfileLoading } = useDoc(userDocRef);
+
+    const profileDocRef = useMemoFirebase(() => {
+        if (!userProfile?.profileId || !firestore) return null;
+        return doc(firestore, 'profiles', userProfile.profileId);
+    }, [userProfile, firestore]);
+    const { data: profileDetails, isLoading: isProfileDetailsLoading } = useDoc(profileDocRef);
+
+    const isPermissionsLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
+
+    const canManageCadastros = useMemo(() => {
+        if (isPermissionsLoading || !userProfile || !firestore) return false;
+        
+        if (userProfile.profileId === 'Administrador' || userProfile.profileId === 'Administrador(a)') {
+            return true;
+        }
+        
+        const hasCustomPermission = userProfile.customPermissions?.includes('manage:cadastros');
+        const hasProfilePermission = profileDetails?.permissions?.['manage:cadastros'] === true;
+        
+        return hasCustomPermission || hasProfilePermission;
+    }, [userProfile, profileDetails, isPermissionsLoading, firestore]);
 
     return (
         <AuthGuard>
@@ -40,20 +71,41 @@ export default function ServidoresPage() {
 
                 <main className="flex-1 py-8">
                     <div className="container">
-                       <Tabs defaultValue="visualizar" className="w-full">
-                          <TabsList className="grid w-full grid-cols-2 max-w-lg mx-auto">
-                            <TabsTrigger value="visualizar">Visualizar Servidores</TabsTrigger>
-                            <TabsTrigger value="cadastrar">Novo Cadastro</TabsTrigger>
-                          </TabsList>
-                          <TabsContent value="visualizar" className="mt-6">
-                            <ServidorDataView />
-                          </TabsContent>
-                           <TabsContent value="cadastrar" className="mt-6">
-                            <div className="max-w-4xl mx-auto">
-                                <ServidorForm />
-                            </div>
-                          </TabsContent>
-                        </Tabs>
+                       {isPermissionsLoading ? (
+                           <div className="flex h-64 flex-col items-center justify-center space-y-4">
+                               <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                               <p className="text-muted-foreground">A verificar permissões...</p>
+                           </div>
+                       ) : canManageCadastros ? (
+                           <Tabs defaultValue="visualizar" className="w-full">
+                              <TabsList className="grid w-full grid-cols-2 max-w-lg mx-auto">
+                                <TabsTrigger value="visualizar">Visualizar Servidores</TabsTrigger>
+                                <TabsTrigger value="cadastrar">Novo Cadastro</TabsTrigger>
+                              </TabsList>
+                              <TabsContent value="visualizar" className="mt-6">
+                                <ServidorDataView />
+                              </TabsContent>
+                               <TabsContent value="cadastrar" className="mt-6">
+                                <div className="max-w-4xl mx-auto">
+                                    <ServidorForm />
+                                </div>
+                              </TabsContent>
+                            </Tabs>
+                       ) : (
+                           <div className="flex h-96 flex-col items-center justify-center text-center space-y-4">
+                               <div className="rounded-full bg-destructive/10 p-6">
+                                   <ShieldAlert className="h-16 w-16 text-destructive" />
+                               </div>
+                               <h2 className="text-2xl font-bold">Acesso Negado</h2>
+                               <p className="text-muted-foreground max-w-md">
+                                   O seu perfil não tem permissão para gerir o cadastro de servidores. 
+                                   Contacte um administrador se acredita que isto é um erro.
+                               </p>
+                               <Button variant="outline" onClick={() => router.push('/dashboard')}>
+                                   Voltar para a Dashboard
+                               </Button>
+                           </div>
+                       )}
                     </div>
                 </main>
                 <AppFooter />
