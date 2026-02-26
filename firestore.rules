@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -40,11 +39,12 @@ service cloud.firestore {
 
       let profileDoc = get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
       
+      // Verificação robusta do mapa de permissões
       if (!('permissions' in profileDoc) || profileDoc.permissions == null) {
         return false;
       }
       
-      // Correção Crucial: Verifica se o valor da permissão no mapa é explicitamente true
+      // Verifica se o campo da permissão existe e é explicitamente verdadeiro
       return (permission in profileDoc.permissions) && (profileDoc.permissions[permission] == true);
     }
 

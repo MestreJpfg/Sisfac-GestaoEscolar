@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect } from "react";
@@ -25,23 +24,15 @@ const permissionKeys = [
     'manage:cadastros', 'manage:migration', 'manage:transcript'
 ] as const;
 
-const permissionSchema = z.record(z.string(), z.boolean());
-
+// Usamos z.any() para as permissões para evitar que erros de validação silenciosos bloqueiem o formulário
 const profileSchema = z.object({
   name: z.string().min(1, "O nome do perfil é obrigatório."),
   description: z.string().optional().nullable(),
-  permissions: permissionSchema,
+  permissions: z.any(),
   color: z.string().optional().nullable(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
-
-interface ProfileEditDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  profile: any | null;
-  onSave: (data: ProfileFormValues, profileId?: string) => void;
-}
 
 const allPermissions = [
     { id: 'view:students', label: 'Visualizar Alunos' },
@@ -65,8 +56,6 @@ const allPermissions = [
 
 
 export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: ProfileEditDialogProps) {
-  const { toast } = useToast();
-  
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -84,7 +73,7 @@ export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: 
         basePermissions[key] = false;
       });
 
-      if (profile) {
+      if (profile && profile.id) {
         form.reset({
           name: profile.name || '',
           description: profile.description || '',
@@ -103,7 +92,18 @@ export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: 
   }, [profile, isOpen, form]);
 
   const onSubmit = (data: ProfileFormValues) => {
-    onSave(data, profile?.id);
+    // Garantimos que todas as permissões enviadas sejam booleanas puras
+    const cleanedPermissions: Record<string, boolean> = {};
+    if (data.permissions) {
+        Object.keys(data.permissions).forEach(key => {
+            cleanedPermissions[key] = !!data.permissions[key];
+        });
+    }
+
+    onSave({
+        ...data,
+        permissions: cleanedPermissions
+    }, profile?.id);
   };
   
   return (
@@ -126,7 +126,7 @@ export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: 
                       <FormItem>
                         <FormLabel>Nome do Perfil</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Ex: Professor Chefe" />
+                          <Input {...field} placeholder="Ex: Monitor(a)" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -184,7 +184,7 @@ export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: 
                                 <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                                     <FormControl>
                                         <Checkbox
-                                            checked={field.value}
+                                            checked={!!field.value}
                                             onCheckedChange={field.onChange}
                                         />
                                     </FormControl>
