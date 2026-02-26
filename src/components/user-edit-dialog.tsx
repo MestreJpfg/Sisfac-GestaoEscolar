@@ -10,9 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useFirestore, useMemoFirebase } from "@/firebase";
-import { useCollection } from "@/firebase/firestore/use-collection";
-import { collection, query, orderBy } from "firebase/firestore";
 
 const userEditSchema = z.object({
   name: z.string().min(1, "O nome é obrigatório."),
@@ -25,19 +22,11 @@ interface UserEditDialogProps {
   isOpen: boolean;
   onClose: () => void;
   user: any;
+  profiles: any[];
   onSave: (data: Partial<UserEditFormValues>) => void;
 }
 
-export default function UserEditDialog({ isOpen, onClose, user, onSave }: UserEditDialogProps) {
-  const firestore = useFirestore();
-  
-  const profilesQuery = useMemoFirebase(() => {
-      if (!firestore) return null;
-      return query(collection(firestore, 'profiles'))
-  }, [firestore]);
-
-  const { data: profiles, isLoading: isLoadingProfiles } = useCollection(profilesQuery);
-
+export default function UserEditDialog({ isOpen, onClose, user, profiles, onSave }: UserEditDialogProps) {
   const form = useForm<UserEditFormValues>({
     resolver: zodResolver(userEditSchema),
     defaultValues: {
@@ -89,19 +78,19 @@ export default function UserEditDialog({ isOpen, onClose, user, onSave }: UserEd
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Perfil</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingProfiles}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={isLoadingProfiles ? "A carregar perfis..." : "Selecione um perfil"} />
+                        <SelectValue placeholder="Selecione um perfil" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {!isLoadingProfiles && profiles && profiles.length > 0 ? (
+                      {profiles && profiles.length > 0 ? (
                         profiles.map(profile => (
                           <SelectItem key={profile.id} value={profile.id}>{profile.name}</SelectItem>
                         ))
                       ) : (
-                         !isLoadingProfiles && <SelectItem value="no-profiles" disabled>Nenhum perfil criado</SelectItem>
+                        <SelectItem value="no-profiles" disabled>Nenhum perfil criado</SelectItem>
                       )}
                     </SelectContent>
                   </Select>

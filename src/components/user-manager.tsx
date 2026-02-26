@@ -201,6 +201,7 @@ export default function UserManager() {
           isOpen={!!editingUser}
           onClose={handleCloseDialog}
           user={editingUser}
+          profiles={allProfiles}
           onSave={handleSaveChanges}
         />
       )}
