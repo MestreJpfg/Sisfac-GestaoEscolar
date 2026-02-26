@@ -14,31 +14,24 @@ import { ScrollArea } from "./ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "./ui/checkbox";
 
-const permissionSchema = z.object({
-    'view:students': z.boolean().optional(),
-    'manage:students': z.boolean().optional(),
-    'view:users': z.boolean().optional(),
-    'manage:users': z.boolean().optional(),
-    'view:profiles': z.boolean().optional(),
-    'manage:profiles': z.boolean().optional(),
-    'view:grades': z.boolean().optional(),
-    'manage:grades': z.boolean().optional(),
-    'view:attendance': z.boolean().optional(),
-    'manage:attendance': z.boolean().optional(),
-    'view:announcements': z.boolean().optional(),
-    'manage:announcements': z.boolean().optional(),
-    'view:database': z.boolean().optional(),
-    'manage:database': z.boolean().optional(),
-    'manage:cadastros': z.boolean().optional(),
-    'manage:migration': z.boolean().optional(),
-    'manage:transcript': z.boolean().optional(),
-});
+const permissionKeys = [
+    'view:students', 'manage:students',
+    'view:users', 'manage:users',
+    'view:profiles', 'manage:profiles',
+    'view:grades', 'manage:grades',
+    'view:attendance', 'manage:attendance',
+    'view:announcements', 'manage:announcements',
+    'view:database', 'manage:database',
+    'manage:cadastros', 'manage:migration', 'manage:transcript'
+] as const;
+
+const permissionSchema = z.record(z.string(), z.boolean());
 
 const profileSchema = z.object({
   name: z.string().min(1, "O nome do perfil é obrigatório."),
-  description: z.string().optional(),
+  description: z.string().optional().nullable(),
   permissions: permissionSchema,
-  color: z.string().optional(),
+  color: z.string().optional().nullable(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -80,25 +73,32 @@ export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: 
       name: '',
       description: '',
       permissions: {},
-      color: '#808080', // Cor padrão (cinza)
+      color: '#808080',
     },
   });
 
   useEffect(() => {
-    if (profile) {
-      form.reset({
-        name: profile.name || '',
-        description: profile.description || '',
-        permissions: profile.permissions || {},
-        color: profile.color || '#808080',
+    if (isOpen) {
+      const basePermissions: Record<string, boolean> = {};
+      permissionKeys.forEach(key => {
+        basePermissions[key] = false;
       });
-    } else {
-      form.reset({
-        name: '',
-        description: '',
-        permissions: {},
-        color: '#808080',
-      });
+
+      if (profile) {
+        form.reset({
+          name: profile.name || '',
+          description: profile.description || '',
+          permissions: { ...basePermissions, ...(profile.permissions || {}) },
+          color: profile.color || '#808080',
+        });
+      } else {
+        form.reset({
+          name: '',
+          description: '',
+          permissions: basePermissions,
+          color: '#808080',
+        });
+      }
     }
   }, [profile, isOpen, form]);
 
@@ -110,7 +110,7 @@ export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: 
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-lg h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>{profile ? 'Editar Perfil' : 'Criar Novo Perfil'}</DialogTitle>
+          <DialogTitle>{profile?.id ? 'Editar Perfil' : 'Criar Novo Perfil'}</DialogTitle>
           <DialogDescription>
             Defina o nome, a descrição e as permissões para este perfil.
           </DialogDescription>
@@ -140,7 +140,7 @@ export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: 
                         <FormLabel>Cor do Perfil</FormLabel>
                         <FormControl>
                             <div className="flex items-center gap-2">
-                                <Input type="color" {...field} value={field.value ?? ''} className="p-1 h-10 w-14 cursor-pointer" />
+                                <Input type="color" {...field} value={field.value ?? '#808080'} className="p-1 h-10 w-14 cursor-pointer" />
                                 <Input 
                                     value={field.value ?? ''} 
                                     onChange={field.onChange} 
@@ -179,7 +179,7 @@ export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: 
                         <FormField
                             key={item.id}
                             control={form.control}
-                            name={`permissions.${item.id as keyof typeof permissionSchema.shape}`}
+                            name={`permissions.${item.id}`}
                             render={({ field }) => (
                                 <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                                     <FormControl>
@@ -188,7 +188,7 @@ export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: 
                                             onCheckedChange={field.onChange}
                                         />
                                     </FormControl>
-                                    <FormLabel className="font-normal">
+                                    <FormLabel className="font-normal cursor-pointer">
                                         {item.label}
                                     </FormLabel>
                                 </FormItem>

@@ -5,7 +5,7 @@ import { useMemo, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, doc, getCountFromServer, getDocs } from 'firebase/firestore';
+import { collection, query, doc, getDocs } from 'firebase/firestore';
 import { Loader2, Users, UserCog, Shield, Database, ClipboardList, Megaphone, CalendarCheck, ArrowLeft, NotebookText, Gamepad2, Award, FileText, GitBranch, Briefcase } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
@@ -51,19 +51,22 @@ export default function DashboardPage() {
       return true;
     }
     
-    if (permission.startsWith('view:')) {
-        const managePermission = permission.replace('view:', 'manage:');
-        if (profileDetails?.permissions?.[managePermission] || userProfile.customPermissions?.includes(managePermission)) {
-            return true;
-        }
-    }
-    
-    if (profileDetails?.permissions?.[permission]) {
-      return true;
-    }
-    
+    // Check if user has explicit custom permission
     if (userProfile.customPermissions?.includes(permission)) {
       return true;
+    }
+
+    // Check inherited permission from profile
+    if (profileDetails?.permissions?.[permission] === true) {
+      return true;
+    }
+    
+    // Hierarchy check: if permission is 'view', but user has 'manage', grant it
+    if (permission.startsWith('view:')) {
+        const managePermission = permission.replace('view:', 'manage:');
+        if (profileDetails?.permissions?.[managePermission] === true || userProfile.customPermissions?.includes(managePermission)) {
+            return true;
+        }
     }
 
     return false;

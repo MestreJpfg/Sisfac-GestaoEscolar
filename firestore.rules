@@ -13,28 +13,39 @@ service cloud.firestore {
     }
     
     function hasPermission(permission) {
-      // Allow if the user document is not yet created
+      // Se o documento do usuário não existir, não tem permissão
       if (!exists(/databases/$(database)/documents/users/$(request.auth.uid))) {
         return false;
       }
       
       let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
       
+      // Administradores têm acesso total bypassando outras verificações
       if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
         return true;
       }
+      
       if (!('profileId' in userData) || userData.profileId == null) {
         return false;
       }
       
+      // Verifica se a permissão está explicitamente nos customPermissions do usuário (como array)
+      let hasCustom = ('customPermissions' in userData) && (permission in userData.customPermissions);
+      if (hasCustom) return true;
+
+      // Se o perfil não existir na coleção de perfis, para aqui
+      if (!exists(/databases/$(database)/documents/profiles/$(userData.profileId))) {
+        return false;
+      }
+
       let profileDoc = get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
       
       if (!('permissions' in profileDoc) || profileDoc.permissions == null) {
         return false;
       }
       
-      // Correctly check for a key in a map
-      return permission in profileDoc.permissions;
+      // Correção Crucial: Verifica se o valor da permissão no mapa é explicitamente true
+      return (permission in profileDoc.permissions) && (profileDoc.permissions[permission] == true);
     }
 
     match /users/{userId} {
