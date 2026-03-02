@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -525,6 +524,10 @@ export default function ClassListGenerator() {
         const numCols = parseInt(customColumnCount, 10);
         const head = [['Nº', 'Nome do Aluno', ...customHeaders]];
         
+        // Ajuste dinâmico de estilo para acomodar muitas colunas
+        const fontSize = numCols > 15 ? 6 : numCols > 10 ? 7 : 8;
+        const cellPadding = numCols > 12 ? 0.8 : 1.5;
+
         const groupedStudents = students.reduce((acc, student) => {
             const key = `${student.serie || 'Série Indefinida'}|${student.classe || 'Classe Indefinida'}|${student.turno || 'Turno Indefinido'}`;
             if (!acc[key]) {
@@ -576,18 +579,24 @@ export default function ClassListGenerator() {
                         doc.setFont('helvetica', 'normal');
                         doc.text(finalTitle, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
                     },
-                    styles: { fontSize: 8, cellPadding: 1.5 },
+                    styles: { 
+                        fontSize: fontSize, 
+                        cellPadding: cellPadding,
+                        overflow: 'ellipsize',
+                        valign: 'middle'
+                    },
                     headStyles: {
                         fillColor: headerColor,
                         textColor: [40, 40, 40],
                         fontStyle: 'bold',
+                        halign: 'center'
                     },
                     alternateRowStyles: {
                         fillColor: useAlternateRowColors ? getLightAlternateColor(headerColor) : false
                     },
                     columnStyles: {
-                        0: { cellWidth: 10 },
-                        1: { cellWidth: 'auto' },
+                        0: { cellWidth: numCols > 15 ? 7 : 10, halign: 'center' },
+                        1: { cellWidth: numCols > 15 ? 35 : 'auto' }, // Fixar largura do nome para não apertar as outras colunas
                     },
                     margin: { top: 20, right: 10, bottom: 10, left: 10 },
                 });
@@ -899,7 +908,7 @@ export default function ClassListGenerator() {
                                                                 <SelectValue placeholder="Nº de colunas" />
                                                             </SelectTrigger>
                                                             <SelectContent>
-                                                                {Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
+                                                                {Array.from({ length: 20 }, (_, i) => i + 1).map(num => (
                                                                     <SelectItem key={num} value={String(num)}>{num} {num > 1 ? 'Colunas' : 'Coluna'}</SelectItem>
                                                                 ))}
                                                             </SelectContent>
