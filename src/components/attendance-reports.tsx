@@ -38,6 +38,9 @@ interface AttendanceRecord {
     date: string;
     status: 'Ausente' | 'Justificado';
     studentName?: string;
+    serie?: string;
+    classe?: string;
+    turno?: string;
 }
 
 export default function AttendanceReports() {
@@ -166,7 +169,14 @@ export default function AttendanceReports() {
             const snapshot = await getDocs(q);
             snapshot.forEach(doc => {
                 const data = doc.data() as AttendanceRecord;
-                records.push({ ...data, studentName: studentMap.get(data.studentId) || 'Aluno não encontrado' });
+                const student = allStudents.find(s => s.id === data.studentId);
+                records.push({ 
+                    ...data, 
+                    studentName: student?.nome || 'Aluno não encontrado',
+                    serie: student?.serie || '-',
+                    classe: student?.classe || '-',
+                    turno: student?.turno || '-'
+                });
             });
         }
         
@@ -219,17 +229,22 @@ export default function AttendanceReports() {
         );
     }, [debouncedSearch, allStudents]);
 
-    const exportToPDF = (data: any[], title: string, head: string[][], body: any[][]) => {
+    const exportToPDF = (data: any[], title: string, head: string[][], body: any[][], subtitle?: string) => {
         const doc = new jsPDF();
         doc.setFontSize(16);
         doc.text(title, 14, 15);
+        if (subtitle) {
+            doc.setFontSize(10);
+            doc.text(subtitle, 14, 21);
+        }
         
         autoTable(doc, {
             head: head,
             body: body,
-            startY: 20,
+            startY: subtitle ? 25 : 20,
             theme: 'striped',
             headStyles: { fillColor: [30, 136, 229] },
+            styles: { fontSize: 8 }
         });
 
         doc.save(`${title.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
@@ -255,11 +270,36 @@ export default function AttendanceReports() {
                 </Button>
                 {dailyReportData.length > 0 && (
                     <div className="pt-4 space-y-2">
-                        <Button onClick={() => exportToPDF(dailyReportData, `Relatório de Faltas - ${format(dailyDate!, 'dd/MM/yyyy')}`, [['Aluno', 'Status']], dailyReportData.map(r => [r.studentName, r.status]))} variant="outline"><Download className="mr-2 h-4 w-4"/>Exportar PDF</Button>
-                        <Table>
-                            <TableHeader><TableRow><TableHead>Aluno</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
-                            <TableBody>{dailyReportData.map(r => <TableRow key={r.id}><TableCell>{r.studentName}</TableCell><TableCell>{r.status}</TableCell></TableRow>)}</TableBody>
-                        </Table>
+                        <Button onClick={() => exportToPDF(
+                            dailyReportData, 
+                            `Relatório de Faltas - ${format(dailyDate!, 'dd/MM/yyyy')}`, 
+                            [['Aluno', 'Série', 'Turma', 'Turno', 'Status']], 
+                            dailyReportData.map(r => [r.studentName, r.serie, r.classe, r.turno, r.status])
+                        )} variant="outline"><Download className="mr-2 h-4 w-4"/>Exportar PDF</Button>
+                        <div className="overflow-x-auto border rounded-md">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Aluno</TableHead>
+                                        <TableHead>Série</TableHead>
+                                        <TableHead>Turma</TableHead>
+                                        <TableHead>Turno</TableHead>
+                                        <TableHead>Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {dailyReportData.map(r => (
+                                        <TableRow key={r.id}>
+                                            <TableCell className="font-medium">{r.studentName}</TableCell>
+                                            <TableCell>{r.serie}</TableCell>
+                                            <TableCell>{r.classe}</TableCell>
+                                            <TableCell>{r.turno}</TableCell>
+                                            <TableCell>{r.status}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     </div>
                 )}
             </CardContent>
@@ -312,8 +352,18 @@ export default function AttendanceReports() {
                 </Button>
                 {individualReportData.length > 0 && (
                      <div className="pt-4 space-y-2">
-                        <h3 className="font-semibold">{selectedStudent.nome} - Faltas: {individualReportData.length}</h3>
-                        <Button onClick={() => exportToPDF(individualReportData, `Relatório de Faltas - ${selectedStudent.nome}`, [['Data', 'Status']], individualReportData.map(r => [format(new Date(r.date), 'dd/MM/yyyy', { locale: ptBR }), r.status]))} variant="outline"><Download className="mr-2 h-4 w-4"/>Exportar PDF</Button>
+                        <div className="p-4 bg-muted/50 rounded-lg mb-4">
+                            <h3 className="font-bold text-lg">{selectedStudent.nome}</h3>
+                            <p className="text-sm text-muted-foreground">{selectedStudent.serie} {selectedStudent.classe} - Turno: {selectedStudent.turno}</p>
+                            <p className="text-sm font-semibold mt-2">Total de Faltas no Período: {individualReportData.length}</p>
+                        </div>
+                        <Button onClick={() => exportToPDF(
+                            individualReportData, 
+                            `Relatório de Faltas - ${selectedStudent.nome}`, 
+                            [['Data', 'Status']], 
+                            individualReportData.map(r => [format(new Date(r.date + 'T00:00:00-03:00'), 'dd/MM/yyyy', { locale: ptBR }), r.status]),
+                            `Turma: ${selectedStudent.serie} ${selectedStudent.classe} | Turno: ${selectedStudent.turno}`
+                        )} variant="outline"><Download className="mr-2 h-4 w-4"/>Exportar PDF</Button>
                         <Table>
                             <TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
                             <TableBody>{individualReportData.map(r => <TableRow key={r.id}><TableCell>{format(new Date(r.date + 'T00:00:00-03:00'), 'dd/MM/yyyy', { locale: ptBR })}</TableCell><TableCell>{r.status}</TableCell></TableRow>)}</TableBody>

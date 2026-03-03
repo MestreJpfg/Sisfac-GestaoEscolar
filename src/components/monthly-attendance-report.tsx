@@ -180,8 +180,8 @@ export default function MonthlyAttendanceReport() {
     
     const exportMonthlyPDF = () => {
         const doc = new jsPDF({ orientation: 'landscape' });
-        const title = `Relatório Mensal de Faltas - ${filters.serie || filters.ensino || ''} ${filters.classe || ''}`;
-        const subtitle = `${format(new Date(selectedYear, selectedMonth), 'MMMM yyyy', { locale: ptBR })}`;
+        const title = `Relatório Mensal de Faltas - ${filters.serie} ${filters.classe}`;
+        const subtitle = `${format(new Date(selectedYear, selectedMonth), 'MMMM yyyy', { locale: ptBR })} | Turno: ${filters.turno}`;
 
         doc.setFontSize(16);
         doc.text(title, 14, 15);
@@ -222,7 +222,7 @@ export default function MonthlyAttendanceReport() {
             }
         });
 
-        doc.save(`Relatorio_Mensal_${filters.serie || 'geral'}_${filters.classe || ''}.pdf`);
+        doc.save(`Relatorio_Mensal_${filters.serie.replace(/\s+/g, '_')}_${filters.classe}.pdf`);
     };
 
     return (
@@ -280,5 +280,3 @@ export default function MonthlyAttendanceReport() {
         </div>
     );
 }
-
-    
