@@ -79,7 +79,11 @@ export default function MonthlyAttendanceReport() {
         if (filters.serie) filteredForOptions = filteredForOptions.filter(s => s.serie === filters.serie);
         const classes = getUniqueValues('classe', filteredForOptions);
         if (filters.classe) filteredForOptions = filteredForOptions.filter(s => s.classe === filters.classe);
-        const turnos = getUniqueValues('turno', filteredForOptions);
+        
+        // Turnos dependem apenas de ensino para serem independentes de série/turma
+        let filteredForTurnos = allStudents;
+        if (filters.ensino) filteredForTurnos = filteredForTurnos.filter(s => s.ensino === filters.ensino);
+        const turnos = getUniqueValues('turno', filteredForTurnos);
         
         return { ensinos, series, classes, turnos };
     }, [allStudents, filters]);
@@ -88,9 +92,16 @@ export default function MonthlyAttendanceReport() {
         const newValue = value === 'all' ? '' : value;
         setFilters(prev => {
             const newFilters = { ...prev, [name]: newValue };
-            if (name === 'ensino') { newFilters.serie = ''; newFilters.classe = ''; newFilters.turno = ''; }
-            else if (name === 'serie') { newFilters.classe = ''; newFilters.turno = ''; }
-            else if (name === 'classe') { newFilters.turno = ''; }
+            if (name === 'ensino') { 
+                newFilters.serie = ''; 
+                newFilters.classe = ''; 
+                newFilters.turno = ''; 
+            } else if (name === 'serie') { 
+                newFilters.classe = ''; 
+                // Turno não é resetado
+            } else if (name === 'classe') { 
+                // Turno não é resetado
+            }
             return newFilters;
         });
     };
@@ -231,7 +242,7 @@ export default function MonthlyAttendanceReport() {
                 <Select value={filters.ensino} onValueChange={(v) => handleFilterChange('ensino', v)} disabled={isLoadingOptions}><SelectTrigger><SelectValue placeholder={isLoadingOptions ? "A carregar..." : "Ensino..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.ensinos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
                 <Select value={filters.serie} onValueChange={(v) => handleFilterChange('serie', v)} disabled={isLoadingOptions || !filters.ensino}><SelectTrigger><SelectValue placeholder={isLoadingOptions ? "A carregar..." : "Série..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.series.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
                 <Select value={filters.classe} onValueChange={(v) => handleFilterChange('classe', v)} disabled={isLoadingOptions || !filters.serie}><SelectTrigger><SelectValue placeholder={isLoadingOptions ? "A carregar..." : "Classe..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.classes.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
-                <Select value={filters.turno} onValueChange={(v) => handleFilterChange('turno', v)} disabled={isLoadingOptions || !filters.classe}><SelectTrigger><SelectValue placeholder={isLoadingOptions ? "A carregar..." : "Turno..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.turnos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
+                <Select value={filters.turno} onValueChange={(v) => handleFilterChange('turno', v)} disabled={isLoadingOptions}><SelectTrigger><SelectValue placeholder={isLoadingOptions ? "A carregar..." : "Turno..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.turnos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
                 <Select value={String(selectedMonth)} onValueChange={(v) => setSelectedMonth(Number(v))}><SelectTrigger><SelectValue placeholder="Mês..." /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>)}</SelectContent></Select>
                 <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}><SelectTrigger><SelectValue placeholder="Ano..." /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent></Select>
             </div>

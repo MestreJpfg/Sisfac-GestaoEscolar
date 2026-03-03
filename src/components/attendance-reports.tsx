@@ -109,10 +109,12 @@ export default function AttendanceReports() {
         }
         const classes = getUniqueValues('classe', filteredForOptions);
   
-        if (dailyFilters.classe) {
-            filteredForOptions = filteredForOptions.filter(s => s.classe === dailyFilters.classe);
+        // Turnos dependem apenas de ensino (se selecionado) para permitir seleção independente
+        let filteredForTurnos = allStudents;
+        if (dailyFilters.ensino) {
+            filteredForTurnos = filteredForTurnos.filter(s => s.ensino === dailyFilters.ensino);
         }
-        const turnos = getUniqueValues('turno', filteredForOptions);
+        const turnos = getUniqueValues('turno', filteredForTurnos);
   
         return { ensinos, series, classes, turnos };
     }, [allStudents, dailyFilters]);
@@ -121,9 +123,16 @@ export default function AttendanceReports() {
         const newValue = value === 'all' ? '' : value;
         setDailyFilters(prev => {
             const newFilters = { ...prev, [name]: newValue };
-            if (name === 'ensino') { newFilters.serie = ''; newFilters.classe = ''; newFilters.turno = ''; }
-            else if (name === 'serie') { newFilters.classe = ''; newFilters.turno = ''; }
-            else if (name === 'classe') { newFilters.turno = ''; }
+            if (name === 'ensino') { 
+                newFilters.serie = ''; 
+                newFilters.classe = ''; 
+                newFilters.turno = ''; 
+            } else if (name === 'serie') { 
+                newFilters.classe = ''; 
+                // Não reseta turno aqui para permitir independência
+            } else if (name === 'classe') { 
+                // Não reseta turno aqui para permitir independência
+            }
             return newFilters;
         });
     };
@@ -261,7 +270,7 @@ export default function AttendanceReports() {
                     <Select value={dailyFilters.ensino} onValueChange={(v) => handleDailyFilterChange('ensino', v)} disabled={isLoadingStudentsOptions}><SelectTrigger><SelectValue placeholder={isLoadingStudentsOptions ? "A carregar..." : "Ensino..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.ensinos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
                     <Select value={dailyFilters.serie} onValueChange={(v) => handleDailyFilterChange('serie', v)} disabled={isLoadingStudentsOptions || !dailyFilters.ensino}><SelectTrigger><SelectValue placeholder={isLoadingStudentsOptions ? "A carregar..." : "Série..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.series.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
                     <Select value={dailyFilters.classe} onValueChange={(v) => handleDailyFilterChange('classe', v)} disabled={isLoadingStudentsOptions || !dailyFilters.serie}><SelectTrigger><SelectValue placeholder={isLoadingStudentsOptions ? "A carregar..." : "Classe..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.classes.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
-                    <Select value={dailyFilters.turno} onValueChange={(v) => handleDailyFilterChange('turno', v)} disabled={isLoadingStudentsOptions || !dailyFilters.classe}><SelectTrigger><SelectValue placeholder={isLoadingStudentsOptions ? "A carregar..." : "Turno..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.turnos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
+                    <Select value={dailyFilters.turno} onValueChange={(v) => handleDailyFilterChange('turno', v)} disabled={isLoadingStudentsOptions}><SelectTrigger><SelectValue placeholder={isLoadingStudentsOptions ? "A carregar..." : "Turno..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.turnos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
                     <Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("justify-start text-left font-normal", !dailyDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{dailyDate ? format(dailyDate, "PPP", { locale: ptBR }) : <span>Escolha uma data</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={dailyDate} onSelect={setDailyDate} initialFocus disabled={(date) => date > new Date()} /></PopoverContent></Popover>
                 </div>
                 <Button onClick={generateDailyReport} disabled={isLoadingDaily}>
