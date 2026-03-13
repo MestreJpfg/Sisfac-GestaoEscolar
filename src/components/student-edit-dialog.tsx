@@ -37,7 +37,7 @@ const studentSchema = z.object({
   endereco_rua: z.string().nullable().optional(),
   endereco_numero: z.string().nullable().optional(),
   endereco_bairro: z.string().nullable().optional(),
-  endereco: z.string().nullable().optional(), // Mantém o campo original
+  endereco: z.string().nullable().optional(), 
 
   telefones: z.array(z.string()).nullable().optional(),
   transporte_escolar: z.boolean().nullable().optional(),
@@ -51,7 +51,7 @@ interface StudentEditDialogProps {
   isOpen: boolean;
   onClose: () => void;
   student: any;
-  onSave: (data: Partial<StudentFormValues>) => void;
+  onSave: (data: any) => void;
 }
 
 const cleanData = (data: any) => {
@@ -90,15 +90,16 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
   });
 
   useEffect(() => {
-    if (student) {
+    if (student && isOpen) {
         const address = parseAddress(student.endereco);
         const defaultVals = {
             ...student,
+            rm: String(student.rm || ''),
             endereco_cep: address.cep,
             endereco_rua: address.rua,
             endereco_numero: address.numero,
             endereco_bairro: address.bairro,
-            telefones: student.telefones || [],
+            telefones: Array.isArray(student.telefones) ? student.telefones : (student.telefone ? [student.telefone] : []),
             transporte_escolar: !!student.transporte_escolar,
             carteira_estudante: !!student.carteira_estudante
         };
@@ -126,16 +127,8 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
       }
       form.setValue('endereco_rua', data.logradouro, { shouldValidate: true });
       form.setValue('endereco_bairro', data.bairro, { shouldValidate: true });
-      toast({
-        title: "Endereço encontrado!",
-        description: `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}`,
-      });
     } catch (error) {
-      toast({
-            variant: "destructive",
-            title: "Erro ao buscar CEP",
-            description: "Não foi possível buscar o endereço. Verifique sua conexão.",
-        });
+      console.error("Erro ao buscar CEP", error);
     } finally {
       setIsCepLoading(false);
     }
@@ -150,21 +143,22 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
       enderecoCompleto = `(${endereco_cep || ''}) - ${endereco_rua || ''} - ${endereco_numero || ''} - ${endereco_bairro || ''}`;
     }
 
-    const uppercasedData: any = {};
+    const processedData: any = {};
     for (const key in restOfData) {
         const value = (restOfData as any)[key];
-        if (typeof value === 'string') {
-            uppercasedData[key] = value.toUpperCase();
+        if (typeof value === 'string' && key !== 'id') {
+            processedData[key] = value.toUpperCase();
         } else {
-            uppercasedData[key] = value;
+            processedData[key] = value;
         }
     }
 
     const finalData = {
-        ...student, // Preserve all original student data
-        ...uppercasedData, // Overwrite with form data
+        ...student, 
+        ...processedData,
         endereco: enderecoCompleto.toUpperCase() || null,
     };
+    
     onSave(cleanData(finalData));
   };
   
@@ -172,55 +166,55 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Editar Aluno</DialogTitle>
+          <DialogTitle>Editar Ficha do Aluno</DialogTitle>
           <DialogDescription>
-            Altere as informações do aluno. Clique em salvar quando terminar.
+            Altere qualquer informação do aluno. Todos os campos estão habilitados para edição.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
              <ScrollArea className="flex-1 pr-6 -mr-6">
-                <Accordion type="multiple" defaultValue={["personal", "address", "academic"]} className="w-full">
+                <Accordion type="multiple" defaultValue={["personal", "academic"]} className="w-full">
 
-                  {/* Dados Pessoais */}
                   <AccordionItem value="personal">
-                    <AccordionTrigger>Dados Pessoais</AccordionTrigger>
-                    <AccordionContent className="space-y-4">
+                    <AccordionTrigger className="text-primary font-bold">1. Identificação e Contato</AccordionTrigger>
+                    <AccordionContent className="space-y-4 pt-2 px-1">
                       <FormField name="nome" control={form.control} render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Nome</FormLabel>
+                          <FormLabel>Nome Completo</FormLabel>
                           <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
                           <FormMessage />
                         </FormItem>
                       )} />
-                       <FormField name="rm" control={form.control} render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>RM</FormLabel>
-                          <FormControl><Input {...field} value={field.value ?? ''} disabled /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
-                      <FormField name="data_nascimento" control={form.control} render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Data de Nascimento</FormLabel>
-                          <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )} />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField name="rm" control={form.control} render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>RM (Registro Acadêmico)</FormLabel>
+                            <FormControl><Input {...field} value={field.value ?? ''} placeholder="Ex: 12345" /></FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField name="data_nascimento" control={form.control} render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Data de Nascimento</FormLabel>
+                            <FormControl><Input {...field} value={field.value ?? ''} placeholder="DD/MM/AAAA" /></FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )} />
+                      </div>
                        <FormField name="telefones" control={form.control} render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Telefones (separados por vírgula)</FormLabel>
-                          <FormControl><Input {...field} value={Array.isArray(field.value) ? field.value.join(', ') : ''} onChange={e => field.onChange(e.target.value.split(',').map(s => s.trim()))} /></FormControl>
+                          <FormLabel>Telefones (separe por vírgula)</FormLabel>
+                          <FormControl><Input {...field} value={Array.isArray(field.value) ? field.value.join(', ') : ''} onChange={e => field.onChange(e.target.value.split(',').map(s => s.trim()).filter(Boolean))} /></FormControl>
                           <FormMessage />
                         </FormItem>
                        )} />
                     </AccordionContent>
                   </AccordionItem>
                   
-                   {/* Endereço */}
                   <AccordionItem value="address">
-                    <AccordionTrigger>Endereço</AccordionTrigger>
-                    <AccordionContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <AccordionTrigger className="text-primary font-bold">2. Localização / Endereço</AccordionTrigger>
+                    <AccordionContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 px-1">
                         <FormField name="endereco_cep" control={form.control} render={({ field }) => (
                             <FormItem>
                               <FormLabel>CEP</FormLabel>
@@ -259,7 +253,7 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
                         )} />
                          <FormField name="endereco_numero" control={form.control} render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Número</FormLabel>
+                            <FormLabel>Número / Complemento</FormLabel>
                             <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
                             <FormMessage />
                             </FormItem>
@@ -267,10 +261,9 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
                     </AccordionContent>
                   </AccordionItem>
 
-                  {/* Dados de Documentos */}
                   <AccordionItem value="documents">
-                    <AccordionTrigger>Documentos</AccordionTrigger>
-                    <AccordionContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <AccordionTrigger className="text-primary font-bold">3. Documentação</AccordionTrigger>
+                    <AccordionContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 px-1">
                        <FormField name="rg" control={form.control} render={({ field }) => (
                         <FormItem>
                           <FormLabel>RG</FormLabel>
@@ -280,7 +273,7 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
                       )} />
                        <FormField name="cpf_aluno" control={form.control} render={({ field }) => (
                         <FormItem>
-                          <FormLabel>CPF Aluno</FormLabel>
+                          <FormLabel>CPF do Aluno</FormLabel>
                           <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
                           <FormMessage />
                         </FormItem>
@@ -302,27 +295,26 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
                     </AccordionContent>
                   </AccordionItem>
 
-                  {/* Dados Académicos */}
                   <AccordionItem value="academic">
-                    <AccordionTrigger>Dados Académicos</AccordionTrigger>
-                    <AccordionContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <AccordionTrigger className="text-primary font-bold">4. Vínculo Académico</AccordionTrigger>
+                    <AccordionContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 px-1">
                        <FormField name="ensino" control={form.control} render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Ensino</FormLabel>
+                          <FormLabel>Nível de Ensino</FormLabel>
                           <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
                           <FormMessage />
                         </FormItem>
                       )} />
                       <FormField name="serie" control={form.control} render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Série</FormLabel>
+                          <FormLabel>Série / Ano</FormLabel>
                           <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
                           <FormMessage />
                         </FormItem>
                       )} />
                        <FormField name="classe" control={form.control} render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Classe</FormLabel>
+                          <FormLabel>Turma / Classe</FormLabel>
                           <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
                           <FormMessage />
                         </FormItem>
@@ -337,27 +329,26 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
                     </AccordionContent>
                   </AccordionItem>
 
-                   {/* Filiação */}
                   <AccordionItem value="family">
-                    <AccordionTrigger>Filiação</AccordionTrigger>
-                    <AccordionContent className="space-y-4">
+                    <AccordionTrigger className="text-primary font-bold">5. Composição Familiar</AccordionTrigger>
+                    <AccordionContent className="space-y-4 pt-2 px-1">
                         <FormField name="filiacao_1" control={form.control} render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Filiação 1</FormLabel>
+                            <FormLabel>Nome da Mãe (ou Responsável 1)</FormLabel>
                             <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
                             <FormMessage />
                             </FormItem>
                         )} />
                         <FormField name="cpffiliacao1" control={form.control} render={({ field }) => (
                             <FormItem>
-                            <FormLabel>CPF Filiação 1</FormLabel>
+                            <FormLabel>CPF da Mãe/Responsável 1</FormLabel>
                             <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
                             <FormMessage />
                             </FormItem>
                         )} />
                         <FormField name="filiacao_2" control={form.control} render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Filiação 2</FormLabel>
+                            <FormLabel>Nome do Pai (ou Responsável 2)</FormLabel>
                             <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
                             <FormMessage />
                             </FormItem>
@@ -365,20 +356,20 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
                     </AccordionContent>
                   </AccordionItem>
                   
-                  {/* Outras Informações */}
                   <AccordionItem value="other">
-                    <AccordionTrigger>Outras Informações</AccordionTrigger>
-                    <AccordionContent className="space-y-6">
+                    <AccordionTrigger className="text-primary font-bold">6. Informações Adicionais</AccordionTrigger>
+                    <AccordionContent className="space-y-6 pt-2 px-1">
                       <FormField name="nee" control={form.control} render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Necessidades Educacionais Especiais (NEE)</FormLabel>
-                          <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
+                          <FormLabel>Necessidades Especiais (NEE)</FormLabel>
+                          <FormControl><Input {...field} value={field.value ?? ''} placeholder="Descreva se houver, ou deixe vazio" /></FormControl>
                           <FormMessage />
                         </FormItem>
                       )} />
                        <div className="flex flex-row items-center justify-between rounded-lg border p-4">
                             <div className="space-y-0.5">
-                                <FormLabel>Transporte Escolar</FormLabel>
+                                <FormLabel className="text-base">Transporte Escolar</FormLabel>
+                                <p className="text-xs text-muted-foreground">O aluno utiliza transporte da prefeitura?</p>
                             </div>
                             <FormControl>
                                 <FormField name="transporte_escolar" control={form.control} render={({ field }) => (
@@ -391,7 +382,8 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
                         </div>
                         <div className="flex flex-row items-center justify-between rounded-lg border p-4">
                             <div className="space-y-0.5">
-                                <FormLabel>Direito a Carteira de Estudante</FormLabel>
+                                <FormLabel className="text-base">Carteira de Estudante</FormLabel>
+                                <p className="text-xs text-muted-foreground">O aluno possui ou tem direito à carteira?</p>
                             </div>
                             <FormControl>
                                 <FormField name="carteira_estudante" control={form.control} render={({ field }) => (
@@ -408,8 +400,8 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
                 </Accordion>
              </ScrollArea>
              <DialogFooter className="pt-6 border-t mt-auto">
-                <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-                <Button type="submit">Salvar Alterações</Button>
+                <Button type="button" variant="outline" onClick={onClose}>Descartar</Button>
+                <Button type="submit">Gravar Alterações</Button>
             </DialogFooter>
           </form>
         </Form>

@@ -22,8 +22,8 @@ import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriang
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
-import { doc } from "firebase/firestore";
-import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { doc, deleteDoc, setDoc } from "firebase/firestore";
+import { setDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import StudentReportCardDialog from "./student-report-card-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
@@ -41,7 +41,7 @@ const formatPhoneNumber = (phone: string): string => {
   if (cleaned.length === 10) {
     return `(${cleaned.substring(0, 2)}) ${cleaned.substring(2, 6)}-${cleaned.substring(6)}`;
   }
-  return phone; // Return original if not a valid length
+  return phone; 
 };
 
 type PdfType = 'declaration' | 'transfer' | 'declarationWithReport' | 'detailedReport' | 'compact' | 'grid' | 'transcript';
@@ -133,9 +133,6 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
         return null;
     }
 
-    const currentBoletim = student.boletim?.[currentYear];
-    if (!currentBoletim) return null;
-
     const classmates = allStudents
       .filter(s => 
         s.ensino === studentClass.ensino &&
@@ -165,25 +162,49 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
   if (!student) return null;
 
   const handleUpdateStudent = async (updatedData: any) => {
-    if (!firestore || !student?.rm) {
-       toast({
-        variant: "destructive",
-        title: "Erro de Base de Dados",
-        description: "A ligação com a base de dados não foi estabelecida. Tente novamente.",
-      });
-      return;
+    if (!firestore || !student?.rm) return;
+    
+    const oldRm = String(student.rm);
+    const newRm = String(updatedData.rm);
+    
+    try {
+        if (oldRm !== newRm) {
+            // Se o RM mudou, precisamos criar um novo documento e apagar o antigo
+            const newDocRef = doc(firestore, 'alunos', newRm);
+            const oldDocRef = doc(firestore, 'alunos', oldRm);
+            
+            // Garantir que o ID interno também seja atualizado
+            const finalData = { ...updatedData, id: newRm };
+            
+            // Usamos setDoc diretamente para garantir a criação antes da deleção (operações não bloqueantes)
+            setDocumentNonBlocking(newDocRef, finalData);
+            deleteDocumentNonBlocking(oldDocRef);
+            
+            toast({
+                title: "Mudança de RM Processada",
+                description: `O registro foi movido do RM ${oldRm} para o novo RM ${newRm}.`,
+            });
+            onUpdate(finalData);
+        } else {
+            // Caso comum: atualização de dados no mesmo RM
+            const docRef = doc(firestore, 'alunos', oldRm);
+            setDocumentNonBlocking(docRef, updatedData, { merge: true });
+            
+            toast({
+                title: "Dados Atualizados",
+                description: `As alterações para ${updatedData.nome} foram salvas com sucesso.`,
+            });
+            onUpdate(updatedData);
+        }
+    } catch (error) {
+        console.error("Erro ao salvar alterações:", error);
+        toast({
+            variant: "destructive",
+            title: "Erro ao Salvar",
+            description: "Ocorreu uma falha ao tentar gravar as modificações.",
+        });
     }
-    
-    const docRef = doc(firestore, 'alunos', student.rm);
-    
-    setDocumentNonBlocking(docRef, updatedData, { merge: true });
 
-    toast({
-        title: "Atualização em andamento...",
-        description: "Os dados do aluno estão a ser salvos.",
-    });
-
-    onUpdate(updatedData);
     setIsEditDialogOpen(false);
     onClose(); 
   };
@@ -442,7 +463,7 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
               {student.nome || "Detalhes do Aluno"}
             </SheetTitle>
             <SheetDescription>
-              Informações completas do aluno.
+              Informações completas do aluno. Todos os campos podem ser editados.
             </SheetDescription>
           </SheetHeader>
           
@@ -510,7 +531,7 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Editar Aluno</p>
+                      <p>Editar Ficha Completa</p>
                     </TooltipContent>
                   </Tooltip>
                 
