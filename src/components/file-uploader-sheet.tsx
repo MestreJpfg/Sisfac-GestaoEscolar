@@ -4,9 +4,9 @@
 import { useState } from "react";
 import * as XLSX from "xlsx";
 import { useToast } from "@/hooks/use-toast";
-import { doc, writeBatch } from "firebase/firestore";
+import { doc, collection, getDocs, query } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
-import { commitBatchNonBlocking } from "@/firebase/non-blocking-updates";
+import { setDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -98,7 +98,6 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
         
         if (header === 'data_nascimento' && value) {
           if (typeof value === 'number') { // Excel date serial number
-            // Convert Excel serial date to JS Date, accounting for timezone issues.
             const date = new Date(Date.UTC(0, 0, value - 1));
             if (!isNaN(date.getTime())) {
               processedValue = ('0' + date.getUTCDate()).slice(-2) + '/' + ('0' + (date.getUTCMonth() + 1)).slice(-2) + '/' + date.getUTCFullYear();
@@ -115,8 +114,6 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
 
       if (!student.rm) return null;
       student.rm = String(student.rm);
-      student.status = "ATIVO"; 
-
       return student;
     }).filter(Boolean);
   };
@@ -140,31 +137,62 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
       return;
     }
   
-    const collectionPath = "alunos";
-    const batch = writeBatch(firestore);
-    
-    normalizedStudents.forEach(student => {
-      if (student.rm) {
-        const docId = student.rm;
-        const docRef = doc(firestore, collectionPath, docId);
+    try {
+        const uploadedRms = new Set(normalizedStudents.map(s => s.rm));
         
-        // Adiciona um ID ao próprio objeto para referência futura
-        const finalData = { ...student, id: docId }; 
-        batch.set(docRef, finalData, { merge: true });
-      }
-    });
-  
-    commitBatchNonBlocking(batch, collectionPath);
+        // 1. Buscar todos os alunos atuais na base de dados
+        const studentsColl = collection(firestore, "alunos");
+        const snapshot = await getDocs(query(studentsColl));
+        
+        let moveCount = 0;
 
-    setTimeout(() => {
-        toast({
-            title: "Sucesso!",
-            description: `${normalizedStudents.length} registros de alunos foram carregados na base de dados.`,
+        // 2. Identificar alunos que NÃO estão no novo ficheiro e movê-los para ex-alunos
+        snapshot.docs.forEach(docSnap => {
+            const studentId = docSnap.id;
+            if (!uploadedRms.has(studentId)) {
+                const studentData = docSnap.data();
+                const exAlunoRef = doc(firestore, 'exalunos', studentId);
+                const studentRef = doc(firestore, 'alunos', studentId);
+                
+                // Mover para exalunos com status TRANSFERIDO (Operação não bloqueante)
+                setDocumentNonBlocking(exAlunoRef, { ...studentData, status: 'TRANSFERIDO' }, { merge: true });
+                
+                // Remover da coleção de alunos ativos (Operação não bloqueante)
+                deleteDocumentNonBlocking(studentRef);
+                
+                moveCount++;
+            }
         });
+
+        // 3. Adicionar ou atualizar os alunos que vieram no ficheiro
+        normalizedStudents.forEach(student => {
+            if (student.rm) {
+                const docId = student.rm;
+                const docRef = doc(firestore, "alunos", docId);
+                
+                // Status ATIVO para todos os que constam na nova listagem
+                const finalData = { ...student, id: docId, status: "ATIVO" }; 
+                setDocumentNonBlocking(docRef, finalData, { merge: true });
+            }
+        });
+
+        toast({
+            title: "Sincronização Iniciada!",
+            description: `${normalizedStudents.length} alunos ativos processados. ${moveCount} alunos ausentes foram movidos para 'Transferidos'.`,
+        });
+
         onUploadSuccess();
         setIsOpen(false);
+    } catch (error) {
+        console.error("Erro na sincronização:", error);
+        toast({
+            variant: "destructive",
+            title: "Erro no Processamento",
+            description: "Ocorreu uma falha ao tentar sincronizar os dados."
+        });
+    } finally {
         setIsLoading(false);
-    }, 1500);
+    }
   };
 
   if (isPrimaryAction) {
@@ -173,14 +201,14 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
             <SheetTrigger asChild>
                 <Button>
                     <Upload className="mr-2 h-4 w-4" />
-                    Carregar Dados dos Alunos
+                    Sincronizar Base de Alunos
                 </Button>
             </SheetTrigger>
              <SheetContent className="flex flex-col">
               <SheetHeader>
-                <SheetTitle>Carregar Alunos</SheetTitle>
+                <SheetTitle>Sincronizar Alunos</SheetTitle>
                 <SheetDescription>
-                  Envie um ficheiro XLSX, CSV ou JSON para adicionar ou atualizar os dados dos alunos.
+                  Envie a listagem master. Alunos ausentes no ficheiro serão movidos para 'Transferidos' automaticamente.
                 </SheetDescription>
               </SheetHeader>
               <div className="py-4 flex-1">
@@ -196,14 +224,14 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
       <SheetTrigger asChild>
         <Button variant="secondary" className="flex items-center gap-2 shadow-lg">
           <Upload className="h-4 w-4" />
-          <span>Carregar Alunos</span>
+          <span>Sincronizar Alunos</span>
         </Button>
       </SheetTrigger>
       <SheetContent className="flex flex-col">
         <SheetHeader>
-          <SheetTitle>Carregar Alunos</SheetTitle>
+          <SheetTitle>Sincronizar Alunos</SheetTitle>
           <SheetDescription>
-            Envie um ficheiro XLSX, CSV ou JSON para adicionar ou atualizar os dados dos alunos.
+            Envie a listagem atualizada. O sistema moverá automaticamente os alunos que não constam neste ficheiro para a base de transferidos.
           </SheetDescription>
         </SheetHeader>
         <div className="py-4 flex-1">

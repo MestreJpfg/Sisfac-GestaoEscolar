@@ -412,3 +412,59 @@
 [debug] [2026-03-10T23:43:18.051Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
 [debug] [2026-03-10T23:43:18.075Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 400
 [debug] [2026-03-10T23:43:18.076Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-03-16T13:12:47.100Z] Object "/apphosting" in "firebase.json" is missing required property: {"missingProperty":"ignore"}
+[debug] [2026-03-16T13:12:47.103Z] Field "/apphosting" in "firebase.json" is possibly invalid: must be array
+[debug] [2026-03-16T13:12:47.104Z] Field "/apphosting" in "firebase.json" is possibly invalid: must match a schema in anyOf
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[debug] [2026-03-16T13:12:47.129Z] Object "/apphosting" in "firebase.json" is missing required property: {"missingProperty":"ignore"}
+[debug] [2026-03-16T13:12:47.131Z] Field "/apphosting" in "firebase.json" is possibly invalid: must be array
+[debug] [2026-03-16T13:12:47.132Z] Field "/apphosting" in "firebase.json" is possibly invalid: must match a schema in anyOf
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[debug] [2026-03-16T13:12:47.136Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2026-03-16T13:12:47.137Z] > authorizing via signed-in user (mestrejpfg@gmail.com)
+[debug] [2026-03-16T13:12:47.139Z] Checked if tokens are valid: false, expires at: 1763950401416
+[debug] [2026-03-16T13:12:47.139Z] Checked if tokens are valid: false, expires at: 1763950401416
+[debug] [2026-03-16T13:12:47.139Z] > refreshing access token with scopes: []
+[debug] [2026-03-16T13:12:47.142Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-03-16T13:12:47.142Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-03-16T13:12:47.244Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 400
+[debug] [2026-03-16T13:12:47.246Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-03-16T13:12:47.247Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/studio-1312336971-92aca/billingInfo [none]
+[debug] [2026-03-16T13:12:47.307Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/studio-1312336971-92aca/billingInfo 401
+[debug] [2026-03-16T13:12:47.308Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/studio-1312336971-92aca/billingInfo {"error":{"code":401,"message":"Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project.","status":"UNAUTHENTICATED","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"ACCESS_TOKEN_TYPE_UNSUPPORTED","metadata":{"method":"google.cloud.billing.v1.CloudBilling.GetProjectBillingInfo","service":"cloudbilling.googleapis.com"}}]}}
+[debug] [2026-03-16T13:12:47.308Z] Got a 401 Unauthenticated error for a call that required authentication. Refreshing tokens.
+[debug] [2026-03-16T13:12:47.308Z] Checked if tokens are valid: false, expires at: 1763950401416
+[debug] [2026-03-16T13:12:47.308Z] Checked if tokens are valid: false, expires at: 1763950401416
+[debug] [2026-03-16T13:12:47.308Z] > refreshing access token with scopes: []
+[debug] [2026-03-16T13:12:47.309Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-03-16T13:12:47.309Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-03-16T13:12:47.329Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 400
+[debug] [2026-03-16T13:12:47.329Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-03-16T13:12:50.774Z] Object "/apphosting" in "firebase.json" is missing required property: {"missingProperty":"ignore"}
+[debug] [2026-03-16T13:12:50.775Z] Field "/apphosting" in "firebase.json" is possibly invalid: must be array
+[debug] [2026-03-16T13:12:50.775Z] Field "/apphosting" in "firebase.json" is possibly invalid: must match a schema in anyOf
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[debug] [2026-03-16T13:12:50.777Z] Object "/apphosting" in "firebase.json" is missing required property: {"missingProperty":"ignore"}
+[debug] [2026-03-16T13:12:50.777Z] Field "/apphosting" in "firebase.json" is possibly invalid: must be array
+[debug] [2026-03-16T13:12:50.777Z] Field "/apphosting" in "firebase.json" is possibly invalid: must match a schema in anyOf
+[error] Failed to fetch Firebase Project from Studio Workspace because WORKSPACE_SLUG environment variable is empty
+[debug] [2026-03-16T13:12:50.778Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform","https://www.googleapis.com/auth/userinfo.email"]
+[debug] [2026-03-16T13:12:50.778Z] > authorizing via signed-in user (mestrejpfg@gmail.com)
+[debug] [2026-03-16T13:12:50.778Z] Checked if tokens are valid: false, expires at: 1763950401416
+[debug] [2026-03-16T13:12:50.778Z] Checked if tokens are valid: false, expires at: 1763950401416
+[debug] [2026-03-16T13:12:50.779Z] > refreshing access token with scopes: []
+[debug] [2026-03-16T13:12:50.779Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-03-16T13:12:50.779Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-03-16T13:12:50.804Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 400
+[debug] [2026-03-16T13:12:50.804Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-03-16T13:12:50.804Z] >>> [apiv2][query] GET https://cloudbilling.googleapis.com/v1/projects/studio-1312336971-92aca/billingInfo [none]
+[debug] [2026-03-16T13:12:50.832Z] <<< [apiv2][status] GET https://cloudbilling.googleapis.com/v1/projects/studio-1312336971-92aca/billingInfo 401
+[debug] [2026-03-16T13:12:50.832Z] <<< [apiv2][body] GET https://cloudbilling.googleapis.com/v1/projects/studio-1312336971-92aca/billingInfo {"error":{"code":401,"message":"Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project.","status":"UNAUTHENTICATED","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"ACCESS_TOKEN_TYPE_UNSUPPORTED","metadata":{"method":"google.cloud.billing.v1.CloudBilling.GetProjectBillingInfo","service":"cloudbilling.googleapis.com"}}]}}
+[debug] [2026-03-16T13:12:50.833Z] Got a 401 Unauthenticated error for a call that required authentication. Refreshing tokens.
+[debug] [2026-03-16T13:12:50.833Z] Checked if tokens are valid: false, expires at: 1763950401416
+[debug] [2026-03-16T13:12:50.833Z] Checked if tokens are valid: false, expires at: 1763950401416
+[debug] [2026-03-16T13:12:50.833Z] > refreshing access token with scopes: []
+[debug] [2026-03-16T13:12:50.833Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-03-16T13:12:50.834Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-03-16T13:12:50.849Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 400
+[debug] [2026-03-16T13:12:50.849Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
