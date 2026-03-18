@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Database } from 'lucide-react';
 import AppFooter from '@/components/app-footer';
 import DatabaseManager from '@/components/database-manager';
+import { NotificationCenter } from '@/components/notification-center';
 
 // A página agora confia que o acesso foi garantido pela dashboard.
 export default function DatabasePage() {
@@ -34,6 +35,7 @@ export default function DatabasePage() {
                         </div>
                         <div className="flex flex-1 items-center justify-end space-x-4">
                             <nav className="flex items-center space-x-1">
+                                <NotificationCenter />
                                 <ThemeToggle />
                                 <UserNav />
                             </nav>

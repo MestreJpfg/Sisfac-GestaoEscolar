@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useEffect, useState } from 'react';
@@ -16,6 +17,7 @@ import StudentDistributionChart from '@/components/student-distribution-chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import NeeDistributionChart from '@/components/nee-distribution-chart';
+import { NotificationCenter } from '@/components/notification-center';
 
 
 export default function DashboardPage() {
@@ -139,6 +141,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex flex-1 items-center justify-end space-x-4">
                         <nav className="flex items-center space-x-1">
+                            <NotificationCenter />
                             <ThemeToggle />
                             <UserNav />
                         </nav>

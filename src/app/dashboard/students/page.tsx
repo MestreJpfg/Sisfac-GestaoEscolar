@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import FileUploaderSheet from '@/components/file-uploader-sheet';
 import Image from 'next/image';
 import { ArrowLeft } from 'lucide-react';
+import { NotificationCenter } from '@/components/notification-center';
 
 export default function StudentsPage() {
   const router = useRouter();
@@ -37,6 +38,7 @@ export default function StudentsPage() {
                 <div className="flex flex-1 items-center justify-end space-x-4">
                     <nav className="flex items-center space-x-1">
                         <FileUploaderSheet onUploadSuccess={onUploadSuccess} />
+                        <NotificationCenter />
                         <ThemeToggle />
                         <UserNav />
                     </nav>
