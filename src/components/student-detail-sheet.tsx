@@ -18,11 +18,11 @@ import { ScrollArea } from "./ui/scroll-area";
 import StudentDeclaration from "./student-declaration";
 import StudentTransferDeclaration from "./student-transfer-declaration";
 import StudentEditDialog from "./student-edit-dialog";
-import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Loader2, Share2, Pencil, Printer, MapPin, BookCheck, Award, GraduationCap } from "lucide-react";
+import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Loader2, Share2, Pencil, Printer, MapPin, BookCheck, Award, GraduationCap, UserMinus, AlertCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
-import { doc, deleteDoc, setDoc } from "firebase/firestore";
+import { doc, deleteDoc, setDoc, getDoc } from "firebase/firestore";
 import { setDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import StudentReportCardDialog from "./student-report-card-dialog";
@@ -31,6 +31,7 @@ import ReportCardWithDeclaration from "./report-card-with-declaration";
 import ReportCardDetailed from "./report-card-detailed";
 import ReportCardGrid from "./report-card-grid";
 import StudentTranscript from "./student-transcript";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
 
 
 const formatPhoneNumber = (phone: string): string => {
@@ -115,6 +116,9 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isReportCardOpen, setIsReportCardOpen] = useState(false);
   const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
+  const [isTransferAlertOpen, setIsTransferAlertOpen] = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
+  
   const { toast } = useToast();
   const firestore = useFirestore();
 
@@ -169,14 +173,10 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
     
     try {
         if (oldRm !== newRm) {
-            // Se o RM mudou, precisamos criar um novo documento e apagar o antigo
             const newDocRef = doc(firestore, 'alunos', newRm);
             const oldDocRef = doc(firestore, 'alunos', oldRm);
-            
-            // Garantir que o ID interno também seja atualizado
             const finalData = { ...updatedData, id: newRm };
             
-            // Usamos setDoc diretamente para garantir a criação antes da deleção (operações não bloqueantes)
             setDocumentNonBlocking(newDocRef, finalData);
             deleteDocumentNonBlocking(oldDocRef);
             
@@ -186,7 +186,6 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
             });
             onUpdate(finalData);
         } else {
-            // Caso comum: atualização de dados no mesmo RM
             const docRef = doc(firestore, 'alunos', oldRm);
             setDocumentNonBlocking(docRef, updatedData, { merge: true });
             
@@ -207,6 +206,32 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
 
     setIsEditDialogOpen(false);
     onClose(); 
+  };
+
+  const handleManualTransfer = async () => {
+    if (!firestore || !student) return;
+    setIsTransferring(true);
+
+    try {
+        const studentId = student.id;
+        const studentRef = doc(firestore, 'alunos', studentId);
+        const exRef = doc(firestore, 'exalunos', studentId);
+
+        const studentSnap = await getDoc(studentRef);
+        if (studentSnap.exists()) {
+            const data = studentSnap.data();
+            setDocumentNonBlocking(exRef, { ...data, status: 'TRANSFERIDO', updatedAt: new Date().toISOString() }, { merge: true });
+            deleteDocumentNonBlocking(studentRef);
+
+            toast({ title: "Aluno Transferido", description: `${student.nome} foi movido para a base de ex-alunos.` });
+            onClose(); // Fecha a ficha pois o aluno não é mais ativo
+        }
+    } catch (error) {
+        toast({ variant: 'destructive', title: "Erro na transferência" });
+    } finally {
+        setIsTransferring(false);
+        setIsTransferAlertOpen(false);
+    }
   };
   
   const generatePdfBlob = async (type: PdfType): Promise<Blob | null> => {
@@ -534,6 +559,18 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
                       <p>Editar Ficha Completa</p>
                     </TooltipContent>
                   </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setIsTransferAlertOpen(true)} disabled={!!isProcessing || !!isSharing}>
+                          <UserMinus className="w-4 h-4" />
+                          <span className="sr-only">Transferir Aluno</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Transferir Aluno (Mover para Ex-alunos)</p>
+                    </TooltipContent>
+                  </Tooltip>
                 
                 <DropdownMenu>
                     <Tooltip>
@@ -618,6 +655,26 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
         </SheetContent>
       </Sheet>
       
+      <AlertDialog open={isTransferAlertOpen} onOpenChange={setIsTransferAlertOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-destructive" />
+                    Confirmar Transferência?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                    Tem a certeza que deseja transferir o aluno <strong>{student.nome}</strong>? 
+                    Esta ação irá movê-lo permanentemente para a base de dados de ex-alunos com o status "TRANSFERIDO".
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel disabled={isTransferring}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleManualTransfer} className="bg-destructive hover:bg-destructive/90" disabled={isTransferring}>
+                    {isTransferring ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Sim, transferir agora"}
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       
       <StudentReportCardDialog
           isOpen={isReportCardOpen}
