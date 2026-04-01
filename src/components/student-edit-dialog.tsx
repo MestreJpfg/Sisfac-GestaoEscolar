@@ -15,11 +15,8 @@ import { Switch } from "./ui/switch";
 import { Loader2, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-// Esquema extremamente flexível para evitar bloqueios de validação
-const studentSchema = z.object({
-  rm: z.any(),
-  nome: z.any(),
-}).catchall(z.any());
+// Esquema ultra-permissivo para evitar bloqueios de validação por campos inesperados
+const studentSchema = z.record(z.any());
 
 type StudentFormValues = z.infer<typeof studentSchema>;
 
@@ -34,6 +31,7 @@ const cleanData = (data: any) => {
     const cleaned: any = {};
     for (const key in data) {
         const value = data[key];
+        // Converte strings vazias para null para limpar o banco, mas mantém objetos como o boletim
         if (value === '' || value === undefined) {
             cleaned[key] = null;
         } else {
@@ -47,6 +45,7 @@ const parseAddress = (addressString: string) => {
     if (!addressString || typeof addressString !== 'string') {
       return { cep: '', rua: '', numero: '', bairro: '' };
     }
+    // Formato esperado: (CEP) - RUA - NUMERO - BAIRRO
     const cleanedString = addressString.replace(/[()]/g, '');
     const parts = cleanedString.split(' - ').map(part => part.trim());
 
@@ -70,6 +69,7 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
   useEffect(() => {
     if (student && isOpen) {
         const address = parseAddress(student.endereco);
+        // Populamos o formulário com TODOS os dados do aluno para garantir que nada se perca
         const defaultVals = {
             ...student,
             rm: String(student.rm || ''),
@@ -88,9 +88,7 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
 
   const handleCepChange = async (cep: string) => {
     const cleanedCep = cep?.replace(/\D/g, '') || '';
-    if (cleanedCep.length !== 8) {
-      return;
-    }
+    if (cleanedCep.length !== 8) return;
 
     setIsCepLoading(true);
     try {
@@ -113,33 +111,36 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
     }
   };
 
-
-  const onSubmit = async (data: StudentFormValues) => {
+  const onSubmit = async (values: StudentFormValues) => {
     setIsSaving(true);
     try {
-        const { endereco_cep, endereco_rua, endereco_numero, endereco_bairro, ...restOfData } = data;
+        const { endereco_cep, endereco_rua, endereco_numero, endereco_bairro, ...restOfData } = values;
         
+        // Reconstrói o endereço no formato padrão do sistema
         let enderecoCompleto = '';
         if (endereco_cep || endereco_rua || endereco_numero || endereco_bairro) {
           enderecoCompleto = `(${endereco_cep || ''}) - ${endereco_rua || ''} - ${endereco_numero || ''} - ${endereco_bairro || ''}`;
         }
 
+        // Processa os dados para garantir que campos de texto fiquem em MAIÚSCULAS (exceto IDs e objetos)
         const processedData: any = {};
         for (const key in restOfData) {
-            const value = (restOfData as any)[key];
-            if (typeof value === 'string' && key !== 'id') {
+            const value = restOfData[key];
+            if (typeof value === 'string' && !['id', 'rm', 'email'].includes(key)) {
                 processedData[key] = value.toUpperCase();
             } else {
                 processedData[key] = value;
             }
         }
 
+        // Mescla com os dados originais do aluno para não perder campos não editáveis no formulário (como o boletim completo)
         const finalData = {
             ...student, 
             ...processedData,
             endereco: enderecoCompleto.toUpperCase() || null,
         };
         
+        // Envia para o pai (StudentDetailSheet)
         await onSave(cleanData(finalData));
     } catch (error) {
         console.error("Erro ao processar salvamento:", error);
@@ -159,7 +160,7 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
         <DialogHeader>
           <DialogTitle>Editar Ficha do Aluno</DialogTitle>
           <DialogDescription>
-            Altere qualquer informação do aluno. Todos os campos estão habilitados para edição.
+            Altere qualquer informação do aluno. As mudanças serão aplicadas ao RM atual.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -168,8 +169,8 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
                 console.error("Erros de validação:", errors);
                 toast({
                     variant: "destructive",
-                    title: "Campos Inválidos",
-                    description: "Por favor, verifique se os campos obrigatórios estão preenchidos corretamente.",
+                    title: "Verifique o Formulário",
+                    description: "Alguns campos impediram o salvamento. Por favor, revise os dados inseridos.",
                 });
             })} 
             className="flex-1 flex flex-col min-h-0"
@@ -191,7 +192,7 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
                         <FormField name="rm" control={form.control} render={({ field }) => (
                             <FormItem>
                             <FormLabel>RM (Registro Acadêmico)</FormLabel>
-                            <FormControl><Input {...field} value={field.value ?? ''} placeholder="Ex: 12345" /></FormControl>
+                            <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
                             <FormMessage />
                             </FormItem>
                         )} />
