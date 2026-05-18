@@ -3,29 +3,31 @@ node_modules/
 .pnp
 .pnp.js
 
-# Build e Produção
+# Next.js
 .next/
 out/
-build/
-dist/
 
-# Variáveis de Ambiente
+# Produção
+build/
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Variáveis de ambiente (Segurança)
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Vercel e outros
+.vercel
+.turbo
+*.local
 
-# Sistema
+# Mac/Windows temp
 .DS_Store
 Thumbs.db
-
-# Firebase e Ferramentas
-.firebase/
-.firebaserc
-firebug.log
