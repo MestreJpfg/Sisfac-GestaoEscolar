@@ -14,7 +14,7 @@ service cloud.firestore {
     
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.token.email in ['mestrejpfg@gmail.com', 'fortalezaem@gmail.com'] ||
+        request.auth.token.get('email', '') in ['mestrejpfg@gmail.com', 'fortalezaem@gmail.com'] ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('profileId', '') in ['Administrador', 'Administrador(a)'])
       );
@@ -74,7 +74,7 @@ service cloud.firestore {
     }
 
     match /ocorrencias/{ocorrenciaId} {
-      allow read, list: if isSignedIn();
+      allow read, list: if isAdmin() || hasPermission('manage:occurrences');
       allow write: if isAdmin() || hasPermission('manage:occurrences');
     }
 

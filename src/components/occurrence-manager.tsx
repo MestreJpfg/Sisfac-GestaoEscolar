@@ -78,12 +78,12 @@ export default function OccurrenceManager() {
                 updatedAt: new Date().toISOString()
             };
 
-            // Utilizando o padrão setDocumentNonBlocking que funciona nos Alunos
+            // Utilizando o padrão setDocumentNonBlocking que é validado como funcional nos Alunos
             setDocumentNonBlocking(docRef, finalData, { merge: true });
 
             toast({
                 title: data.id ? "Ocorrência Atualizada" : "Ocorrência Registrada",
-                description: `A ocorrência de ${data.studentName} foi salva com sucesso.`,
+                description: `A ocorrência de ${data.studentName} foi processada com sucesso.`,
             });
 
             setIsFormOpen(false);

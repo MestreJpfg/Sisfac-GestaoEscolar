@@ -73,7 +73,7 @@ export default function LoginPage() {
         
         if (!userData.createdAt) updates.createdAt = new Date().toISOString();
         
-        // Sincronização forçada para administradores
+        // Sincronização prioritária para administradores
         if (shouldBeAdmin && userData.profileId !== 'Administrador') {
             updates.profileId = 'Administrador';
         }
