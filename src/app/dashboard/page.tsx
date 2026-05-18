@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { collection, query, doc, getDocs, limit, orderBy } from 'firebase/firestore';
-import { Loader2, Users, UserCog, Megaphone, CalendarCheck, NotebookText, Gamepad2, History, ShieldAlert } from 'lucide-react';
+import { Loader2, Users, UserCog, Megaphone, CalendarCheck, NotebookText, Gamepad2, History, ShieldAlert, Briefcase, LayoutGrid, FileText, GitBranch, Database } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -60,6 +60,13 @@ export default function DashboardPage() {
   
   const canViewStudents = useMemo(() => hasPermission('view:students'), [userProfile, profileDetails, user]);
   const canManageOccurrences = useMemo(() => hasPermission('manage:occurrences'), [userProfile, profileDetails, user]);
+  const canManageServidores = useMemo(() => hasPermission('manage:cadastros'), [userProfile, profileDetails, user]);
+  const canManageGrades = useMemo(() => hasPermission('manage:grades'), [userProfile, profileDetails, user]);
+  const canManageAttendance = useMemo(() => hasPermission('manage:attendance'), [userProfile, profileDetails, user]);
+  const canManageClasses = useMemo(() => hasPermission('manage:students'), [userProfile, profileDetails, user]);
+  const canManageTranscript = useMemo(() => hasPermission('manage:transcript'), [userProfile, profileDetails, user]);
+  const canManageMigration = useMemo(() => hasPermission('manage:migration'), [userProfile, profileDetails, user]);
+  const canManageDatabase = useMemo(() => hasPermission('manage:database'), [userProfile, profileDetails, user]);
 
   // 2. Buscar Ocorrências Recentes
   const occurrencesQuery = useMemo(() => {
@@ -138,7 +145,7 @@ export default function DashboardPage() {
               <div className="container py-8">
                 <div className="mb-8">
                   <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Bem-vindo(a), {welcomeName}!</h2>
-                  <p className="text-muted-foreground">Visão geral do sistema e registros recentes.</p>
+                  <p className="text-muted-foreground">Aceda a todas as ferramentas de gestão escolar.</p>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -147,18 +154,40 @@ export default function DashboardPage() {
                         title="Alunos Ativos"
                         value={studentCount}
                         icon={Users}
-                        description="Total de alunos na base"
+                        description="Gestão de fichas e documentos"
                         action={<Button variant="outline" size="sm" onClick={() => router.push('/dashboard/students')}>Gerir</Button>}
                     />
                   )}
                   
-                  <StatCard
-                      title="Meu Perfil"
-                      value={user?.displayName ?? ''}
-                      icon={UserCog}
-                      description={user?.email || ''}
-                      action={<Button variant="outline" size="sm" onClick={() => router.push('/profile')}>Aceder</Button>}
-                  />
+                  {canManageServidores && (
+                    <StatCard
+                        title="Servidores"
+                        value="RH"
+                        icon={Briefcase}
+                        description="Cadastro de funcionários"
+                        action={<Button variant="outline" size="sm" onClick={() => router.push('/dashboard/servidores')}>Aceder</Button>}
+                    />
+                  )}
+
+                  {canManageAttendance && (
+                    <StatCard
+                        title="Frequência"
+                        value="Chamada"
+                        icon={CalendarCheck}
+                        description="Registo e relatórios"
+                        action={<Button variant="outline" size="sm" onClick={() => router.push('/dashboard/attendance')}>Registar</Button>}
+                    />
+                  )}
+
+                  {canManageGrades && (
+                    <StatCard
+                        title="Avaliações"
+                        value="Notas"
+                        icon={NotebookText}
+                        description="Boletins e desempenho"
+                        action={<Button variant="outline" size="sm" onClick={() => router.push('/dashboard/grades')}>Lançar</Button>}
+                    />
+                  )}
 
                   {canManageOccurrences && (
                     <StatCard
@@ -167,6 +196,46 @@ export default function DashboardPage() {
                         icon={ShieldAlert}
                         description="Registros disciplinares"
                         action={<Button variant="outline" size="sm" onClick={() => router.push('/dashboard/occurrences')}>Histórico</Button>}
+                    />
+                  )}
+
+                  {canManageClasses && (
+                    <StatCard
+                        title="Turmas"
+                        value="Classes"
+                        icon={LayoutGrid}
+                        description="Listas e remanejamento"
+                        action={<Button variant="outline" size="sm" onClick={() => router.push('/dashboard/classes')}>Gerir</Button>}
+                    />
+                  )}
+
+                  {canManageTranscript && (
+                    <StatCard
+                        title="Históricos"
+                        value="PDF"
+                        icon={FileText}
+                        description="Gerador de histórico escolar"
+                        action={<Button variant="outline" size="sm" onClick={() => router.push('/dashboard/transcript')}>Gerar</Button>}
+                    />
+                  )}
+
+                  {canManageMigration && (
+                    <StatCard
+                        title="Anos Letivos"
+                        value="Migração"
+                        icon={GitBranch}
+                        description="Transição de ano e formatura"
+                        action={<Button variant="outline" size="sm" onClick={() => router.push('/dashboard/migration')}>Configurar</Button>}
+                    />
+                  )}
+                  
+                  {canManageDatabase && (
+                    <StatCard
+                        title="Sistema"
+                        value="Base Dados"
+                        icon={Database}
+                        description="Importação e manutenção"
+                        action={<Button variant="outline" size="sm" onClick={() => router.push('/dashboard/database')}>Administrar</Button>}
                     />
                   )}
 
@@ -179,15 +248,15 @@ export default function DashboardPage() {
                    />
                 </div>
 
-                <div className="mt-8">
-                    {/* Últimas Ocorrências - Agora em destaque central */}
-                    <Card className="max-w-2xl">
+                <div className="mt-8 grid gap-4 md:grid-cols-2">
+                    {/* Últimas Ocorrências */}
+                    <Card>
                         <CardHeader>
                             <div className="flex items-center gap-2">
                                 <History className="h-5 w-5 text-primary" />
-                                <CardTitle>Últimas Ocorrências</CardTitle>
+                                <CardTitle>Ocorrências Recentes</CardTitle>
                             </div>
-                            <CardDescription>Resumo dos registros mais recentes efetuados no sistema.</CardDescription>
+                            <CardDescription>Últimos registros disciplinares no sistema.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             {isLoadingRecentOccurrences ? (
@@ -215,6 +284,30 @@ export default function DashboardPage() {
                                     <p className="text-xs">Nenhum registro recente encontrado.</p>
                                 </div>
                             )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Atalhos Rápidos para Admin */}
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center gap-2">
+                                <UserCog className="h-5 w-5 text-primary" />
+                                <CardTitle>Atalhos Administrativos</CardTitle>
+                            </div>
+                            <CardDescription>Acesso rápido ao perfil e segurança.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                             <div className="flex flex-col gap-2">
+                                <Button variant="secondary" className="justify-start" onClick={() => router.push('/profile')}>
+                                    <UserCog className="mr-2 h-4 w-4" /> Editar Meu Perfil
+                                </Button>
+                                <Button variant="secondary" className="justify-start" onClick={() => router.push('/dashboard/announcements')}>
+                                    <Megaphone className="mr-2 h-4 w-4" /> Gerir Comunicados
+                                </Button>
+                                <Button variant="secondary" className="justify-start" onClick={() => router.push('/dashboard/database')}>
+                                    <UserCog className="mr-2 h-4 w-4" /> Gestão de Utilizadores
+                                </Button>
+                             </div>
                         </CardContent>
                     </Card>
                 </div>

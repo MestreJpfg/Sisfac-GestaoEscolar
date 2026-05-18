@@ -73,10 +73,10 @@ export default function LoginPage() {
         
         if (!userData.createdAt) updates.createdAt = new Date().toISOString();
         
-        // Sincronização rigorosa para administradores
+        // Sincronização rigorosa para administradores: garante o Perfil de Administrador em cada login
         if (shouldBeAdmin) {
             updates.profileId = 'Administrador';
-            updates.profileCompleted = true; // Garante que o adm não fique preso na tela de perfil
+            updates.profileCompleted = true; 
         }
 
         if (Object.keys(updates).length > 0) {
@@ -97,7 +97,7 @@ export default function LoginPage() {
             customPermissions: [],
             createdAt: new Date().toISOString(),
             photoURL: user.photoURL || null,
-            profileCompleted: shouldBeAdmin, // Adms já começam com perfil completo
+            profileCompleted: shouldBeAdmin, 
         };
     
         await setDoc(userDocRef, newUserData);
