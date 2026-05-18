@@ -13,37 +13,49 @@ Este é um sistema completo de gestão escolar desenvolvido com NextJS, React, S
 - **Sistema de Permissões**: Controlo de acesso baseado em perfis (Admin, Secretário, etc.).
 - **Centro de Notificações**: Alertas em tempo real para novos registos de utilizadores.
 
-## Guia de Exportação para Git (GitHub/GitLab)
+## 🚀 Guia de Exportação para o GitHub
+
+Se estiver a ter erros no terminal, siga estas instruções atualizadas:
 
 ### 1. Configuração Inicial (Apenas na primeira vez)
 
-Se encontrar o erro `remote origin already exists`, utilize o comando de atualização:
+Se o terminal disser `remote origin already exists`, utilize o comando de atualização abaixo:
 
 ```bash
-# Se o remote já existir, atualize o URL
-git remote set-url origin https://github.com/SEU_UTILIZADOR/REPOSITORIO.git
+# 1. Inicia o repositório local
+git init
 
-# Envie pela primeira vez
+# 2. Configura o endereço do seu GitHub (Substitua pelo seu URL)
+# Se der erro de "already exists", use: git remote set-url origin https://github.com/SEU_USER/NOME_REPOSITORIO.git
+git remote add origin https://github.com/SEU_USER/NOME_REPOSITORIO.git
+
+# 3. Prepara os ficheiros
 git add .
-git commit -m "Configuração inicial"
+
+# 4. Cria o primeiro registo
+git commit -m "Configuração inicial do sistema"
+
+# 5. Envia para o GitHub
 git branch -M main
 git push -u origin main
 ```
 
 ### 2. Como Atualizar (Para novas mudanças)
 
-Sempre que fizer alterações no código e quiser enviá-las para o GitHub, siga estes 3 passos no terminal:
+Sempre que fizer alterações e quiser guardá-las no GitHub:
 
 ```bash
-# 1. Prepara todos os ficheiros alterados
+# 1. Prepara todos os ficheiros alterados (O .gitignore agora impede o envio de lixo)
 git add .
 
-# 2. Cria um registo das alterações (escreva uma mensagem curta)
+# 2. Cria um registo das alterações (escreva uma mensagem curta entre aspas)
 git commit -m "Otimização da dashboard e correções no sistema"
 
 # 3. Envia para o GitHub
 git push origin main
 ```
+
+---
 
 ## Tecnologias Utilizadas
 
@@ -52,3 +64,6 @@ git push origin main
 - **Backend**: Firebase Auth, Firestore, Cloud Storage.
 - **PDF Generation**: jsPDF, html2canvas.
 - **AI**: Genkit (para funcionalidades de inteligência artificial).
+
+---
+© 2024 MestreJp. Desenvolvido para eficiência na gestão escolar.
