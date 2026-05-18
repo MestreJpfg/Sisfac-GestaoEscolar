@@ -24,7 +24,8 @@ export default function StatCard({ title, value, icon: Icon, description, action
         <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
           {title}
         </CardTitle>
-        <Icon className="h-5 w-5 text-primary/40 group-hover:text-primary transition-colors" />
+        {/* Adicionado mr-4 para evitar sobreposição com o handle de arrasto do DND */}
+        <Icon className="h-5 w-5 text-primary/40 group-hover:text-primary transition-colors mr-4" />
       </CardHeader>
       
       <CardContent className="relative z-10">

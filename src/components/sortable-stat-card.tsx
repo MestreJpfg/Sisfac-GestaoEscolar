@@ -39,7 +39,7 @@ export function SortableStatCard({ id, ...props }: SortableStatCardProps) {
       <div
         {...attributes}
         {...listeners}
-        className="absolute top-3 right-3 p-1 cursor-grab active:cursor-grabbing text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors z-10"
+        className="absolute top-2 right-2 p-1 cursor-grab active:cursor-grabbing text-muted-foreground/20 group-hover:text-muted-foreground/60 transition-colors z-10"
         title="Arraste para reordenar"
       >
         <GripVertical className="h-4 w-4" />
