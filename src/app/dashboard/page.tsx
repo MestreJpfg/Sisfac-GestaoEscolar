@@ -24,7 +24,8 @@ export default function DashboardPage() {
   const firestore = useFirestore();
   const router = useRouter();
 
-  const [studentCount, setStudentCount] = useState<number | React.ReactNode>(<Loader2 className="h-5 w-5 animate-spin" />);
+  const [studentCount, setStudentCount] = useState<number | string | React.ReactNode>(<Loader2 className="h-4 w-4 animate-spin" />);
+  const [occurrenceCount, setOccurrenceCount] = useState<number | string | React.ReactNode>(<Loader2 className="h-4 w-4 animate-spin" />);
 
   // 1. Permissões e Perfil
   const userDocRef = useMemoFirebase(() => {
@@ -42,7 +43,6 @@ export default function DashboardPage() {
   const isPermissionsLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
 
   const hasPermission = (permission: string) => {
-    // Bypass total por e-mail direto (Chave Mestra)
     const adminEmails = ['mestrejpfg@gmail.com', 'fortalezaem@gmail.com'];
     if (user?.email && adminEmails.includes(user.email.toLowerCase())) return true;
 
@@ -68,7 +68,7 @@ export default function DashboardPage() {
   const canManageMigration = useMemo(() => hasPermission('manage:migration'), [userProfile, profileDetails, user]);
   const canManageDatabase = useMemo(() => hasPermission('manage:database'), [userProfile, profileDetails, user]);
 
-  // 2. Buscar Ocorrências Recentes
+  // 2. Buscar Ocorrências Recentes (Heurística: últimos 10 alunos atualizados)
   const occurrencesQuery = useMemo(() => {
     if (!firestore || !canManageOccurrences) return null;
     return query(collection(firestore, 'ocorrencias'), orderBy('lastUpdated', 'desc'), limit(10));
@@ -92,25 +92,51 @@ export default function DashboardPage() {
     return events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
   }, [recentRecords]);
 
-  // 3. Efeito para carregar estatísticas
+  // 3. Efeito para carregar estatísticas precisas
   useEffect(() => {
     if (isPermissionsLoading || !firestore) return;
     
     const fetchData = async () => {
         try {
+            // Contagem de Alunos
             if (canViewStudents) {
                 const snapshot = await getDocs(collection(firestore, 'alunos'));
                 setStudentCount(snapshot.size);
             } else {
                  setStudentCount(0);
             }
+
+            // Contagem de Ocorrências (Global)
+            if (canManageOccurrences) {
+                const occSnapshot = await getDocs(collection(firestore, 'ocorrencias'));
+                let total = 0;
+                occSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.eventos && Array.isArray(data.eventos)) {
+                        total += data.eventos.length;
+                    }
+                });
+                setOccurrenceCount(total);
+            } else {
+                setOccurrenceCount(0);
+            }
         } catch (e) {
-            console.error("Error fetching students:", e);
+            console.error("Error fetching stats:", e);
             setStudentCount('N/A');
+            setOccurrenceCount('N/A');
         }
     };
     fetchData();
-  }, [firestore, isPermissionsLoading, canViewStudents]);
+  }, [firestore, isPermissionsLoading, canViewStudents, canManageOccurrences]);
+
+  const safeFormatDate = (dateStr: string) => {
+      try {
+          if (!dateStr) return '--/--';
+          return format(new Date(dateStr), 'dd/MM HH:mm', { locale: ptBR });
+      } catch {
+          return '--/--';
+      }
+  };
 
   const welcomeName = user?.displayName?.split(' ')[0] || 'Utilizador';
 
@@ -192,7 +218,7 @@ export default function DashboardPage() {
                   {canManageOccurrences && (
                     <StatCard
                         title="Ocorrências"
-                        value={allEventsFlattenedCount(recentRecords)}
+                        value={occurrenceCount}
                         icon={ShieldAlert}
                         description="Registros disciplinares"
                         action={<Button variant="outline" size="sm" onClick={() => router.push('/dashboard/occurrences')}>Histórico</Button>}
@@ -260,7 +286,9 @@ export default function DashboardPage() {
                         </CardHeader>
                         <CardContent>
                             {isLoadingRecentOccurrences ? (
-                                <div className="flex py-10 justify-center"><Loader2 className="animate-spin text-primary"/></div>
+                                <div className="flex py-10 justify-center">
+                                    <Loader2 className="h-8 w-8 animate-spin text-primary"/>
+                                </div>
                             ) : latestEvents.length > 0 ? (
                                 <div className="space-y-4">
                                     {latestEvents.map((ev, i) => (
@@ -269,10 +297,10 @@ export default function DashboardPage() {
                                                 <span className="text-sm font-bold truncate max-w-[200px]">{ev.studentName}</span>
                                                 <Badge variant="outline" className="text-[10px] h-5">{ev.type}</Badge>
                                             </div>
-                                            <p className="text-xs text-muted-foreground line-clamp-1">{ev.description}</p>
+                                            <p className="text-xs text-muted-foreground line-clamp-1 italic">"{ev.description}"</p>
                                             <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-                                                <span>{ev.studentClass}</span>
-                                                <span>{format(new Date(ev.date), 'dd/MM HH:mm')}</span>
+                                                <span className="font-semibold">{ev.studentClass}</span>
+                                                <span>{safeFormatDate(ev.date)}</span>
                                             </div>
                                         </div>
                                     ))}
@@ -317,9 +345,4 @@ export default function DashboardPage() {
         </div>
     </AuthGuard>
   );
-}
-
-function allEventsFlattenedCount(records: any[] | null) {
-    if (!records) return 0;
-    return records.reduce((acc, r) => acc + (r.eventos?.length || 0), 0);
 }

@@ -9,7 +9,6 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      // Prioridade máxima: bypass por email direto do token ou profileId específico
       return isSignedIn() && (
         request.auth.token.email.lower() in ['mestrejpfg@gmail.com', 'fortalezaem@gmail.com'] ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
@@ -19,27 +18,19 @@ service cloud.firestore {
     
     function hasPermission(permission) {
       if (!isSignedIn()) return false;
-      
-      // Admin bypass total e imediato para qualquer permissão
       if (isAdmin()) return true;
 
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
       if (!exists(userPath)) return false;
       
       let userData = get(userPath).data;
-      
-      // Verifica permissão individual
-      if (permission in userData.get('customPermissions', [])) {
-        return true;
-      }
+      if (permission in userData.get('customPermissions', [])) return true;
 
-      // Verifica permissões herdadas do perfil
       let pId = userData.get('profileId', '');
       if (pId != '') {
         let profilePath = /databases/$(database)/documents/profiles/$(pId);
         if (exists(profilePath)) {
-          let profileData = get(profilePath).data;
-          let permissions = profileData.get('permissions', {});
+          let permissions = get(profilePath).data.get('permissions', {});
           return permissions.get(permission, false) == true;
         }
       }
@@ -47,12 +38,12 @@ service cloud.firestore {
       return false;
     }
 
-    // Regra Mestra: Administradores podem fazer TUDO em qualquer coleção
+    // Regra Mestra: Administradores têm acesso TOTAL
     match /{document=**} {
       allow read, write: if isAdmin();
     }
 
-    // Regras específicas para outros perfis (respeitando hasPermission)
+    // Regras específicas para outros perfis
     match /users/{userId} {
       allow read, list: if isSignedIn();
       allow create, update: if request.auth.uid == userId || hasPermission('manage:users');
@@ -65,7 +56,8 @@ service cloud.firestore {
     }
 
     match /servidores/{servidorId} {
-      allow read, list, write: if hasPermission('manage:cadastros');
+      allow read, list: if hasPermission('manage:cadastros');
+      allow write: if hasPermission('manage:cadastros');
     }
 
     match /alunos/{alunoId} {
@@ -79,7 +71,8 @@ service cloud.firestore {
     }
 
     match /ocorrencias/{ocorrenciaId} {
-      allow read, list, write: if hasPermission('manage:occurrences');
+      allow read, list: if hasPermission('manage:occurrences');
+      allow write: if hasPermission('manage:occurrences');
     }
 
     match /grades/{gradeId} {
