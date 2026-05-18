@@ -1,4 +1,3 @@
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -13,40 +12,37 @@ service cloud.firestore {
     }
     
     function hasPermission(permission) {
-      // Se o documento do usuário não existir, não tem permissão
-      if (!exists(/databases/$(database)/documents/users/$(request.auth.uid))) {
+      // 1. Verificar se o documento do usuário existe
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      if (!userDoc.exists) {
         return false;
       }
       
-      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      let userData = userDoc.data;
       
-      // Administradores têm acesso total bypassando outras verificações
+      // 2. Administradores têm acesso total bypassando outras verificações
       if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
         return true;
       }
       
-      if (!('profileId' in userData) || userData.profileId == null) {
-        return false;
-      }
-      
-      // Verifica se a permissão está explicitamente nos customPermissions do usuário (como array)
-      let hasCustom = ('customPermissions' in userData) && (permission in userData.customPermissions);
-      if (hasCustom) return true;
-
-      // Se o perfil não existir na coleção de perfis, para aqui
-      if (!exists(/databases/$(database)/documents/profiles/$(userData.profileId))) {
-        return false;
+      // 3. Verifica se a permissão está nos customPermissions do usuário (como array)
+      if ('customPermissions' in userData && permission in userData.customPermissions) {
+        return true;
       }
 
-      let profileDoc = get(/databases/$(database)/documents/profiles/$(userData.profileId)).data;
-      
-      // Verificação robusta do mapa de permissões
-      if (!('permissions' in profileDoc) || profileDoc.permissions == null) {
-        return false;
+      // 4. Verifica permissões herdadas do perfil
+      if ('profileId' in userData && userData.profileId != null) {
+        let profilePath = /databases/$(database)/documents/profiles/$(userData.profileId);
+        if (exists(profilePath)) {
+          let profileData = get(profilePath).data;
+          // Verifica se o campo da permissão existe e é verdadeiro no mapa de permissões do perfil
+          return 'permissions' in profileData && 
+                 permission in profileData.permissions && 
+                 profileData.permissions[permission] == true;
+        }
       }
-      
-      // Verifica se o campo da permissão existe e é explicitamente verdadeiro
-      return (permission in profileDoc.permissions) && (profileDoc.permissions[permission] == true);
+
+      return false;
     }
 
     match /users/{userId} {
@@ -61,7 +57,8 @@ service cloud.firestore {
     }
 
     match /servidores/{servidorId} {
-      allow read, list, write: if hasPermission('manage:cadastros');
+      allow read, list: if hasPermission('manage:cadastros');
+      allow write: if hasPermission('manage:cadastros');
     }
 
     match /alunos/{alunoId} {

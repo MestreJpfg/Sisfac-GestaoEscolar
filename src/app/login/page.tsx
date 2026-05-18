@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -63,12 +62,19 @@ export default function LoginPage() {
     const userDocRef = doc(firestore, 'users', user.uid);
     const userDoc = await getDoc(userDocRef);
 
+    const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',') || [];
+    const shouldBeAdmin = user.email && adminEmails.includes(user.email);
+
     if (userDoc.exists()) {
         const userData = userDoc.data();
         
-        // If the user exists but is missing createdAt, add it.
-        if (!userData.createdAt) {
-            await setDoc(userDocRef, { createdAt: new Date().toISOString() }, { merge: true });
+        // Sincronização de perfil: se deve ser admin mas o perfil não é, atualiza
+        const updates: any = {};
+        if (!userData.createdAt) updates.createdAt = new Date().toISOString();
+        if (shouldBeAdmin && userData.profileId !== 'Administrador') updates.profileId = 'Administrador';
+
+        if (Object.keys(updates).length > 0) {
+            await setDoc(userDocRef, updates, { merge: true });
         }
         
         if (userData?.profileCompleted) {
@@ -77,14 +83,11 @@ export default function LoginPage() {
             router.push('/profile'); 
         }
     } else {
-        const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',') || [];
-        const isAdmin = user.email && adminEmails.includes(user.email);
-
         const newUserData = {
             uid: user.uid,
             name: user.displayName || user.email?.split('@')[0] || 'Novo Utilizador',
             email: user.email,
-            profileId: isAdmin ? 'Administrador' : 'Aluno', // Default profile
+            profileId: shouldBeAdmin ? 'Administrador' : 'Aluno', // Default profile
             customPermissions: [],
             createdAt: new Date().toISOString(),
             photoURL: user.photoURL || null,
