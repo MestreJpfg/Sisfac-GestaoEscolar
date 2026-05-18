@@ -164,7 +164,8 @@
             "manage:database": { "type": "boolean" },
             "manage:cadastros": { "type": "boolean" },
             "manage:migration": { "type": "boolean" },
-            "manage:transcript": { "type": "boolean" }
+            "manage:transcript": { "type": "boolean" },
+            "manage:occurrences": { "type": "boolean" }
           },
           "additionalProperties": false
         }

@@ -82,7 +82,7 @@ export default function LoginPage() {
             await setDoc(userDocRef, updates, { merge: true });
         }
         
-        if (userData?.profileCompleted || updates.profileId === 'Administrador') {
+        if (userData?.profileCompleted || shouldBeAdmin) {
             router.push('/dashboard');
         } else {
             router.push('/profile'); 

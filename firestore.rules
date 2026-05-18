@@ -12,27 +12,31 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
     
+    function isAdmin() {
+      // Bypass robusto: Verifica se o email está na lista de administradores mestre
+      // ou se o documento do utilizador tem o perfil de administrador.
+      return isSignedIn() && (
+        request.auth.token.email in ['mestrejpfg@gmail.com', 'fortalezaem@gmail.com'] ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('profileId', '') in ['Administrador', 'Administrador(a)']
+      );
+    }
+    
     function hasPermission(permission) {
-      // 1. Verificar se o documento do utilizador existe (uso de get para aceder a dados externos)
+      if (!isSignedIn()) return false;
+      if (isAdmin()) return true;
+      
       let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      if (!userDoc.exists) {
-        return false;
-      }
+      if (!userDoc.exists) return false;
       
       let userData = userDoc.data;
-      let pId = userData.get('profileId', '');
       
-      // 2. Administradores têm acesso total
-      if (pId == 'Administrador' || pId == 'Administrador(a)') {
-        return true;
-      }
-      
-      // 3. Verifica permissão individual (customPermissions como List)
+      // Verifica permissão individual
       if (userData.get('customPermissions', []).hasAny([permission])) {
         return true;
       }
 
-      // 4. Verifica permissões herdadas do perfil
+      // Verifica permissões herdadas do perfil
+      let pId = userData.get('profileId', '');
       if (pId != '') {
         let profilePath = /databases/$(database)/documents/profiles/$(pId);
         if (exists(profilePath)) {
@@ -47,48 +51,48 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read, list: if isSignedIn();
-      allow create, update: if isOwner(userId) || hasPermission('manage:users');
-      allow delete: if hasPermission('manage:users');
+      allow create, update: if isOwner(userId) || isAdmin() || hasPermission('manage:users');
+      allow delete: if isAdmin() || hasPermission('manage:users');
     }
     
     match /profiles/{profileId} {
         allow read, list: if isSignedIn();
-        allow write: if hasPermission('manage:profiles');
+        allow write: if isAdmin() || hasPermission('manage:profiles');
     }
 
     match /servidores/{servidorId} {
-      allow read, list: if hasPermission('manage:cadastros');
-      allow write: if hasPermission('manage:cadastros');
+      allow read, list: if isAdmin() || hasPermission('manage:cadastros');
+      allow write: if isAdmin() || hasPermission('manage:cadastros');
     }
 
     match /alunos/{alunoId} {
-      allow read, list: if hasPermission('view:students');
-      allow write: if hasPermission('manage:students') || hasPermission('manage:migration');
+      allow read, list: if isAdmin() || hasPermission('view:students');
+      allow write: if isAdmin() || hasPermission('manage:students') || hasPermission('manage:migration');
     }
     
     match /exalunos/{alunoId} {
-      allow read, list: if hasPermission('view:students');
-      allow write: if hasPermission('manage:migration');
+      allow read, list: if isAdmin() || hasPermission('view:students');
+      allow write: if isAdmin() || hasPermission('manage:migration');
     }
 
     match /ocorrencias/{ocorrenciaId} {
       allow read, list: if isSignedIn();
-      allow write: if hasPermission('manage:occurrences');
+      allow write: if isAdmin() || hasPermission('manage:occurrences');
     }
 
     match /grades/{gradeId} {
-       allow read, list: if hasPermission('view:grades');
-       allow write: if hasPermission('manage:grades');
+       allow read, list: if isAdmin() || hasPermission('view:grades');
+       allow write: if isAdmin() || hasPermission('manage:grades');
     }
 
     match /attendance/{attendanceId} {
-       allow read, list: if hasPermission('view:attendance');
-       allow write: if hasPermission('manage:attendance');
+       allow read, list: if isAdmin() || hasPermission('view:attendance');
+       allow write: if isAdmin() || hasPermission('manage:attendance');
     }
     
     match /announcements/{announcementId} {
       allow read, list: if isSignedIn();
-      allow write: if hasPermission('manage:announcements');
+      allow write: if isAdmin() || hasPermission('manage:announcements');
     }
   }
 }
