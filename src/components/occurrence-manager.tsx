@@ -3,15 +3,15 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, orderBy, deleteDoc, doc, setDoc } from 'firebase/firestore';
+import { collection, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Loader2, Calendar, User, Trash2, Edit, AlertCircle, FileText } from 'lucide-react';
+import { Plus, Search, Loader2, Trash2, Edit, FileText } from 'lucide-react';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import OccurrenceFormDialog from './occurrence-form-dialog';
 import { Badge } from './ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
@@ -63,7 +63,7 @@ export default function OccurrenceManager() {
         );
     }, [occurrences, searchTerm]);
 
-    const handleSave = async (data: any) => {
+    const handleSave = (data: any) => {
         if (!firestore) return;
 
         setIsSaving(true);
@@ -78,8 +78,8 @@ export default function OccurrenceManager() {
                 updatedAt: new Date().toISOString()
             };
 
-            // Utilizando o padrão await setDoc (bloqueante com tratamento de erro local)
-            await setDoc(docRef, finalData, { merge: true });
+            // Utilizando o padrão setDocumentNonBlocking que funciona nos Alunos
+            setDocumentNonBlocking(docRef, finalData, { merge: true });
 
             toast({
                 title: data.id ? "Ocorrência Atualizada" : "Ocorrência Registrada",
@@ -93,7 +93,7 @@ export default function OccurrenceManager() {
             toast({
                 variant: 'destructive',
                 title: 'Erro ao Salvar',
-                description: 'Não foi possível gravar a ocorrência. Verifique as suas permissões.',
+                description: 'Não foi possível gravar a ocorrência.',
             });
         } finally {
             setIsSaving(false);
