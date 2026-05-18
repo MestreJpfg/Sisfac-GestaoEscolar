@@ -220,7 +220,7 @@ export default function DashboardPage() {
         icon: Users,
         description: "Gestão de fichas e documentos",
         href: '/dashboard/students',
-        actionLabel: 'Gerir',
+        actionLabel: 'Ver',
         show: permissions.students
     },
     servidores: {
@@ -270,7 +270,7 @@ export default function DashboardPage() {
         icon: LayoutGrid,
         description: "Listas e remanejamento",
         href: '/dashboard/classes',
-        actionLabel: 'Gerir',
+        actionLabel: 'Ver',
         show: permissions.classes
     },
     transcript: {
