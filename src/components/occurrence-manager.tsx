@@ -2,8 +2,9 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, doc, getDoc, setDoc, orderBy } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { collection, query, doc, getDoc, getDocs, orderBy } from 'firebase/firestore';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,30 +28,46 @@ export default function OccurrenceManager() {
     const [editingOccurrence, setEditingOccurrence] = useState<any | null>(null);
     const [viewingOccurrence, setViewingOccurrence] = useState<any | null>(null);
     const [deletingOccurrence, setDeletingOccurrence] = useState<any | null>(null);
-    const [isLoadingStudents, setIsLoadingStudents] = useState(true);
+    
+    const [isLoadingData, setIsLoadingData] = useState(true);
+    const [studentRecords, setStudentRecords] = useState<any[]>([]);
     const [allStudents, setAllStudents] = useState<any[]>([]);
 
-    // Buscar prontuários de ocorrências. Removido o limite para listar todas conforme solicitado.
-    const occurrencesQuery = useMemo(() => {
-        if (!firestore) return null;
-        return query(
-            collection(firestore, 'ocorrencias'), 
-            orderBy('lastUpdated', 'desc')
-        );
-    }, [firestore]);
+    // Carregar dados iniciais (Ocorrências e Alunos)
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!firestore) return;
+            setIsLoadingData(true);
+            try {
+                const occQuery = query(collection(firestore, 'ocorrencias'), orderBy('lastUpdated', 'desc'));
+                const studentQuery = query(collection(firestore, 'alunos'));
 
-    const { data: studentRecords, isLoading: isLoadingOccurrences, error: occurrencesError } = useCollection(occurrencesQuery);
+                const [occSnap, studentSnap] = await Promise.all([
+                    getDocs(occQuery),
+                    getDocs(studentQuery)
+                ]);
 
-    // Achatar todos os eventos de todos os alunos para uma lista única cronológica para a tabela principal
+                setStudentRecords(occSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+                setAllStudents(studentSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+            } catch (error) {
+                console.error("Erro ao buscar dados:", error);
+                toast({ variant: 'destructive', title: 'Erro de Conexão', description: 'Não foi possível carregar os registros.' });
+            } finally {
+                setIsLoadingData(false);
+            }
+        };
+        fetchData();
+    }, [firestore, toast]);
+
+    // Achatar eventos para listagem linear
     const allEventsFlattened = useMemo(() => {
-        if (!studentRecords) return [];
         const events: any[] = [];
         studentRecords.forEach(record => {
             if (record.eventos && Array.isArray(record.eventos)) {
                 record.eventos.forEach((ev: any) => {
                     events.push({
                         ...ev,
-                        studentId: record.id, // O ID é o RM
+                        studentId: record.id,
                         studentName: record.studentName,
                         studentClass: record.studentClass
                     });
@@ -64,23 +81,6 @@ export default function OccurrenceManager() {
             return dateB - dateA;
         });
     }, [studentRecords]);
-
-    // Buscar lista de alunos para o autocomplete do formulário
-    useEffect(() => {
-        const fetchStudents = async () => {
-            if (!firestore) return;
-            setIsLoadingStudents(true);
-            try {
-                const snapshot = await (await import('firebase/firestore')).getDocs(collection(firestore, 'alunos'));
-                setAllStudents(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-            } catch (error) {
-                console.error("Erro ao buscar alunos:", error);
-            } finally {
-                setIsLoadingStudents(false);
-            }
-        };
-        fetchStudents();
-    }, [firestore]);
 
     const filteredEvents = useMemo(() => {
         const lowerSearch = searchTerm.toLowerCase().trim();
@@ -104,13 +104,11 @@ export default function OccurrenceManager() {
             
             const docSnap = await getDoc(docRef);
             let currentEventos = [];
-            
             if (docSnap.exists()) {
                 currentEventos = docSnap.data().eventos || [];
             }
 
             const occurrenceId = data.id || `occ_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-            
             const eventData = {
                 ...data,
                 id: occurrenceId,
@@ -133,22 +131,23 @@ export default function OccurrenceManager() {
                 eventos: updatedEventos
             };
 
-            await setDoc(docRef, finalDocData, { merge: true });
+            setDocumentNonBlocking(docRef, finalDocData, { merge: true });
 
-            toast({
-                title: data.id ? "Registro Atualizado" : "Ocorrência Registrada",
-                description: `O prontuário de ${data.studentName} foi atualizado com sucesso.`,
+            // Atualização otimista local
+            setStudentRecords(prev => {
+                const existing = prev.find(r => r.id === studentId);
+                if (existing) {
+                    return prev.map(r => r.id === studentId ? finalDocData : r);
+                }
+                return [finalDocData, ...prev];
             });
 
+            toast({ title: data.id ? "Registro Atualizado" : "Ocorrência Registrada" });
             setIsFormOpen(false);
             setEditingOccurrence(null);
         } catch (error: any) {
-            console.error("Erro ao salvar ocorrência:", error);
-            toast({
-                variant: 'destructive',
-                title: 'Erro ao Salvar',
-                description: 'Não foi possível gravar os dados. Verifique a sua conexão.',
-            });
+            console.error("Erro ao salvar:", error);
+            toast({ variant: 'destructive', title: 'Erro ao Salvar' });
         } finally {
             setIsSaving(false);
         }
@@ -164,18 +163,15 @@ export default function OccurrenceManager() {
             if (docSnap.exists()) {
                 const currentData = docSnap.data();
                 const filteredEventos = (currentData.eventos || []).filter((ev: any) => ev.id !== deletingOccurrence.id);
+                const finalData = { ...currentData, eventos: filteredEventos, lastUpdated: new Date().toISOString() };
                 
-                await setDoc(docRef, { 
-                    ...currentData, 
-                    eventos: filteredEventos,
-                    lastUpdated: new Date().toISOString()
-                });
+                setDocumentNonBlocking(docRef, finalData, { merge: true });
+                setStudentRecords(prev => prev.map(r => r.id === studentId ? finalData : r));
                 
-                toast({ title: "Evento removido do histórico." });
+                toast({ title: "Evento removido." });
             }
         } catch (error) {
-            console.error("Erro ao eliminar:", error);
-            toast({ variant: 'destructive', title: "Não foi possível remover o registro." });
+            toast({ variant: 'destructive', title: "Erro ao eliminar." });
         } finally {
             setDeletingOccurrence(null);
         }
@@ -196,7 +192,7 @@ export default function OccurrenceManager() {
                 <div className="relative w-full sm:w-96">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input 
-                        placeholder="Pesquisar por aluno, RM, tipo ou descrição..." 
+                        placeholder="Pesquisar por aluno, RM ou descrição..." 
                         className="pl-10"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -213,23 +209,15 @@ export default function OccurrenceManager() {
                         <History className="h-5 w-5 text-primary" />
                         <div>
                             <CardTitle>Histórico de Eventos Disciplinares</CardTitle>
-                            <CardDescription>Lista cronológica de todas as ocorrências registradas no sistema.</CardDescription>
+                            <CardDescription>Lista cronológica de todas as ocorrências registradas.</CardDescription>
                         </div>
                     </div>
                 </CardHeader>
                 <CardContent>
-                    {isLoadingOccurrences ? (
+                    {isLoadingData ? (
                         <div className="flex h-64 flex-col items-center justify-center space-y-4 text-center">
                             <Loader2 className="h-10 w-10 animate-spin text-primary" />
                             <p className="text-sm text-muted-foreground">A carregar registros do banco de dados...</p>
-                        </div>
-                    ) : (occurrencesError) ? (
-                        <div className="text-center py-24 text-destructive border-2 border-dashed rounded-lg bg-destructive/5">
-                            <History className="mx-auto h-16 w-16 mb-4 opacity-50" />
-                            <h3 className="text-lg font-semibold">Erro ao Carregar Dados</h3>
-                            <p className="max-w-xs mx-auto text-sm opacity-80">
-                                Verifique as permissões de acesso ou se há índices em falta no Firebase.
-                            </p>
                         </div>
                     ) : filteredEvents.length > 0 ? (
                         <div className="border rounded-md overflow-hidden">
@@ -238,7 +226,7 @@ export default function OccurrenceManager() {
                                     <TableRow>
                                         <TableHead className="w-[120px]">Data/Hora</TableHead>
                                         <TableHead>Aluno / Turma</TableHead>
-                                        <TableHead>Tipo de Falta</TableHead>
+                                        <TableHead>Tipo</TableHead>
                                         <TableHead className="hidden md:table-cell">Descrição</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead className="text-right">Ações</TableHead>
@@ -252,7 +240,7 @@ export default function OccurrenceManager() {
                                             onClick={() => setViewingOccurrence(occ)}
                                         >
                                             <TableCell>
-                                                <div className="flex flex-col text-xs">
+                                                <div className="flex flex-col text-[11px]">
                                                     <span className="font-bold flex items-center gap-1">
                                                         <CalendarDays className="h-3 w-3" />
                                                         {format(new Date(occ.date), 'dd/MM/yy')}
@@ -267,7 +255,7 @@ export default function OccurrenceManager() {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                <Badge variant="outline" className="text-[10px] font-medium uppercase tracking-wider">{occ.type}</Badge>
+                                                <Badge variant="outline" className="text-[10px] font-medium uppercase">{occ.type}</Badge>
                                             </TableCell>
                                             <TableCell className="hidden md:table-cell">
                                                 <p className="text-xs text-muted-foreground line-clamp-2 italic">"{occ.description}"</p>
@@ -285,7 +273,7 @@ export default function OccurrenceManager() {
                                                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingOccurrence(occ); setIsFormOpen(true); }}>
                                                         <Edit className="h-4 w-4" />
                                                     </Button>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeletingOccurrence(occ)}>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeletingOccurrence(occ)}>
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
                                                 </div>
@@ -299,12 +287,7 @@ export default function OccurrenceManager() {
                         <div className="text-center py-24 text-muted-foreground border-2 border-dashed rounded-lg bg-muted/5">
                             <FileText className="mx-auto h-16 w-16 mb-4 opacity-10" />
                             <h3 className="text-lg font-semibold text-foreground/70">Nenhum registro encontrado</h3>
-                            <p className="max-w-xs mx-auto text-sm">
-                                {searchTerm ? "Não existem ocorrências que correspondam à sua pesquisa." : "O histórico está limpo. Comece a registrar os eventos para acompanhar os alunos."}
-                            </p>
-                            {searchTerm && (
-                                <Button variant="link" onClick={() => setSearchTerm('')} className="mt-2">Limpar busca</Button>
-                            )}
+                            <p className="text-sm">Clique em "Registrar Ocorrência" para começar.</p>
                         </div>
                     )}
                 </CardContent>
@@ -334,12 +317,12 @@ export default function OccurrenceManager() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Eliminar Registro?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Deseja remover este evento específico do prontuário de <strong>{deletingOccurrence?.studentName}</strong>? Esta ação não apagará outras ocorrências do mesmo aluno, apenas esta selecionada.
+                            Deseja remover este evento do prontuário de <strong>{deletingOccurrence?.studentName}</strong>?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Confirmar Exclusão</AlertDialogAction>
+                        <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Confirmar</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
