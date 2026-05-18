@@ -6,17 +6,15 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { collection, query, doc, getDocs, limit, orderBy } from 'firebase/firestore';
-import { Loader2, Users, UserCog, Database, ClipboardList, Megaphone, CalendarCheck, ArrowLeft, NotebookText, Gamepad2, Award, FileText, GitBranch, Briefcase, ShieldAlert, History } from 'lucide-react';
+import { Loader2, Users, UserCog, Megaphone, CalendarCheck, NotebookText, Gamepad2, History, ShieldAlert } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import AuthGuard from '@/components/auth-guard';
 import AppFooter from '@/components/app-footer';
-import StudentDistributionChart from '@/components/student-distribution-chart';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import NeeDistributionChart from '@/components/nee-distribution-chart';
 import { NotificationCenter } from '@/components/notification-center';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -27,9 +25,6 @@ export default function DashboardPage() {
   const router = useRouter();
 
   const [studentCount, setStudentCount] = useState<number | React.ReactNode>(<Loader2 className="h-5 w-5 animate-spin" />);
-  const [chartDrilldown, setChartDrilldown] = useState<string | null>(null);
-  const [allStudents, setAllStudents] = useState<any[]>([]);
-  const [isLoadingAllStudents, setIsLoadingAllStudents] = useState(true);
 
   // 1. Permissões e Perfil
   const userDocRef = useMemoFirebase(() => {
@@ -91,22 +86,16 @@ export default function DashboardPage() {
     if (isPermissionsLoading || !firestore) return;
     
     const fetchData = async () => {
-        setIsLoadingAllStudents(true);
         try {
             if (canViewStudents) {
                 const snapshot = await getDocs(collection(firestore, 'alunos'));
-                const studentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setStudentCount(studentsData.length);
-                setAllStudents(studentsData);
+                setStudentCount(snapshot.size);
             } else {
                  setStudentCount(0);
-                 setAllStudents([]);
             }
         } catch (e) {
             console.error("Error fetching students:", e);
             setStudentCount('N/A');
-        } finally {
-            setIsLoadingAllStudents(false);
         }
     };
     fetchData();
@@ -186,34 +175,15 @@ export default function DashboardPage() {
                    />
                 </div>
 
-                <div className="mt-8 grid gap-8 lg:grid-cols-3">
-                    {/* Gráfico de Distribuição */}
-                    <Card className="lg:col-span-2">
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <div>
-                                <CardTitle>{chartDrilldown ? `Turmas: ${chartDrilldown}` : 'Distribuição por Série'}</CardTitle>
-                                <CardDescription>Capacidade vs Matriculados</CardDescription>
-                            </div>
-                            {chartDrilldown && <Button variant="ghost" size="sm" onClick={() => setChartDrilldown(null)}><ArrowLeft className="h-4 w-4 mr-1"/> Voltar</Button>}
-                        </CardHeader>
-                        <CardContent>
-                            <StudentDistributionChart 
-                                students={allStudents}
-                                isLoading={isLoadingAllStudents}
-                                onDrilldown={setChartDrilldown}
-                                drilledSerie={chartDrilldown}
-                            />
-                        </CardContent>
-                    </Card>
-
-                    {/* Últimas Ocorrências */}
-                    <Card>
+                <div className="mt-8">
+                    {/* Últimas Ocorrências - Agora em destaque central */}
+                    <Card className="max-w-2xl">
                         <CardHeader>
                             <div className="flex items-center gap-2">
                                 <History className="h-5 w-5 text-primary" />
                                 <CardTitle>Últimas Ocorrências</CardTitle>
                             </div>
-                            <CardDescription>Resumo dos registros mais recentes.</CardDescription>
+                            <CardDescription>Resumo dos registros mais recentes efetuados no sistema.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             {isLoadingRecentOccurrences ? (
@@ -223,7 +193,7 @@ export default function DashboardPage() {
                                     {latestEvents.map((ev, i) => (
                                         <div key={i} className="flex flex-col gap-1 pb-3 border-b last:border-0">
                                             <div className="flex justify-between items-start">
-                                                <span className="text-sm font-bold truncate max-w-[150px]">{ev.studentName}</span>
+                                                <span className="text-sm font-bold truncate max-w-[200px]">{ev.studentName}</span>
                                                 <Badge variant="outline" className="text-[10px] h-5">{ev.type}</Badge>
                                             </div>
                                             <p className="text-xs text-muted-foreground line-clamp-1">{ev.description}</p>
@@ -233,12 +203,12 @@ export default function DashboardPage() {
                                             </div>
                                         </div>
                                     ))}
-                                    <Button variant="ghost" className="w-full text-xs" onClick={() => router.push('/dashboard/occurrences')}>Ver todas</Button>
+                                    <Button variant="ghost" className="w-full text-xs" onClick={() => router.push('/dashboard/occurrences')}>Ver todas as ocorrências</Button>
                                 </div>
                             ) : (
                                 <div className="text-center py-10 text-muted-foreground">
                                     <ShieldAlert className="mx-auto h-8 w-8 mb-2 opacity-20"/>
-                                    <p className="text-xs">Nenhum registro recente.</p>
+                                    <p className="text-xs">Nenhum registro recente encontrado.</p>
                                 </div>
                             )}
                         </CardContent>
