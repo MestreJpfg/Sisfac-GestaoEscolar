@@ -3,17 +3,19 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, doc, getDoc, setDoc, orderBy, limit } from 'firebase/firestore';
+import { collection, query, doc, getDoc, setDoc, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Loader2, Trash2, Edit, FileText, History, CalendarDays } from 'lucide-react';
+import { Plus, Search, Loader2, Trash2, Edit, FileText, History, CalendarDays, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import OccurrenceFormDialog from './occurrence-form-dialog';
+import OccurrenceDetailDialog from './occurrence-detail-dialog';
 import { Badge } from './ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
+import { cn } from '@/lib/utils';
 
 export default function OccurrenceManager() {
     const firestore = useFirestore();
@@ -23,17 +25,17 @@ export default function OccurrenceManager() {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [editingOccurrence, setEditingOccurrence] = useState<any | null>(null);
+    const [viewingOccurrence, setViewingOccurrence] = useState<any | null>(null);
     const [deletingOccurrence, setDeletingOccurrence] = useState<any | null>(null);
     const [isLoadingStudents, setIsLoadingStudents] = useState(true);
     const [allStudents, setAllStudents] = useState<any[]>([]);
 
-    // Buscar prontuários de ocorrências. Adicionado limite para garantir performance e evitar loops.
+    // Buscar prontuários de ocorrências. Removido o limite para listar todas conforme solicitado.
     const occurrencesQuery = useMemo(() => {
         if (!firestore) return null;
         return query(
             collection(firestore, 'ocorrencias'), 
-            orderBy('lastUpdated', 'desc'),
-            limit(50)
+            orderBy('lastUpdated', 'desc')
         );
     }, [firestore]);
 
@@ -217,13 +219,13 @@ export default function OccurrenceManager() {
                 </CardHeader>
                 <CardContent>
                     {isLoadingOccurrences ? (
-                        <div className="flex h-64 flex-col items-center justify-center space-y-4">
+                        <div className="flex h-64 flex-col items-center justify-center space-y-4 text-center">
                             <Loader2 className="h-10 w-10 animate-spin text-primary" />
                             <p className="text-sm text-muted-foreground">A carregar registros do banco de dados...</p>
                         </div>
                     ) : (occurrencesError) ? (
                         <div className="text-center py-24 text-destructive border-2 border-dashed rounded-lg bg-destructive/5">
-                            <AlertCircle className="mx-auto h-16 w-16 mb-4 opacity-50" />
+                            <History className="mx-auto h-16 w-16 mb-4 opacity-50" />
                             <h3 className="text-lg font-semibold">Erro ao Carregar Dados</h3>
                             <p className="max-w-xs mx-auto text-sm opacity-80">
                                 Verifique as permissões de acesso ou se há índices em falta no Firebase.
@@ -244,7 +246,11 @@ export default function OccurrenceManager() {
                                 </TableHeader>
                                 <TableBody>
                                     {filteredEvents.map((occ) => (
-                                        <TableRow key={occ.id} className="hover:bg-muted/30 transition-colors">
+                                        <TableRow 
+                                            key={occ.id} 
+                                            className="hover:bg-muted/30 transition-colors cursor-pointer"
+                                            onClick={() => setViewingOccurrence(occ)}
+                                        >
                                             <TableCell>
                                                 <div className="flex flex-col text-xs">
                                                     <span className="font-bold flex items-center gap-1">
@@ -271,8 +277,11 @@ export default function OccurrenceManager() {
                                                     {occ.status}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="text-right">
+                                            <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex justify-end gap-1">
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewingOccurrence(occ)}>
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
                                                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingOccurrence(occ); setIsFormOpen(true); }}>
                                                         <Edit className="h-4 w-4" />
                                                     </Button>
@@ -312,6 +321,14 @@ export default function OccurrenceManager() {
                 />
             )}
 
+            {viewingOccurrence && (
+                <OccurrenceDetailDialog 
+                    isOpen={!!viewingOccurrence}
+                    onClose={() => setViewingOccurrence(null)}
+                    occurrence={viewingOccurrence}
+                />
+            )}
+
             <AlertDialog open={!!deletingOccurrence} onOpenChange={() => setDeletingOccurrence(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
@@ -329,5 +346,3 @@ export default function OccurrenceManager() {
         </div>
     );
 }
-
-import { AlertCircle } from 'lucide-react';
