@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useEffect, useState } from 'react';
@@ -239,9 +238,9 @@ export default function DashboardPage() {
         title: "Frequência",
         value: "Chamada",
         icon: CalendarCheck,
-        description: "Registo e relatórios",
+        description: "Registro e relatórios",
         href: '/dashboard/attendance',
-        actionLabel: 'Registar',
+        actionLabel: 'Registrar',
         show: permissions.attendance
     },
     grades: {
