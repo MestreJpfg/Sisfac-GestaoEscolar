@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, doc, getDoc, setDoc, orderBy } from 'firebase/firestore';
+import { collection, query, doc, getDoc, setDoc, orderBy, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,13 +27,17 @@ export default function OccurrenceManager() {
     const [isLoadingStudents, setIsLoadingStudents] = useState(true);
     const [allStudents, setAllStudents] = useState<any[]>([]);
 
-    // Buscar prontuários de ocorrências. Ordenamos pela última atualização para ver os casos recentes primeiro.
+    // Buscar prontuários de ocorrências. Adicionado limite para garantir performance e evitar loops.
     const occurrencesQuery = useMemo(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'ocorrencias'), orderBy('lastUpdated', 'desc'));
+        return query(
+            collection(firestore, 'ocorrencias'), 
+            orderBy('lastUpdated', 'desc'),
+            limit(50)
+        );
     }, [firestore]);
 
-    const { data: studentRecords, isLoading: isLoadingOccurrences } = useCollection(occurrencesQuery);
+    const { data: studentRecords, isLoading: isLoadingOccurrences, error: occurrencesError } = useCollection(occurrencesQuery);
 
     // Achatar todos os eventos de todos os alunos para uma lista única cronológica para a tabela principal
     const allEventsFlattened = useMemo(() => {
@@ -44,14 +48,14 @@ export default function OccurrenceManager() {
                 record.eventos.forEach((ev: any) => {
                     events.push({
                         ...ev,
-                        studentId: record.id, // O ID agora é o RM
+                        studentId: record.id, // O ID é o RM
                         studentName: record.studentName,
                         studentClass: record.studentClass
                     });
                 });
             }
         });
-        // Ordenação garantida por data decrescente (mais recentes primeiro)
+        
         return events.sort((a, b) => {
             const dateA = a.date ? new Date(a.date).getTime() : 0;
             const dateB = b.date ? new Date(b.date).getTime() : 0;
@@ -93,11 +97,9 @@ export default function OccurrenceManager() {
 
         setIsSaving(true);
         try {
-            // Utilizamos o RM do aluno como ID do documento para centralizar o histórico
             const studentId = data.studentId; 
             const docRef = doc(firestore, 'ocorrencias', studentId);
             
-            // Buscar documento atual para manter o histórico de eventos desse aluno
             const docSnap = await getDoc(docRef);
             let currentEventos = [];
             
@@ -105,7 +107,6 @@ export default function OccurrenceManager() {
                 currentEventos = docSnap.data().eventos || [];
             }
 
-            // Criar ID único para este evento específico dentro do array
             const occurrenceId = data.id || `occ_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
             
             const eventData = {
@@ -117,22 +118,19 @@ export default function OccurrenceManager() {
 
             let updatedEventos;
             if (data.id) {
-                // Editar evento existente no array
                 updatedEventos = currentEventos.map((ev: any) => ev.id === data.id ? eventData : ev);
             } else {
-                // Adicionar novo evento ao início da lista do aluno
                 updatedEventos = [eventData, ...currentEventos];
             }
 
             const finalDocData = {
-                studentId: data.studentId, // RM
+                studentId: data.studentId, 
                 studentName: data.studentName,
                 studentClass: data.studentClass,
                 lastUpdated: new Date().toISOString(),
                 eventos: updatedEventos
             };
 
-            // Gravamos usando o RM como ID fixo
             await setDoc(docRef, finalDocData, { merge: true });
 
             toast({
@@ -147,7 +145,7 @@ export default function OccurrenceManager() {
             toast({
                 variant: 'destructive',
                 title: 'Erro ao Salvar',
-                description: 'Não foi possível gravar os dados. Verifique a sua conexão e permissões.',
+                description: 'Não foi possível gravar os dados. Verifique a sua conexão.',
             });
         } finally {
             setIsSaving(false);
@@ -165,7 +163,6 @@ export default function OccurrenceManager() {
                 const currentData = docSnap.data();
                 const filteredEventos = (currentData.eventos || []).filter((ev: any) => ev.id !== deletingOccurrence.id);
                 
-                // Atualizar o documento removendo apenas o evento específico do array
                 await setDoc(docRef, { 
                     ...currentData, 
                     eventos: filteredEventos,
@@ -223,6 +220,14 @@ export default function OccurrenceManager() {
                         <div className="flex h-64 flex-col items-center justify-center space-y-4">
                             <Loader2 className="h-10 w-10 animate-spin text-primary" />
                             <p className="text-sm text-muted-foreground">A carregar registros do banco de dados...</p>
+                        </div>
+                    ) : (occurrencesError) ? (
+                        <div className="text-center py-24 text-destructive border-2 border-dashed rounded-lg bg-destructive/5">
+                            <AlertCircle className="mx-auto h-16 w-16 mb-4 opacity-50" />
+                            <h3 className="text-lg font-semibold">Erro ao Carregar Dados</h3>
+                            <p className="max-w-xs mx-auto text-sm opacity-80">
+                                Verifique as permissões de acesso ou se há índices em falta no Firebase.
+                            </p>
                         </div>
                     ) : filteredEvents.length > 0 ? (
                         <div className="border rounded-md overflow-hidden">
@@ -324,3 +329,5 @@ export default function OccurrenceManager() {
         </div>
     );
 }
+
+import { AlertCircle } from 'lucide-react';

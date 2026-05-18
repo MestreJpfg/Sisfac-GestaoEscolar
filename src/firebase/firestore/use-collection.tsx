@@ -61,13 +61,10 @@ export function useCollection<T = any>(
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
-  // Use a ref to store the previous query to compare against the new one.
   const prevQueryRef = useRef<Query<DocumentData> | CollectionReference<DocumentData> | null | undefined>(null);
 
   useEffect(() => {
     // Check if the new query is actually different from the previous one.
-    // This helps prevent re-subscribing if the parent component re-renders
-    // but the query itself hasn't changed.
     if (targetRefOrQuery && prevQueryRef.current && queryEqual(targetRefOrQuery, prevQueryRef.current)) {
       return;
     }
@@ -99,10 +96,12 @@ export function useCollection<T = any>(
       (err: FirestoreError) => {
         console.error("Firestore onSnapshot error:", err);
         
-        const path: string =
-          targetRefOrQuery.type === 'collection'
-            ? (targetRefOrQuery as CollectionReference).path
-            : (targetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
+        let path = "unknown";
+        try {
+            path = targetRefOrQuery.type === 'collection'
+                ? (targetRefOrQuery as CollectionReference).path
+                : (targetRefOrQuery as any)?._query?.path?.canonicalString() || "query";
+        } catch (e) {}
 
         const contextualError = new FirestorePermissionError({
           operation: 'list',
@@ -118,7 +117,7 @@ export function useCollection<T = any>(
     );
 
     return () => unsubscribe();
-  }, [targetRefOrQuery]); // The effect re-runs if the query object itself changes.
+  }, [targetRefOrQuery]);
 
   return { data, isLoading, error };
 }
