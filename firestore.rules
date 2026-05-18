@@ -23,6 +23,9 @@ service cloud.firestore {
     function hasPermission(permission) {
       if (!isSignedIn()) return false;
       
+      // Admin bypass total
+      if (isAdmin()) return true;
+
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
       if (!exists(userPath)) return false;
       

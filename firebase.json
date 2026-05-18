@@ -4,6 +4,10 @@
     "backendId": "gestaoescolar",
     "source": "."
   },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
   "hosting": {
     "public": "public",
     "ignore": [
