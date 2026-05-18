@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -12,33 +13,32 @@ service cloud.firestore {
     }
     
     function hasPermission(permission) {
-      // 1. Verificar se o documento do usuário existe
+      // 1. Verificar se o documento do utilizador existe (uso de get para aceder a dados externos)
       let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
       if (!userDoc.exists) {
         return false;
       }
       
       let userData = userDoc.data;
+      let pId = userData.get('profileId', '');
       
-      // 2. Administradores têm acesso total bypassando outras verificações
-      if (userData.profileId == 'Administrador' || userData.profileId == 'Administrador(a)') {
+      // 2. Administradores têm acesso total
+      if (pId == 'Administrador' || pId == 'Administrador(a)') {
         return true;
       }
       
-      // 3. Verifica se a permissão está nos customPermissions do usuário (como array)
-      if ('customPermissions' in userData && permission in userData.customPermissions) {
+      // 3. Verifica permissão individual (customPermissions como List)
+      if (userData.get('customPermissions', []).hasAny([permission])) {
         return true;
       }
 
       // 4. Verifica permissões herdadas do perfil
-      if ('profileId' in userData && userData.profileId != null) {
-        let profilePath = /databases/$(database)/documents/profiles/$(userData.profileId);
+      if (pId != '') {
+        let profilePath = /databases/$(database)/documents/profiles/$(pId);
         if (exists(profilePath)) {
           let profileData = get(profilePath).data;
-          // Verifica se o campo da permissão existe e é verdadeiro no mapa de permissões do perfil
-          return 'permissions' in profileData && 
-                 permission in profileData.permissions && 
-                 profileData.permissions[permission] == true;
+          let permissions = profileData.get('permissions', {});
+          return permissions.get(permission, false) == true;
         }
       }
 

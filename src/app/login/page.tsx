@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -62,22 +63,26 @@ export default function LoginPage() {
     const userDocRef = doc(firestore, 'users', user.uid);
     const userDoc = await getDoc(userDocRef);
 
-    const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',') || [];
-    const shouldBeAdmin = user.email && adminEmails.includes(user.email);
+    // Lista de emails que devem ser administradores forçados
+    const adminEmails = ['mestrejpfg@gmail.com', 'fortalezaem@gmail.com']; 
+    const shouldBeAdmin = user.email && adminEmails.includes(user.email.toLowerCase());
 
     if (userDoc.exists()) {
         const userData = userDoc.data();
         
-        // Sincronização de perfil: se deve ser admin mas o perfil não é, atualiza
+        // Sincronização agressiva de perfil: se deve ser admin mas o perfil não é, atualiza imediatamente
         const updates: any = {};
         if (!userData.createdAt) updates.createdAt = new Date().toISOString();
-        if (shouldBeAdmin && userData.profileId !== 'Administrador') updates.profileId = 'Administrador';
+        if (shouldBeAdmin && userData.profileId !== 'Administrador') {
+            updates.profileId = 'Administrador';
+            console.log(`Elevating user ${user.email} to Administrador`);
+        }
 
         if (Object.keys(updates).length > 0) {
             await setDoc(userDocRef, updates, { merge: true });
         }
         
-        if (userData?.profileCompleted) {
+        if (userData?.profileCompleted || updates.profileId === 'Administrador') {
             router.push('/dashboard');
         } else {
             router.push('/profile'); 
@@ -87,7 +92,7 @@ export default function LoginPage() {
             uid: user.uid,
             name: user.displayName || user.email?.split('@')[0] || 'Novo Utilizador',
             email: user.email,
-            profileId: shouldBeAdmin ? 'Administrador' : 'Aluno', // Default profile
+            profileId: shouldBeAdmin ? 'Administrador' : 'Aluno',
             customPermissions: [],
             createdAt: new Date().toISOString(),
             photoURL: user.photoURL || null,
@@ -118,16 +123,12 @@ export default function LoginPage() {
           description = 'Credenciais inválidas. Verifique o seu email e senha.';
           
           try {
-            // Check if the user's email is associated with a Google account
             const methods = await fetchSignInMethodsForEmail(auth, data.email);
             if (methods.includes('google.com')) {
                 title = "Conta Google Detectada";
                 description = "Este email está associado a um login com Google. Por favor, utilize o botão 'Entrar com Google'.";
             }
-          } catch (fetchError) {
-             // This can happen if the email doesn't exist at all.
-             // Keep the generic "invalid credentials" message in this case.
-          }
+          } catch (fetchError) {}
       }
       toast({ variant: 'destructive', title, description });
       setIsLoading(false);
