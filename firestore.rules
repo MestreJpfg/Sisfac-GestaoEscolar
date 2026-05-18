@@ -13,8 +13,9 @@ service cloud.firestore {
     }
     
     function isAdmin() {
+      // Prioridade máxima: bypass por email direto do token de autenticação
       return isSignedIn() && (
-        request.auth.token.get('email', '') in ['mestrejpfg@gmail.com', 'fortalezaem@gmail.com'] ||
+        request.auth.token.email.lower() in ['mestrejpfg@gmail.com', 'fortalezaem@gmail.com'] ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('profileId', '') in ['Administrador', 'Administrador(a)'])
       );
@@ -23,7 +24,7 @@ service cloud.firestore {
     function hasPermission(permission) {
       if (!isSignedIn()) return false;
       
-      // Admin bypass total
+      // Admin bypass total e imediato
       if (isAdmin()) return true;
 
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);

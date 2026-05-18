@@ -73,9 +73,10 @@ export default function LoginPage() {
         
         if (!userData.createdAt) updates.createdAt = new Date().toISOString();
         
-        // Sincronização prioritária para administradores
-        if (shouldBeAdmin && userData.profileId !== 'Administrador') {
+        // Sincronização rigorosa para administradores
+        if (shouldBeAdmin) {
             updates.profileId = 'Administrador';
+            updates.profileCompleted = true; // Garante que o adm não fique preso na tela de perfil
         }
 
         if (Object.keys(updates).length > 0) {
@@ -96,11 +97,11 @@ export default function LoginPage() {
             customPermissions: [],
             createdAt: new Date().toISOString(),
             photoURL: user.photoURL || null,
-            profileCompleted: false,
+            profileCompleted: shouldBeAdmin, // Adms já começam com perfil completo
         };
     
         await setDoc(userDocRef, newUserData);
-        router.push('/profile');
+        router.push(shouldBeAdmin ? '/dashboard' : '/profile');
     }
   };
   

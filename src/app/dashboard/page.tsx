@@ -42,6 +42,10 @@ export default function DashboardPage() {
   const isPermissionsLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
 
   const hasPermission = (permission: string) => {
+    // Bypass total por e-mail direto (Chave Mestra)
+    const adminEmails = ['mestrejpfg@gmail.com', 'fortalezaem@gmail.com'];
+    if (user?.email && adminEmails.includes(user.email.toLowerCase())) return true;
+
     if (!userProfile) return false;
     if (userProfile.profileId === 'Administrador' || userProfile.profileId === 'Administrador(a)') return true;
     if (userProfile.customPermissions?.includes(permission)) return true;
@@ -54,8 +58,8 @@ export default function DashboardPage() {
     return false;
   };
   
-  const canViewStudents = useMemo(() => hasPermission('view:students'), [userProfile, profileDetails]);
-  const canManageOccurrences = useMemo(() => hasPermission('manage:occurrences'), [userProfile, profileDetails]);
+  const canViewStudents = useMemo(() => hasPermission('view:students'), [userProfile, profileDetails, user]);
+  const canManageOccurrences = useMemo(() => hasPermission('manage:occurrences'), [userProfile, profileDetails, user]);
 
   // 2. Buscar Ocorrências Recentes
   const occurrencesQuery = useMemo(() => {
