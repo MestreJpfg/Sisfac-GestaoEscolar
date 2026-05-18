@@ -3,14 +3,13 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, query, doc, getDoc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Loader2, Trash2, Edit, FileText } from 'lucide-react';
+import { Plus, Search, Loader2, Trash2, Edit, FileText, History } from 'lucide-react';
 import { format } from 'date-fns';
 import OccurrenceFormDialog from './occurrence-form-dialog';
 import { Badge } from './ui/badge';
@@ -28,15 +27,34 @@ export default function OccurrenceManager() {
     const [isLoadingStudents, setIsLoadingStudents] = useState(true);
     const [allStudents, setAllStudents] = useState<any[]>([]);
 
-    // Buscar ocorrências em tempo real
+    // Buscar prontuários de ocorrências em tempo real
     const occurrencesQuery = useMemo(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'ocorrencias'), orderBy('date', 'desc'));
+        return query(collection(firestore, 'ocorrencias'));
     }, [firestore]);
 
-    const { data: occurrences, isLoading: isLoadingOccurrences } = useCollection(occurrencesQuery);
+    const { data: studentRecords, isLoading: isLoadingOccurrences } = useCollection(occurrencesQuery);
 
-    // Buscar alunos para o autocomplete do formulário
+    // Achatar todos os eventos de todos os alunos para uma lista única cronológica
+    const allEventsFlattened = useMemo(() => {
+        if (!studentRecords) return [];
+        const events: any[] = [];
+        studentRecords.forEach(record => {
+            if (record.eventos && Array.isArray(record.eventos)) {
+                record.eventos.forEach((ev: any) => {
+                    events.push({
+                        ...ev,
+                        studentId: record.id,
+                        studentName: record.studentName,
+                        studentClass: record.studentClass
+                    });
+                });
+            }
+        });
+        return events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [studentRecords]);
+
+    // Buscar alunos para o autocomplete
     useEffect(() => {
         const fetchStudents = async () => {
             if (!firestore) return;
@@ -53,37 +71,62 @@ export default function OccurrenceManager() {
         fetchStudents();
     }, [firestore]);
 
-    const filteredOccurrences = useMemo(() => {
-        if (!occurrences) return [];
+    const filteredEvents = useMemo(() => {
         const lowerSearch = searchTerm.toLowerCase();
-        return occurrences.filter(occ => 
+        return allEventsFlattened.filter(occ => 
             occ.studentName?.toLowerCase().includes(lowerSearch) ||
             occ.type?.toLowerCase().includes(lowerSearch) ||
             occ.description?.toLowerCase().includes(lowerSearch)
         );
-    }, [occurrences, searchTerm]);
+    }, [allEventsFlattened, searchTerm]);
 
-    const handleSave = (data: any) => {
+    const handleSave = async (data: any) => {
         if (!firestore) return;
 
         setIsSaving(true);
         try {
-            const id = data.id || doc(collection(firestore, 'ocorrencias')).id;
-            const docRef = doc(firestore, 'ocorrencias', id);
+            const studentId = data.studentId;
+            const docRef = doc(firestore, 'ocorrencias', studentId);
             
-            const finalData = {
+            // Buscar documento atual para manter o histórico
+            const docSnap = await getDoc(docRef);
+            let currentEventos = [];
+            
+            if (docSnap.exists()) {
+                currentEventos = docSnap.data().eventos || [];
+            }
+
+            const occurrenceId = data.id || `occ_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            
+            const eventData = {
                 ...data,
-                id,
-                createdAt: data.createdAt || new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                id: occurrenceId,
+                updatedAt: new Date().toISOString(),
+                createdAt: data.createdAt || new Date().toISOString()
             };
 
-            // Utilizando o padrão setDocumentNonBlocking que é validado como funcional nos Alunos
-            setDocumentNonBlocking(docRef, finalData, { merge: true });
+            let updatedEventos;
+            if (data.id) {
+                // Editar evento existente
+                updatedEventos = currentEventos.map((ev: any) => ev.id === data.id ? eventData : ev);
+            } else {
+                // Adicionar novo evento
+                updatedEventos = [eventData, ...currentEventos];
+            }
+
+            const finalDocData = {
+                studentId: data.studentId,
+                studentName: data.studentName,
+                studentClass: data.studentClass,
+                lastUpdated: new Date().toISOString(),
+                eventos: updatedEventos
+            };
+
+            await setDoc(docRef, finalDocData, { merge: true });
 
             toast({
                 title: data.id ? "Ocorrência Atualizada" : "Ocorrência Registrada",
-                description: `A ocorrência de ${data.studentName} foi processada com sucesso.`,
+                description: `O prontuário de ${data.studentName} foi atualizado.`,
             });
 
             setIsFormOpen(false);
@@ -93,7 +136,7 @@ export default function OccurrenceManager() {
             toast({
                 variant: 'destructive',
                 title: 'Erro ao Salvar',
-                description: 'Não foi possível gravar a ocorrência.',
+                description: 'Não foi possível gravar a ocorrência na base de dados.',
             });
         } finally {
             setIsSaving(false);
@@ -103,10 +146,25 @@ export default function OccurrenceManager() {
     const confirmDelete = async () => {
         if (!firestore || !deletingOccurrence) return;
         try {
-            await deleteDoc(doc(firestore, 'ocorrencias', deletingOccurrence.id));
-            toast({ title: "Ocorrência Eliminada" });
+            const studentId = deletingOccurrence.studentId;
+            const docRef = doc(firestore, 'ocorrencias', studentId);
+            const docSnap = await getDoc(docRef);
+            
+            if (docSnap.exists()) {
+                const currentData = docSnap.data();
+                const filteredEventos = (currentData.eventos || []).filter((ev: any) => ev.id !== deletingOccurrence.id);
+                
+                await setDoc(docRef, { 
+                    ...currentData, 
+                    eventos: filteredEventos,
+                    lastUpdated: new Date().toISOString()
+                });
+                
+                toast({ title: "Registro removido com sucesso" });
+            }
         } catch (error) {
-            toast({ variant: 'destructive', title: "Erro ao eliminar" });
+            console.error("Erro ao eliminar:", error);
+            toast({ variant: 'destructive', title: "Erro ao eliminar registro" });
         } finally {
             setDeletingOccurrence(null);
         }
@@ -140,15 +198,20 @@ export default function OccurrenceManager() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Histórico de Ocorrências</CardTitle>
-                    <CardDescription>Lista completa de eventos disciplinares e administrativos registrados.</CardDescription>
+                    <div className="flex items-center gap-2">
+                        <History className="h-5 w-5 text-primary" />
+                        <div>
+                            <CardTitle>Histórico de Ocorrências</CardTitle>
+                            <CardDescription>Eventos disciplinares agrupados por prontuário de aluno.</CardDescription>
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     {isLoadingOccurrences ? (
                         <div className="flex h-48 items-center justify-center">
                             <Loader2 className="h-8 w-8 animate-spin text-primary" />
                         </div>
-                    ) : filteredOccurrences.length > 0 ? (
+                    ) : filteredEvents.length > 0 ? (
                         <div className="border rounded-md">
                             <Table>
                                 <TableHeader>
@@ -162,7 +225,7 @@ export default function OccurrenceManager() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredOccurrences.map((occ) => (
+                                    {filteredEvents.map((occ) => (
                                         <TableRow key={occ.id}>
                                             <TableCell className="whitespace-nowrap">
                                                 <div className="flex flex-col">
@@ -205,7 +268,7 @@ export default function OccurrenceManager() {
                     ) : (
                         <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-lg">
                             <FileText className="mx-auto h-12 w-12 mb-4 opacity-20" />
-                            <p>Nenhuma ocorrência encontrada para a busca atual.</p>
+                            <p>Nenhuma ocorrência registrada ou encontrada para a busca.</p>
                         </div>
                     )}
                 </CardContent>
@@ -227,7 +290,7 @@ export default function OccurrenceManager() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Eliminar Registro?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Tem certeza que deseja apagar esta ocorrência? Esta ação não pode ser desfeita.
+                            Deseja remover este registro do prontuário de <strong>{deletingOccurrence?.studentName}</strong>? Esta ação não pode ser desfeita.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
