@@ -438,26 +438,38 @@ export default function DashboardPage() {
                         </CardContent>
                     </Card>
 
-                    {/* Atalhos Rápidos para Admin */}
+                    {/* Atalhos Rápidos com Permissões */}
                     <Card>
                         <CardHeader>
                             <div className="flex items-center gap-2">
                                 <UserCog className="h-5 w-5 text-primary" />
-                                <CardTitle>Atalhos Administrativos</CardTitle>
+                                <CardTitle>Atalhos Rápidos</CardTitle>
                             </div>
-                            <CardDescription>Acesso rápido ao perfil e segurança.</CardDescription>
+                            <CardDescription>Acesso imediato às suas ferramentas e configurações.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                              <div className="flex flex-col gap-2">
                                 <Button variant="secondary" className="justify-start" onClick={() => router.push('/profile')}>
                                     <UserCog className="mr-2 h-4 w-4" /> Editar Meu Perfil
                                 </Button>
-                                <Button variant="secondary" className="justify-start" onClick={() => router.push('/dashboard/announcements')}>
-                                    <Megaphone className="mr-2 h-4 w-4" /> Gerir Comunicados
-                                </Button>
-                                <Button variant="secondary" className="justify-start" onClick={() => router.push('/dashboard/database')}>
-                                    <UserCog className="mr-2 h-4 w-4" /> Gestão de Utilizadores
-                                </Button>
+                                
+                                {hasPermission('manage:announcements') && (
+                                    <Button variant="secondary" className="justify-start" onClick={() => router.push('/dashboard/announcements')}>
+                                        <Megaphone className="mr-2 h-4 w-4" /> Gerir Comunicados
+                                    </Button>
+                                )}
+
+                                {hasPermission('manage:users') && (
+                                    <Button variant="secondary" className="justify-start" onClick={() => router.push('/dashboard/database')}>
+                                        <Users className="mr-2 h-4 w-4" /> Gestão de Utilizadores
+                                    </Button>
+                                )}
+
+                                {hasPermission('manage:database') && (
+                                    <Button variant="secondary" className="justify-start" onClick={() => router.push('/dashboard/database')}>
+                                        <Database className="mr-2 h-4 w-4" /> Manutenção do Sistema
+                                    </Button>
+                                )}
                              </div>
                         </CardContent>
                     </Card>
