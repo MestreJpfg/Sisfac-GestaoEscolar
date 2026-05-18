@@ -63,19 +63,19 @@ export default function LoginPage() {
     const userDocRef = doc(firestore, 'users', user.uid);
     const userDoc = await getDoc(userDocRef);
 
-    // Lista de emails que devem ser administradores forçados
     const adminEmails = ['mestrejpfg@gmail.com', 'fortalezaem@gmail.com']; 
-    const shouldBeAdmin = user.email && adminEmails.includes(user.email.toLowerCase());
+    const userEmail = user.email?.toLowerCase() || '';
+    const shouldBeAdmin = adminEmails.includes(userEmail);
 
     if (userDoc.exists()) {
         const userData = userDoc.data();
-        
-        // Sincronização agressiva de perfil: se deve ser admin mas o perfil não é, atualiza imediatamente
         const updates: any = {};
+        
         if (!userData.createdAt) updates.createdAt = new Date().toISOString();
+        
+        // Sincronização forçada para administradores
         if (shouldBeAdmin && userData.profileId !== 'Administrador') {
             updates.profileId = 'Administrador';
-            console.log(`Elevating user ${user.email} to Administrador`);
         }
 
         if (Object.keys(updates).length > 0) {
@@ -90,8 +90,8 @@ export default function LoginPage() {
     } else {
         const newUserData = {
             uid: user.uid,
-            name: user.displayName || user.email?.split('@')[0] || 'Novo Utilizador',
-            email: user.email,
+            name: user.displayName || userEmail.split('@')[0] || 'Novo Utilizador',
+            email: userEmail,
             profileId: shouldBeAdmin ? 'Administrador' : 'Aluno',
             customPermissions: [],
             createdAt: new Date().toISOString(),

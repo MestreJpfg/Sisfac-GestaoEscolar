@@ -76,6 +76,7 @@ export default function OccurrenceManager() {
             updatedAt: new Date().toISOString()
         };
 
+        // setDocumentNonBlocking lidará com o catch internamente via emissor global se falhar
         setDocumentNonBlocking(docRef, finalData, { merge: true });
 
         toast({
