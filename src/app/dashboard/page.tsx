@@ -50,11 +50,9 @@ export default function DashboardPage() {
 
   const [studentCount, setStudentCount] = useState<number | string | React.ReactNode>(<Loader2 className="h-4 w-4 animate-spin" />);
   const [occurrenceCount, setOccurrenceCount] = useState<number | string | React.ReactNode>(<Loader2 className="h-4 w-4 animate-spin" />);
-  
-  // Dashboard Order State
   const [cardOrder, setCardOrder] = useState<CardId[]>([]);
 
-  // 1. Permissões e Perfil
+  // 1. Permissões e Perfil - Prioridade para Administrador direto
   const userDocRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return doc(firestore, 'users', user.uid);
@@ -69,15 +67,19 @@ export default function DashboardPage() {
   
   const isPermissionsLoading = isUserLoading || isProfileLoading || isProfileDetailsLoading;
 
-  const hasPermission = (permission: string) => {
+  const isAdmin = useMemo(() => {
     const adminEmails = ['mestrejpfg@gmail.com', 'fortalezaem@gmail.com'];
     if (user?.email && adminEmails.includes(user.email.toLowerCase())) return true;
+    return userProfile?.profileId === 'Administrador' || userProfile?.profileId === 'Administrador(a)';
+  }, [user, userProfile]);
 
+  const hasPermission = (permission: string) => {
+    if (isAdmin) return true;
     if (!userProfile) return false;
-    if (userProfile.profileId === 'Administrador' || userProfile.profileId === 'Administrador(a)') return true;
     if (userProfile.customPermissions?.includes(permission)) return true;
     if (profileDetails?.permissions?.[permission] === true) return true;
     
+    // View fallback for manage permissions
     if (permission.startsWith('view:')) {
         const managePermission = permission.replace('view:', 'manage:');
         if (profileDetails?.permissions?.[managePermission] === true || userProfile.customPermissions?.includes(managePermission)) return true;
@@ -95,17 +97,15 @@ export default function DashboardPage() {
     transcript: hasPermission('manage:transcript'),
     migration: hasPermission('manage:migration'),
     database: hasPermission('manage:database'),
-    games: true // Todos têm acesso a jogos
-  }), [userProfile, profileDetails, user]);
+    games: true 
+  }), [isAdmin, userProfile, profileDetails]);
 
-  // Inicializar e Sincronizar Ordem
   useEffect(() => {
     if (!isPermissionsLoading && userProfile) {
         const defaultOrder: CardId[] = ['students', 'servidores', 'attendance', 'grades', 'occurrences', 'classes', 'transcript', 'migration', 'database', 'games'];
         const savedOrder = userProfile.dashboardOrder as CardId[];
         
         if (savedOrder && Array.isArray(savedOrder)) {
-            // Garantir que novos cartões adicionados ao sistema apareçam mesmo se não estiverem no savedOrder
             const combinedOrder = [...savedOrder];
             defaultOrder.forEach(id => {
                 if (!combinedOrder.includes(id)) combinedOrder.push(id);
@@ -120,7 +120,7 @@ export default function DashboardPage() {
   // 2. Buscar Ocorrências Recentes
   const occurrencesQuery = useMemo(() => {
     if (!firestore || !permissions.occurrences) return null;
-    return query(collection(firestore, 'ocorrencias'), orderBy('lastUpdated', 'desc'), limit(10));
+    return query(collection(firestore, 'ocorrencias'), orderBy('lastUpdated', 'desc'), limit(5));
   }, [firestore, permissions.occurrences]);
   const { data: recentRecords, isLoading: isLoadingRecentOccurrences } = useCollection(occurrencesQuery);
 
@@ -141,7 +141,7 @@ export default function DashboardPage() {
     return events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
   }, [recentRecords]);
 
-  // 3. Estatísticas
+  // 3. Estatísticas com carregamento otimizado
   useEffect(() => {
     if (isPermissionsLoading || !firestore) return;
     
@@ -150,8 +150,6 @@ export default function DashboardPage() {
             if (permissions.students) {
                 const snapshot = await getDocs(collection(firestore, 'alunos'));
                 setStudentCount(snapshot.size);
-            } else {
-                 setStudentCount(0);
             }
 
             if (permissions.occurrences) {
@@ -164,13 +162,9 @@ export default function DashboardPage() {
                     }
                 });
                 setOccurrenceCount(total);
-            } else {
-                setOccurrenceCount(0);
             }
         } catch (e) {
-            console.error("Error fetching stats:", e);
-            setStudentCount('N/A');
-            setOccurrenceCount('N/A');
+            console.error("Error fetching dashboard stats:", e);
         }
     };
     fetchData();
@@ -185,7 +179,6 @@ export default function DashboardPage() {
       }
   };
 
-  // DND Handlers
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -200,7 +193,6 @@ export default function DashboardPage() {
         const newIndex = items.indexOf(over.id as CardId);
         const newOrder = arrayMove(items, oldIndex, newIndex);
         
-        // Salvar ordem no Firestore
         if (firestore && user) {
             const userRef = doc(firestore, 'users', user.uid);
             setDocumentNonBlocking(userRef, { dashboardOrder: newOrder }, { merge: true });
@@ -211,7 +203,6 @@ export default function DashboardPage() {
     }
   };
 
-  // Map of Card definitions
   const allCards: Record<CardId, { id: CardId, title: string, value: any, icon: any, description: string, href: string, actionLabel: string, show: boolean }> = {
     students: {
         id: 'students',
@@ -398,7 +389,6 @@ export default function DashboardPage() {
                 </DndContext>
 
                 <div className="mt-8 grid gap-4 md:grid-cols-2">
-                    {/* Últimas Ocorrências */}
                     <Card>
                         <CardHeader>
                             <div className="flex items-center gap-2">
@@ -438,7 +428,6 @@ export default function DashboardPage() {
                         </CardContent>
                     </Card>
 
-                    {/* Atalhos Rápidos com Permissões */}
                     <Card>
                         <CardHeader>
                             <div className="flex items-center gap-2">
