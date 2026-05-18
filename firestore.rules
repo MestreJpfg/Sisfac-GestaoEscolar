@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -71,6 +72,11 @@ service cloud.firestore {
     match /exalunos/{alunoId} {
       allow read, list: if hasPermission('view:students');
       allow write: if hasPermission('manage:migration');
+    }
+
+    match /ocorrencias/{ocorrenciaId} {
+      allow read, list: if isSignedIn();
+      allow write: if hasPermission('manage:occurrences');
     }
 
     match /grades/{gradeId} {

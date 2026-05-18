@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, doc, getDocs } from 'firebase/firestore';
-import { Loader2, Users, UserCog, Shield, Database, ClipboardList, Megaphone, CalendarCheck, ArrowLeft, NotebookText, Gamepad2, Award, FileText, GitBranch, Briefcase } from 'lucide-react';
+import { Loader2, Users, UserCog, Shield, Database, ClipboardList, Megaphone, CalendarCheck, ArrowLeft, NotebookText, Gamepad2, Award, FileText, GitBranch, Briefcase, ShieldAlert } from 'lucide-react';
 import StatCard from '@/components/stat-card';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -87,6 +87,7 @@ export default function DashboardPage() {
   const canManageTranscripts = useMemo(() => hasPermission('manage:transcript'), [userProfile, profileDetails, isPermissionsLoading]);
   const canManageMigration = useMemo(() => hasPermission('manage:migration'), [userProfile, profileDetails, isPermissionsLoading]);
   const canManageCadastros = useMemo(() => hasPermission('manage:cadastros'), [userProfile, profileDetails, isPermissionsLoading]);
+  const canManageOccurrences = useMemo(() => hasPermission('manage:occurrences'), [userProfile, profileDetails, isPermissionsLoading]);
 
   useEffect(() => {
     const fetchCountsAndStudents = async () => {
@@ -194,6 +195,15 @@ export default function DashboardPage() {
                                 icon={Briefcase}
                                 description="Gerir o cadastro de servidores"
                                 action={<Button onClick={() => router.push('/dashboard/servidores')}>Aceder</Button>}
+                            />
+                          )}
+                           {canManageOccurrences && (
+                            <StatCard
+                                title="Ocorrências"
+                                value={"Disciplinar"}
+                                icon={ShieldAlert}
+                                description="Registrar e acompanhar ocorrências"
+                                action={<Button onClick={() => router.push('/dashboard/occurrences')}>Aceder</Button>}
                             />
                           )}
                           {(canViewAttendance || canManageAttendance) && (

@@ -97,6 +97,26 @@
       },
        "required": ["id", "rm", "nome"]
     },
+    "Ocorrencia": {
+      "title": "Ocorrência",
+      "type": "object",
+      "description": "Registra um evento disciplinar ou administrativo relacionado a um aluno.",
+      "properties": {
+        "id": { "type": "string" },
+        "studentId": { "type": "string", "description": "RM do aluno principal." },
+        "studentName": { "type": "string" },
+        "studentClass": { "type": "string" },
+        "type": { "type": "string", "enum": ["Indisciplina", "Atraso", "Briga", "Ofensa", "Falta", "Uso de Celular", "Outros"] },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "reportedBy": { "type": "string", "description": "Nome do professor ou funcionário que relatou." },
+        "involvedStudents": { "type": "array", "items": { "type": "string" }, "description": "Nomes ou RMs de outros alunos envolvidos." },
+        "penalty": { "type": "string", "enum": ["Advertência Verbal", "Advertência Escrita", "Suspensão", "Convocação de Responsáveis", "Nenhuma"] },
+        "status": { "type": "string", "enum": ["Ativa", "Em Análise", "Resolvida", "Arquivada"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "studentId", "type", "description", "date", "status"]
+    },
     "Servidor": {
       "title": "Servidor",
       "type": "object",
@@ -164,7 +184,8 @@
             "manage:database": { "type": "boolean" },
             "manage:cadastros": { "type": "boolean" },
             "manage:migration": { "type": "boolean" },
-            "manage:transcript": { "type": "boolean" }
+            "manage:transcript": { "type": "boolean" },
+            "manage:occurrences": { "type": "boolean" }
           },
           "additionalProperties": false
         }
@@ -274,6 +295,10 @@
       {
         "path": "/alunos/{alunoId}",
         "definition": { "schema": { "$ref": "#/entities/Aluno" } }
+      },
+      {
+        "path": "/ocorrencias/{ocorrenciaId}",
+        "definition": { "schema": { "$ref": "#/entities/Ocorrencia" } }
       },
       {
         "path": "/profiles/{profileId}",

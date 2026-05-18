@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from "react";
@@ -21,7 +22,7 @@ const permissionKeys = [
     'view:attendance', 'manage:attendance',
     'view:announcements', 'manage:announcements',
     'view:database', 'manage:database',
-    'manage:cadastros', 'manage:migration', 'manage:transcript'
+    'manage:cadastros', 'manage:migration', 'manage:transcript', 'manage:occurrences'
 ] as const;
 
 // Usamos z.any() para as permissões para evitar que erros de validação silenciosos bloqueiem o formulário
@@ -33,6 +34,13 @@ const profileSchema = z.object({
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
+
+interface ProfileEditDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  profile: any | null;
+  onSave: (data: ProfileFormValues, profileId?: string) => void;
+}
 
 const allPermissions = [
     { id: 'view:students', label: 'Visualizar Alunos' },
@@ -52,6 +60,7 @@ const allPermissions = [
     { id: 'manage:cadastros', label: 'Gerir Cadastro de Servidores' },
     { id: 'manage:migration', label: 'Gerir Migração de Ano Letivo' },
     { id: 'manage:transcript', label: 'Gerir Históricos Escolares' },
+    { id: 'manage:occurrences', label: 'Gerir Registro de Ocorrências' },
 ];
 
 
