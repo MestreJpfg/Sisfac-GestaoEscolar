@@ -3,8 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, query, orderBy, deleteDoc, doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,6 +22,7 @@ export default function OccurrenceManager() {
     
     const [searchTerm, setSearchTerm] = useState('');
     const [isFormOpen, setIsFormOpen] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const [editingOccurrence, setEditingOccurrence] = useState<any | null>(null);
     const [deletingOccurrence, setDeletingOccurrence] = useState<any | null>(null);
     const [isLoadingStudents, setIsLoadingStudents] = useState(true);
@@ -63,29 +63,41 @@ export default function OccurrenceManager() {
         );
     }, [occurrences, searchTerm]);
 
-    const handleSave = (data: any) => {
+    const handleSave = async (data: any) => {
         if (!firestore) return;
 
-        const id = data.id || doc(collection(firestore, 'ocorrencias')).id;
-        const docRef = doc(firestore, 'ocorrencias', id);
-        
-        const finalData = {
-            ...data,
-            id,
-            createdAt: data.createdAt || new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
+        setIsSaving(true);
+        try {
+            const id = data.id || doc(collection(firestore, 'ocorrencias')).id;
+            const docRef = doc(firestore, 'ocorrencias', id);
+            
+            const finalData = {
+                ...data,
+                id,
+                createdAt: data.createdAt || new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
 
-        // setDocumentNonBlocking lidará com o catch internamente via emissor global se falhar
-        setDocumentNonBlocking(docRef, finalData, { merge: true });
+            // Utilizando o padrão await setDoc (bloqueante com tratamento de erro local)
+            await setDoc(docRef, finalData, { merge: true });
 
-        toast({
-            title: data.id ? "Ocorrência Atualizada" : "Ocorrência Registrada",
-            description: `A ocorrência de ${data.studentName} foi salva com sucesso.`,
-        });
+            toast({
+                title: data.id ? "Ocorrência Atualizada" : "Ocorrência Registrada",
+                description: `A ocorrência de ${data.studentName} foi salva com sucesso.`,
+            });
 
-        setIsFormOpen(false);
-        setEditingOccurrence(null);
+            setIsFormOpen(false);
+            setEditingOccurrence(null);
+        } catch (error: any) {
+            console.error("Erro ao salvar ocorrência:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Erro ao Salvar',
+                description: 'Não foi possível gravar a ocorrência. Verifique as suas permissões.',
+            });
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const confirmDelete = async () => {
@@ -206,6 +218,7 @@ export default function OccurrenceManager() {
                     onSave={handleSave}
                     occurrence={editingOccurrence}
                     students={allStudents}
+                    isSaving={isSaving}
                 />
             )}
 

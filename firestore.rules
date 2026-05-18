@@ -13,16 +13,11 @@ service cloud.firestore {
     }
     
     function isAdmin() {
-      // 1. Verificação prioritária por email (Bypass imediato sem custo de leitura)
-      if (isSignedIn() && request.auth.token.email in ['mestrejpfg@gmail.com', 'fortalezaem@gmail.com']) {
-        return true;
-      }
-      
-      // 2. Verificação por perfil no documento do utilizador (Safe get)
-      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      return isSignedIn() && 
-             exists(userPath) && 
-             get(userPath).data.get('profileId', '') in ['Administrador', 'Administrador(a)'];
+      return isSignedIn() && (
+        request.auth.token.email in ['mestrejpfg@gmail.com', 'fortalezaem@gmail.com'] ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('profileId', '') in ['Administrador', 'Administrador(a)'])
+      );
     }
     
     function hasPermission(permission) {
@@ -81,7 +76,7 @@ service cloud.firestore {
 
     match /ocorrencias/{ocorrenciaId} {
       allow read, list: if isSignedIn();
-      allow create, update, delete: if isAdmin() || hasPermission('manage:occurrences');
+      allow write: if isAdmin() || hasPermission('manage:occurrences');
     }
 
     match /grades/{gradeId} {

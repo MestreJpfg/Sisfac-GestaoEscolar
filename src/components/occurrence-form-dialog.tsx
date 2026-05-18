@@ -39,9 +39,10 @@ interface OccurrenceFormDialogProps {
   onSave: (data: any) => void;
   occurrence: any | null;
   students: any[];
+  isSaving?: boolean;
 }
 
-export default function OccurrenceFormDialog({ isOpen, onClose, onSave, occurrence, students }: OccurrenceFormDialogProps) {
+export default function OccurrenceFormDialog({ isOpen, onClose, onSave, occurrence, students, isSaving = false }: OccurrenceFormDialogProps) {
     const { toast } = useToast();
     const [searchStudent, setSearchStudent] = useState('');
     const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
@@ -296,8 +297,8 @@ export default function OccurrenceFormDialog({ isOpen, onClose, onSave, occurren
 
                         <DialogFooter className="pt-4 border-t">
                             <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-                            <Button type="submit">
-                                {occurrence ? 'Salvar Alterações' : 'Registrar Ocorrência'}
+                            <Button type="submit" disabled={isSaving}>
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (occurrence ? 'Salvar Alterações' : 'Registrar Ocorrência')}
                             </Button>
                         </DialogFooter>
                     </form>
