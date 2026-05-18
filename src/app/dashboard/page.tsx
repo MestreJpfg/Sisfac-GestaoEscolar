@@ -9,7 +9,8 @@ import { collection, query, doc, getDocs, limit, orderBy } from 'firebase/firest
 import { 
   Loader2, Users, UserCog, Megaphone, CalendarCheck, 
   NotebookText, Gamepad2, History, ShieldAlert, 
-  Briefcase, LayoutGrid, FileText, GitBranch, Database, GripVertical 
+  Briefcase, LayoutGrid, FileText, GitBranch, Database, GripVertical,
+  Award, ScrollText
 } from 'lucide-react';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -448,26 +449,36 @@ export default function DashboardPage() {
                             <CardDescription>Acesso imediato às suas ferramentas e configurações.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                             <div className="flex flex-col gap-2">
+                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 <Button variant="secondary" className="justify-start" onClick={() => router.push('/profile')}>
-                                    <UserCog className="mr-2 h-4 w-4" /> Editar Meu Perfil
+                                    <UserCog className="mr-2 h-4 w-4" /> Meu Perfil
                                 </Button>
                                 
+                                <Button variant="secondary" className="justify-start" onClick={() => router.push('/dashboard/ranking')}>
+                                    <Award className="mr-2 h-4 w-4" /> Ranking Escolar
+                                </Button>
+
                                 {hasPermission('manage:announcements') && (
                                     <Button variant="secondary" className="justify-start" onClick={() => router.push('/dashboard/announcements')}>
-                                        <Megaphone className="mr-2 h-4 w-4" /> Gerir Comunicados
+                                        <Megaphone className="mr-2 h-4 w-4" /> Comunicados
+                                    </Button>
+                                )}
+
+                                {hasPermission('manage:transcript') && (
+                                    <Button variant="secondary" className="justify-start" onClick={() => router.push('/dashboard/transcript')}>
+                                        <ScrollText className="mr-2 h-4 w-4" /> Históricos
                                     </Button>
                                 )}
 
                                 {hasPermission('manage:users') && (
                                     <Button variant="secondary" className="justify-start" onClick={() => router.push('/dashboard/database')}>
-                                        <Users className="mr-2 h-4 w-4" /> Gestão de Utilizadores
+                                        <Users className="mr-2 h-4 w-4" /> Utilizadores
                                     </Button>
                                 )}
 
                                 {hasPermission('manage:database') && (
                                     <Button variant="secondary" className="justify-start" onClick={() => router.push('/dashboard/database')}>
-                                        <Database className="mr-2 h-4 w-4" /> Manutenção do Sistema
+                                        <Database className="mr-2 h-4 w-4" /> Manutenção
                                     </Button>
                                 )}
                              </div>
