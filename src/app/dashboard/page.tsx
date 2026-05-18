@@ -6,8 +6,11 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { collection, query, doc, getDocs, limit, orderBy } from 'firebase/firestore';
-import { Loader2, Users, UserCog, Megaphone, CalendarCheck, NotebookText, Gamepad2, History, ShieldAlert, Briefcase, LayoutGrid, FileText, GitBranch, Database } from 'lucide-react';
-import StatCard from '@/components/stat-card';
+import { 
+  Loader2, Users, UserCog, Megaphone, CalendarCheck, 
+  NotebookText, Gamepad2, History, ShieldAlert, 
+  Briefcase, LayoutGrid, FileText, GitBranch, Database, GripVertical 
+} from 'lucide-react';
 import { UserNav } from '@/components/user-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -18,6 +21,27 @@ import { Badge } from '@/components/ui/badge';
 import { NotificationCenter } from '@/components/notification-center';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+
+// DND Kit Imports
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { SortableStatCard } from '@/components/sortable-stat-card';
+
+type CardId = 'students' | 'servidores' | 'attendance' | 'grades' | 'occurrences' | 'classes' | 'transcript' | 'migration' | 'database' | 'games';
 
 export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
@@ -26,6 +50,9 @@ export default function DashboardPage() {
 
   const [studentCount, setStudentCount] = useState<number | string | React.ReactNode>(<Loader2 className="h-4 w-4 animate-spin" />);
   const [occurrenceCount, setOccurrenceCount] = useState<number | string | React.ReactNode>(<Loader2 className="h-4 w-4 animate-spin" />);
+  
+  // Dashboard Order State
+  const [cardOrder, setCardOrder] = useState<CardId[]>([]);
 
   // 1. Permissões e Perfil
   const userDocRef = useMemoFirebase(() => {
@@ -58,21 +85,43 @@ export default function DashboardPage() {
     return false;
   };
   
-  const canViewStudents = useMemo(() => hasPermission('view:students'), [userProfile, profileDetails, user]);
-  const canManageOccurrences = useMemo(() => hasPermission('manage:occurrences'), [userProfile, profileDetails, user]);
-  const canManageServidores = useMemo(() => hasPermission('manage:cadastros'), [userProfile, profileDetails, user]);
-  const canManageGrades = useMemo(() => hasPermission('manage:grades'), [userProfile, profileDetails, user]);
-  const canManageAttendance = useMemo(() => hasPermission('manage:attendance'), [userProfile, profileDetails, user]);
-  const canManageClasses = useMemo(() => hasPermission('manage:students'), [userProfile, profileDetails, user]);
-  const canManageTranscript = useMemo(() => hasPermission('manage:transcript'), [userProfile, profileDetails, user]);
-  const canManageMigration = useMemo(() => hasPermission('manage:migration'), [userProfile, profileDetails, user]);
-  const canManageDatabase = useMemo(() => hasPermission('manage:database'), [userProfile, profileDetails, user]);
+  const permissions = useMemo(() => ({
+    students: hasPermission('view:students'),
+    servidores: hasPermission('manage:cadastros'),
+    attendance: hasPermission('manage:attendance'),
+    grades: hasPermission('manage:grades'),
+    occurrences: hasPermission('manage:occurrences'),
+    classes: hasPermission('manage:students'),
+    transcript: hasPermission('manage:transcript'),
+    migration: hasPermission('manage:migration'),
+    database: hasPermission('manage:database'),
+    games: true // Todos têm acesso a jogos
+  }), [userProfile, profileDetails, user]);
 
-  // 2. Buscar Ocorrências Recentes (Heurística: últimos 10 alunos atualizados)
+  // Inicializar e Sincronizar Ordem
+  useEffect(() => {
+    if (!isPermissionsLoading && userProfile) {
+        const defaultOrder: CardId[] = ['students', 'servidores', 'attendance', 'grades', 'occurrences', 'classes', 'transcript', 'migration', 'database', 'games'];
+        const savedOrder = userProfile.dashboardOrder as CardId[];
+        
+        if (savedOrder && Array.isArray(savedOrder)) {
+            // Garantir que novos cartões adicionados ao sistema apareçam mesmo se não estiverem no savedOrder
+            const combinedOrder = [...savedOrder];
+            defaultOrder.forEach(id => {
+                if (!combinedOrder.includes(id)) combinedOrder.push(id);
+            });
+            setCardOrder(combinedOrder);
+        } else {
+            setCardOrder(defaultOrder);
+        }
+    }
+  }, [isPermissionsLoading, userProfile]);
+
+  // 2. Buscar Ocorrências Recentes
   const occurrencesQuery = useMemo(() => {
-    if (!firestore || !canManageOccurrences) return null;
+    if (!firestore || !permissions.occurrences) return null;
     return query(collection(firestore, 'ocorrencias'), orderBy('lastUpdated', 'desc'), limit(10));
-  }, [firestore, canManageOccurrences]);
+  }, [firestore, permissions.occurrences]);
   const { data: recentRecords, isLoading: isLoadingRecentOccurrences } = useCollection(occurrencesQuery);
 
   const latestEvents = useMemo(() => {
@@ -92,22 +141,20 @@ export default function DashboardPage() {
     return events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
   }, [recentRecords]);
 
-  // 3. Efeito para carregar estatísticas precisas
+  // 3. Estatísticas
   useEffect(() => {
     if (isPermissionsLoading || !firestore) return;
     
     const fetchData = async () => {
         try {
-            // Contagem de Alunos
-            if (canViewStudents) {
+            if (permissions.students) {
                 const snapshot = await getDocs(collection(firestore, 'alunos'));
                 setStudentCount(snapshot.size);
             } else {
                  setStudentCount(0);
             }
 
-            // Contagem de Ocorrências (Global)
-            if (canManageOccurrences) {
+            if (permissions.occurrences) {
                 const occSnapshot = await getDocs(collection(firestore, 'ocorrencias'));
                 let total = 0;
                 occSnapshot.forEach(doc => {
@@ -127,7 +174,7 @@ export default function DashboardPage() {
         }
     };
     fetchData();
-  }, [firestore, isPermissionsLoading, canViewStudents, canManageOccurrences]);
+  }, [firestore, isPermissionsLoading, permissions]);
 
   const safeFormatDate = (dateStr: string) => {
       try {
@@ -138,9 +185,143 @@ export default function DashboardPage() {
       }
   };
 
+  // DND Handlers
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setCardOrder((items) => {
+        const oldIndex = items.indexOf(active.id as CardId);
+        const newIndex = items.indexOf(over.id as CardId);
+        const newOrder = arrayMove(items, oldIndex, newIndex);
+        
+        // Salvar ordem no Firestore
+        if (firestore && user) {
+            const userRef = doc(firestore, 'users', user.uid);
+            setDocumentNonBlocking(userRef, { dashboardOrder: newOrder }, { merge: true });
+        }
+        
+        return newOrder;
+      });
+    }
+  };
+
+  // Map of Card definitions
+  const allCards: Record<CardId, { id: CardId, title: string, value: any, icon: any, description: string, href: string, actionLabel: string, show: boolean }> = {
+    students: {
+        id: 'students',
+        title: "Alunos Ativos",
+        value: studentCount,
+        icon: Users,
+        description: "Gestão de fichas e documentos",
+        href: '/dashboard/students',
+        actionLabel: 'Gerir',
+        show: permissions.students
+    },
+    servidores: {
+        id: 'servidores',
+        title: "Servidores",
+        value: "RH",
+        icon: Briefcase,
+        description: "Cadastro de funcionários",
+        href: '/dashboard/servidores',
+        actionLabel: 'Aceder',
+        show: permissions.servidores
+    },
+    attendance: {
+        id: 'attendance',
+        title: "Frequência",
+        value: "Chamada",
+        icon: CalendarCheck,
+        description: "Registo e relatórios",
+        href: '/dashboard/attendance',
+        actionLabel: 'Registar',
+        show: permissions.attendance
+    },
+    grades: {
+        id: 'grades',
+        title: "Avaliações",
+        value: "Notas",
+        icon: NotebookText,
+        description: "Boletins e desempenho",
+        href: '/dashboard/grades',
+        actionLabel: 'Lançar',
+        show: permissions.grades
+    },
+    occurrences: {
+        id: 'occurrences',
+        title: "Ocorrências",
+        value: occurrenceCount,
+        icon: ShieldAlert,
+        description: "Registros disciplinares",
+        href: '/dashboard/occurrences',
+        actionLabel: 'Histórico',
+        show: permissions.occurrences
+    },
+    classes: {
+        id: 'classes',
+        title: "Turmas",
+        value: "Classes",
+        icon: LayoutGrid,
+        description: "Listas e remanejamento",
+        href: '/dashboard/classes',
+        actionLabel: 'Gerir',
+        show: permissions.classes
+    },
+    transcript: {
+        id: 'transcript',
+        title: "Históricos",
+        value: "PDF",
+        icon: FileText,
+        description: "Gerador de histórico escolar",
+        href: '/dashboard/transcript',
+        actionLabel: 'Gerar',
+        show: permissions.transcript
+    },
+    migration: {
+        id: 'migration',
+        title: "Anos Letivos",
+        value: "Migração",
+        icon: GitBranch,
+        description: "Transição de ano e formatura",
+        href: '/dashboard/migration',
+        actionLabel: 'Configurar',
+        show: permissions.migration
+    },
+    database: {
+        id: 'database',
+        title: "Sistema",
+        value: "Base Dados",
+        icon: Database,
+        description: "Importação e manutenção",
+        href: '/dashboard/database',
+        actionLabel: 'Administrar',
+        show: permissions.database
+    },
+    games: {
+        id: 'games',
+        title: "Entretenimento",
+        value: "Jogos",
+        icon: Gamepad2,
+        description: "Pausa para descanso",
+        href: '/dashboard/games',
+        actionLabel: 'Jogar',
+        show: true
+    }
+  };
+
+  const visibleCardIds = useMemo(() => {
+    return cardOrder.filter(id => allCards[id]?.show);
+  }, [cardOrder, permissions]);
+
   const welcomeName = user?.displayName?.split(' ')[0] || 'Utilizador';
 
-  if (isUserLoading) {
+  if (isUserLoading || isProfileLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -169,110 +350,52 @@ export default function DashboardPage() {
 
             <main className="flex-1">
               <div className="container py-8">
-                <div className="mb-8">
-                  <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Bem-vindo(a), {welcomeName}!</h2>
-                  <p className="text-muted-foreground">Aceda a todas as ferramentas de gestão escolar.</p>
+                <div className="mb-8 flex justify-between items-end">
+                  <div>
+                    <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Bem-vindo(a), {welcomeName}!</h2>
+                    <p className="text-muted-foreground">Personalize a sua dashboard arrastando os cartões.</p>
+                  </div>
+                  <Badge variant="outline" className="hidden md:flex gap-1 text-[10px] items-center text-muted-foreground">
+                    <GripVertical className="h-3 w-3" /> Arraste para organizar
+                  </Badge>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {canViewStudents && (
-                    <StatCard
-                        title="Alunos Ativos"
-                        value={studentCount}
-                        icon={Users}
-                        description="Gestão de fichas e documentos"
-                        action={<Button variant="outline" size="sm" onClick={() => router.push('/dashboard/students')}>Gerir</Button>}
-                    />
-                  )}
-                  
-                  {canManageServidores && (
-                    <StatCard
-                        title="Servidores"
-                        value="RH"
-                        icon={Briefcase}
-                        description="Cadastro de funcionários"
-                        action={<Button variant="outline" size="sm" onClick={() => router.push('/dashboard/servidores')}>Aceder</Button>}
-                    />
-                  )}
-
-                  {canManageAttendance && (
-                    <StatCard
-                        title="Frequência"
-                        value="Chamada"
-                        icon={CalendarCheck}
-                        description="Registo e relatórios"
-                        action={<Button variant="outline" size="sm" onClick={() => router.push('/dashboard/attendance')}>Registar</Button>}
-                    />
-                  )}
-
-                  {canManageGrades && (
-                    <StatCard
-                        title="Avaliações"
-                        value="Notas"
-                        icon={NotebookText}
-                        description="Boletins e desempenho"
-                        action={<Button variant="outline" size="sm" onClick={() => router.push('/dashboard/grades')}>Lançar</Button>}
-                    />
-                  )}
-
-                  {canManageOccurrences && (
-                    <StatCard
-                        title="Ocorrências"
-                        value={occurrenceCount}
-                        icon={ShieldAlert}
-                        description="Registros disciplinares"
-                        action={<Button variant="outline" size="sm" onClick={() => router.push('/dashboard/occurrences')}>Histórico</Button>}
-                    />
-                  )}
-
-                  {canManageClasses && (
-                    <StatCard
-                        title="Turmas"
-                        value="Classes"
-                        icon={LayoutGrid}
-                        description="Listas e remanejamento"
-                        action={<Button variant="outline" size="sm" onClick={() => router.push('/dashboard/classes')}>Gerir</Button>}
-                    />
-                  )}
-
-                  {canManageTranscript && (
-                    <StatCard
-                        title="Históricos"
-                        value="PDF"
-                        icon={FileText}
-                        description="Gerador de histórico escolar"
-                        action={<Button variant="outline" size="sm" onClick={() => router.push('/dashboard/transcript')}>Gerar</Button>}
-                    />
-                  )}
-
-                  {canManageMigration && (
-                    <StatCard
-                        title="Anos Letivos"
-                        value="Migração"
-                        icon={GitBranch}
-                        description="Transição de ano e formatura"
-                        action={<Button variant="outline" size="sm" onClick={() => router.push('/dashboard/migration')}>Configurar</Button>}
-                    />
-                  )}
-                  
-                  {canManageDatabase && (
-                    <StatCard
-                        title="Sistema"
-                        value="Base Dados"
-                        icon={Database}
-                        description="Importação e manutenção"
-                        action={<Button variant="outline" size="sm" onClick={() => router.push('/dashboard/database')}>Administrar</Button>}
-                    />
-                  )}
-
-                  <StatCard
-                    title="Entretenimento"
-                    value="Jogos"
-                    icon={Gamepad2}
-                    description="Pausa para descanso"
-                    action={<Button variant="outline" size="sm" onClick={() => router.push('/dashboard/games')}>Jogar</Button>}
-                   />
-                </div>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={visibleCardIds}
+                    strategy={rectSortingStrategy}
+                  >
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                      {visibleCardIds.map((id) => {
+                        const card = allCards[id];
+                        return (
+                          <SortableStatCard
+                            key={id}
+                            id={id}
+                            title={card.title}
+                            value={card.value}
+                            icon={card.icon}
+                            description={card.description}
+                            action={
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => router.push(card.href)}
+                                    className="w-full mt-2"
+                                >
+                                    {card.actionLabel}
+                                </Button>
+                            }
+                          />
+                        );
+                      })}
+                    </div>
+                  </SortableContext>
+                </DndContext>
 
                 <div className="mt-8 grid gap-4 md:grid-cols-2">
                     {/* Últimas Ocorrências */}
@@ -339,7 +462,7 @@ export default function DashboardPage() {
                         </CardContent>
                     </Card>
                 </div>
-            </div>
+              </div>
             </main>
             <AppFooter />
         </div>
