@@ -74,6 +74,13 @@ export default function ClassListGenerator() {
   const [oneClassPerPage, setOneClassPerPage] = useState(false);
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
 
+  const [filters, setFilters] = useState({
+    ensino: '',
+    serie: '',
+    turno: '',
+    classe: '',
+  });
+
   const availableYears = useMemo(() => {
     if (!allStudents) return [];
     const years = new Set<string>();
@@ -85,14 +92,6 @@ export default function ClassListGenerator() {
     return Array.from(years).sort((a,b) => parseInt(b) - parseInt(a));
   }, [allStudents]);
 
-
-  const [filters, setFilters] = useState({
-    ensino: '',
-    serie: '',
-    turno: '',
-    classe: '',
-  });
-
   useEffect(() => {
     const fetchStudents = async () => {
       if (!firestore) return;
@@ -100,7 +99,7 @@ export default function ClassListGenerator() {
       try {
         const q = query(collection(firestore, "alunos"));
         const querySnapshot = await getDocs(q);
-        const studentsData = querySnapshot.docs.map(doc => doc.data());
+        const studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setAllStudents(studentsData);
       } catch (error) {
         console.error("Error fetching students: ", error);
@@ -134,23 +133,10 @@ export default function ClassListGenerator() {
       const getUniqueValues = (key: string, data: any[]) =>
         [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
-      let filteredForOptions = allStudents;
-      const ensinos = getUniqueValues('ensino', filteredForOptions);
-
-      if (filters.ensino) {
-        filteredForOptions = filteredForOptions.filter(s => s.ensino === filters.ensino);
-      }
-      const series = getUniqueValues('serie', filteredForOptions);
-
-      if (filters.serie) {
-        filteredForOptions = filteredForOptions.filter(s => s.serie === filters.serie);
-      }
-      const turnos = getUniqueValues('turno', filteredForOptions);
-      
-      if (filters.turno) {
-        filteredForOptions = filteredForOptions.filter(s => s.turno === filters.turno);
-      }
-      const classes = getUniqueValues('classe', filteredForOptions);
+      const ensinos = getUniqueValues('ensino', allStudents);
+      const series = getUniqueValues('serie', filters.ensino ? allStudents.filter(s => s.ensino === filters.ensino) : allStudents);
+      const turnos = getUniqueValues('turno', filters.serie ? allStudents.filter(s => s.serie === filters.serie) : allStudents);
+      const classes = getUniqueValues('classe', filters.turno ? allStudents.filter(s => s.turno === filters.turno) : allStudents);
 
       return { ensinos, series, turnos, classes };
   }, [allStudents, filters]);
@@ -161,7 +147,6 @@ export default function ClassListGenerator() {
     const newValue = value === 'all' ? '' : value;
     setFilters(prev => {
         const newFilters = { ...prev, [name]: newValue };
-        // Reset dependent filters when a parent filter changes
         if (name === 'ensino') {
             newFilters.serie = '';
             newFilters.turno = '';
@@ -190,7 +175,7 @@ export default function ClassListGenerator() {
     
     await new Promise(resolve => setTimeout(resolve, 300));
 
-    let studentsData = allStudents;
+    let studentsData = [...allStudents];
 
     if (filters.ensino) studentsData = studentsData.filter(s => s.ensino === filters.ensino);
     if (filters.serie) studentsData = studentsData.filter(s => s.serie === filters.serie);
@@ -221,83 +206,63 @@ export default function ClassListGenerator() {
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
         
         const groupedStudents = students.reduce((acc, student) => {
-            const key = `${student.serie || 'Série Indefinida'}|${student.classe || 'Classe Indefinida'}|${student.turno || 'Turno Indefinido'}`;
-            if (!acc[key]) {
-                acc[key] = [];
-            }
+            const key = `${student.ensino || 'S/E'}|${student.serie || 'S/S'}|${student.classe || 'S/C'}|${student.turno || 'S/T'}`;
+            if (!acc[key]) acc[key] = [];
             acc[key].push(student);
             return acc;
         }, {} as { [key: string]: any[] });
 
-        let isFirstChunkOfDoc = true;
+        let isFirstClass = true;
 
         for (const groupKey in groupedStudents) {
             const classStudents = groupedStudents[groupKey];
             if (classStudents.length === 0) continue;
 
-            const studentChunks = chunk(classStudents, 39);
-
-            for (let i = 0; i < studentChunks.length; i++) {
-                const pageStudents = studentChunks[i];
-                
-                if (!isFirstChunkOfDoc) {
-                    doc.addPage();
-                }
-                isFirstChunkOfDoc = false;
-                
-                const tableData = pageStudents.map((student, index) => {
-                    return [
-                        (i * 39) + index + 1,
-                        student.nome,
-                        student.data_nascimento || '',
-                        '' // Coluna de observações vazia
-                    ];
-                });
-                
-                const studentSample = pageStudents[0] || {};
-                const dynamicTitleParts = [
-                    'Lista de Alunos',
-                    studentSample.ensino,
-                    studentSample.serie,
-                    studentSample.classe,
-                    studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
-                ];
-                const dynamicTitle = dynamicTitleParts.filter(Boolean).join(' ');
-                const finalTitle = customTitle.trim() ? `${customTitle.trim()} - ${dynamicTitle}` : dynamicTitle;
-                
-                autoTable(doc, {
-                    head: [['Nº', 'Nome do Aluno', 'Data de Nasc.', 'Observações']],
-                    body: tableData,
-                    didDrawPage: (data) => {
-                        doc.setFontSize(10);
-                        doc.setFont('helvetica', 'bold');
-                        doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
-                        
-                        doc.setFontSize(9);
-                        doc.setFont('helvetica', 'normal');
-                        doc.text(finalTitle, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
-
-                        doc.setFontSize(7);
-                        doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, data.settings.margin.left, doc.internal.pageSize.getHeight() - 5);
-                        const pageNumText = `Página ${doc.internal.getNumberOfPages()}`;
-                        doc.text(pageNumText, doc.internal.pageSize.getWidth() - data.settings.margin.right, doc.internal.pageSize.getHeight() - 5, { align: 'right' });
-                    },
-                    styles: {
-                        font: 'helvetica',
-                        fontSize: 8,
-                        cellPadding: 1.5,
-                    },
-                    headStyles: {
-                        fillColor: headerColor,
-                        textColor: [40, 40, 40],
-                        fontStyle: 'bold',
-                    },
-                    alternateRowStyles: {
-                        fillColor: useAlternateRowColors ? getLightAlternateColor(headerColor) : false
-                    },
-                    margin: { top: 20, right: 10, bottom: 10, left: 10 },
-                });
+            if (!isFirstClass) {
+                doc.addPage();
             }
+            isFirstClass = false;
+            
+            const tableData = classStudents.map((student, index) => [
+                index + 1,
+                student.nome,
+                student.data_nascimento || '',
+                ''
+            ]);
+            
+            const studentSample = classStudents[0] || {};
+            const dynamicTitleParts = [
+                'Lista de Alunos',
+                studentSample.ensino,
+                studentSample.serie,
+                studentSample.classe,
+                studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
+            ];
+            const dynamicTitle = dynamicTitleParts.filter(Boolean).join(' ');
+            const finalTitle = customTitle.trim() ? `${customTitle.trim()} - ${dynamicTitle}` : dynamicTitle;
+            
+            autoTable(doc, {
+                head: [['Nº', 'Nome do Aluno', 'Data de Nasc.', 'Observações']],
+                body: tableData,
+                didDrawPage: (data) => {
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
+                    
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(finalTitle, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+
+                    doc.setFontSize(7);
+                    doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, data.settings.margin.left, doc.internal.pageSize.getHeight() - 5);
+                    const pageNumText = `Página ${doc.internal.getNumberOfPages()}`;
+                    doc.text(pageNumText, doc.internal.pageSize.getWidth() - data.settings.margin.right, doc.internal.pageSize.getHeight() - 5, { align: 'right' });
+                },
+                styles: { font: 'helvetica', fontSize: 8, cellPadding: 1.5 },
+                headStyles: { fillColor: headerColor, textColor: [40, 40, 40], fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: useAlternateRowColors ? getLightAlternateColor(headerColor) : false },
+                margin: { top: 20, right: 10, bottom: 10, left: 10 },
+            });
         }
 
         const fileName = `Listas_Turmas_${filters.serie || 'Geral'}.pdf`.replace(/ /g, '_');
@@ -319,29 +284,18 @@ export default function ClassListGenerator() {
     if (!boletimAno || !boletimAno.notas || typeof boletimAno.notas !== 'object') {
         return 0;
     }
-  
     const disciplineKeys = Object.keys(boletimAno.notas);
     const allSubjectAverages: number[] = [];
-  
     disciplineKeys.forEach(key => {
         const disciplina = boletimAno.notas[key];
         if (disciplina && typeof disciplina === 'object') {
-            const etapaGrades = [disciplina.etapa1, disciplina.etapa2, disciplina.etapa3, disciplina.etapa4];
-            const validGrades = etapaGrades.filter(g => g !== null && g !== undefined && !isNaN(g));
-            
-            if (validGrades.length > 0) {
-                const subjectAverage = validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length;
-                allSubjectAverages.push(subjectAverage);
+            const media = disciplina.mediaFinal;
+            if (media !== null && media !== undefined && !isNaN(media)) {
+                allSubjectAverages.push(media);
             }
         }
     });
-  
-    if (allSubjectAverages.length === 0) {
-        return 0;
-    }
-  
-    const overallSum = allSubjectAverages.reduce((acc, curr) => acc + curr, 0);
-    return overallSum / allSubjectAverages.length;
+    return allSubjectAverages.length === 0 ? 0 : allSubjectAverages.reduce((s, g) => s + g, 0) / allSubjectAverages.length;
   };
 
   const handleDownloadWithAverages = async () => {
@@ -350,89 +304,63 @@ export default function ClassListGenerator() {
 
     try {
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-        let isFirstPageOfDoc = true;
         
-        const processStudentGroup = (studentList: any[]) => {
-            const studentsWithAverages = studentList.map(student => ({
-                ...student,
-                average: calculateAverage(student.boletim?.[selectedYear])
+        const groupedStudents = students.reduce((acc, student) => {
+            const key = oneClassPerPage 
+                ? `${student.ensino || 'S/E'}|${student.serie || 'S/S'}|${student.classe || 'S/C'}|${student.turno || 'S/T'}`
+                : 'geral';
+            if (!acc[key]) acc[key] = [];
+            acc[key].push(student);
+            return acc;
+        }, {} as { [key: string]: any[] });
+
+        let isFirstGroup = true;
+
+        for (const groupKey in groupedStudents) {
+            const groupList = groupedStudents[groupKey];
+            if (groupList.length === 0) continue;
+
+            if (!isFirstGroup) doc.addPage();
+            isFirstGroup = false;
+
+            const rankedList = groupList.map(s => ({
+                ...s,
+                average: calculateAverage(s.boletim?.[selectedYear])
             })).sort((a, b) => b.average - a.average);
 
-            const studentChunks = chunk(studentsWithAverages, 39);
+            const tableData = rankedList.map((s, i) => [
+                `${i + 1}º`,
+                s.nome,
+                s.average > 0 ? s.average.toFixed(2).replace('.', ',') : '-'
+            ]);
 
-            for (let i = 0; i < studentChunks.length; i++) {
-                const pageStudents = studentChunks[i];
-                if (!isFirstPageOfDoc) {
-                    doc.addPage();
-                }
-                isFirstPageOfDoc = false;
-                
-                const tableData = pageStudents.map((student, index) => {
-                    const globalIndex = (i * 39) + index;
-                    return [
-                        `${globalIndex + 1}º`,
-                        student.nome,
-                        student.average > 0 ? student.average.toFixed(2).replace('.', ',') : '-'
-                    ];
-                });
-                
-                const studentSample = pageStudents[0] || {};
-                const dynamicTitleParts = [
-                    `Lista de Alunos com Média Final (${selectedYear})`,
-                    studentSample.ensino,
-                    studentSample.serie,
-                    studentSample.classe,
-                    studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
-                ];
-                const dynamicTitle = dynamicTitleParts.filter(Boolean).join(' ');
-                const finalTitle = customTitle.trim() ? `${customTitle.trim()} - ${dynamicTitle}` : dynamicTitle;
-                
-                autoTable(doc, {
-                    head: [['Pos.', 'Nome do Aluno', 'Média Final']],
-                    body: tableData,
-                    didDrawPage: (data) => {
-                        doc.setFontSize(10);
-                        doc.setFont('helvetica', 'bold');
-                        doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
-                        doc.setFontSize(9);
-                        doc.setFont('helvetica', 'normal');
-                        doc.text(finalTitle, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
-                    },
-                    styles: { fontSize: 8, cellPadding: 1.5, halign: 'center' },
-                    headStyles: { fillColor: headerColor, textColor: [40, 40, 40], fontStyle: 'bold' },
-                    alternateRowStyles: { fillColor: useAlternateRowColors ? getLightAlternateColor(headerColor) : false },
-                    columnStyles: {
-                        0: { cellWidth: 15, halign: 'center' },
-                        1: { cellWidth: 'auto', halign: 'left' },
-                        2: { cellWidth: 25, halign: 'center' },
-                    },
-                    margin: { top: 20, right: 10, bottom: 10, left: 10 },
-                });
-            }
-        };
+            const studentSample = groupList[0] || {};
+            const title = groupKey === 'geral' 
+                ? `Ranking Geral de Médias (${selectedYear})`
+                : `Ranking de Médias (${selectedYear}) - ${studentSample.serie} ${studentSample.classe}`;
 
-        if (oneClassPerPage) {
-            const groupedStudents = students.reduce((acc, student) => {
-                const key = `${student.ensino || 'S/E'}|${student.serie || 'S/S'}|${student.classe || 'S/C'}|${student.turno || 'S/T'}`;
-                if (!acc[key]) acc[key] = [];
-                acc[key].push(student);
-                return acc;
-            }, {} as { [key: string]: any[] });
-            
-            for (const groupKey in groupedStudents) {
-                processStudentGroup(groupedStudents[groupKey]);
-            }
-
-        } else {
-            processStudentGroup(students);
+            autoTable(doc, {
+                head: [['Pos.', 'Nome do Aluno', 'Média Final']],
+                body: tableData,
+                didDrawPage: () => {
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(title, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+                },
+                styles: { fontSize: 8, cellPadding: 1.5, halign: 'center' },
+                headStyles: { fillColor: headerColor, textColor: [40, 40, 40], fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: useAlternateRowColors ? getLightAlternateColor(headerColor) : false },
+                columnStyles: { 0: { cellWidth: 15 }, 1: { cellWidth: 'auto', halign: 'left' }, 2: { cellWidth: 25 } },
+                margin: { top: 20, right: 10, bottom: 10, left: 10 },
+            });
         }
 
-        const fileName = `Lista_com_Medias_${filters.serie || 'Geral'}.pdf`.replace(/ /g, '_');
-        doc.save(fileName);
-
+        doc.save(`Ranking_Medias_${filters.serie || 'Geral'}.pdf`);
     } catch (error) {
-        console.error("Error generating PDF with averages:", error);
-        toast({ variant: "destructive", title: "Erro ao Gerar PDF", description: "Não foi possível criar o ficheiro com as médias." });
+        toast({ variant: "destructive", title: "Erro ao Gerar PDF" });
     } finally {
         setIsDownloadingAverages(false);
     }
@@ -455,10 +383,8 @@ export default function ClassListGenerator() {
 
         for (let i = 0; i < studentChunks.length; i++) {
             const chunk = studentChunks[i];
-
             const elementToRender = document.createElement('div');
             container.appendChild(elementToRender);
-            
             const reactRoot = await import('react-dom/client').then(m => m.createRoot(elementToRender));
             
             const studentsWithBoletimForYear = chunk.map(student => ({
@@ -471,34 +397,18 @@ export default function ClassListGenerator() {
                 setTimeout(resolve, 500); 
             });
 
-            const canvas = await html2canvas(elementToRender, {
-                scale: 2,
-                useCORS: true,
-            });
-
+            const canvas = await html2canvas(elementToRender, { scale: 2, useCORS: true });
             const imgData = canvas.toDataURL('image/jpeg', 0.95);
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
             
-            if (i > 0) {
-                pdf.addPage();
-            }
-            pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+            if (i > 0) pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight());
 
             reactRoot.unmount();
             container.removeChild(elementToRender);
         }
-        
-        const fileName = `Boletins_Grade_${filters.serie || 'Geral'}_${filters.classe || ''}.pdf`.replace(/ /g, '_');
-        pdf.save(fileName);
-
+        pdf.save(`Boletins_Grade_${filters.serie || 'Geral'}.pdf`);
     } catch (error) {
-        console.error("Error generating grid PDF:", error);
-        toast({
-            variant: "destructive",
-            title: "Erro ao Gerar PDF",
-            description: "Ocorreu um erro ao criar o ficheiro PDF.",
-        });
+        toast({ variant: "destructive", title: "Erro ao Gerar PDF" });
     } finally {
         document.body.removeChild(container);
         setIsDownloadingGrid(false);
@@ -514,86 +424,46 @@ export default function ClassListGenerator() {
         const numCols = parseInt(customColumnCount, 10);
         const head = [['Nº', 'Nome do Aluno', ...customHeaders]];
         
-        // Ajuste dinâmico de estilo para acomodar muitas colunas
-        const fontSize = numCols > 15 ? 6 : numCols > 10 ? 7 : 8;
-        const cellPadding = numCols > 12 ? 0.8 : 1.5;
-
         const groupedStudents = students.reduce((acc, student) => {
-            const key = `${student.serie || 'Série Indefinida'}|${student.classe || 'Classe Indefinida'}|${student.turno || 'Turno Indefinido'}`;
-            if (!acc[key]) {
-                acc[key] = [];
-            }
+            const key = `${student.ensino || 'S/E'}|${student.serie || 'S/S'}|${student.classe || 'S/C'}|${student.turno || 'S/T'}`;
+            if (!acc[key]) acc[key] = [];
             acc[key].push(student);
             return acc;
         }, {} as { [key: string]: any[] });
 
-        let isFirstChunkOfDoc = true;
+        let isFirstClass = true;
 
         for (const groupKey in groupedStudents) {
             const classStudents = groupedStudents[groupKey];
             if (classStudents.length === 0) continue;
 
-            const studentChunks = chunk(classStudents, 39);
+            if (!isFirstClass) doc.addPage();
+            isFirstClass = false;
 
-            for(let i=0; i < studentChunks.length; i++) {
-                const pageStudents = studentChunks[i];
+            const body = classStudents.map((s, i) => [i + 1, s.nome, ...Array(numCols).fill('')]);
+            const sSample = classStudents[0] || {};
+            const title = customTitle.trim() || `Lista de Frequência - ${sSample.serie} ${sSample.classe}`;
 
-                if (!isFirstChunkOfDoc) {
-                    doc.addPage();
-                }
-                isFirstChunkOfDoc = false;
-
-                const body = pageStudents.map((student, index) => [ (i * 39) + index + 1, student.nome, ...Array(numCols).fill('')]);
-                const studentSample = pageStudents[0] || {};
-                const dynamicTitleParts = [
-                    'Lista de Alunos',
-                    studentSample.ensino,
-                    studentSample.serie,
-                    studentSample.classe,
-                    studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
-                ];
-                const dynamicTitle = dynamicTitleParts.filter(Boolean).join(' ');
-                const finalTitle = customTitle.trim() ? `${customTitle.trim()} - ${dynamicTitle}` : dynamicTitle;
-
-                autoTable(doc, {
-                    head: head,
-                    body: body,
-                    theme: 'grid',
-                    didDrawPage: (data) => {
-                        doc.setFontSize(10);
-                        doc.setFont('helvetica', 'bold');
-                        doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
-                        doc.setFontSize(9);
-                        doc.setFont('helvetica', 'normal');
-                        doc.text(finalTitle, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
-                    },
-                    styles: { 
-                        fontSize: fontSize, 
-                        cellPadding: cellPadding,
-                        overflow: 'ellipsize',
-                        valign: 'middle'
-                    },
-                    headStyles: {
-                        fillColor: headerColor,
-                        textColor: [40, 40, 40],
-                        fontStyle: 'bold',
-                        halign: 'center'
-                    },
-                    alternateRowStyles: {
-                        fillColor: useAlternateRowColors ? getLightAlternateColor(headerColor) : false
-                    },
-                    columnStyles: {
-                        0: { cellWidth: numCols > 15 ? 7 : 10, halign: 'center' },
-                        1: { cellWidth: numCols > 15 ? 35 : 'auto' }, // Fixar largura do nome para não apertar as outras colunas
-                    },
-                    margin: { top: 20, right: 10, bottom: 10, left: 10 },
-                });
-            }
+            autoTable(doc, {
+                head: head,
+                body: body,
+                theme: 'grid',
+                didDrawPage: () => {
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
+                    doc.setFontSize(9);
+                    doc.text(title, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+                },
+                styles: { fontSize: numCols > 12 ? 6 : 8, cellPadding: 1 },
+                headStyles: { fillColor: headerColor, textColor: [40, 40, 40], fontStyle: 'bold', halign: 'center' },
+                alternateRowStyles: { fillColor: useAlternateRowColors ? getLightAlternateColor(headerColor) : false },
+                columnStyles: { 0: { cellWidth: 10, halign: 'center' }, 1: { cellWidth: numCols > 15 ? 40 : 'auto' } },
+                margin: { top: 20, right: 10, bottom: 10, left: 10 },
+            });
         }
-
         doc.save(`Lista_Personalizada_${filters.serie || 'Geral'}.pdf`);
     } catch (e) {
-      console.error(e);
       toast({ variant: 'destructive', title: "Erro ao gerar PDF" });
     } finally {
       setIsDownloadingCustom(false);
@@ -610,83 +480,44 @@ export default function ClassListGenerator() {
         const head = [['Nº', 'Nome do Aluno', ...subjects]];
         
         const groupedStudents = students.reduce((acc, student) => {
-            const key = `${student.serie || 'Série Indefinida'}|${student.classe || 'Classe Indefinida'}|${student.turno || 'Turno Indefinido'}`;
-            if (!acc[key]) {
-                acc[key] = [];
-            }
+            const key = `${student.ensino || 'S/E'}|${student.serie || 'S/S'}|${student.classe || 'S/C'}|${student.turno || 'S/T'}`;
+            if (!acc[key]) acc[key] = [];
             acc[key].push(student);
             return acc;
         }, {} as { [key: string]: any[] });
 
-        let isFirstChunkOfDoc = true;
+        let isFirstClass = true;
 
         for (const groupKey in groupedStudents) {
             const classStudents = groupedStudents[groupKey];
             if (classStudents.length === 0) continue;
 
-            const studentChunks = chunk(classStudents, 39);
+            if (!isFirstClass) doc.addPage();
+            isFirstClass = false;
 
-            for(let i=0; i < studentChunks.length; i++) {
-                const pageStudents = studentChunks[i];
-                
-                if (!isFirstChunkOfDoc) {
-                    doc.addPage();
-                }
-                isFirstChunkOfDoc = false;
+            const body = classStudents.map((s, i) => [i + 1, s.nome, ...Array(subjects.length).fill('')]);
+            const sSample = classStudents[0] || {};
 
-                const body = pageStudents.map((student, index) => [(i * 39) + index + 1, student.nome, ...Array(subjects.length).fill('')]);
-                const studentSample = pageStudents[0] || {};
-                
-                const dynamicTitleParts = [
-                    'Grelha de Avaliação',
-                    studentSample.ensino,
-                    studentSample.serie,
-                    studentSample.classe,
-                    studentSample.turno ? `- Turno: ${studentSample.turno}` : ''
-                ];
-                const dynamicTitle = dynamicTitleParts.filter(Boolean).join(' ');
-                const finalTitle = customTitle.trim() ? `${customTitle.trim()} - ${dynamicTitle}` : dynamicTitle;
-
-
-                autoTable(doc, {
-                    head: head,
-                    body: body,
-                    theme: 'grid',
-                    didDrawPage: (data) => {
-                        doc.setFontSize(10);
-                        doc.setFont('helvetica', 'bold');
-                        doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
-                        doc.setFontSize(9);
-                        doc.setFont('helvetica', 'normal');
-                        doc.text(finalTitle, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
-                    },
-                    styles: { fontSize: 8, cellPadding: 1 },
-                    headStyles: { 
-                        fillColor: headerColor, 
-                        textColor: [40, 40, 40],
-                        fontStyle: 'bold',
-                        halign: 'center',
-                        valign: 'middle',
-                    },
-                    alternateRowStyles: {
-                        fillColor: useAlternateRowColors ? getLightAlternateColor(headerColor) : false
-                    },
-                    columnStyles: {
-                        0: { cellWidth: 10, halign: 'center' },
-                        1: { cellWidth: 'auto' }, 
-                        ...subjects.reduce((acc, _, index) => {
-                            acc[index + 2] = { cellWidth: 12, halign: 'center' };
-                            return acc;
-                        }, {} as {[key: number]: {cellWidth: number, halign: 'center'}})
-                    },
-                    margin: { top: 20, right: 10, bottom: 10, left: 10 },
-                });
-            }
+            autoTable(doc, {
+                head: head,
+                body: body,
+                theme: 'grid',
+                didDrawPage: () => {
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
+                    doc.setFontSize(9);
+                    doc.text(`Grelha de Avaliação - ${sSample.serie} ${sSample.classe}`, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+                },
+                styles: { fontSize: 8, cellPadding: 1 },
+                headStyles: { fillColor: headerColor, textColor: [40, 40, 40], fontStyle: 'bold', halign: 'center' },
+                alternateRowStyles: { fillColor: useAlternateRowColors ? getLightAlternateColor(headerColor) : false },
+                columnStyles: { 0: { cellWidth: 10, halign: 'center' }, 1: { cellWidth: 'auto' } },
+                margin: { top: 20, right: 10, bottom: 10, left: 10 },
+            });
         }
-
         doc.save(`Grelha_Disciplinas_${filters.serie || 'Geral'}.pdf`);
     } catch (e) {
-        console.error(e);
         toast({ variant: 'destructive', title: "Erro ao gerar PDF" });
     } finally {
       setIsDownloadingSubjects(false);
@@ -697,10 +528,8 @@ export default function ClassListGenerator() {
   const clearFiltersAndResults = () => {
     setFilters({ ensino: '', serie: '', turno: '', classe: '' });
     setStudents([]);
-    setActiveAccordion("item-1"); // Re-open accordion
+    setActiveAccordion("item-1"); 
   };
-
-  const isAnyFilterSelected = filters.ensino || filters.serie || filters.turno || filters.classe;
 
   return (
     <Card className="w-full">
@@ -728,21 +557,21 @@ export default function ClassListGenerator() {
                                     {uniqueOptions.ensinos.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                            <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)} disabled={isLoadingAllStudents || !filters.ensino}>
+                            <Select value={filters.serie} onValueChange={(value) => handleFilterChange('serie', value)} disabled={isLoadingAllStudents}>
                                 <SelectTrigger><SelectValue placeholder={isLoadingAllStudents ? "A carregar..." : "Filtrar por Série..."} /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todas as Séries</SelectItem>
                                     {uniqueOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                            <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)} disabled={isLoadingAllStudents || !filters.serie}>
+                            <Select value={filters.turno} onValueChange={(value) => handleFilterChange('turno', value)} disabled={isLoadingAllStudents}>
                                 <SelectTrigger><SelectValue placeholder={isLoadingAllStudents ? "A carregar..." : "Filtrar por Turno..."} /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todos os Turnos</SelectItem>
                                     {uniqueOptions.turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                            <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)} disabled={isLoadingAllStudents || !filters.turno}>
+                            <Select value={filters.classe} onValueChange={(value) => handleFilterChange('classe', value)} disabled={isLoadingAllStudents}>
                                 <SelectTrigger><SelectValue placeholder={isLoadingAllStudents ? "A carregar..." : "Filtrar por Classe..."} /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todas as Classes</SelectItem>
@@ -751,10 +580,10 @@ export default function ClassListGenerator() {
                             </Select>
                         </div>
                          <div className="flex items-center gap-2 pt-2">
-                            <Button onClick={handleGenerateList} disabled={!isAnyFilterSelected || isGenerating || isLoadingAllStudents} className="flex-1">
+                            <Button onClick={handleGenerateList} disabled={isGenerating || isLoadingAllStudents} className="flex-1">
                                 {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Gerar Lista'}
                             </Button>
-                            {isAnyFilterSelected && (
+                            {(filters.ensino || filters.serie || filters.turno || filters.classe) && (
                             <Button variant="ghost" size="icon" onClick={clearFiltersAndResults}>
                                 <X className="h-4 w-4" />
                             </Button>
@@ -830,6 +659,7 @@ export default function ClassListGenerator() {
                                     <TableRow>
                                         <TableHead className="w-16 text-center">Nº</TableHead>
                                         <TableHead>Nome do Aluno</TableHead>
+                                        <TableHead>Turma</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -837,6 +667,7 @@ export default function ClassListGenerator() {
                                     <TableRow key={student.rm}>
                                         <TableCell className="text-center font-medium">{index + 1}</TableCell>
                                         <TableCell>{student.nome}</TableCell>
+                                        <TableCell className="text-xs text-muted-foreground">{student.serie} {student.classe}</TableCell>
                                     </TableRow>
                                     ))}
                                 </TableBody>
@@ -939,7 +770,7 @@ export default function ClassListGenerator() {
                     </div>
                 ) : (
                     <div className="flex-1 flex items-center justify-center text-center text-sm text-muted-foreground p-4">
-                        <p>Nenhum aluno encontrado ou nenhum filtro aplicado. Selecione os filtros acima e clique em "Gerar Lista".</p>
+                        <p>Aguardando busca. Selecione os filtros (ou deixe em branco para todos) e clique em "Gerar Lista".</p>
                     </div>
                 )}
             </div>
