@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -75,9 +76,12 @@ export default function StudentTranscript({ student }: StudentTranscriptProps) {
                 {/* Rodapé */}
                  <footer className="flex flex-col items-center justify-center text-center pt-2 mt-auto">
                     <p className="text-xs my-4">Gerado em: {formattedDate}</p>
-                    <div className="w-full max-w-xs mx-auto text-center">
-                        <div className="relative h-24 w-full">
-                            <Image src="/assinatura.png" alt="Assinatura" fill style={{ objectFit: 'contain' }} unoptimized />
+                    <div className="w-full max-w-[220px] mx-auto text-center">
+                        <div className="relative h-16 w-full mb-1">
+                            <img src="/assinatura.png" alt="Assinatura Gestão Escolar" style={{ width: '100%', height: '100%', objectFit: 'contain' }} crossOrigin="anonymous" />
+                        </div>
+                        <div className="border-t border-black w-full pt-1">
+                            <p className="font-bold text-xs">DIRETOR(A)</p>
                         </div>
                     </div>
                     <div className="w-full mt-2">

@@ -106,8 +106,8 @@ export default function ReportCardDetailed({ student, boletim, ranking }: Report
                         </div>
                     )}
                     <p className="text-xs my-4">Gerado em: {formattedDate}</p>
-                    <div className="w-full max-w-[150px] mx-auto text-center">
-                        <div className="relative h-10 w-full mb-1">
+                    <div className="w-full max-w-[220px] mx-auto text-center">
+                        <div className="relative h-16 w-full mb-1">
                             <img src="/assinatura.png" alt="Assinatura Gestão Escolar" style={{ width: '100%', height: '100%', objectFit: 'contain' }} crossOrigin="anonymous" />
                         </div>
                         <div className="border-t border-black w-full pt-1">
