@@ -229,13 +229,9 @@ export default function ClassListGenerator() {
             return acc;
         }, {} as { [key: string]: any[] });
 
-        let isFirstPage = true;
+        let isFirstChunkOfDoc = true;
 
         for (const groupKey in groupedStudents) {
-            if (!isFirstPage) {
-                doc.addPage();
-            }
-
             const classStudents = groupedStudents[groupKey];
             if (classStudents.length === 0) continue;
 
@@ -243,9 +239,11 @@ export default function ClassListGenerator() {
 
             for (let i = 0; i < studentChunks.length; i++) {
                 const pageStudents = studentChunks[i];
-                if (i > 0 || !isFirstPage) {
+                
+                if (!isFirstChunkOfDoc) {
                     doc.addPage();
                 }
+                isFirstChunkOfDoc = false;
                 
                 const tableData = pageStudents.map((student, index) => {
                     return [
@@ -300,8 +298,6 @@ export default function ClassListGenerator() {
                     margin: { top: 20, right: 10, bottom: 10, left: 10 },
                 });
             }
-            
-            isFirstPage = false;
         }
 
         const fileName = `Listas_Turmas_${filters.serie || 'Geral'}.pdf`.replace(/ /g, '_');
@@ -354,8 +350,9 @@ export default function ClassListGenerator() {
 
     try {
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+        let isFirstPageOfDoc = true;
         
-        const processStudentGroup = (studentList: any[], isFirstPage: boolean) => {
+        const processStudentGroup = (studentList: any[]) => {
             const studentsWithAverages = studentList.map(student => ({
                 ...student,
                 average: calculateAverage(student.boletim?.[selectedYear])
@@ -365,9 +362,10 @@ export default function ClassListGenerator() {
 
             for (let i = 0; i < studentChunks.length; i++) {
                 const pageStudents = studentChunks[i];
-                if (i > 0 || !isFirstPage) {
+                if (!isFirstPageOfDoc) {
                     doc.addPage();
                 }
+                isFirstPageOfDoc = false;
                 
                 const tableData = pageStudents.map((student, index) => {
                     const globalIndex = (i * 39) + index;
@@ -410,10 +408,7 @@ export default function ClassListGenerator() {
                     },
                     margin: { top: 20, right: 10, bottom: 10, left: 10 },
                 });
-
-                if (i === 0) isFirstPage = false;
             }
-            return isFirstPage;
         };
 
         if (oneClassPerPage) {
@@ -424,17 +419,12 @@ export default function ClassListGenerator() {
                 return acc;
             }, {} as { [key: string]: any[] });
             
-            let isFirstGroup = true;
             for (const groupKey in groupedStudents) {
-                if (!isFirstGroup) {
-                    doc.addPage();
-                }
-                processStudentGroup(groupedStudents[groupKey], true);
-                isFirstGroup = false;
+                processStudentGroup(groupedStudents[groupKey]);
             }
 
         } else {
-            processStudentGroup(students, true);
+            processStudentGroup(students);
         }
 
         const fileName = `Lista_com_Medias_${filters.serie || 'Geral'}.pdf`.replace(/ /g, '_');
@@ -506,7 +496,7 @@ export default function ClassListGenerator() {
         console.error("Error generating grid PDF:", error);
         toast({
             variant: "destructive",
-            title: "Erro ao Gerar PDF em Grade",
+            title: "Erro ao Gerar PDF",
             description: "Ocorreu um erro ao criar o ficheiro PDF.",
         });
     } finally {
@@ -537,12 +527,9 @@ export default function ClassListGenerator() {
             return acc;
         }, {} as { [key: string]: any[] });
 
-        let isFirstPage = true;
+        let isFirstChunkOfDoc = true;
 
         for (const groupKey in groupedStudents) {
-             if (!isFirstPage) {
-                doc.addPage();
-            }
             const classStudents = groupedStudents[groupKey];
             if (classStudents.length === 0) continue;
 
@@ -551,9 +538,10 @@ export default function ClassListGenerator() {
             for(let i=0; i < studentChunks.length; i++) {
                 const pageStudents = studentChunks[i];
 
-                if (i > 0 || !isFirstPage) {
+                if (!isFirstChunkOfDoc) {
                     doc.addPage();
                 }
+                isFirstChunkOfDoc = false;
 
                 const body = pageStudents.map((student, index) => [ (i * 39) + index + 1, student.nome, ...Array(numCols).fill('')]);
                 const studentSample = pageStudents[0] || {};
@@ -601,7 +589,6 @@ export default function ClassListGenerator() {
                     margin: { top: 20, right: 10, bottom: 10, left: 10 },
                 });
             }
-            isFirstPage = false;
         }
 
         doc.save(`Lista_Personalizada_${filters.serie || 'Geral'}.pdf`);
@@ -631,12 +618,9 @@ export default function ClassListGenerator() {
             return acc;
         }, {} as { [key: string]: any[] });
 
-        let isFirstPage = true;
+        let isFirstChunkOfDoc = true;
 
         for (const groupKey in groupedStudents) {
-            if (!isFirstPage) {
-                doc.addPage();
-            }
             const classStudents = groupedStudents[groupKey];
             if (classStudents.length === 0) continue;
 
@@ -644,9 +628,11 @@ export default function ClassListGenerator() {
 
             for(let i=0; i < studentChunks.length; i++) {
                 const pageStudents = studentChunks[i];
-                if (i > 0 || !isFirstPage) {
+                
+                if (!isFirstChunkOfDoc) {
                     doc.addPage();
                 }
+                isFirstChunkOfDoc = false;
 
                 const body = pageStudents.map((student, index) => [(i * 39) + index + 1, student.nome, ...Array(subjects.length).fill('')]);
                 const studentSample = pageStudents[0] || {};
@@ -696,7 +682,6 @@ export default function ClassListGenerator() {
                     margin: { top: 20, right: 10, bottom: 10, left: 10 },
                 });
             }
-            isFirstPage = false;
         }
 
         doc.save(`Grelha_Disciplinas_${filters.serie || 'Geral'}.pdf`);
