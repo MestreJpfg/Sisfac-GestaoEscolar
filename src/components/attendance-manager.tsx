@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -16,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 
 type AttendanceStatus = 'Presente' | 'Ausente' | 'Justificado';
 
@@ -294,7 +294,12 @@ export default function AttendanceManager() {
                             <div className="space-y-4">
                                 {sortedStudentsInClass.map((student) => (
                                     <div key={student.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-md hover:bg-muted/50 transition-colors">
-                                        <span className="font-medium mb-3 sm:mb-0">{student.nome}</span>
+                                        <div className="flex items-center gap-2 mb-3 sm:mb-0">
+                                            <span className="font-medium">{student.nome}</span>
+                                            {student.nee && (
+                                                <Badge variant="destructive" className="text-[10px] h-5 px-1.5 font-bold">AEE</Badge>
+                                            )}
+                                        </div>
                                         <RadioGroup
                                             value={attendance.get(student.id) || 'Presente'}
                                             onValueChange={(value) => handleStatusChange(student.id, value as AttendanceStatus)}
@@ -349,5 +354,3 @@ export default function AttendanceManager() {
         </div>
     );
 }
-
-    
