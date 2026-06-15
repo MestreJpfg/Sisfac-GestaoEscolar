@@ -105,7 +105,14 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
               processedValue = String(value);
             }
           } else {
-             processedValue = String(value);
+             const valStr = String(value).trim();
+             // Detect YYYY-MM-DD and convert to DD/MM/YYYY
+             if (valStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                 const [y, m, d] = valStr.split('-');
+                 processedValue = `${d}/${m}/${y}`;
+             } else {
+                 processedValue = valStr;
+             }
           }
         }
 
@@ -139,14 +146,11 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
   
     try {
         const uploadedRms = new Set(normalizedStudents.map(s => s.rm));
-        
-        // 1. Buscar todos os alunos atuais na base de dados
         const studentsColl = collection(firestore, "alunos");
         const snapshot = await getDocs(query(studentsColl));
         
         let moveCount = 0;
 
-        // 2. Identificar alunos que NÃO estão no novo ficheiro e movê-los para ex-alunos
         snapshot.docs.forEach(docSnap => {
             const studentId = docSnap.id;
             if (!uploadedRms.has(studentId)) {
@@ -154,23 +158,16 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
                 const exAlunoRef = doc(firestore, 'exalunos', studentId);
                 const studentRef = doc(firestore, 'alunos', studentId);
                 
-                // Mover para exalunos com status TRANSFERIDO (Operação não bloqueante)
                 setDocumentNonBlocking(exAlunoRef, { ...studentData, status: 'TRANSFERIDO' }, { merge: true });
-                
-                // Remover da coleção de alunos ativos (Operação não bloqueante)
                 deleteDocumentNonBlocking(studentRef);
-                
                 moveCount++;
             }
         });
 
-        // 3. Adicionar ou atualizar os alunos que vieram no ficheiro
         normalizedStudents.forEach(student => {
             if (student.rm) {
                 const docId = student.rm;
                 const docRef = doc(firestore, "alunos", docId);
-                
-                // Status ATIVO para todos os que constam na nova listagem
                 const finalData = { ...student, id: docId, status: "ATIVO" }; 
                 setDocumentNonBlocking(docRef, finalData, { merge: true });
             }

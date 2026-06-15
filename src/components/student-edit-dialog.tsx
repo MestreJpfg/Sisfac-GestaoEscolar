@@ -51,6 +51,14 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
     defaultValues: {},
   });
 
+  const formatBirthDate = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/(\d{2})(\d)/, '$1/$2')
+      .replace(/(\d{2})\/(\d{2})(\d)/, '$1/$2/$3')
+      .substring(0, 10);
+  };
+
   useEffect(() => {
     if (student && isOpen) {
         const address = parseAddress(student.endereco);
@@ -110,8 +118,7 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
         const processedData: any = {};
         for (const key in restOfData) {
             const value = restOfData[key];
-            // Don't uppercase IDs, booleans, or existing objects like boletim
-            if (typeof value === 'string' && !['id', 'rm', 'email', 'status'].includes(key)) {
+            if (typeof value === 'string' && !['id', 'rm', 'email', 'status', 'data_nascimento'].includes(key)) {
                 processedData[key] = value.toUpperCase();
             } else if (value === '') {
                 processedData[key] = null;
@@ -143,11 +150,10 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
           <DialogDescription>Atualize todos os dados cadastrais do aluno abaixo.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 space-y-4">
              <ScrollArea className="flex-1 pr-6 -mr-6">
                 <Accordion type="multiple" defaultValue={["personal"]} className="w-full">
                   
-                  {/* Secção 1: Identificação */}
                   <AccordionItem value="personal">
                     <AccordionTrigger className="text-primary font-bold hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -165,7 +171,17 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
                             <FormItem><FormLabel>RM (Registro do Aluno)</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl></FormItem>
                         )} />
                         <FormField name="data_nascimento" control={form.control} render={({ field }) => (
-                            <FormItem><FormLabel>Data de Nascimento</FormLabel><FormControl><Input {...field} value={field.value ?? ''} placeholder="DD/MM/AAAA" /></FormControl></FormItem>
+                            <FormItem>
+                                <FormLabel>Data de Nascimento</FormLabel>
+                                <FormControl>
+                                    <Input 
+                                        {...field} 
+                                        value={field.value ?? ''} 
+                                        onChange={(e) => field.onChange(formatBirthDate(e.target.value))}
+                                        placeholder="DD/MM/AAAA" 
+                                    />
+                                </FormControl>
+                            </FormItem>
                         )} />
                         <FormField name="rg" control={form.control} render={({ field }) => (
                             <FormItem><FormLabel>RG</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl></FormItem>
@@ -190,7 +206,6 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
                     </AccordionContent>
                   </AccordionItem>
 
-                  {/* Secção 2: Localização */}
                   <AccordionItem value="address">
                     <AccordionTrigger className="text-primary font-bold hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -220,7 +235,6 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
                     </AccordionContent>
                   </AccordionItem>
 
-                  {/* Secção 3: Vida Académica */}
                   <AccordionItem value="academic">
                     <AccordionTrigger className="text-primary font-bold hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -236,7 +250,6 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
                     </AccordionContent>
                   </AccordionItem>
 
-                  {/* Secção 4: Filiação */}
                   <AccordionItem value="family">
                     <AccordionTrigger className="text-primary font-bold hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -257,7 +270,6 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
                     </AccordionContent>
                   </AccordionItem>
 
-                  {/* Secção 5: Info Adicional */}
                   <AccordionItem value="others">
                     <AccordionTrigger className="text-primary font-bold hover:no-underline">
                         <div className="flex items-center gap-2">

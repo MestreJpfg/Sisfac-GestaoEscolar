@@ -389,7 +389,10 @@ export default function TranscriptPDFTemplate({ student, isEditing = false, onSt
     const handleDetailChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
         let value = e.target.value;
         if (field === 'data_nascimento') {
-            value = value.replace(/\D/g, '').replace(/(\d{2})(\d)/, '$1/$2').replace(/(\d{2})\/(\d{2})(\d)/, '$1/$2/$3').slice(0, 10);
+            value = value.replace(/\D/g, '')
+                        .replace(/(\d{2})(\d)/, '$1/$2')
+                        .replace(/(\d{2})\/(\d{2})(\d)/, '$1/$2/$3')
+                        .slice(0, 10);
         }
         onStudentChange?.({ ...student, [field]: value });
     };
