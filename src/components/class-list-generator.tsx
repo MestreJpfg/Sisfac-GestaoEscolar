@@ -337,7 +337,7 @@ export default function ClassListGenerator() {
             const studentSample = groupList[0] || {};
             const title = groupKey === 'geral' 
                 ? `Ranking Geral de Médias (${selectedYear})`
-                : `Ranking de Médias (${selectedYear}) - ${studentSample.serie} ${studentSample.classe}`;
+                : `Ranking de Médias (${selectedYear}) - ${studentSample.serie} ${studentSample.classe} (${studentSample.turno})`;
 
             autoTable(doc, {
                 head: [['Pos.', 'Nome do Aluno', 'Média Final']],
@@ -442,7 +442,7 @@ export default function ClassListGenerator() {
 
             const body = classStudents.map((s, i) => [i + 1, s.nome, ...Array(numCols).fill('')]);
             const sSample = classStudents[0] || {};
-            const title = customTitle.trim() || `Lista de Frequência - ${sSample.serie} ${sSample.classe}`;
+            const title = customTitle.trim() || `Lista de Frequência - ${sSample.serie} ${sSample.classe} (${sSample.turno})`;
 
             autoTable(doc, {
                 head: head,
@@ -507,7 +507,7 @@ export default function ClassListGenerator() {
                     doc.setFont('helvetica', 'bold');
                     doc.text('E.M. PROFESSORA FERNANDA MARIA DE ALENCAR COLARES', doc.internal.pageSize.getWidth() / 2, 10, { align: 'center' });
                     doc.setFontSize(9);
-                    doc.text(`Grelha de Avaliação - ${sSample.serie} ${sSample.classe}`, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+                    doc.text(`Grelha de Avaliação - ${sSample.serie} ${sSample.classe} (${sSample.turno})`, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
                 },
                 styles: { fontSize: 8, cellPadding: 1 },
                 headStyles: { fillColor: headerColor, textColor: [40, 40, 40], fontStyle: 'bold', halign: 'center' },
