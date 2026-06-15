@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -11,8 +12,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ScrollArea } from "./ui/scroll-area";
 import { Switch } from "./ui/switch";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, User, MapPin, GraduationCap, Users, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Label } from "./ui/label";
 
 const studentSchema = z.record(z.any());
 
@@ -56,6 +58,14 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
             ...student,
             rm: String(student.rm || ''),
             nome: student.nome || '',
+            rg: student.rg || '',
+            nis: student.nis || '',
+            id_censo: student.id_censo || '',
+            cpf_aluno: student.cpf_aluno || '',
+            filiacao_1: student.filiacao_1 || '',
+            filiacao_2: student.filiacao_2 || '',
+            cpffiliacao1: student.cpffiliacao1 || '',
+            nee: student.nee || '',
             endereco_cep: address.cep,
             endereco_rua: address.rua,
             endereco_numero: address.numero,
@@ -100,7 +110,8 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
         const processedData: any = {};
         for (const key in restOfData) {
             const value = restOfData[key];
-            if (typeof value === 'string' && !['id', 'rm', 'email'].includes(key)) {
+            // Don't uppercase IDs, booleans, or existing objects like boletim
+            if (typeof value === 'string' && !['id', 'rm', 'email', 'status'].includes(key)) {
                 processedData[key] = value.toUpperCase();
             } else if (value === '') {
                 processedData[key] = null;
@@ -129,64 +140,170 @@ export default function StudentEditDialog({ isOpen, onClose, student, onSave }: 
       <DialogContent className="sm:max-w-2xl h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Editar Ficha do Aluno</DialogTitle>
-          <DialogDescription>Atualize os dados cadastrais do aluno.</DialogDescription>
+          <DialogDescription>Atualize todos os dados cadastrais do aluno abaixo.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
              <ScrollArea className="flex-1 pr-6 -mr-6">
-                <Accordion type="multiple" defaultValue={["personal", "academic"]} className="w-full">
+                <Accordion type="multiple" defaultValue={["personal"]} className="w-full">
+                  
+                  {/* Secção 1: Identificação */}
                   <AccordionItem value="personal">
-                    <AccordionTrigger className="text-primary font-bold">1. Identificação e Contato</AccordionTrigger>
+                    <AccordionTrigger className="text-primary font-bold hover:no-underline">
+                        <div className="flex items-center gap-2">
+                            <User className="h-4 w-4" />
+                            <span>1. Identificação e Documentos</span>
+                        </div>
+                    </AccordionTrigger>
                     <AccordionContent className="space-y-4 pt-2">
                       <FormField name="nome" control={form.control} render={({ field }) => (
                         <FormItem><FormLabel>Nome Completo</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl></FormItem>
                       )} />
-                      <div className="grid grid-cols-2 gap-4">
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <FormField name="rm" control={form.control} render={({ field }) => (
-                            <FormItem><FormLabel>RM</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl></FormItem>
+                            <FormItem><FormLabel>RM (Registro do Aluno)</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl></FormItem>
                         )} />
                         <FormField name="data_nascimento" control={form.control} render={({ field }) => (
-                            <FormItem><FormLabel>Nascimento</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl></FormItem>
+                            <FormItem><FormLabel>Data de Nascimento</FormLabel><FormControl><Input {...field} value={field.value ?? ''} placeholder="DD/MM/AAAA" /></FormControl></FormItem>
+                        )} />
+                        <FormField name="rg" control={form.control} render={({ field }) => (
+                            <FormItem><FormLabel>RG</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl></FormItem>
+                        )} />
+                        <FormField name="cpf_aluno" control={form.control} render={({ field }) => (
+                            <FormItem><FormLabel>CPF do Aluno</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl></FormItem>
+                        )} />
+                        <FormField name="nis" control={form.control} render={({ field }) => (
+                            <FormItem><FormLabel>NIS</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl></FormItem>
+                        )} />
+                        <FormField name="id_censo" control={form.control} render={({ field }) => (
+                            <FormItem><FormLabel>ID Censo</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl></FormItem>
                         )} />
                       </div>
-                       <FormField name="telefones" control={form.control} render={({ field }) => (
+                      
+                      <FormField name="telefones" control={form.control} render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Telefones (vírgula)</FormLabel>
+                          <FormLabel>Telefones (separados por vírgula)</FormLabel>
                           <FormControl><Input {...field} value={Array.isArray(field.value) ? field.value.join(', ') : ''} onChange={e => field.onChange(e.target.value.split(',').map(s => s.trim()))} /></FormControl>
                         </FormItem>
-                       )} />
+                      )} />
                     </AccordionContent>
                   </AccordionItem>
+
+                  {/* Secção 2: Localização */}
                   <AccordionItem value="address">
-                    <AccordionTrigger className="text-primary font-bold">2. Localização</AccordionTrigger>
-                    <AccordionContent className="grid grid-cols-2 gap-4 pt-2">
+                    <AccordionTrigger className="text-primary font-bold hover:no-underline">
+                        <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4" />
+                            <span>2. Localização e Endereço</span>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                         <FormField name="endereco_cep" control={form.control} render={({ field }) => (
-                            <FormItem><FormLabel>CEP</FormLabel><FormControl><Input {...field} onChange={e => { field.onChange(e.target.value); handleCepChange(e.target.value); }} /></FormControl></FormItem>
+                            <FormItem>
+                                <FormLabel>CEP</FormLabel>
+                                <div className="relative">
+                                    <FormControl><Input {...field} onChange={e => { field.onChange(e.target.value); handleCepChange(e.target.value); }} /></FormControl>
+                                    {isCepLoading && <Loader2 className="absolute right-2 top-2 h-4 w-4 animate-spin text-muted-foreground" />}
+                                </div>
+                            </FormItem>
                         )} />
                         <FormField name="endereco_bairro" control={form.control} render={({ field }) => (
-                            <FormItem><FormLabel>Bairro</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                            <FormItem><FormLabel>Bairro</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl></FormItem>
                         )} />
                         <FormField name="endereco_rua" control={form.control} render={({ field }) => (
-                            <FormItem className="col-span-2"><FormLabel>Rua</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                            <FormItem className="sm:col-span-2"><FormLabel>Logradouro / Rua</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl></FormItem>
+                        )} />
+                        <FormField name="endereco_numero" control={form.control} render={({ field }) => (
+                            <FormItem><FormLabel>Número / Complemento</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl></FormItem>
                         )} />
                     </AccordionContent>
                   </AccordionItem>
+
+                  {/* Secção 3: Vida Académica */}
                   <AccordionItem value="academic">
-                    <AccordionTrigger className="text-primary font-bold">3. Vínculo Académico</AccordionTrigger>
-                    <AccordionContent className="grid grid-cols-2 gap-4 pt-2">
-                       <FormField name="ensino" control={form.control} render={({ field }) => (<FormItem><FormLabel>Ensino</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
-                       <FormField name="serie" control={form.control} render={({ field }) => (<FormItem><FormLabel>Série</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
-                       <FormField name="classe" control={form.control} render={({ field }) => (<FormItem><FormLabel>Classe</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
-                       <FormField name="turno" control={form.control} render={({ field }) => (<FormItem><FormLabel>Turno</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>)} />
+                    <AccordionTrigger className="text-primary font-bold hover:no-underline">
+                        <div className="flex items-center gap-2">
+                            <GraduationCap className="h-4 w-4" />
+                            <span>3. Vínculo Académico</span>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                       <FormField name="ensino" control={form.control} render={({ field }) => (<FormItem><FormLabel>Ensino</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl></FormItem>)} />
+                       <FormField name="serie" control={form.control} render={({ field }) => (<FormItem><FormLabel>Série / Ano</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl></FormItem>)} />
+                       <FormField name="classe" control={form.control} render={({ field }) => (<FormItem><FormLabel>Classe / Turma</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl></FormItem>)} />
+                       <FormField name="turno" control={form.control} render={({ field }) => (<FormItem><FormLabel>Turno</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl></FormItem>)} />
                     </AccordionContent>
                   </AccordionItem>
+
+                  {/* Secção 4: Filiação */}
+                  <AccordionItem value="family">
+                    <AccordionTrigger className="text-primary font-bold hover:no-underline">
+                        <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            <span>4. Família e Filiação</span>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="space-y-4 pt-2">
+                        <FormField name="filiacao_1" control={form.control} render={({ field }) => (
+                            <FormItem><FormLabel>Filiação 1 (Mãe/Responsável)</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl></FormItem>
+                        )} />
+                        <FormField name="cpffiliacao1" control={form.control} render={({ field }) => (
+                            <FormItem><FormLabel>CPF da Filiação 1</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl></FormItem>
+                        )} />
+                        <FormField name="filiacao_2" control={form.control} render={({ field }) => (
+                            <FormItem><FormLabel>Filiação 2 (Pai/Responsável)</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl></FormItem>
+                        )} />
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  {/* Secção 5: Info Adicional */}
+                  <AccordionItem value="others">
+                    <AccordionTrigger className="text-primary font-bold hover:no-underline">
+                        <div className="flex items-center gap-2">
+                            <Info className="h-4 w-4" />
+                            <span>5. Necessidades e Benefícios</span>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="space-y-6 pt-4">
+                        <FormField name="nee" control={form.control} render={({ field }) => (
+                            <FormItem><FormLabel>NEE (Necessidade Educacional Especial)</FormLabel><FormControl><Input {...field} value={field.value ?? ''} placeholder="Ex: Autismo, Deficiência Visual..." /></FormControl></FormItem>
+                        )} />
+                        
+                        <div className="flex flex-col gap-4">
+                            <FormField name="transporte_escolar" control={form.control} render={({ field }) => (
+                                <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                                    <div className="space-y-0.5">
+                                        <FormLabel>Utiliza Transporte Escolar?</FormLabel>
+                                    </div>
+                                    <FormControl>
+                                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                    </FormControl>
+                                </FormItem>
+                            )} />
+                            
+                            <FormField name="carteira_estudante" control={form.control} render={({ field }) => (
+                                <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                                    <div className="space-y-0.5">
+                                        <FormLabel>Possui Carteira de Estudante?</FormLabel>
+                                    </div>
+                                    <FormControl>
+                                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                    </FormControl>
+                                </FormItem>
+                            )} />
+                        </div>
+                    </AccordionContent>
+                  </AccordionItem>
+
                 </Accordion>
              </ScrollArea>
-             <DialogFooter className="pt-6 border-t">
+
+             <DialogFooter className="pt-6 border-t mt-4">
                 <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>Cancelar</Button>
                 <Button type="submit" disabled={isSaving}>
                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Salvar
+                    Salvar Alterações
                 </Button>
             </DialogFooter>
           </form>
