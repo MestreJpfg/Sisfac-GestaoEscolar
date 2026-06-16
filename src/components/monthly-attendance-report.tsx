@@ -27,6 +27,9 @@ interface MonthlyRecord {
     studentName: string;
     absences: { [day: number]: 'F' | 'J' }; // F for Ausente, J for Justificado
     total: number;
+    serie: string;
+    classe: string;
+    turno: string;
 }
 
 const years = Array.from({ length: 5 }, (_, i) => getYear(new Date()) - i);
@@ -80,7 +83,6 @@ export default function MonthlyAttendanceReport() {
         const classes = getUniqueValues('classe', filteredForOptions);
         if (filters.classe) filteredForOptions = filteredForOptions.filter(s => s.classe === filters.classe);
         
-        // Turnos dependem apenas de ensino para serem independentes de série/turma
         let filteredForTurnos = allStudents;
         if (filters.ensino) filteredForTurnos = filteredForTurnos.filter(s => s.ensino === filters.ensino);
         const turnos = getUniqueValues('turno', filteredForTurnos);
@@ -98,9 +100,6 @@ export default function MonthlyAttendanceReport() {
                 newFilters.turno = ''; 
             } else if (name === 'serie') { 
                 newFilters.classe = ''; 
-                // Turno não é resetado
-            } else if (name === 'classe') { 
-                // Turno não é resetado
             }
             return newFilters;
         });
@@ -116,18 +115,15 @@ export default function MonthlyAttendanceReport() {
             toast({ variant: 'destructive', title: 'Dados não carregados', description: 'Aguarde o carregamento dos dados dos alunos.' });
             return;
         }
-        if (!filters.ensino || !filters.serie || !filters.classe || !filters.turno) {
-            toast({ variant: 'destructive', title: 'Filtros incompletos', description: 'Por favor, selecione todos os filtros da turma.' });
-            return;
-        }
+
         setIsLoading(true);
         setReportData([]);
 
         const studentsInClass = allStudents.filter(s => 
-            (s.ensino === filters.ensino) &&
-            (s.serie === filters.serie) &&
-            (s.classe === filters.classe) &&
-            (s.turno === filters.turno)
+            (!filters.ensino || s.ensino === filters.ensino) &&
+            (!filters.serie || s.serie === filters.serie) &&
+            (!filters.classe || s.classe === filters.classe) &&
+            (!filters.turno || s.turno === filters.turno)
         ).sort((a, b) => a.nome.localeCompare(b.nome));
 
         if (studentsInClass.length === 0) {
@@ -179,6 +175,9 @@ export default function MonthlyAttendanceReport() {
                 studentName: student.nome,
                 absences,
                 total,
+                serie: student.serie || 'S/S',
+                classe: student.classe || 'S/C',
+                turno: student.turno || 'S/T'
             };
         });
         
@@ -191,73 +190,129 @@ export default function MonthlyAttendanceReport() {
     
     const exportMonthlyPDF = () => {
         const doc = new jsPDF({ orientation: 'landscape' });
-        const title = `Relatório Mensal de Faltas - ${filters.serie} ${filters.classe}`;
-        const subtitle = `${format(new Date(selectedYear, selectedMonth), 'MMMM yyyy', { locale: ptBR })} | Turno: ${filters.turno}`;
+        
+        // Agrupar dados por turma para gerar páginas individuais
+        const grouped = reportData.reduce((acc, record) => {
+            const key = `${record.serie}|${record.classe}|${record.turno}`;
+            if (!acc[key]) acc[key] = [];
+            acc[key].push(record);
+            return acc;
+        }, {} as Record<string, MonthlyRecord[]>);
 
-        doc.setFontSize(16);
-        doc.text(title, 14, 15);
-        doc.setFontSize(10);
-        doc.text(subtitle, 14, 21);
+        const sortedKeys = Object.keys(grouped).sort();
 
-        const head: (string | { content: string, styles: any })[] = [{ content: 'Aluno', styles: { halign: 'left' } }];
-        daysInMonth.forEach(day => {
-            const dayNumber = format(day, 'd');
-            head.push({ content: dayNumber, styles: { halign: 'center', cellWidth: 6 } });
-        });
-        head.push({ content: 'Total', styles: { halign: 'center' } });
+        sortedKeys.forEach((key, index) => {
+            if (index > 0) doc.addPage();
+            
+            const records = grouped[key];
+            const [serie, classe, turno] = key.split('|');
+            
+            const title = `Relatório Mensal de Faltas - ${serie} ${classe}`;
+            const subtitle = `${format(new Date(selectedYear, selectedMonth), 'MMMM yyyy', { locale: ptBR })} | Turno: ${turno}`;
 
-        const body = reportData.map(record => {
-            const row: (string | { content: string, styles: any })[] = [{ content: record.studentName, styles: { halign: 'left', cellWidth: 'auto' } }];
+            doc.setFontSize(16);
+            doc.text(title, 14, 15);
+            doc.setFontSize(10);
+            doc.text(subtitle, 14, 21);
+
+            const head: (string | { content: string, styles: any })[] = [{ content: 'Aluno', styles: { halign: 'left' } }];
             daysInMonth.forEach(day => {
-                const status = record.absences[day.getDate()];
-                row.push({ content: status || '', styles: { halign: 'center', textColor: status === 'F' ? [255,0,0] : (status === 'J' ? [245, 160, 0] : [0,0,0]) } });
+                head.push({ content: format(day, 'd'), styles: { halign: 'center', cellWidth: 6 } });
             });
-            row.push({ content: record.total > 0 ? String(record.total) : '', styles: { halign: 'center', fontStyle: 'bold' } });
-            return row;
-        });
+            head.push({ content: 'Total', styles: { halign: 'center' } });
 
-        autoTable(doc, {
-            head: [head],
-            body: body,
-            startY: 25,
-            theme: 'grid',
-            styles: { fontSize: 7, overflow: 'linebreak' },
-            headStyles: { fillColor: [230, 230, 230], textColor: [40, 40, 40], fontSize: 8 },
-            didParseCell: (data) => {
-                if (data.section === 'head' && data.column.index > 0 && data.column.index <= daysInMonth.length) {
-                    const day = daysInMonth[data.column.index - 1];
-                    if (day.getDay() === 0 || day.getDay() === 6) { // Domingo ou Sábado
-                        data.cell.styles.fillColor = '#fdecec';
+            const body = records.map(record => {
+                const row: (string | { content: string, styles: any })[] = [{ content: record.studentName, styles: { halign: 'left', cellWidth: 'auto' } }];
+                daysInMonth.forEach(day => {
+                    const status = record.absences[day.getDate()];
+                    row.push({ content: status || '', styles: { halign: 'center', textColor: status === 'F' ? [255,0,0] : (status === 'J' ? [245, 160, 0] : [0,0,0]) } });
+                });
+                row.push({ content: record.total > 0 ? String(record.total) : '0', styles: { halign: 'center', fontStyle: 'bold' } });
+                return row;
+            });
+
+            autoTable(doc, {
+                head: [head],
+                body: body,
+                startY: 25,
+                theme: 'grid',
+                styles: { fontSize: 7, overflow: 'linebreak' },
+                headStyles: { fillColor: [230, 230, 230], textColor: [40, 40, 40], fontSize: 8 },
+                didParseCell: (data) => {
+                    if (data.section === 'head' && data.column.index > 0 && data.column.index <= daysInMonth.length) {
+                        const day = daysInMonth[data.column.index - 1];
+                        if (day.getDay() === 0 || day.getDay() === 6) { 
+                            data.cell.styles.fillColor = '#fdecec';
+                        }
                     }
                 }
-            }
+            });
         });
 
-        doc.save(`Relatorio_Mensal_${filters.serie.replace(/\s+/g, '_')}_${filters.classe}.pdf`);
+        doc.save(`Relatorio_Mensal_${format(new Date(selectedYear, selectedMonth), 'MMMM_yyyy', { locale: ptBR })}.pdf`);
     };
 
     return (
         <div className="space-y-4">
              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 border rounded-md">
-                <Select value={filters.ensino} onValueChange={(v) => handleFilterChange('ensino', v)} disabled={isLoadingOptions}><SelectTrigger><SelectValue placeholder={isLoadingOptions ? "A carregar..." : "Ensino..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.ensinos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
-                <Select value={filters.serie} onValueChange={(v) => handleFilterChange('serie', v)} disabled={isLoadingOptions || !filters.ensino}><SelectTrigger><SelectValue placeholder={isLoadingOptions ? "A carregar..." : "Série..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.series.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
-                <Select value={filters.classe} onValueChange={(v) => handleFilterChange('classe', v)} disabled={isLoadingOptions || !filters.serie}><SelectTrigger><SelectValue placeholder={isLoadingOptions ? "A carregar..." : "Classe..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.classes.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
-                <Select value={filters.turno} onValueChange={(v) => handleFilterChange('turno', v)} disabled={isLoadingOptions}><SelectTrigger><SelectValue placeholder={isLoadingOptions ? "A carregar..." : "Turno..."} /></SelectTrigger><SelectContent>{uniqueFilterOptions.turnos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
-                <Select value={String(selectedMonth)} onValueChange={(v) => setSelectedMonth(Number(v))}><SelectTrigger><SelectValue placeholder="Mês..." /></SelectTrigger><SelectContent>{months.map(m => <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>)}</SelectContent></Select>
-                <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}><SelectTrigger><SelectValue placeholder="Ano..." /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent></Select>
+                <Select value={filters.ensino || 'all'} onValueChange={(v) => handleFilterChange('ensino', v)} disabled={isLoadingOptions}>
+                    <SelectTrigger><SelectValue placeholder="Ensino..." /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Todos Ensinos</SelectItem>
+                        {uniqueFilterOptions.ensinos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                <Select value={filters.serie || 'all'} onValueChange={(v) => handleFilterChange('serie', v)} disabled={isLoadingOptions}>
+                    <SelectTrigger><SelectValue placeholder="Série..." /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Todas Séries</SelectItem>
+                        {uniqueFilterOptions.series.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                <Select value={filters.classe || 'all'} onValueChange={(v) => handleFilterChange('classe', v)} disabled={isLoadingOptions}>
+                    <SelectTrigger><SelectValue placeholder="Classe..." /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Todas Classes</SelectItem>
+                        {uniqueFilterOptions.classes.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                <Select value={filters.turno || 'all'} onValueChange={(v) => handleFilterChange('turno', v)} disabled={isLoadingOptions}>
+                    <SelectTrigger><SelectValue placeholder="Turno..." /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Todos Turnos</SelectItem>
+                        {uniqueFilterOptions.turnos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                <Select value={String(selectedMonth)} onValueChange={(v) => setSelectedMonth(Number(v))}>
+                    <SelectTrigger><SelectValue placeholder="Mês..." /></SelectTrigger>
+                    <SelectContent>{months.map(m => <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>)}</SelectContent>
+                </Select>
+                <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
+                    <SelectTrigger><SelectValue placeholder="Ano..." /></SelectTrigger>
+                    <SelectContent>{years.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
+                </Select>
             </div>
-            <Button onClick={generateReport} disabled={isLoading || isLoadingOptions}>
-                {isLoading || isLoadingOptions ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Search className="mr-2 h-4 w-4"/>}
-                Gerar Relatório Mensal
-            </Button>
+            <div className="flex gap-2">
+                <Button onClick={generateReport} disabled={isLoading || isLoadingOptions}>
+                    {isLoading || isLoadingOptions ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Search className="mr-2 h-4 w-4"/>}
+                    Visualizar Dados
+                </Button>
+                {reportData.length > 0 && (
+                    <Button onClick={exportMonthlyPDF} variant="outline" className="flex-1 sm:flex-none">
+                        <Download className="mr-2 h-4 w-4"/>
+                        Gerar PDF (Todas as Turmas Selecionadas)
+                    </Button>
+                )}
+            </div>
+
             {reportData.length > 0 && (
-                <div className="pt-4 space-y-2">
-                    <Button onClick={exportMonthlyPDF} variant="outline"><Download className="mr-2 h-4 w-4"/>Exportar PDF</Button>
+                <div className="pt-4 space-y-4">
                     <div className="overflow-x-auto border rounded-md">
                         <Table className="min-w-full">
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="sticky left-0 bg-background z-10 w-48">Aluno</TableHead>
+                                    <TableHead className="text-center w-24">Turma</TableHead>
                                     {daysInMonth.map(day => {
                                         const isWeekend = day.getDay() === 0 || day.getDay() === 6;
                                         return <TableHead key={day.toISOString()} className={cn("text-center", isWeekend && "bg-muted/50")}>{format(day, 'd')}</TableHead>
@@ -268,7 +323,12 @@ export default function MonthlyAttendanceReport() {
                             <TableBody>
                                 {reportData.map(record => (
                                     <TableRow key={record.studentId}>
-                                        <TableCell className="font-medium sticky left-0 bg-background z-10 w-48 truncate">{record.studentName}</TableCell>
+                                        <TableCell className="font-medium sticky left-0 bg-background z-10 w-48 truncate">
+                                            {record.studentName}
+                                        </TableCell>
+                                        <TableCell className="text-center text-[10px] text-muted-foreground">
+                                            {record.serie} {record.classe}
+                                        </TableCell>
                                         {daysInMonth.map(day => {
                                              const isWeekend = day.getDay() === 0 || day.getDay() === 6;
                                              const status = record.absences[day.getDate()];
@@ -280,7 +340,7 @@ export default function MonthlyAttendanceReport() {
                                                 </TableCell>
                                              )
                                         })}
-                                        <TableCell className="text-center font-bold sticky right-0 bg-background z-10">{record.total > 0 ? record.total : ''}</TableCell>
+                                        <TableCell className="text-center font-bold sticky right-0 bg-background z-10">{record.total}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -291,3 +351,4 @@ export default function MonthlyAttendanceReport() {
         </div>
     );
 }
+
