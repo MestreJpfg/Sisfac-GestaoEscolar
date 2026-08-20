@@ -4,7 +4,7 @@
 import { useState } from "react";
 import * as XLSX from "xlsx";
 import { useToast } from "@/hooks/use-toast";
-import { doc, collection } from "firebase/firestore";
+import { doc, collection, getDocs } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,10 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import FileUploader from "./file-uploader";
-import { Upload } from "lucide-react";
+import { Upload, Loader2 } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { format } from "date-fns";
 
 interface FileUploaderSheetProps {
   onUploadSuccess: () => void;
@@ -97,7 +100,7 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
         }
         
         if (header === 'data_nascimento' && value) {
-          if (typeof value === 'number') { // Excel date serial number
+          if (typeof value === 'number') { 
             const date = new Date(Date.UTC(0, 0, value - 1));
             if (!isNaN(date.getTime())) {
               processedValue = ('0' + date.getUTCDate()).slice(-2) + '/' + ('0' + (date.getUTCMonth() + 1)).slice(-2) + '/' + date.getUTCFullYear();
@@ -106,7 +109,6 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
             }
           } else {
              const valStr = String(value).trim();
-             // Detect YYYY-MM-DD and convert to DD/MM/YYYY
              if (valStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
                  const [y, m, d] = valStr.split('-');
                  processedValue = `${d}/${m}/${y}`;
@@ -123,6 +125,66 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
       student.rm = String(student.rm);
       return student;
     }).filter(Boolean);
+  };
+
+  const generateSummaryReport = (inclusions: any[], changes: any[]) => {
+    const doc = new jsPDF();
+    const timestamp = format(new Date(), "dd/MM/yyyy HH:mm");
+
+    doc.setFontSize(16);
+    doc.text("Relatório de Alterações na Base de Alunos", 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Data do Processamento: ${timestamp}`, 14, 22);
+
+    let currentY = 30;
+
+    // Seção de Inclusões
+    if (inclusions.length > 0) {
+        doc.setFontSize(12);
+        doc.text(`Novos Alunos Incluídos (${inclusions.length})`, 14, currentY);
+        
+        autoTable(doc, {
+            startY: currentY + 5,
+            head: [['RM', 'Nome', 'Série', 'Turma', 'Turno']],
+            body: inclusions.map(s => [s.rm, s.nome, s.serie, s.classe, s.turno]),
+            theme: 'striped',
+            headStyles: { fillColor: [46, 125, 50] },
+            styles: { fontSize: 8 }
+        });
+        currentY = (doc as any).lastAutoTable.finalY + 15;
+    } else {
+        doc.setFontSize(12);
+        doc.text("Nenhum novo aluno incluído.", 14, currentY);
+        currentY += 15;
+    }
+
+    // Seção de Mudanças de Enturmação
+    if (changes.length > 0) {
+        if (currentY > 250) { doc.addPage(); currentY = 20; }
+        
+        doc.setFontSize(12);
+        doc.text(`Mudanças de Enturmação Detetadas (${changes.length})`, 14, currentY);
+        
+        autoTable(doc, {
+            startY: currentY + 5,
+            head: [['RM', 'Nome', 'Série (Antiga > Nova)', 'Turma (Antiga > Nova)', 'Turno (Antiga > Novo)']],
+            body: changes.map(c => [
+                c.rm, 
+                c.nome, 
+                `${c.oldSerie || '-'} > ${c.newSerie || '-'}`,
+                `${c.oldClasse || '-'} > ${c.newClasse || '-'}`,
+                `${c.oldTurno || '-'} > ${c.newTurno || '-'}`
+            ]),
+            theme: 'grid',
+            headStyles: { fillColor: [30, 136, 229] },
+            styles: { fontSize: 7 }
+        });
+    } else {
+        doc.setFontSize(12);
+        doc.text("Nenhuma mudança de enturmação detectada nos cadastros existentes.", 14, currentY);
+    }
+
+    doc.save(`Relatorio_Importacao_Alunos_${format(new Date(), "yyyyMMdd_HHmm")}.pdf`);
   };
 
   const handleUploadComplete = async (data: any[]) => {
@@ -145,20 +207,58 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
     }
   
     try {
+        // Buscar dados atuais para comparação
+        const snapshot = await getDocs(collection(firestore, "alunos"));
+        const existingMap = new Map();
+        snapshot.forEach(d => existingMap.set(String(d.id), d.data()));
+
+        const inclusions: any[] = [];
+        const changes: any[] = [];
+
         normalizedStudents.forEach(student => {
             if (student.rm) {
-                const docId = student.rm;
+                const docId = String(student.rm);
+                const existing = existingMap.get(docId);
+
+                if (!existing) {
+                    inclusions.push(student);
+                } else {
+                    const hasSerieChange = student.serie && student.serie !== existing.serie;
+                    const hasClasseChange = student.classe && student.classe !== existing.classe;
+                    const hasTurnoChange = student.turno && student.turno !== existing.turno;
+
+                    if (hasSerieChange || hasClasseChange || hasTurnoChange) {
+                        changes.push({
+                            rm: docId,
+                            nome: student.nome || existing.nome,
+                            oldSerie: existing.serie,
+                            newSerie: student.serie,
+                            oldClasse: existing.classe,
+                            newClasse: student.classe,
+                            oldTurno: existing.turno,
+                            newTurno: student.turno
+                        });
+                    }
+                }
+
                 const docRef = doc(firestore, "alunos", docId);
                 const finalData = { ...student, id: docId, status: "ATIVO" }; 
-                // Usando merge: true para atualizar campos existentes e adicionar novos sem apagar outros dados (como boletins)
                 setDocumentNonBlocking(docRef, finalData, { merge: true });
             }
         });
 
-        toast({
-            title: "Importação Iniciada!",
-            description: `${normalizedStudents.length} registos de alunos estão a ser atualizados ou inseridos na base de dados.`,
-        });
+        if (inclusions.length > 0 || changes.length > 0) {
+            generateSummaryReport(inclusions, changes);
+            toast({
+                title: "Importação e Relatório!",
+                description: `Atualização iniciada. O relatório de alterações foi gerado.`,
+            });
+        } else {
+            toast({
+                title: "Processamento Concluído",
+                description: "Nenhuma alteração de enturmação ou novo aluno foi detetado.",
+            });
+        }
 
         onUploadSuccess();
         setIsOpen(false);
@@ -210,7 +310,7 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
         <SheetHeader>
           <SheetTitle>Atualizar Alunos</SheetTitle>
           <SheetDescription>
-            Envie o ficheiro para atualizar informações ou adicionar novos alunos. Os alunos atuais que não constarem no ficheiro permanecerão intactos na base de dados.
+            Envie o ficheiro para atualizar informações ou adicionar novos alunos. Um relatório de alterações será gerado automaticamente.
           </SheetDescription>
         </SheetHeader>
         <div className="py-4 flex-1">
