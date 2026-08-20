@@ -4,9 +4,9 @@
 import { useState } from "react";
 import * as XLSX from "xlsx";
 import { useToast } from "@/hooks/use-toast";
-import { doc, collection, getDocs, query } from "firebase/firestore";
+import { doc, collection } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
-import { setDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -145,47 +145,29 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
     }
   
     try {
-        const uploadedRms = new Set(normalizedStudents.map(s => s.rm));
-        const studentsColl = collection(firestore, "alunos");
-        const snapshot = await getDocs(query(studentsColl));
-        
-        let moveCount = 0;
-
-        snapshot.docs.forEach(docSnap => {
-            const studentId = docSnap.id;
-            if (!uploadedRms.has(studentId)) {
-                const studentData = docSnap.data();
-                const exAlunoRef = doc(firestore, 'exalunos', studentId);
-                const studentRef = doc(firestore, 'alunos', studentId);
-                
-                setDocumentNonBlocking(exAlunoRef, { ...studentData, status: 'TRANSFERIDO' }, { merge: true });
-                deleteDocumentNonBlocking(studentRef);
-                moveCount++;
-            }
-        });
-
         normalizedStudents.forEach(student => {
             if (student.rm) {
                 const docId = student.rm;
                 const docRef = doc(firestore, "alunos", docId);
                 const finalData = { ...student, id: docId, status: "ATIVO" }; 
+                // Usando merge: true para atualizar campos existentes e adicionar novos sem apagar outros dados (como boletins)
                 setDocumentNonBlocking(docRef, finalData, { merge: true });
             }
         });
 
         toast({
-            title: "Sincronização Iniciada!",
-            description: `${normalizedStudents.length} alunos ativos processados. ${moveCount} alunos ausentes foram movidos para 'Transferidos'.`,
+            title: "Importação Iniciada!",
+            description: `${normalizedStudents.length} registos de alunos estão a ser atualizados ou inseridos na base de dados.`,
         });
 
         onUploadSuccess();
         setIsOpen(false);
     } catch (error) {
-        console.error("Erro na sincronização:", error);
+        console.error("Erro na importação:", error);
         toast({
             variant: "destructive",
             title: "Erro no Processamento",
-            description: "Ocorreu uma falha ao tentar sincronizar os dados."
+            description: "Ocorreu uma falha ao tentar processar os dados."
         });
     } finally {
         setIsLoading(false);
@@ -198,14 +180,14 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
             <SheetTrigger asChild>
                 <Button>
                     <Upload className="mr-2 h-4 w-4" />
-                    Sincronizar Base de Alunos
+                    Carregar/Atualizar Base de Alunos
                 </Button>
             </SheetTrigger>
              <SheetContent className="flex flex-col">
               <SheetHeader>
-                <SheetTitle>Sincronizar Alunos</SheetTitle>
+                <SheetTitle>Carregar Alunos</SheetTitle>
                 <SheetDescription>
-                  Envie a listagem master. Alunos ausentes no ficheiro serão movidos para 'Transferidos' automaticamente.
+                  Envie a listagem para atualizar cadastros existentes ou incluir novos alunos. Ninguém será excluído.
                 </SheetDescription>
               </SheetHeader>
               <div className="py-4 flex-1">
@@ -221,14 +203,14 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
       <SheetTrigger asChild>
         <Button variant="secondary" className="flex items-center gap-2 shadow-lg">
           <Upload className="h-4 w-4" />
-          <span>Sincronizar Alunos</span>
+          <span>Atualizar Alunos</span>
         </Button>
       </SheetTrigger>
       <SheetContent className="flex flex-col">
         <SheetHeader>
-          <SheetTitle>Sincronizar Alunos</SheetTitle>
+          <SheetTitle>Atualizar Alunos</SheetTitle>
           <SheetDescription>
-            Envie a listagem atualizada. O sistema moverá automaticamente os alunos que não constam neste ficheiro para a base de transferidos.
+            Envie o ficheiro para atualizar informações ou adicionar novos alunos. Os alunos atuais que não constarem no ficheiro permanecerão intactos na base de dados.
           </SheetDescription>
         </SheetHeader>
         <div className="py-4 flex-1">
