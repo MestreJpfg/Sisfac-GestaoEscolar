@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useRef, useState, useCallback, type DragEvent } from "react";
@@ -67,7 +66,30 @@ export default function ExAlunoUploader({ onUploadComplete, setIsLoading, isLoad
             const studentData: { [key: string]: any } = { id: String(rm) };
             headers.forEach((header, index) => {
                 if (!header) return;
-                studentData[header] = row[index];
+                
+                let val = row[index];
+                
+                // Normalização de Data de Nascimento para Ex-Alunos
+                if (header === 'data_nascimento' && val) {
+                    if (typeof val === 'number') {
+                        const date = new Date(Date.UTC(0, 0, val - 1));
+                        if (!isNaN(date.getTime())) {
+                            val = ('0' + date.getUTCDate()).slice(-2) + '/' + ('0' + (date.getUTCMonth() + 1)).slice(-2) + '/' + date.getUTCFullYear();
+                        }
+                    } else if (val instanceof Date) {
+                        if (!isNaN(val.getTime())) {
+                            val = ('0' + val.getUTCDate()).slice(-2) + '/' + ('0' + (val.getUTCMonth() + 1)).slice(-2) + '/' + val.getUTCFullYear();
+                        }
+                    } else {
+                        const valStr = String(val).trim();
+                        if (valStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                            const [y, m, d] = valStr.split('-');
+                            val = `${d}/${m}/${y}`;
+                        }
+                    }
+                }
+                
+                studentData[header] = val;
             });
             batch.set(docRef, studentData, { merge: true });
             count++;
@@ -94,7 +116,7 @@ export default function ExAlunoUploader({ onUploadComplete, setIsLoading, isLoad
         const data = e.target?.result;
         if (!data) throw new Error("Não foi possível ler os dados do arquivo.");
         
-        const workbook = XLSX.read(data, { type: 'array' });
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
         const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });

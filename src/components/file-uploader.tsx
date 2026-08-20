@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useRef, useState, useCallback, type DragEvent } from "react";
@@ -50,7 +49,8 @@ export default function FileUploader({ onUploadComplete, setIsLoading, isLoading
             const worksheet = workbook.Sheets[firstSheetName];
             jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
         } else if (file.name.endsWith('.xlsx')) {
-            const workbook = XLSX.read(data, { type: 'array' });
+            // cellDates: true garante que datas do Excel venham como objetos Date do JS
+            const workbook = XLSX.read(data, { type: 'array', cellDates: true });
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
             jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
@@ -140,7 +140,7 @@ export default function FileUploader({ onUploadComplete, setIsLoading, isLoading
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFileSelect(e.dataTransfer.files[0]);
     }
-  }, [isLoading]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isLoading]);
   
   const handleClick = () => {
     if (isLoading) return;

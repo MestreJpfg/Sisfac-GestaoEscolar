@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -99,20 +98,35 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
                 .filter(p => p && p.length >= 10);
         }
         
+        // Normalização Rigorosa de Data de Nascimento (DD/MM/AAAA)
         if (header === 'data_nascimento' && value) {
           if (typeof value === 'number') { 
+            // Caso seja número serial do Excel
             const date = new Date(Date.UTC(0, 0, value - 1));
             if (!isNaN(date.getTime())) {
               processedValue = ('0' + date.getUTCDate()).slice(-2) + '/' + ('0' + (date.getUTCMonth() + 1)).slice(-2) + '/' + date.getUTCFullYear();
             } else {
               processedValue = String(value);
             }
+          } else if (value instanceof Date) {
+            // Caso venha como objeto Date do JavaScript (com cellDates: true)
+            if (!isNaN(value.getTime())) {
+               processedValue = ('0' + value.getUTCDate()).slice(-2) + '/' + ('0' + (value.getUTCMonth() + 1)).slice(-2) + '/' + value.getUTCFullYear();
+            }
           } else {
              const valStr = String(value).trim();
+             // Deteta formato ISO AAAA-MM-DD
              if (valStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
                  const [y, m, d] = valStr.split('-');
                  processedValue = `${d}/${m}/${y}`;
-             } else {
+             } 
+             // Deteta formato ISO com tempo AAAA-MM-DDTHH...
+             else if (valStr.match(/^\d{4}-\d{2}-\d{2}T.*$/)) {
+                 const [y, m, d] = valStr.split('T')[0].split('-');
+                 processedValue = `${d}/${m}/${y}`;
+             }
+             // Se for string qualquer, tentamos manter o que está lá, presumindo que o usuário enviou DD/MM/AAAA
+             else {
                  processedValue = valStr;
              }
           }
