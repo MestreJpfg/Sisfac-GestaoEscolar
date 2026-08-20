@@ -3,6 +3,7 @@
 
 import AuthGuard from "@/components/auth-guard";
 import StudentDataView from '@/components/student-data-view';
+import ExStudentDataView from '@/components/ex-student-data-view';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { UserNav } from '@/components/user-nav';
@@ -10,15 +11,15 @@ import AppFooter from '@/components/app-footer';
 import { useRouter } from 'next/navigation';
 import FileUploaderSheet from '@/components/file-uploader-sheet';
 import Image from 'next/image';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Users, UserMinus } from 'lucide-react';
 import { NotificationCenter } from '@/components/notification-center';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function StudentsPage() {
   const router = useRouter();
 
   const onUploadSuccess = () => {
-    // A view de dados irá recarregar automaticamente devido ao hook useCollection.
-    // Nenhuma ação adicional é necessária aqui.
+    // A view de dados irá recarregar automaticamente devido ao hook useCollection ou lógica interna.
   };
 
   return (
@@ -48,7 +49,26 @@ export default function StudentsPage() {
 
             <main className="flex-1 py-8">
                 <div className="container">
-                  <StudentDataView />
+                  <Tabs defaultValue="ativos" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-8">
+                      <TabsTrigger value="ativos" className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Alunos Ativos
+                      </TabsTrigger>
+                      <TabsTrigger value="exalunos" className="flex items-center gap-2">
+                        <UserMinus className="h-4 w-4" />
+                        Ex-Alunos / Transferidos
+                      </TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="ativos" className="animate-in fade-in-50">
+                      <StudentDataView />
+                    </TabsContent>
+                    
+                    <TabsContent value="exalunos" className="animate-in fade-in-50">
+                      <ExStudentDataView />
+                    </TabsContent>
+                  </Tabs>
                 </div>
             </main>
             <AppFooter />

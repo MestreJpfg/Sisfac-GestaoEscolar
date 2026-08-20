@@ -18,11 +18,11 @@ import { ScrollArea } from "./ui/scroll-area";
 import StudentDeclaration from "./student-declaration";
 import StudentTransferDeclaration from "./student-transfer-declaration";
 import StudentEditDialog from "./student-edit-dialog";
-import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Loader2, Share2, Pencil, Printer, MapPin, BookCheck, Award, GraduationCap, UserMinus, AlertCircle } from "lucide-react";
+import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Loader2, Share2, Pencil, Printer, MapPin, BookCheck, Award, GraduationCap, UserMinus, UserCheck, AlertCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
-import { doc, deleteDoc, setDoc, getDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { setDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import StudentReportCardDialog from "./student-report-card-dialog";
@@ -84,29 +84,16 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, lab
 };
 
 const calculateAverage = (boletimAno: any): number => {
-    if (!boletimAno || !boletimAno.notas || typeof boletimAno.notas !== 'object') {
-        return 0;
-    }
-
+    if (!boletimAno || !boletimAno.notas || typeof boletimAno.notas !== 'object') return 0;
     const disciplineKeys = Object.keys(boletimAno.notas);
     const allSubjectAverages: number[] = [];
-
     disciplineKeys.forEach(key => {
         const disciplina = boletimAno.notas[key];
-        if (disciplina && typeof disciplina === 'object') {
-            const mediaFinal = disciplina.mediaFinal;
-            if (mediaFinal !== null && mediaFinal !== undefined && !isNaN(mediaFinal)) {
-                allSubjectAverages.push(mediaFinal);
-            }
+        if (disciplina && typeof disciplina === 'object' && disciplina.mediaFinal !== null) {
+            allSubjectAverages.push(disciplina.mediaFinal);
         }
     });
-
-    if (allSubjectAverages.length === 0) {
-        return 0;
-    }
-
-    const overallSum = allSubjectAverages.reduce((acc, curr) => acc + curr, 0);
-    return overallSum / allSubjectAverages.length;
+    return allSubjectAverages.length === 0 ? 0 : allSubjectAverages.reduce((a, b) => a + b, 0) / allSubjectAverages.length;
 };
 
 
@@ -117,7 +104,8 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
   const [isReportCardOpen, setIsReportCardOpen] = useState(false);
   const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
   const [isTransferAlertOpen, setIsTransferAlertOpen] = useState(false);
-  const [isTransferring, setIsTransferring] = useState(false);
+  const [isReactivateAlertOpen, setIsReactivateAlertOpen] = useState(false);
+  const [isActionLoading, setIsActionLoading] = useState(false);
   
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -126,111 +114,65 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
 
   const classRanking = useMemo(() => {
     if (!student || !allStudents || allStudents.length === 0) return null;
-    
-    const studentClass = {
-        ensino: student.ensino,
-        serie: student.serie,
-        classe: student.classe,
-        turno: student.turno,
-    };
-    if (!studentClass.ensino || !studentClass.serie || !studentClass.classe || !studentClass.turno) {
-        return null;
-    }
-
     const classmates = allStudents
-      .filter(s => 
-        s.ensino === studentClass.ensino &&
-        s.serie === studentClass.serie &&
-        s.classe === studentClass.classe &&
-        s.turno === studentClass.turno
-      )
-      .map(s => ({
-        id: s.id,
-        average: calculateAverage(s.boletim?.[currentYear])
-      }))
+      .filter(s => s.serie === student.serie && s.classe === student.classe && s.turno === student.turno)
+      .map(s => ({ id: s.id, average: calculateAverage(s.boletim?.[currentYear]) }))
       .filter(s => s.average > 0)
       .sort((a, b) => b.average - a.average);
-    
     const rank = classmates.findIndex(s => s.id === student.id) + 1;
-    
-    if (rank > 0) {
-        return {
-            rank: rank,
-            total: classmates.length
-        };
-    }
-    
-    return null;
+    return rank > 0 ? { rank, total: classmates.length } : null;
   }, [student, allStudents, currentYear]);
 
   if (!student) return null;
 
+  const isActive = !student.status || student.status === 'ATIVO';
+
   const handleUpdateStudent = async (updatedData: any) => {
     if (!firestore || !student?.rm) return;
-    
-    const oldRm = String(student.rm);
-    const newRm = String(updatedData.rm);
-    
-    try {
-        if (oldRm !== newRm) {
-            const newDocRef = doc(firestore, 'alunos', newRm);
-            const oldDocRef = doc(firestore, 'alunos', oldRm);
-            const finalData = { ...updatedData, id: newRm };
-            
-            setDocumentNonBlocking(newDocRef, finalData);
-            deleteDocumentNonBlocking(oldDocRef);
-            
-            toast({
-                title: "Mudança de RM Processada",
-                description: `O registro foi movido do RM ${oldRm} para o novo RM ${newRm}.`,
-            });
-            onUpdate(finalData);
-        } else {
-            const docRef = doc(firestore, 'alunos', oldRm);
-            setDocumentNonBlocking(docRef, updatedData, { merge: true });
-            
-            toast({
-                title: "Dados Atualizados",
-                description: `As alterações para ${updatedData.nome} foram salvas com sucesso.`,
-            });
-            onUpdate(updatedData);
-        }
-    } catch (error) {
-        console.error("Erro ao salvar alterações:", error);
-        toast({
-            variant: "destructive",
-            title: "Erro ao Salvar",
-            description: "Ocorreu uma falha ao tentar gravar as modificações.",
-        });
-    }
-
+    const collectionName = isActive ? 'alunos' : 'exalunos';
+    const docRef = doc(firestore, collectionName, String(updatedData.rm));
+    setDocumentNonBlocking(docRef, updatedData, { merge: true });
+    toast({ title: "Dados Atualizados" });
+    onUpdate(updatedData);
     setIsEditDialogOpen(false);
-    onClose(); 
   };
 
   const handleManualTransfer = async () => {
     if (!firestore || !student) return;
-    setIsTransferring(true);
-
+    setIsActionLoading(true);
     try {
-        const studentId = student.id;
-        const studentRef = doc(firestore, 'alunos', studentId);
+        const studentId = String(student.id);
+        const activeRef = doc(firestore, 'alunos', studentId);
         const exRef = doc(firestore, 'exalunos', studentId);
-
-        const studentSnap = await getDoc(studentRef);
-        if (studentSnap.exists()) {
-            const data = studentSnap.data();
-            setDocumentNonBlocking(exRef, { ...data, status: 'TRANSFERIDO', updatedAt: new Date().toISOString() }, { merge: true });
-            deleteDocumentNonBlocking(studentRef);
-
-            toast({ title: "Aluno Transferido", description: `${student.nome} foi movido para a base de ex-alunos.` });
-            onClose(); // Fecha a ficha pois o aluno não é mais ativo
-        }
-    } catch (error) {
+        setDocumentNonBlocking(exRef, { ...student, status: 'TRANSFERIDO', updatedAt: new Date().toISOString() });
+        deleteDocumentNonBlocking(activeRef);
+        toast({ title: "Aluno Transferido" });
+        onClose();
+    } catch (e) {
         toast({ variant: 'destructive', title: "Erro na transferência" });
     } finally {
-        setIsTransferring(false);
+        setIsActionLoading(false);
         setIsTransferAlertOpen(false);
+    }
+  };
+
+  const handleReactivate = async () => {
+    if (!firestore || !student) return;
+    setIsActionLoading(true);
+    try {
+        const studentId = String(student.id);
+        const exRef = doc(firestore, 'exalunos', studentId);
+        const activeRef = doc(firestore, 'alunos', studentId);
+        const { status, ...cleanData } = student;
+        setDocumentNonBlocking(activeRef, { ...cleanData, status: 'ATIVO', updatedAt: new Date().toISOString() });
+        deleteDocumentNonBlocking(exRef);
+        toast({ title: "Aluno Reativado", description: "O aluno agora consta na lista de matriculados ativos." });
+        onClose();
+    } catch (e) {
+        toast({ variant: 'destructive', title: "Erro ao reativar" });
+    } finally {
+        setIsActionLoading(false);
+        setIsReactivateAlertOpen(false);
     }
   };
   
@@ -239,77 +181,40 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
     container.style.position = 'absolute';
     container.style.left = '-9999px';
     container.style.top = '0';
-    
     let componentToRender;
     let pdfOptions: any = { orientation: 'p', unit: 'mm', format: 'a4' };
     const currentBoletim = student.boletim?.[currentYear]?.notas || {};
     
     switch (type) {
-        case 'declaration':
-            componentToRender = <StudentDeclaration student={student} />;
-            break;
-        case 'transfer':
-            componentToRender = <StudentTransferDeclaration student={student} />;
-            break;
-        case 'declarationWithReport':
-            componentToRender = <ReportCardWithDeclaration student={student} boletim={currentBoletim} />;
-            break;
-        case 'detailedReport':
-            componentToRender = <ReportCardDetailed student={student} boletim={currentBoletim} ranking={classRanking} />;
-            break;
-        case 'compact':
-             componentToRender = <ReportCardGrid students={[student]} />;
-             pdfOptions.orientation = 'l';
-             break;
-        case 'grid':
-             componentToRender = <ReportCardGrid students={[student, student, student, student]} />;
-             pdfOptions.orientation = 'l';
-             break;
-        case 'transcript':
-             componentToRender = <StudentTranscript student={student} />;
-             break;
-        default:
-            return null;
+        case 'declaration': componentToRender = <StudentDeclaration student={student} />; break;
+        case 'transfer': componentToRender = <StudentTransferDeclaration student={student} />; break;
+        case 'declarationWithReport': componentToRender = <ReportCardWithDeclaration student={student} boletim={currentBoletim} />; break;
+        case 'detailedReport': componentToRender = <ReportCardDetailed student={student} boletim={currentBoletim} ranking={classRanking} />; break;
+        case 'compact': componentToRender = <ReportCardGrid students={[student]} />; pdfOptions.orientation = 'l'; break;
+        case 'grid': componentToRender = <ReportCardGrid students={[student, student, student, student]} />; pdfOptions.orientation = 'l'; break;
+        case 'transcript': componentToRender = <StudentTranscript student={student} />; break;
+        default: return null;
     }
     
     const elementToRender = document.createElement('div');
     container.appendChild(elementToRender);
     document.body.appendChild(container);
-
     const reactRoot = await import('react-dom/client').then(m => m.createRoot(elementToRender));
-    await new Promise<void>(resolve => {
-        reactRoot.render(componentToRender);
-        setTimeout(resolve, 500); 
-    });
+    await new Promise<void>(resolve => { reactRoot.render(componentToRender); setTimeout(resolve, 500); });
 
     try {
-        const canvas = await html2canvas(elementToRender, {
-            scale: 2,
-            useCORS: true,
-        });
-        
+        const canvas = await html2canvas(elementToRender, { scale: 2, useCORS: true });
         const imgData = canvas.toDataURL('image/jpeg', 0.95);
         const pdf = new jsPDF(pdfOptions);
-        
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight());
         return pdf.output('blob');
-
     } catch (error) {
-        console.error("Erro ao gerar o Blob do PDF:", error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao Gerar PDF",
-          description: "Ocorreu um erro ao criar o ficheiro PDF.",
-        });
         return null;
     } finally {
         reactRoot.unmount();
         document.body.removeChild(container);
     }
   };
-
 
   const handleGeneratePdf = async (type: PdfType) => {
     setIsProcessing(type);
@@ -318,20 +223,7 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      
-      let fileName;
-      switch(type) {
-        case 'declaration': fileName = `Declaracao_${student.nome.replace(/\s+/g, '_')}.pdf`; break;
-        case 'transfer': fileName = `Declaracao_Transferencia_${student.nome.replace(/\s+/g, '_')}.pdf`; break;
-        case 'declarationWithReport': fileName = `Declaracao_com_Boletim_${student.nome.replace(/\s+/g, '_')}.pdf`; break;
-        case 'detailedReport': fileName = `Boletim_Detalhado_${student.nome.replace(/\s+/g, '_')}.pdf`; break;
-        case 'compact': fileName = `Boletim_Compacto_${student.nome.replace(/\s+/g, '_')}.pdf`; break;
-        case 'grid': fileName = `Boletim_Grade_${student.nome.replace(/\s+/g, '_')}.pdf`; break;
-        case 'transcript': fileName = `Historico_Escolar_${student.nome.replace(/\s+/g, '_')}.pdf`; break;
-        default: fileName = `Documento_${student.nome.replace(/\s+/g, '_')}.pdf`;
-      }
-      
-      a.download = fileName;
+      a.download = `Doc_${type}_${student.nome.replace(/\s+/g, '_')}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -343,310 +235,114 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
   const handleShare = async (type: PdfType) => {
     setIsSharing(type);
     const blob = await generatePdfBlob(type);
-    
-    if (!blob) {
-      setIsSharing(null);
-      return;
+    if (blob) {
+        const file = new File([blob], `Documento_${student.nome}.pdf`, { type: 'application/pdf' });
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: `Documento - ${student.nome}` });
+        } else {
+            handleGeneratePdf(type);
+        }
     }
-
-    let fileName;
-    let title;
-    switch(type) {
-      case 'declaration': 
-        fileName = `Declaracao_Matricula_${student.nome.replace(/\s+/g, '_')}.pdf`;
-        title = `Declaração de Matrícula - ${student.nome}`;
-        break;
-      case 'transfer': 
-        fileName = `Declaracao_Transferencia_${student.nome.replace(/\s+/g, '_')}.pdf`;
-        title = `Declaração de Transferência - ${student.nome}`;
-        break;
-      case 'declarationWithReport':
-        fileName = `Declaracao_com_Boletim_${student.nome.replace(/\s+/g, '_')}.pdf`;
-        title = `Declaração com Boletim - ${student.nome}`;
-        break;
-      case 'detailedReport':
-        fileName = `Boletim_Detalhado_${student.nome.replace(/\s+/g, '_')}.pdf`;
-        title = `Boletim Detalhado - ${student.nome}`;
-        break;
-      case 'compact':
-        fileName = `Boletim_Compacto_${student.nome.replace(/\s+/g, '_')}.pdf`;
-        title = `Boletim Compacto - ${student.nome}`;
-        break;
-      case 'grid':
-        fileName = `Boletim_Grade_${student.nome.replace(/\s+/g, '_')}.pdf`;
-        title = `Boletim em Grade - ${student.nome}`;
-        break;
-      case 'transcript':
-        fileName = `Historico_Escolar_${student.nome.replace(/\s+/g, '_')}.pdf`;
-        title = `Histórico Escolar - ${student.nome}`;
-        break;
-      default:
-        fileName = `Documento_${student.nome.replace(/\s+/g, '_')}.pdf`;
-        title = `Documento - ${student.nome}`;
-    }
-
-    const file = new File([blob], fileName, { type: 'application/pdf' });
-
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({
-          files: [file],
-          title: title,
-          text: `Segue em anexo o documento para ${student.nome}.`,
-        });
-      } catch (error) {
-         if ((error as DOMException).name !== 'AbortError') {
-            console.error('Erro ao partilhar:', error);
-            toast({
-              variant: "destructive",
-              title: "Erro de Partilha",
-              description: "Não foi possível partilhar o ficheiro.",
-            });
-         }
-      }
-    } else {
-      toast({
-        title: "Partilha não suportada",
-        description: "O seu navegador não suporta a partilha de ficheiros. A iniciar o download.",
-      });
-      handleGeneratePdf(type);
-    }
-    
     setIsSharing(null);
   };
 
-  const parseAddress = (addressString: string) => {
-    if (!addressString || typeof addressString !== 'string') {
-        return { cep: null, rua: null, bairro: null, enderecoCompleto: addressString };
-    }
-    
-    const cleanedString = addressString.replace(/[()]/g, '');
-    const parts = cleanedString.split('-').map(part => part.trim());
-
-    if (parts.length === 4) {
-        const [cep, rua, numero, bairro] = parts;
-        const fullStreet = numero ? `${rua}, ${numero}` : rua;
-        return { cep, rua: fullStreet, bairro, enderecoCompleto: null };
-    }
-    
-    return { cep: null, rua: null, bairro: null, enderecoCompleto: addressString };
-  };
-
-  const address = parseAddress(student.endereco);
-  
-  const studentPhones = student.telefones || (student.telefone ? [student.telefone] : []);
-  const currentBoletim = student.boletim?.[currentYear] || {};
   const hasAnyBoletim = student.boletim && Object.keys(student.boletim).length > 0;
-
-
-  const studentDetails = [
-    { label: "RM", value: student.rm, icon: Hash },
-    { label: "Data de Nascimento", value: student.data_nascimento, icon: Calendar },
-    { label: "Telefones", value: studentPhones, icon: Phone },
-    { label: "RG", value: student.rg, icon: FileText },
-    { label: "CPF Aluno", value: student.cpf_aluno, icon: FileText },
-    { label: "NIS", value: student.nis, icon: Hash },
-    { label: "ID Censo", value: student.id_censo, icon: Hash },
-  ];
-
-  const addressDetails = address.enderecoCompleto ? 
-    [{ label: "Endereço", value: address.enderecoCompleto, icon: MapPin }] :
-    [
-      { label: "CEP", value: address.cep, icon: MapPin },
-      { label: "Endereço", value: address.rua, icon: MapPin },
-      { label: "Bairro", value: address.bairro, icon: MapPin },
-    ];
-
-
-  const academicDetails = [
-    { label: "Ensino", value: student.ensino, icon: Book },
-    { label: "Série", value: student.serie, icon: Book },
-    { label: "Classe", value: student.classe, icon: Users },
-    { label: "Turno", value: student.turno, icon: Clock },
-    ...(classRanking ? [{ label: "Classificação na Turma", value: `${classRanking.rank}º de ${classRanking.total}`, icon: Award }] : [])
-  ];
-
-  const familyDetails = [
-    { label: "Filiação 1", value: student.filiacao_1, icon: User },
-    { label: "CPF Filiação 1", value: student.cpffiliacao1, icon: FileText },
-    { label: "Filiação 2", value: student.filiacao_2, icon: User },
-  ];
-
-  const otherDetails = [
-    { label: "Transporte Escolar", value: student.transporte_escolar, icon: Bus },
-    { label: "Carteira de Estudante", value: student.carteira_estudante, icon: CreditCard },
-    { label: "Necessidades Especiais (NEE)", value: student.nee, icon: AlertTriangle },
-  ];
   
   return (
     <>
       <Sheet open={isOpen} onOpenChange={onClose}>
         <SheetContent className="w-full sm:max-w-md flex flex-col">
           <SheetHeader className="text-left">
-            <SheetTitle className="text-2xl font-bold text-primary flex items-center gap-3">
-              <User size={28}/>
-              {student.nome || "Detalhes do Aluno"}
-            </SheetTitle>
-            <SheetDescription>
-              Informações completas do aluno. Todos os campos podem ser editados.
-            </SheetDescription>
+            <div className="flex justify-between items-start">
+                <SheetTitle className="text-2xl font-bold text-primary flex items-center gap-3">
+                <User size={28}/>
+                {student.nome || "Detalhes"}
+                </SheetTitle>
+                <Badge variant={isActive ? "default" : "destructive"} className="mt-1">
+                    {student.status || 'ATIVO'}
+                </Badge>
+            </div>
+            <SheetDescription>RM: {student.rm} • {student.serie} {student.classe}</SheetDescription>
           </SheetHeader>
           
           <ScrollArea className="flex-1 -mr-6 pr-6">
             <Accordion type="multiple" defaultValue={["personal", "academic"]} className="w-full mt-6">
-
               <AccordionItem value="personal">
-                <AccordionTrigger className="text-lg font-semibold text-foreground">Dados Pessoais</AccordionTrigger>
+                <AccordionTrigger className="text-lg font-semibold">Dados Pessoais</AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-4">
-                  {studentDetails.map(item => <DetailItem key={item.label} {...item} />)}
+                  <DetailItem icon={Calendar} label="Data de Nascimento" value={student.data_nascimento} />
+                  <DetailItem icon={Phone} label="Telefones" value={student.telefones} />
+                  <DetailItem icon={FileText} label="CPF Aluno" value={student.cpf_aluno} />
+                  <DetailItem icon={Hash} label="ID Censo" value={student.id_censo} />
                 </AccordionContent>
               </AccordionItem>
 
               <AccordionItem value="academic">
-                <AccordionTrigger className="text-lg font-semibold text-foreground">Dados Acadêmicos</AccordionTrigger>
+                <AccordionTrigger className="text-lg font-semibold">Dados Acadêmicos</AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-4">
-                  {academicDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                   {hasAnyBoletim && (
+                  <DetailItem icon={Book} label="Série" value={student.serie} />
+                  <DetailItem icon={Users} label="Classe" value={student.classe} />
+                  <DetailItem icon={Clock} label="Turno" value={student.turno} />
+                  {hasAnyBoletim && (
                     <div className="pt-2 grid grid-cols-2 gap-2">
-                        <Button onClick={() => setIsReportCardOpen(true)} variant="outline" className="w-full">
-                            <BookCheck className="mr-2 h-4 w-4" />
-                            Boletim ({currentYear})
+                        <Button onClick={() => setIsReportCardOpen(true)} variant="outline" className="w-full h-9 text-xs">
+                            <BookCheck className="mr-2 h-4 w-4" /> Boletim ({currentYear})
                         </Button>
-                        <Button onClick={() => setIsTranscriptOpen(true)} variant="outline" className="w-full">
-                            <GraduationCap className="mr-2 h-4 w-4" />
-                            Histórico
+                        <Button onClick={() => setIsTranscriptOpen(true)} variant="outline" className="w-full h-9 text-xs">
+                            <GraduationCap className="mr-2 h-4 w-4" /> Histórico
                         </Button>
                     </div>
                   )}
                 </AccordionContent>
               </AccordionItem>
-              
-              <AccordionItem value="family">
-                <AccordionTrigger className="text-lg font-semibold text-foreground">Filiação</AccordionTrigger>
-                <AccordionContent className="pt-4 space-y-4">
-                  {familyDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="address">
-                <AccordionTrigger className="text-lg font-semibold text-foreground">Endereço</AccordionTrigger>
-                <AccordionContent className="pt-4 space-y-4">
-                  {addressDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                </AccordionContent>
-              </AccordionItem>
-              
-              <AccordionItem value="other">
-                <AccordionTrigger className="text-lg font-semibold text-foreground">Outras Informações</AccordionTrigger>
-                <AccordionContent className="pt-4 space-y-4">
-                  {otherDetails.map(item => <DetailItem key={item.label} {...item} />)}
-                </AccordionContent>
-              </AccordionItem>
-
             </Accordion>
           </ScrollArea>
           
-          <SheetFooter className="mt-auto pt-4 border-t border-border/20">
+          <SheetFooter className="mt-auto pt-4 border-t gap-2">
              <div className="flex items-center justify-center gap-2 w-full">
               <TooltipProvider>
-                 <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={() => setIsEditDialogOpen(true)} disabled={!!isProcessing || !!isSharing}>
-                          <Pencil className="w-4 h-4 text-primary" />
-                          <span className="sr-only">Editar Aluno</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Editar Ficha Completa</p>
-                    </TooltipContent>
-                  </Tooltip>
-
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setIsTransferAlertOpen(true)} disabled={!!isProcessing || !!isSharing}>
-                          <UserMinus className="w-4 h-4" />
-                          <span className="sr-only">Transferir Aluno</span>
-                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setIsEditDialogOpen(true)}><Pencil className="w-4 h-4 text-primary" /></Button>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Transferir Aluno (Mover para Ex-alunos)</p>
-                    </TooltipContent>
+                    <TooltipContent><p>Editar Ficha</p></TooltipContent>
                   </Tooltip>
-                
-                <DropdownMenu>
+
+                  {isActive ? (
                     <Tooltip>
                         <TooltipTrigger asChild>
-                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" disabled={!!isProcessing || !!isSharing}>
-                                    {isProcessing ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Printer className="w-4 h-4 text-primary" />}
-                                    <span className="sr-only">Imprimir Documento</span>
-                                </Button>
-                            </DropdownMenuTrigger>
+                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setIsTransferAlertOpen(true)}><UserMinus className="w-4 h-4" /></Button>
                         </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Imprimir Documento</p>
-                        </TooltipContent>
+                        <TooltipContent><p>Transferir Aluno</p></TooltipContent>
                     </Tooltip>
+                  ) : (
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-green-600" onClick={() => setIsReactivateAlertOpen(true)}><UserCheck className="w-4 h-4" /></Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Reativar Matrícula</p></TooltipContent>
+                    </Tooltip>
+                  )}
+                
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">{isProcessing ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Printer className="w-4 h-4 text-primary" />}</Button>
+                    </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleGeneratePdf('transcript')} disabled={!hasAnyBoletim}>
-                            <GraduationCap className="mr-2 h-4 w-4"/> Histórico Escolar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleGeneratePdf('declaration')}>
-                            Declaração de Matrícula
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleGeneratePdf('transfer')}>
-                            Declaração de Transferência
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleGeneratePdf('declarationWithReport')} disabled={!currentBoletim.notas}>
-                            Declaração com Boletim ({currentYear})
-                        </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleGeneratePdf('detailedReport')} disabled={!currentBoletim.notas}>
-                            Boletim Detalhado ({currentYear})
-                        </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleGeneratePdf('compact')} disabled={!currentBoletim.notas}>
-                            Boletim Compacto (1 por folha)
-                        </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleGeneratePdf('grid')} disabled={!currentBoletim.notas}>
-                            Boletim em Grade (4 por folha)
-                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleGeneratePdf('transcript')} disabled={!hasAnyBoletim}>Histórico Escolar</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleGeneratePdf('declaration')}>Matrícula</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleGeneratePdf('transfer')}>Transferência</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleGeneratePdf('detailedReport')}>Boletim Detalhado</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
 
-                 <DropdownMenu>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" disabled={!!isSharing || !!isProcessing}>
-                                    {isSharing ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Share2 className="w-4 h-4 text-primary" />}
-                                    <span className="sr-only">Partilhar Documento</span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Partilhar Documento</p>
-                        </TooltipContent>
-                    </Tooltip>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">{isSharing ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Share2 className="w-4 h-4 text-primary" />}</Button>
+                    </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleShare('transcript')} disabled={!hasAnyBoletim}>
-                           <GraduationCap className="mr-2 h-4 w-4"/> Histórico Escolar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleShare('declaration')}>
-                            Declaração de Matrícula
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleShare('transfer')}>
-                            Declaração de Transferência
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleShare('declarationWithReport')} disabled={!currentBoletim.notas}>
-                            Declaração com Boletim ({currentYear})
-                        </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleShare('detailedReport')} disabled={!currentBoletim.notas}>
-                            Boletim Detalhado ({currentYear})
-                        </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleShare('compact')} disabled={!currentBoletim.notas}>
-                            Boletim Compacto (1 por folha)
-                        </DropdownMenuItem>
-                         <DropdownMenuItem onClick={() => handleShare('grid')} disabled={!currentBoletim.notas}>
-                            Boletim em Grade (4 por folha)
-                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleShare('transcript')} disabled={!hasAnyBoletim}>Histórico</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleShare('detailedReport')}>Boletim</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
               </TooltipProvider>
@@ -657,45 +353,25 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
       
       <AlertDialog open={isTransferAlertOpen} onOpenChange={setIsTransferAlertOpen}>
         <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle className="flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5 text-destructive" />
-                    Confirmar Transferência?
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                    Tem a certeza que deseja transferir o aluno <strong>{student.nome}</strong>? 
-                    Esta ação irá movê-lo permanentemente para a base de dados de ex-alunos com o status "TRANSFERIDO".
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel disabled={isTransferring}>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleManualTransfer} className="bg-destructive hover:bg-destructive/90" disabled={isTransferring}>
-                    {isTransferring ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Sim, transferir agora"}
-                </AlertDialogAction>
-            </AlertDialogFooter>
+            <AlertDialogHeader><AlertDialogTitle>Transferir Aluno?</AlertDialogTitle>
+            <AlertDialogDescription>Mover <strong>{student.nome}</strong> para a base de ex-alunos?</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleManualTransfer} className="bg-destructive" disabled={isActionLoading}>Transferir</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isReactivateAlertOpen} onOpenChange={setIsReactivateAlertOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader><AlertDialogTitle>Reativar Aluno?</AlertDialogTitle>
+            <AlertDialogDescription>Retornar <strong>{student.nome}</strong> para a lista de matriculados ativos?</AlertDialogDescription></AccordionHeader>
+            <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleReactivate} className="bg-green-600" disabled={isActionLoading}>Reativar</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
       
-      <StudentReportCardDialog
-          isOpen={isReportCardOpen}
-          onClose={() => setIsReportCardOpen(false)}
-          boletim={student.boletim?.[currentYear]?.notas || {}}
-          student={student}
-      />
-      
-      <StudentReportCardDialog
-          isOpen={isTranscriptOpen}
-          onClose={() => setIsTranscriptOpen(false)}
-          boletim={student.boletim || {}}
-          student={student}
-      />
-
-      <StudentEditDialog
-        isOpen={isEditDialogOpen}
-        onClose={() => setIsEditDialogOpen(false)}
-        student={student}
-        onSave={handleUpdateStudent}
-      />
+      <StudentReportCardDialog isOpen={isReportCardOpen} onClose={() => setIsReportCardOpen(false)} boletim={student.boletim?.[currentYear]?.notas || {}} student={student} />
+      <StudentReportCardDialog isOpen={isTranscriptOpen} onClose={() => setIsTranscriptOpen(false)} boletim={student.boletim || {}} student={student} />
+      <StudentEditDialog isOpen={isEditDialogOpen} onClose={() => setIsEditDialogOpen(false)} student={student} onSave={handleUpdateStudent} />
     </>
   );
 }
