@@ -17,8 +17,9 @@ import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import StudentDeclaration from "./student-declaration";
 import StudentTransferDeclaration from "./student-transfer-declaration";
+import ParentAttendanceDeclaration from "./parent-attendance-declaration";
 import StudentEditDialog from "./student-edit-dialog";
-import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Loader2, Share2, Pencil, Printer, MapPin, BookCheck, Award, GraduationCap, UserMinus, UserCheck, AlertCircle } from "lucide-react";
+import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Loader2, Share2, Pencil, Printer, MapPin, BookCheck, Award, GraduationCap, UserMinus, UserCheck, AlertCircle, Clock9 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
@@ -45,7 +46,7 @@ const formatPhoneNumber = (phone: string): string => {
   return phone; 
 };
 
-type PdfType = 'declaration' | 'transfer' | 'declarationWithReport' | 'detailedReport' | 'compact' | 'grid' | 'transcript';
+type PdfType = 'declaration' | 'transfer' | 'parentAttendance' | 'declarationWithReport' | 'detailedReport' | 'compact' | 'grid' | 'transcript';
 
 interface StudentDetailSheetProps {
   student: any | null;
@@ -127,6 +128,8 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
 
   const isActive = !student.status || student.status === 'ATIVO';
 
+  const currentYearData = student.boletim?.[currentYear]?.notas || null;
+
   const handleUpdateStudent = async (updatedData: any) => {
     if (!firestore || !student?.rm) return;
     const collectionName = isActive ? 'alunos' : 'exalunos';
@@ -188,6 +191,7 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
     switch (type) {
         case 'declaration': componentToRender = <StudentDeclaration student={student} />; break;
         case 'transfer': componentToRender = <StudentTransferDeclaration student={student} />; break;
+        case 'parentAttendance': componentToRender = <ParentAttendanceDeclaration student={student} />; break;
         case 'declarationWithReport': componentToRender = <ReportCardWithDeclaration student={student} boletim={currentBoletim} />; break;
         case 'detailedReport': componentToRender = <ReportCardDetailed student={student} boletim={currentBoletim} ranking={classRanking} />; break;
         case 'compact': componentToRender = <ReportCardGrid students={[student]} />; pdfOptions.orientation = 'l'; break;
@@ -328,11 +332,22 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">{isProcessing ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Printer className="w-4 h-4 text-primary" />}</Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleGeneratePdf('transcript')} disabled={!hasAnyBoletim}>Histórico Escolar</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleGeneratePdf('declaration')}>Matrícula</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleGeneratePdf('transfer')}>Transferência</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleGeneratePdf('detailedReport')}>Boletim Detalhado</DropdownMenuItem>
+                    <DropdownMenuContent align="end" className="w-64">
+                        <DropdownMenuItem onClick={() => handleGeneratePdf('transcript')} disabled={!hasAnyBoletim}>
+                            <FileText className="mr-2 h-4 w-4" /> Histórico Escolar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleGeneratePdf('declaration')}>
+                            <FileText className="mr-2 h-4 w-4" /> Declaração de Matrícula
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleGeneratePdf('transfer')}>
+                            <FileText className="mr-2 h-4 w-4" /> Declaração de Transferência
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleGeneratePdf('parentAttendance')}>
+                            <Clock9 className="mr-2 h-4 w-4" /> Declaração Comparecimento (Pais)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleGeneratePdf('detailedReport')} disabled={!currentYearData}>
+                            <BookCheck className="mr-2 h-4 w-4" /> Boletim Detalhado ({currentYear})
+                        </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
 
@@ -340,9 +355,16 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon">{isSharing ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Share2 className="w-4 h-4 text-primary" />}</Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleShare('transcript')} disabled={!hasAnyBoletim}>Histórico</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleShare('detailedReport')}>Boletim</DropdownMenuItem>
+                    <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuItem onClick={() => handleShare('transcript')} disabled={!hasAnyBoletim}>
+                            Histórico (WhatsApp)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleShare('detailedReport')} disabled={!currentYearData}>
+                            Boletim (WhatsApp)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleShare('parentAttendance')}>
+                            Declaração Pais (WhatsApp)
+                        </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
               </TooltipProvider>
@@ -363,7 +385,7 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
       <AlertDialog open={isReactivateAlertOpen} onOpenChange={setIsReactivateAlertOpen}>
         <AlertDialogContent>
             <AlertDialogHeader><AlertDialogTitle>Reativar Aluno?</AlertDialogTitle>
-            <AlertDialogDescription>Retornar <strong>{student.nome}</strong> para a lista de matriculados ativos?</AlertDialogDescription></AccordionHeader>
+            <AlertDialogDescription>Retornar <strong>{student.nome}</strong> para a lista de matriculados ativos?</AlertDialogDescription></AlertDialogHeader>
             <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleReactivate} className="bg-green-600" disabled={isActionLoading}>Reativar</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
