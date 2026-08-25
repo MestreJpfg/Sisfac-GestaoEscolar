@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -15,18 +14,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import ReportCardGrid from './report-card-grid';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, query, getDocs } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
 import { Switch } from './ui/switch';
 
 
-// Helper function to chunk array
-const chunk = (arr: any[], size: number) =>
-  Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
-    arr.slice(i * size, i * size + size)
-  );
-  
 const hexToRgb = (hex: string): { r: number, g: number, b: number } | null => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? {
@@ -38,16 +31,17 @@ const hexToRgb = (hex: string): { r: number, g: number, b: number } | null => {
 
 const getLightAlternateColor = (hex: string): [number, number, number] => {
     const rgb = hexToRgb(hex);
-    if (!rgb) return [245, 245, 245]; // Fallback to light gray
-
-    // Blend with white to get a very light tint
+    if (!rgb) return [245, 245, 245];
     const r = Math.floor(rgb.r * 0.1 + 255 * 0.9);
     const g = Math.floor(rgb.g * 0.1 + 255 * 0.9);
     const b = Math.floor(rgb.b * 0.1 + 255 * 0.9);
-    
     return [r, g, b];
 };
 
+const chunk = (arr: any[], size: number) =>
+  Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
+    arr.slice(i * size, i * size + size)
+  );
 
 export default function ClassListGenerator() {
   const { toast } = useToast();
@@ -65,7 +59,6 @@ export default function ClassListGenerator() {
   const [customTitle, setCustomTitle] = useState('');
   const [customHeaders, setCustomHeaders] = useState<string[]>([]);
   
-  // Subscrição em tempo real para os alunos
   const studentsQuery = useMemo(() => {
     if (!firestore) return null;
     return query(collection(firestore, "alunos"));
@@ -74,7 +67,6 @@ export default function ClassListGenerator() {
   const { data: allStudentsData, isLoading: isLoadingAllStudents } = useCollection(studentsQuery);
   const allStudents = useMemo(() => allStudentsData || [], [allStudentsData]);
 
-  // Styling state
   const [headerColor, setHeaderColor] = useState('#e6e6e6');
   const [useAlternateRowColors, setUseAlternateRowColors] = useState(true);
   const [oneClassPerPage, setOneClassPerPage] = useState(false);
@@ -88,7 +80,6 @@ export default function ClassListGenerator() {
   });
 
   const availableYears = useMemo(() => {
-    if (!allStudents) return [];
     const years = new Set<string>();
     allStudents.forEach(s => {
       if (s.boletim) {
@@ -98,7 +89,6 @@ export default function ClassListGenerator() {
     return Array.from(years).sort((a,b) => parseInt(b) - parseInt(a));
   }, [allStudents]);
 
-  
   useEffect(() => {
     const count = parseInt(customColumnCount, 10);
     if (isNaN(count)) return;
@@ -111,9 +101,7 @@ export default function ClassListGenerator() {
     });
   }, [customColumnCount]);
 
-
   const uniqueOptions = useMemo(() => {
-      if (!allStudents) return { ensinos: [], series: [], turnos: [], classes: [] };
       const getUniqueValues = (key: string, data: any[]) =>
         [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
@@ -124,8 +112,6 @@ export default function ClassListGenerator() {
 
       return { ensinos, series, turnos, classes };
   }, [allStudents, filters]);
-
-
 
   const handleFilterChange = (name: string, value: string) => {
     const newValue = value === 'all' ? '' : value;
@@ -146,14 +132,6 @@ export default function ClassListGenerator() {
   };
 
   const handleGenerateList = async () => {
-    if (!allStudents) {
-        toast({
-            variant: "destructive",
-            title: "Dados não carregados",
-            description: "Aguarde o carregamento dos dados dos alunos.",
-        });
-        return;
-    }
     setIsGenerating(true);
     setStudents([]);
     
@@ -254,29 +232,20 @@ export default function ClassListGenerator() {
 
     } catch (error) {
         console.error("Error generating PDF:", error);
-        toast({
-            variant: "destructive",
-            title: "Erro ao Gerar PDF",
-            description: "Ocorreu um erro ao criar o ficheiro PDF.",
-        });
+        toast({ variant: "destructive", title: "Erro ao Gerar PDF" });
     } finally {
         setIsDownloading(false);
     }
   };
 
   const calculateAverage = (boletimAno: any): number => {
-    if (!boletimAno || !boletimAno.notas || typeof boletimAno.notas !== 'object') {
-        return 0;
-    }
+    if (!boletimAno || !boletimAno.notas || typeof boletimAno.notas !== 'object') return 0;
     const disciplineKeys = Object.keys(boletimAno.notas);
     const allSubjectAverages: number[] = [];
     disciplineKeys.forEach(key => {
         const disciplina = boletimAno.notas[key];
-        if (disciplina && typeof disciplina === 'object') {
-            const media = disciplina.mediaFinal;
-            if (media !== null && media !== undefined && !isNaN(media)) {
-                allSubjectAverages.push(media);
-            }
+        if (disciplina?.mediaFinal !== null && disciplina?.mediaFinal !== undefined) {
+            allSubjectAverages.push(disciplina.mediaFinal);
         }
     });
     return allSubjectAverages.length === 0 ? 0 : allSubjectAverages.reduce((s, g) => s + g, 0) / allSubjectAverages.length;
@@ -288,7 +257,6 @@ export default function ClassListGenerator() {
 
     try {
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-        
         const groupedStudents = students.reduce((acc, student) => {
             const key = oneClassPerPage 
                 ? `${student.ensino || 'S/E'}|${student.serie || 'S/S'}|${student.classe || 'S/C'}|${student.turno || 'S/T'}`
@@ -299,11 +267,9 @@ export default function ClassListGenerator() {
         }, {} as { [key: string]: any[] });
 
         let isFirstGroup = true;
-
         for (const groupKey in groupedStudents) {
             const groupList = groupedStudents[groupKey];
             if (groupList.length === 0) continue;
-
             if (!isFirstGroup) doc.addPage();
             isFirstGroup = false;
 
@@ -341,7 +307,6 @@ export default function ClassListGenerator() {
                 margin: { top: 20, right: 10, bottom: 10, left: 10 },
             });
         }
-
         doc.save(`Ranking_Medias_${filters.serie || 'Geral'}.pdf`);
     } catch (error) {
         toast({ variant: "destructive", title: "Erro ao Gerar PDF" });
@@ -350,43 +315,34 @@ export default function ClassListGenerator() {
     }
   };
 
-
   const handleDownloadGrid = async () => {
     if (students.length === 0) return;
     setIsDownloadingGrid(true);
-
     const container = document.createElement('div');
     container.style.position = 'absolute';
     container.style.left = '-9999px';
     container.style.top = '0';
     document.body.appendChild(container);
-
     try {
         const studentChunks = chunk(students, 4);
         const pdf = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
-
         for (let i = 0; i < studentChunks.length; i++) {
-            const chunk = studentChunks[i];
+            const chunkData = studentChunks[i];
             const elementToRender = document.createElement('div');
             container.appendChild(elementToRender);
             const reactRoot = await import('react-dom/client').then(m => m.createRoot(elementToRender));
-            
-            const studentsWithBoletimForYear = chunk.map(student => ({
+            const studentsWithBoletim = chunkData.map(student => ({
                 ...student,
                 boletim: student.boletim?.[selectedYear]?.notas || {}
             }));
-
             await new Promise<void>(resolve => {
-                reactRoot.render(<ReportCardGrid students={studentsWithBoletimForYear} />);
+                reactRoot.render(<ReportCardGrid students={studentsWithBoletim} />);
                 setTimeout(resolve, 500); 
             });
-
             const canvas = await html2canvas(elementToRender, { scale: 2, useCORS: true });
             const imgData = canvas.toDataURL('image/jpeg', 0.95);
-            
             if (i > 0) pdf.addPage();
             pdf.addImage(imgData, 'JPEG', 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight());
-
             reactRoot.unmount();
             container.removeChild(elementToRender);
         }
@@ -402,32 +358,25 @@ export default function ClassListGenerator() {
   const handleDownloadCustomColumns = async () => {
     if (students.length === 0) return;
     setIsDownloadingCustom(true);
-
     try {
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
         const numCols = parseInt(customColumnCount, 10);
         const head = [['Nº', 'Nome do Aluno', ...customHeaders]];
-        
         const groupedStudents = students.reduce((acc, student) => {
             const key = `${student.ensino || 'S/E'}|${student.serie || 'S/S'}|${student.classe || 'S/C'}|${student.turno || 'S/T'}`;
             if (!acc[key]) acc[key] = [];
             acc[key].push(student);
             return acc;
         }, {} as { [key: string]: any[] });
-
         let isFirstClass = true;
-
         for (const groupKey in groupedStudents) {
             const classStudents = groupedStudents[groupKey];
             if (classStudents.length === 0) continue;
-
             if (!isFirstClass) doc.addPage();
             isFirstClass = false;
-
             const body = classStudents.map((s, i) => [i + 1, s.nome, ...Array(numCols).fill('')]);
             const sSample = classStudents[0] || {};
             const title = customTitle.trim() || `Lista de Frequência - ${sSample.serie} ${sSample.classe} (${sSample.turno})`;
-
             autoTable(doc, {
                 head: head,
                 body: body,
@@ -457,31 +406,24 @@ export default function ClassListGenerator() {
   const handleDownloadSubjectGrid = async () => {
     if (students.length === 0) return;
     setIsDownloadingSubjects(true);
-
     try {
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
         const subjects = ['ART', 'CIE', 'ED.F', 'HIS', 'GEO', 'ING', 'MAT', 'PORT', 'REL'];
         const head = [['Nº', 'Nome do Aluno', ...subjects]];
-        
         const groupedStudents = students.reduce((acc, student) => {
             const key = `${student.ensino || 'S/E'}|${student.serie || 'S/S'}|${student.classe || 'S/C'}|${student.turno || 'S/T'}`;
             if (!acc[key]) acc[key] = [];
             acc[key].push(student);
             return acc;
         }, {} as { [key: string]: any[] });
-
         let isFirstClass = true;
-
         for (const groupKey in groupedStudents) {
             const classStudents = groupedStudents[groupKey];
             if (classStudents.length === 0) continue;
-
             if (!isFirstClass) doc.addPage();
             isFirstClass = false;
-
             const body = classStudents.map((s, i) => [i + 1, s.nome, ...Array(subjects.length).fill('')]);
             const sSample = classStudents[0] || {};
-
             autoTable(doc, {
                 head: head,
                 body: body,
@@ -507,7 +449,6 @@ export default function ClassListGenerator() {
       setIsDownloadingSubjects(false);
     }
   };
-
 
   const clearFiltersAndResults = () => {
     setFilters({ ensino: '', serie: '', turno: '', classe: '' });
@@ -648,7 +589,7 @@ export default function ClassListGenerator() {
                                 </TableHeader>
                                 <TableBody>
                                     {students.map((student, index) => (
-                                    <TableRow key={student.rm}>
+                                    <TableRow key={student.id}>
                                         <TableCell className="text-center font-medium">{index + 1}</TableCell>
                                         <TableCell>{student.nome}</TableCell>
                                         <TableCell className="text-xs text-muted-foreground">{student.serie} {student.classe}</TableCell>
@@ -754,7 +695,7 @@ export default function ClassListGenerator() {
                     </div>
                 ) : (
                     <div className="flex-1 flex items-center justify-center text-center text-sm text-muted-foreground p-4">
-                        <p>Aguardando busca. Selecione os filtros (ou deixe em branco para todos) e clique em "Gerar Lista".</p>
+                        <p>{isLoadingAllStudents ? "A carregar dados..." : "Aguardando busca. Selecione os filtros (ou deixe em branco para todos) e clique em 'Gerar Lista'."}</p>
                     </div>
                 )}
             </div>
