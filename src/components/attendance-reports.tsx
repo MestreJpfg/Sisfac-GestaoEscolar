@@ -1,9 +1,10 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useCollection } from '@/firebase';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -46,8 +47,14 @@ export default function AttendanceReports() {
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    const [allStudents, setAllStudents] = useState<any[]>([]);
-    const [isLoadingStudentsOptions, setIsLoadingStudentsOptions] = useState(true);
+    // Subscrição em tempo real para os alunos
+    const studentsQuery = useMemo(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, "alunos"));
+    }, [firestore]);
+
+    const { data: allStudentsData, isLoading: isLoadingStudentsOptions } = useCollection(studentsQuery);
+    const allStudents = useMemo(() => allStudentsData || [], [allStudentsData]);
     
     // Daily Report State
     const [dailyFilters, setDailyFilters] = useState<ReportFilters>({ ensino: '', serie: '', classe: '', turno: '' });
@@ -63,29 +70,6 @@ export default function AttendanceReports() {
     const [individualDateRange, setIndividualDateRange] = useState<DateRange | undefined>();
     const [individualReportData, setIndividualReportData] = useState<AttendanceRecord[]>([]);
     const [isLoadingIndividual, setIsLoadingIndividual] = useState(false);
-
-    useEffect(() => {
-        const fetchStudents = async () => {
-            if (!firestore) return;
-            setIsLoadingStudentsOptions(true);
-            try {
-                const q = query(collection(firestore, "alunos"));
-                const querySnapshot = await getDocs(q);
-                // Filtra apenas ATIVOS para os relatórios de presença
-                const studentsData = querySnapshot.docs
-                    .map(doc => ({ id: doc.id, ...doc.data() }))
-                    .filter(s => !s.status || s.status === 'ATIVO');
-                
-                setAllStudents(studentsData);
-            } catch (error) {
-                console.error("Error fetching students for filters:", error);
-                toast({ variant: "destructive", title: "Erro ao Carregar Alunos" });
-            } finally {
-                setIsLoadingStudentsOptions(false);
-            }
-        };
-        fetchStudents();
-    }, [firestore, toast]);
 
 
     const studentMap = useMemo(() => {
@@ -132,7 +116,6 @@ export default function AttendanceReports() {
                 newFilters.turno = ''; 
             } else if (name === 'serie') { 
                 newFilters.classe = ''; 
-                // Não reseta turno aqui para permitir independência
             } else if (name === 'classe') { 
                 // Não reseta turno aqui para permitir independência
             }

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -13,7 +14,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import ReportCardGrid from './report-card-grid';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useCollection } from '@/firebase';
 import { collection, query, getDocs } from 'firebase/firestore';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
@@ -64,8 +65,14 @@ export default function ClassListGenerator() {
   const [customTitle, setCustomTitle] = useState('');
   const [customHeaders, setCustomHeaders] = useState<string[]>([]);
   
-  const [allStudents, setAllStudents] = useState<any[]>([]);
-  const [isLoadingAllStudents, setIsLoadingAllStudents] = useState(true);
+  // Subscrição em tempo real para os alunos
+  const studentsQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, "alunos"));
+  }, [firestore]);
+
+  const { data: allStudentsData, isLoading: isLoadingAllStudents } = useCollection(studentsQuery);
+  const allStudents = useMemo(() => allStudentsData || [], [allStudentsData]);
 
   // Styling state
   const [headerColor, setHeaderColor] = useState('#e6e6e6');
@@ -91,32 +98,6 @@ export default function ClassListGenerator() {
     return Array.from(years).sort((a,b) => parseInt(b) - parseInt(a));
   }, [allStudents]);
 
-  useEffect(() => {
-    const fetchStudents = async () => {
-      if (!firestore) return;
-      setIsLoadingAllStudents(true);
-      try {
-        const q = query(collection(firestore, "alunos"));
-        const querySnapshot = await getDocs(q);
-        // Filtra para garantir apenas alunos ATIVOS nas listas geradas
-        const studentsData = querySnapshot.docs
-            .map(doc => ({ id: doc.id, ...doc.data() }))
-            .filter(s => !s.status || s.status === 'ATIVO');
-        
-        setAllStudents(studentsData);
-      } catch (error) {
-        console.error("Error fetching students: ", error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao carregar alunos",
-          description: "Não foi possível buscar os dados dos alunos para os filtros.",
-        });
-      } finally {
-        setIsLoadingAllStudents(false);
-      }
-    };
-    fetchStudents();
-  }, [firestore, toast]);
   
   useEffect(() => {
     const count = parseInt(customColumnCount, 10);

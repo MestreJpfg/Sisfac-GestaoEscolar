@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useCollection } from '@/firebase';
 import { collection, query, where, doc, writeBatch, getDocs } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -40,34 +41,19 @@ export default function AttendanceManager() {
     const [attendance, setAttendance] = useState<Map<string, AttendanceStatus>>(new Map());
     const [isSaving, setIsSaving] = useState(false);
     
-    const [allStudents, setAllStudents] = useState<any[]>([]);
-    const [isLoadingOptions, setIsLoadingOptions] = useState(true);
+    // Subscrição em tempo real para os alunos
+    const studentsQuery = useMemo(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, "alunos"));
+    }, [firestore]);
+
+    const { data: allStudentsData, isLoading: isLoadingOptions } = useCollection(studentsQuery);
+    
+    const allStudents = useMemo(() => allStudentsData || [], [allStudentsData]);
+    
     const [studentsInClass, setStudentsInClass] = useState<any[]>([]);
     const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
-     useEffect(() => {
-        const fetchStudents = async () => {
-            if (!firestore) return;
-            setIsLoadingOptions(true);
-            try {
-                const q = query(collection(firestore, "alunos"));
-                const querySnapshot = await getDocs(q);
-                // Filtra para garantir apenas alunos ATIVOS na frequência
-                const studentsData = querySnapshot.docs
-                    .map(doc => ({ id: doc.id, ...doc.data() }))
-                    .filter(s => !s.status || s.status === 'ATIVO');
-                
-                setAllStudents(studentsData);
-            } catch (error) {
-                console.error("Error fetching students for filters:", error);
-                toast({ variant: "destructive", title: "Erro ao Carregar Alunos" });
-            } finally {
-                setIsLoadingOptions(false);
-            }
-        };
-        fetchStudents();
-    }, [firestore, toast]);
-    
     const uniqueFilterOptions = useMemo(() => {
         if (!allStudents) return { ensinos: [], series: [], classes: [], turnos: [] };
         

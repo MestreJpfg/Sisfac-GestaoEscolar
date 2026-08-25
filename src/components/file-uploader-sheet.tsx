@@ -78,6 +78,11 @@ export default function FileUploaderSheet({ onUploadSuccess, isPrimaryAction = f
 
         let processedValue = value;
         
+        // Normalização de Identificadores de Turma para MAIÚSCULAS
+        if (['ensino', 'serie', 'classe', 'turno'].includes(header) && processedValue) {
+            processedValue = String(processedValue).toUpperCase().trim();
+        }
+
         // Normalização Rigorosa de Data de Nascimento (DD/MM/AAAA)
         if (header === 'data_nascimento' && value) {
           if (typeof value === 'number') { 
