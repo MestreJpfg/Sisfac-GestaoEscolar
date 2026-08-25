@@ -40,7 +40,6 @@ export default function AttendanceManager() {
     const [attendance, setAttendance] = useState<Map<string, AttendanceStatus>>(new Map());
     const [isSaving, setIsSaving] = useState(false);
     
-    // Subscrição em tempo real para os alunos
     const studentsQuery = useMemo(() => {
         if (!firestore) return null;
         return query(collection(firestore, "alunos"));
@@ -52,20 +51,22 @@ export default function AttendanceManager() {
     const [studentsInClass, setStudentsInClass] = useState<any[]>([]);
     const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
+    const normalize = (val: any) => String(val || '').trim().toUpperCase();
+
     const uniqueFilterOptions = useMemo(() => {
         const getUniqueValues = (key: string, data: any[]) =>
-            [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
+            [...new Set(data.map(s => normalize(s[key])).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
         let filteredForOptions = allStudents;
         const ensinos = getUniqueValues('ensino', filteredForOptions);
 
-        if(filters.ensino) filteredForOptions = filteredForOptions.filter(s => s.ensino === filters.ensino);
+        if(filters.ensino) filteredForOptions = filteredForOptions.filter(s => normalize(s.ensino) === normalize(filters.ensino));
         const series = getUniqueValues('serie', filteredForOptions);
 
-        if(filters.serie) filteredForOptions = filteredForOptions.filter(s => s.serie === filters.serie);
+        if(filters.serie) filteredForOptions = filteredForOptions.filter(s => normalize(s.serie) === normalize(filters.serie));
         const classes = getUniqueValues('classe', filteredForOptions);
         
-        if(filters.classe) filteredForOptions = filteredForOptions.filter(s => s.classe === filters.classe);
+        if(filters.classe) filteredForOptions = filteredForOptions.filter(s => normalize(s.classe) === normalize(filters.classe));
         const turnos = getUniqueValues('turno', filteredForOptions);
         
         return { ensinos, series, classes, turnos };
@@ -77,17 +78,17 @@ export default function AttendanceManager() {
 
     const classId = useMemo(() => {
         if (!isClassSelected) return null;
-        return `${filters.ensino}-${filters.serie}-${filters.classe}-${filters.turno}`.replace(/\s+/g, '_');
+        return `${normalize(filters.ensino)}-${normalize(filters.serie)}-${normalize(filters.classe)}-${normalize(filters.turno)}`.replace(/\s+/g, '_');
     }, [isClassSelected, filters]);
 
      useEffect(() => {
         if (isClassSelected && allStudents.length > 0) {
             setIsLoadingStudents(true);
             const filtered = allStudents.filter(s => 
-                s.ensino === filters.ensino &&
-                s.serie === filters.serie &&
-                s.classe === filters.classe &&
-                s.turno === filters.turno
+                normalize(s.ensino) === normalize(filters.ensino) &&
+                normalize(s.serie) === normalize(filters.serie) &&
+                normalize(s.classe) === normalize(filters.classe) &&
+                normalize(s.turno) === normalize(filters.turno)
             ).sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
             setStudentsInClass(filtered);
             setIsLoadingStudents(false);

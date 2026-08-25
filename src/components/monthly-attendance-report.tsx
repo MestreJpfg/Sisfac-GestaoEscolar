@@ -51,6 +51,8 @@ export default function MonthlyAttendanceReport() {
     const [reportData, setReportData] = useState<MonthlyRecord[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
+    const normalize = (val: any) => String(val || '').trim().toUpperCase();
+
     useEffect(() => {
         const fetchStudents = async () => {
             if (!firestore) return;
@@ -58,7 +60,6 @@ export default function MonthlyAttendanceReport() {
             try {
                 const q = query(collection(firestore, "alunos"));
                 const querySnapshot = await getDocs(q);
-                // Filtra para garantir apenas alunos ATIVOS no relatório mensal
                 const studentsData = querySnapshot.docs
                     .map(doc => ({ id: doc.id, ...doc.data() }))
                     .filter(s => !s.status || s.status === 'ATIVO');
@@ -76,18 +77,18 @@ export default function MonthlyAttendanceReport() {
 
     const uniqueFilterOptions = useMemo(() => {
         if (!allStudents) return { ensinos: [], series: [], classes: [], turnos: [] };
-        const getUniqueValues = (key: string, data: any[]) => [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
+        const getUniqueValues = (key: string, data: any[]) => [...new Set(data.map(s => normalize(s[key])).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
         let filteredForOptions = allStudents;
         const ensinos = getUniqueValues('ensino', filteredForOptions);
-        if (filters.ensino) filteredForOptions = filteredForOptions.filter(s => s.ensino === filters.ensino);
+        if (filters.ensino) filteredForOptions = filteredForOptions.filter(s => normalize(s.ensino) === normalize(filters.ensino));
         const series = getUniqueValues('serie', filteredForOptions);
-        if (filters.serie) filteredForOptions = filteredForOptions.filter(s => s.serie === filters.serie);
+        if (filters.serie) filteredForOptions = filteredForOptions.filter(s => normalize(s.serie) === normalize(filters.serie));
         const classes = getUniqueValues('classe', filteredForOptions);
-        if (filters.classe) filteredForOptions = filteredForOptions.filter(s => s.classe === filters.classe);
+        if (filters.classe) filteredForOptions = filteredForOptions.filter(s => normalize(s.classe) === normalize(filters.classe));
         
         let filteredForTurnos = allStudents;
-        if (filters.ensino) filteredForTurnos = filteredForTurnos.filter(s => s.ensino === filters.ensino);
+        if (filters.ensino) filteredForTurnos = filteredForTurnos.filter(s => normalize(s.ensino) === normalize(filters.ensino));
         const turnos = getUniqueValues('turno', filteredForTurnos);
         
         return { ensinos, series, classes, turnos };
@@ -123,10 +124,10 @@ export default function MonthlyAttendanceReport() {
         setReportData([]);
 
         const studentsInClass = allStudents.filter(student => 
-            (!filters.ensino || student.ensino === filters.ensino) &&
-            (!filters.serie || student.serie === filters.serie) &&
-            (!filters.classe || student.classe === filters.classe) &&
-            (!filters.turno || student.turno === filters.turno)
+            (!filters.ensino || normalize(student.ensino) === normalize(filters.ensino)) &&
+            (!filters.serie || normalize(student.serie) === normalize(filters.serie)) &&
+            (!filters.classe || normalize(student.classe) === normalize(filters.classe)) &&
+            (!filters.turno || normalize(student.turno) === normalize(filters.turno))
         ).sort((a, b) => a.nome.localeCompare(b.nome));
 
         if (studentsInClass.length === 0) {
@@ -194,9 +195,8 @@ export default function MonthlyAttendanceReport() {
     const exportMonthlyPDF = () => {
         const doc = new jsPDF({ orientation: 'landscape' });
         
-        // Agrupar dados por turma para gerar páginas individuais
         const grouped = reportData.reduce((acc, record) => {
-            const key = `${record.serie}|${record.classe}|${record.turno}`;
+            const key = `${normalize(record.serie)}|${normalize(record.classe)}|${normalize(record.turno)}`;
             if (!acc[key]) acc[key] = [];
             acc[key].push(record);
             return acc;

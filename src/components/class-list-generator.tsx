@@ -79,6 +79,8 @@ export default function ClassListGenerator() {
     classe: '',
   });
 
+  const normalize = (val: any) => String(val || '').trim().toUpperCase();
+
   const availableYears = useMemo(() => {
     const years = new Set<string>();
     allStudents.forEach(s => {
@@ -103,12 +105,12 @@ export default function ClassListGenerator() {
 
   const uniqueOptions = useMemo(() => {
       const getUniqueValues = (key: string, data: any[]) =>
-        [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
+        [...new Set(data.map(s => normalize(s[key])).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
       const ensinos = getUniqueValues('ensino', allStudents);
-      const series = getUniqueValues('serie', filters.ensino ? allStudents.filter(s => s.ensino === filters.ensino) : allStudents);
-      const turnos = getUniqueValues('turno', filters.serie ? allStudents.filter(s => s.serie === filters.serie) : allStudents);
-      const classes = getUniqueValues('classe', filters.turno ? allStudents.filter(s => s.turno === filters.turno) : allStudents);
+      const series = getUniqueValues('serie', filters.ensino ? allStudents.filter(s => normalize(s.ensino) === normalize(filters.ensino)) : allStudents);
+      const turnos = getUniqueValues('turno', filters.serie ? allStudents.filter(s => normalize(s.serie) === normalize(filters.serie)) : allStudents);
+      const classes = getUniqueValues('classe', filters.turno ? allStudents.filter(s => normalize(s.turno) === normalize(filters.turno)) : allStudents);
 
       return { ensinos, series, turnos, classes };
   }, [allStudents, filters]);
@@ -139,10 +141,10 @@ export default function ClassListGenerator() {
 
     let studentsData = [...allStudents];
 
-    if (filters.ensino) studentsData = studentsData.filter(s => s.ensino === filters.ensino);
-    if (filters.serie) studentsData = studentsData.filter(s => s.serie === filters.serie);
-    if (filters.turno) studentsData = studentsData.filter(s => s.turno === filters.turno);
-    if (filters.classe) studentsData = studentsData.filter(s => s.classe === filters.classe);
+    if (filters.ensino) studentsData = studentsData.filter(s => normalize(s.ensino) === normalize(filters.ensino));
+    if (filters.serie) studentsData = studentsData.filter(s => normalize(s.serie) === normalize(filters.serie));
+    if (filters.turno) studentsData = studentsData.filter(s => normalize(s.turno) === normalize(filters.turno));
+    if (filters.classe) studentsData = studentsData.filter(s => normalize(s.classe) === normalize(filters.classe));
 
     studentsData.sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'));
     setStudents(studentsData);
@@ -168,7 +170,7 @@ export default function ClassListGenerator() {
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
         
         const groupedStudents = students.reduce((acc, student) => {
-            const key = `${student.ensino || 'S/E'}|${student.serie || 'S/S'}|${student.classe || 'S/C'}|${student.turno || 'S/T'}`;
+            const key = `${normalize(student.ensino || 'S/E')}|${normalize(student.serie || 'S/S')}|${normalize(student.classe || 'S/C')}|${normalize(student.turno || 'S/T')}`;
             if (!acc[key]) acc[key] = [];
             acc[key].push(student);
             return acc;
@@ -259,7 +261,7 @@ export default function ClassListGenerator() {
         const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
         const groupedStudents = students.reduce((acc, student) => {
             const key = oneClassPerPage 
-                ? `${student.ensino || 'S/E'}|${student.serie || 'S/S'}|${student.classe || 'S/C'}|${student.turno || 'S/T'}`
+                ? `${normalize(student.ensino || 'S/E')}|${normalize(student.serie || 'S/S')}|${normalize(student.classe || 'S/C')}|${normalize(student.turno || 'S/T')}`
                 : 'geral';
             if (!acc[key]) acc[key] = [];
             acc[key].push(student);
@@ -363,7 +365,7 @@ export default function ClassListGenerator() {
         const numCols = parseInt(customColumnCount, 10);
         const head = [['Nº', 'Nome do Aluno', ...customHeaders]];
         const groupedStudents = students.reduce((acc, student) => {
-            const key = `${student.ensino || 'S/E'}|${student.serie || 'S/S'}|${student.classe || 'S/C'}|${student.turno || 'S/T'}`;
+            const key = `${normalize(student.ensino || 'S/E')}|${normalize(student.serie || 'S/S')}|${normalize(student.classe || 'S/C')}|${normalize(student.turno || 'S/T')}`;
             if (!acc[key]) acc[key] = [];
             acc[key].push(student);
             return acc;
@@ -411,7 +413,7 @@ export default function ClassListGenerator() {
         const subjects = ['ART', 'CIE', 'ED.F', 'HIS', 'GEO', 'ING', 'MAT', 'PORT', 'REL'];
         const head = [['Nº', 'Nome do Aluno', ...subjects]];
         const groupedStudents = students.reduce((acc, student) => {
-            const key = `${student.ensino || 'S/E'}|${student.serie || 'S/S'}|${student.classe || 'S/C'}|${student.turno || 'S/T'}`;
+            const key = `${normalize(student.ensino || 'S/E')}|${normalize(student.serie || 'S/S')}|${normalize(student.classe || 'S/C')}|${normalize(student.turno || 'S/T')}`;
             if (!acc[key]) acc[key] = [];
             acc[key].push(student);
             return acc;

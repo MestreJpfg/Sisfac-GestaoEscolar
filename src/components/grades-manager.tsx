@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -46,6 +44,8 @@ export default function GradesManager() {
     const [studentsInClass, setStudentsInClass] = useState<any[]>([]);
     const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
+    const normalize = (val: any) => String(val || '').trim().toUpperCase();
+
     const availableYears = useMemo(() => {
         const currentYear = new Date().getFullYear();
         return Array.from({ length: 5 }, (_, i) => (currentYear - i).toString());
@@ -76,18 +76,18 @@ export default function GradesManager() {
         if (!allStudents) return { ensinos: [], series: [], classes: [], turnos: [] };
         
         const getUniqueValues = (key: string, data: any[]) =>
-            [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
+            [...new Set(data.map(s => normalize(s[key])).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
         let filteredForOptions = allStudents;
         const ensinos = getUniqueValues('ensino', filteredForOptions);
 
-        if(filters.ensino) filteredForOptions = filteredForOptions.filter(s => s.ensino === filters.ensino);
+        if(filters.ensino) filteredForOptions = filteredForOptions.filter(s => normalize(s.ensino) === normalize(filters.ensino));
         const series = getUniqueValues('serie', filteredForOptions);
 
-        if(filters.serie) filteredForOptions = filteredForOptions.filter(s => s.serie === filters.serie);
+        if(filters.serie) filteredForOptions = filteredForOptions.filter(s => normalize(s.serie) === normalize(filters.serie));
         const classes = getUniqueValues('classe', filteredForOptions);
         
-        if(filters.classe) filteredForOptions = filteredForOptions.filter(s => s.classe === filters.classe);
+        if(filters.classe) filteredForOptions = filteredForOptions.filter(s => normalize(s.classe) === normalize(filters.classe));
         const turnos = getUniqueValues('turno', filteredForOptions);
         
         return { ensinos, series, classes, turnos };
@@ -102,10 +102,10 @@ export default function GradesManager() {
         if (isReadyToLoad && allStudents.length > 0) {
             setIsLoadingStudents(true);
             const filtered = allStudents.filter(s => 
-                s.ensino === filters.ensino &&
-                s.serie === filters.serie &&
-                s.classe === filters.classe &&
-                s.turno === filters.turno
+                normalize(s.ensino) === normalize(filters.ensino) &&
+                normalize(s.serie) === normalize(filters.serie) &&
+                normalize(s.classe) === normalize(filters.classe) &&
+                normalize(s.turno) === normalize(filters.turno)
             ).sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
             setStudentsInClass(filtered);
             setIsLoadingStudents(false);
