@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -59,7 +58,11 @@ export default function MonthlyAttendanceReport() {
             try {
                 const q = query(collection(firestore, "alunos"));
                 const querySnapshot = await getDocs(q);
-                const studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                // Filtra para garantir apenas alunos ATIVOS no relatório mensal
+                const studentsData = querySnapshot.docs
+                    .map(doc => ({ id: doc.id, ...doc.data() }))
+                    .filter(s => !s.status || s.status === 'ATIVO');
+                
                 setAllStudents(studentsData);
             } catch (error) {
                 console.error("Error fetching students for filters:", error);
@@ -119,11 +122,11 @@ export default function MonthlyAttendanceReport() {
         setIsLoading(true);
         setReportData([]);
 
-        const studentsInClass = allStudents.filter(s => 
-            (!filters.ensino || s.ensino === filters.ensino) &&
-            (!filters.serie || s.serie === filters.serie) &&
-            (!filters.classe || s.classe === filters.classe) &&
-            (!filters.turno || s.turno === filters.turno)
+        const studentsInClass = allStudents.filter(student => 
+            (!filters.ensino || student.ensino === filters.ensino) &&
+            (!filters.serie || student.serie === filters.serie) &&
+            (!filters.classe || student.classe === filters.classe) &&
+            (!filters.turno || student.turno === filters.turno)
         ).sort((a, b) => a.nome.localeCompare(b.nome));
 
         if (studentsInClass.length === 0) {
@@ -351,4 +354,3 @@ export default function MonthlyAttendanceReport() {
         </div>
     );
 }
-

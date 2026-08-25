@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -72,7 +71,11 @@ export default function AttendanceReports() {
             try {
                 const q = query(collection(firestore, "alunos"));
                 const querySnapshot = await getDocs(q);
-                const studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                // Filtra apenas ATIVOS para os relatórios de presença
+                const studentsData = querySnapshot.docs
+                    .map(doc => ({ id: doc.id, ...doc.data() }))
+                    .filter(s => !s.status || s.status === 'ATIVO');
+                
                 setAllStudents(studentsData);
             } catch (error) {
                 console.error("Error fetching students for filters:", error);

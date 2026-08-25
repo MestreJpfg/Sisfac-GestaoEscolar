@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -99,7 +98,11 @@ export default function ClassListGenerator() {
       try {
         const q = query(collection(firestore, "alunos"));
         const querySnapshot = await getDocs(q);
-        const studentsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Filtra para garantir apenas alunos ATIVOS nas listas geradas
+        const studentsData = querySnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter(s => !s.status || s.status === 'ATIVO');
+        
         setAllStudents(studentsData);
       } catch (error) {
         console.error("Error fetching students: ", error);
