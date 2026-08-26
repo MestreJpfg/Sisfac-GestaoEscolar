@@ -51,6 +51,9 @@ export default function OccurrenceFormDialog({ isOpen, onClose, onSave, occurren
     const form = useForm<OccurrenceFormValues>({
         resolver: zodResolver(occurrenceSchema),
         defaultValues: {
+            studentId: '',
+            studentName: '',
+            studentClass: '',
             type: '',
             date: format(new Date(), 'yyyy-MM-dd'),
             time: format(new Date(), 'HH:mm'),
@@ -63,17 +66,34 @@ export default function OccurrenceFormDialog({ isOpen, onClose, onSave, occurren
     });
 
     useEffect(() => {
-        if (occurrence) {
-            const dateObj = new Date(occurrence.date);
-            form.reset({
-                ...occurrence,
-                date: format(dateObj, 'yyyy-MM-dd'),
-                time: format(dateObj, 'HH:mm'),
-                involvedStudents: Array.isArray(occurrence.involvedStudents) ? occurrence.involvedStudents : [],
-            });
-            setSelectedStudent({ id: occurrence.studentId, nome: occurrence.studentName, serie: '', classe: '' });
+        if (isOpen) {
+            if (occurrence) {
+                const dateObj = new Date(occurrence.date);
+                form.reset({
+                    ...occurrence,
+                    date: format(dateObj, 'yyyy-MM-dd'),
+                    time: format(dateObj, 'HH:mm'),
+                    involvedStudents: Array.isArray(occurrence.involvedStudents) ? occurrence.involvedStudents : [],
+                });
+                setSelectedStudent({ id: occurrence.studentId, nome: occurrence.studentName, serie: '', classe: '' });
+            } else {
+                form.reset({
+                    studentId: '',
+                    studentName: '',
+                    studentClass: '',
+                    type: '',
+                    date: format(new Date(), 'yyyy-MM-dd'),
+                    time: format(new Date(), 'HH:mm'),
+                    description: '',
+                    reportedBy: '',
+                    involvedStudents: [],
+                    penalty: 'Nenhuma',
+                    status: 'Ativa',
+                });
+                setSelectedStudent(null);
+            }
         }
-    }, [occurrence, form]);
+    }, [occurrence, isOpen, form]);
 
     const studentSuggestions = useMemo(() => {
         if (searchStudent.length < 3) return [];
@@ -84,7 +104,6 @@ export default function OccurrenceFormDialog({ isOpen, onClose, onSave, occurren
     const involvedSuggestions = useMemo(() => {
         if (searchInvolved.length < 3) return [];
         const lower = searchInvolved.toLowerCase();
-        // Filtrar para não sugerir o aluno principal nem quem já está na lista
         const currentInvolved = form.getValues('involvedStudents') || [];
         return students.filter(s => 
             s.id !== selectedStudent?.id &&
@@ -95,7 +114,7 @@ export default function OccurrenceFormDialog({ isOpen, onClose, onSave, occurren
 
     const handleSelectStudent = (student: any) => {
         setSelectedStudent(student);
-        form.setValue('studentId', student.id);
+        form.setValue('studentId', student.id, { shouldValidate: true });
         form.setValue('studentName', student.nome);
         form.setValue('studentClass', `${student.serie || ''} ${student.classe || ''}`.trim());
         setSearchStudent('');
@@ -183,7 +202,19 @@ export default function OccurrenceFormDialog({ isOpen, onClose, onSave, occurren
                                             )}
                                         </div>
                                     )}
-                                    <FormField name="studentId" control={form.control} render={() => <FormMessage />} />
+                                    
+                                    <FormField
+                                        control={form.control}
+                                        name="studentId"
+                                        render={({ field }) => (
+                                            <FormItem className="hidden">
+                                                <FormControl>
+                                                    <Input {...field} type="hidden" />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormMessage>{form.formState.errors.studentId?.message}</FormMessage>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
