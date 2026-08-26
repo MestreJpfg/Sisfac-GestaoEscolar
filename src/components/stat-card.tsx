@@ -14,18 +14,17 @@ interface StatCardProps {
 
 export default function StatCard({ title, value, icon: Icon, description, action }: StatCardProps) {
   return (
-    <Card className="relative overflow-hidden group hover:shadow-md transition-all border-primary/10">
+    <Card className="relative overflow-hidden group hover:shadow-md transition-all border-primary/10 h-full">
       {/* Ícone de Fundo (Marca d'água) */}
       <div className="absolute -right-4 -bottom-4 text-primary/5 group-hover:text-primary/10 transition-colors pointer-events-none">
         <Icon className="h-24 w-24" />
       </div>
       
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10 pr-12">
         <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
           {title}
         </CardTitle>
-        {/* Adicionado mr-4 para evitar sobreposição com o handle de arrasto do DND */}
-        <Icon className="h-5 w-5 text-primary/40 group-hover:text-primary transition-colors mr-4" />
+        <Icon className="h-5 w-5 text-primary/40 group-hover:text-primary transition-colors" />
       </CardHeader>
       
       <CardContent className="relative z-10">
