@@ -19,7 +19,7 @@ import StudentDeclaration from "./student-declaration";
 import StudentTransferDeclaration from "./student-transfer-declaration";
 import ParentAttendanceDeclaration from "./parent-attendance-declaration";
 import StudentEditDialog from "./student-edit-dialog";
-import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Loader2, Share2, Pencil, Printer, MapPin, BookCheck, Award, GraduationCap, UserMinus, UserCheck, AlertCircle, Clock9 } from "lucide-react";
+import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Loader2, Share2, Pencil, Printer, MapPin, BookCheck, Award, GraduationCap, UserMinus, UserCheck, AlertCircle, Clock9, Info, ShieldAlert } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
@@ -272,17 +272,26 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
           <ScrollArea className="flex-1 -mr-6 pr-6">
             <Accordion type="multiple" defaultValue={["personal", "academic"]} className="w-full mt-6">
               <AccordionItem value="personal">
-                <AccordionTrigger className="text-lg font-semibold">Dados Pessoais</AccordionTrigger>
+                <AccordionTrigger className="text-lg font-semibold">Identificação e Documentos</AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-4">
                   <DetailItem icon={Calendar} label="Data de Nascimento" value={student.data_nascimento} />
                   <DetailItem icon={Phone} label="Telefones" value={student.telefones} />
+                  <DetailItem icon={FileText} label="RG" value={student.rg} />
                   <DetailItem icon={FileText} label="CPF Aluno" value={student.cpf_aluno} />
+                  <DetailItem icon={Hash} label="NIS" value={student.nis} />
                   <DetailItem icon={Hash} label="ID Censo" value={student.id_censo} />
                 </AccordionContent>
               </AccordionItem>
 
+              <AccordionItem value="address">
+                <AccordionTrigger className="text-lg font-semibold">Endereço e Localização</AccordionTrigger>
+                <AccordionContent className="pt-4 space-y-4">
+                  <DetailItem icon={MapPin} label="Endereço Completo" value={student.endereco} />
+                </AccordionContent>
+              </AccordionItem>
+
               <AccordionItem value="academic">
-                <AccordionTrigger className="text-lg font-semibold">Dados Acadêmicos</AccordionTrigger>
+                <AccordionTrigger className="text-lg font-semibold">Vínculo Académico</AccordionTrigger>
                 <AccordionContent className="pt-4 space-y-4">
                   <DetailItem icon={Book} label="Série" value={student.serie} />
                   <DetailItem icon={Users} label="Classe" value={student.classe} />
@@ -297,6 +306,24 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
                         </Button>
                     </div>
                   )}
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="family">
+                <AccordionTrigger className="text-lg font-semibold">Família e Filiação</AccordionTrigger>
+                <AccordionContent className="pt-4 space-y-4">
+                  <DetailItem icon={Users} label="Filiação 1 (Mãe/Responsável)" value={student.filiacao_1} />
+                  <DetailItem icon={FileText} label="CPF Filiação 1" value={student.cpffiliacao1} />
+                  <DetailItem icon={Users} label="Filiação 2 (Pai/Responsável)" value={student.filiacao_2} />
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="others">
+                <AccordionTrigger className="text-lg font-semibold">Necessidades e Benefícios</AccordionTrigger>
+                <AccordionContent className="pt-4 space-y-4">
+                  <DetailItem icon={ShieldAlert} label="NEE (Necessidade Especial)" value={student.nee} />
+                  <DetailItem icon={Bus} label="Transporte Escolar" value={student.transporte_escolar} />
+                  <DetailItem icon={CreditCard} label="Carteira de Estudante" value={student.carteira_estudante} />
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
