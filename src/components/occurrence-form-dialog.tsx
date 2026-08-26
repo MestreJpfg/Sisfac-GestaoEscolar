@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -13,9 +12,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from './ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { User, Calendar as CalendarIcon, Clock, Users, ShieldAlert, Loader2 } from 'lucide-react';
+import { User, Calendar as CalendarIcon, Clock, Users, ShieldAlert, Loader2, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Badge } from './ui/badge';
 
 const occurrenceSchema = z.object({
   studentId: z.string().min(1, "Selecione um aluno."),
@@ -26,7 +26,7 @@ const occurrenceSchema = z.object({
   time: z.string().min(1, "A hora é obrigatória."),
   description: z.string().min(10, "Descreva detalhadamente o ocorrido (mínimo 10 caracteres)."),
   reportedBy: z.string().min(1, "Identifique quem está relatando."),
-  involvedStudents: z.string().optional().nullable(),
+  involvedStudents: z.array(z.string()).default([]),
   penalty: z.string().min(1, "Selecione a penalidade aplicada ou prevista."),
   status: z.string().min(1, "Selecione o status atual."),
 });
@@ -45,6 +45,7 @@ interface OccurrenceFormDialogProps {
 export default function OccurrenceFormDialog({ isOpen, onClose, onSave, occurrence, students, isSaving = false }: OccurrenceFormDialogProps) {
     const { toast } = useToast();
     const [searchStudent, setSearchStudent] = useState('');
+    const [searchInvolved, setSearchInvolved] = useState('');
     const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
     const form = useForm<OccurrenceFormValues>({
@@ -55,7 +56,7 @@ export default function OccurrenceFormDialog({ isOpen, onClose, onSave, occurren
             time: format(new Date(), 'HH:mm'),
             description: '',
             reportedBy: '',
-            involvedStudents: '',
+            involvedStudents: [],
             penalty: 'Nenhuma',
             status: 'Ativa',
         }
@@ -68,7 +69,7 @@ export default function OccurrenceFormDialog({ isOpen, onClose, onSave, occurren
                 ...occurrence,
                 date: format(dateObj, 'yyyy-MM-dd'),
                 time: format(dateObj, 'HH:mm'),
-                involvedStudents: occurrence.involvedStudents?.join(', ') || '',
+                involvedStudents: Array.isArray(occurrence.involvedStudents) ? occurrence.involvedStudents : [],
             });
             setSelectedStudent({ id: occurrence.studentId, nome: occurrence.studentName, serie: '', classe: '' });
         }
@@ -80,6 +81,18 @@ export default function OccurrenceFormDialog({ isOpen, onClose, onSave, occurren
         return students.filter(s => s.nome?.toLowerCase().includes(lower)).slice(0, 5);
     }, [students, searchStudent]);
 
+    const involvedSuggestions = useMemo(() => {
+        if (searchInvolved.length < 3) return [];
+        const lower = searchInvolved.toLowerCase();
+        // Filtrar para não sugerir o aluno principal nem quem já está na lista
+        const currentInvolved = form.getValues('involvedStudents') || [];
+        return students.filter(s => 
+            s.id !== selectedStudent?.id &&
+            s.nome?.toLowerCase().includes(lower) &&
+            !currentInvolved.some(name => name.includes(s.nome))
+        ).slice(0, 5);
+    }, [students, searchInvolved, selectedStudent, form]);
+
     const handleSelectStudent = (student: any) => {
         setSelectedStudent(student);
         form.setValue('studentId', student.id);
@@ -88,12 +101,25 @@ export default function OccurrenceFormDialog({ isOpen, onClose, onSave, occurren
         setSearchStudent('');
     };
 
+    const handleAddInvolved = (student: any) => {
+        const current = form.getValues('involvedStudents') || [];
+        const studentInfo = `${student.nome} (${student.serie || ''} ${student.classe || ''})`;
+        if (!current.includes(studentInfo)) {
+            form.setValue('involvedStudents', [...current, studentInfo]);
+        }
+        setSearchInvolved('');
+    };
+
+    const handleRemoveInvolved = (studentInfo: string) => {
+        const current = form.getValues('involvedStudents') || [];
+        form.setValue('involvedStudents', current.filter(s => s !== studentInfo));
+    };
+
     const onSubmit = (values: OccurrenceFormValues) => {
         const fullDate = new Date(`${values.date}T${values.time}`).toISOString();
         const finalData = {
             ...values,
             date: fullDate,
-            involvedStudents: values.involvedStudents ? values.involvedStudents.split(',').map(s => s.trim()) : [],
             id: occurrence?.id
         };
         // @ts-ignore
@@ -118,15 +144,15 @@ export default function OccurrenceFormDialog({ isOpen, onClose, onSave, occurren
                     <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 space-y-4">
                         <ScrollArea className="flex-1 pr-4">
                             <div className="space-y-6 py-2">
-                                {/* Busca de Aluno */}
+                                {/* Busca de Aluno Principal */}
                                 <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
                                     <h3 className="font-semibold text-sm flex items-center gap-2">
-                                        <User className="h-4 w-4" /> Identificação do Aluno
+                                        <User className="h-4 w-4" /> Aluno Principal
                                     </h3>
                                     {!selectedStudent ? (
                                         <div className="relative">
                                             <Input 
-                                                placeholder="Comece a digitar o nome do aluno (mínimo 3 letras)..." 
+                                                placeholder="Pesquisar aluno (mínimo 3 letras)..." 
                                                 value={searchStudent}
                                                 onChange={(e) => setSearchStudent(e.target.value)}
                                             />
@@ -239,17 +265,52 @@ export default function OccurrenceFormDialog({ isOpen, onClose, onSave, occurren
                                     )}
                                 />
 
-                                <FormField
-                                    control={form.control}
-                                    name="involvedStudents"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Outros Alunos Envolvidos (Opcional)</FormLabel>
-                                            <FormControl><Input {...field} value={field.value || ''} placeholder="Ex: Aluno X, Aluna Y..." /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                                {/* Outros Alunos Envolvidos com Busca */}
+                                <div className="space-y-3">
+                                    <FormLabel className="flex items-center gap-2">
+                                        <Users className="h-4 w-4" /> Outros Alunos Envolvidos (Opcional)
+                                    </FormLabel>
+                                    <div className="relative">
+                                        <Input 
+                                            placeholder="Pesquisar outros envolvidos (mínimo 3 letras)..." 
+                                            value={searchInvolved}
+                                            onChange={(e) => setSearchInvolved(e.target.value)}
+                                        />
+                                        {involvedSuggestions.length > 0 && (
+                                            <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md">
+                                                {involvedSuggestions.map(s => (
+                                                    <div 
+                                                        key={s.id} 
+                                                        className="p-2 hover:bg-accent cursor-pointer text-sm border-b last:border-0"
+                                                        onMouseDown={() => handleAddInvolved(s)}
+                                                    >
+                                                        {s.nome} - <span className="text-muted-foreground">{s.serie} {s.classe}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                        {form.watch('involvedStudents')?.map((studentInfo, index) => (
+                                            <Badge key={index} variant="secondary" className="pl-3 pr-1 py-1 flex items-center gap-1">
+                                                <span className="text-xs">{studentInfo}</span>
+                                                <Button 
+                                                    type="button" 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-4 w-4 rounded-full" 
+                                                    onClick={() => handleRemoveInvolved(studentInfo)}
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </Button>
+                                            </Badge>
+                                        ))}
+                                        {(!form.watch('involvedStudents') || form.watch('involvedStudents').length === 0) && (
+                                            <p className="text-xs text-muted-foreground italic">Nenhum outro aluno adicionado.</p>
+                                        )}
+                                    </div>
+                                </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField
