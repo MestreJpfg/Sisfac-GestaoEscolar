@@ -1,13 +1,17 @@
 
 'use client';
 
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarDays, Clock, User, ShieldAlert, FileText, Users } from 'lucide-react';
+import { CalendarDays, Clock, User, ShieldAlert, FileText, Users, Printer, Loader2 } from 'lucide-react';
 import { ScrollArea } from "./ui/scroll-area";
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import OccurrenceParentCommunication from './occurrence-parent-communication';
 
 interface OccurrenceDetailDialogProps {
   isOpen: boolean;
@@ -16,9 +20,45 @@ interface OccurrenceDetailDialogProps {
 }
 
 export default function OccurrenceDetailDialog({ isOpen, onClose, occurrence }: OccurrenceDetailDialogProps) {
+    const [isGenerating, setIsGenerating] = useState(false);
+
     if (!occurrence) return null;
 
     const dateObj = new Date(occurrence.date);
+
+    const handlePrintCommunication = async () => {
+        setIsGenerating(true);
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-9999px';
+        container.style.top = '0';
+        
+        const elementToRender = document.createElement('div');
+        container.appendChild(elementToRender);
+        document.body.appendChild(container);
+
+        try {
+            const reactRoot = await import('react-dom/client').then(m => m.createRoot(elementToRender));
+            await new Promise<void>(resolve => {
+                reactRoot.render(<OccurrenceParentCommunication occurrence={occurrence} />);
+                setTimeout(resolve, 800); // Give extra time for images
+            });
+
+            const canvas = await html2canvas(elementToRender, { scale: 2, useCORS: true });
+            const imgData = canvas.toDataURL('image/jpeg', 0.98);
+            const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+            
+            pdf.addImage(imgData, 'JPEG', 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight());
+            pdf.save(`Comunicado_Pais_${occurrence.studentName.replace(/\s+/g, '_')}.pdf`);
+            
+            reactRoot.unmount();
+        } catch (error) {
+            console.error("Error generating PDF:", error);
+        } finally {
+            document.body.removeChild(container);
+            setIsGenerating(false);
+        }
+    };
     
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -86,7 +126,11 @@ export default function OccurrenceDetailDialog({ isOpen, onClose, occurrence }: 
                     </div>
                 </ScrollArea>
 
-                <DialogFooter className="border-t pt-4 mt-2">
+                <DialogFooter className="border-t pt-4 mt-2 gap-2">
+                    <Button onClick={handlePrintCommunication} variant="outline" className="flex-1" disabled={isGenerating}>
+                        {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+                        Gerar Comunicado
+                    </Button>
                     <Button onClick={onClose} variant="secondary">Fechar</Button>
                 </DialogFooter>
             </DialogContent>
