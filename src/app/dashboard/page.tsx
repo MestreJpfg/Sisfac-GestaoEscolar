@@ -251,7 +251,7 @@ export default function DashboardPage() {
         icon: ShieldAlert,
         description: "Registros disciplinares",
         href: '/dashboard/occurrences',
-        actionLabel: 'Histórico',
+        actionLabel: 'Registros',
         show: permissions.occurrences
     },
     classes: {
