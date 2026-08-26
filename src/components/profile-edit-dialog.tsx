@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect } from "react";
@@ -15,17 +14,18 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "./ui/checkbox";
 
 const permissionKeys = [
-    'view:students', 'manage:students',
-    'view:users', 'manage:users',
-    'view:profiles', 'manage:profiles',
-    'view:grades', 'manage:grades',
-    'view:attendance', 'manage:attendance',
-    'view:announcements', 'manage:announcements',
-    'view:database', 'manage:database',
-    'manage:cadastros', 'manage:migration', 'manage:transcript', 'manage:occurrences'
+    'manage:students',
+    'manage:attendance',
+    'manage:grades',
+    'manage:occurrences',
+    'manage:transcript',
+    'manage:announcements',
+    'manage:cadastros',
+    'manage:users',
+    'manage:migration',
+    'manage:database'
 ] as const;
 
-// Usamos z.any() para as permissões para evitar que erros de validação silenciosos bloqueiem o formulário
 const profileSchema = z.object({
   name: z.string().min(1, "O nome do perfil é obrigatório."),
   description: z.string().optional().nullable(),
@@ -43,24 +43,16 @@ interface ProfileEditDialogProps {
 }
 
 const allPermissions = [
-    { id: 'view:students', label: 'Visualizar Alunos' },
-    { id: 'manage:students', label: 'Gerir Alunos (Criar, Editar, Apagar)' },
-    { id: 'view:users', label: 'Visualizar Utilizadores' },
-    { id: 'manage:users', label: 'Gerir Utilizadores (Criar, Editar, Apagar)' },
-    { id: 'view:profiles', label: 'Visualizar Perfis e Permissões' },
-    { id: 'manage:profiles', label: 'Gerir Perfis e Permissões' },
-    { id: 'view:grades', label: 'Visualizar Notas e Boletins' },
-    { id: 'manage:grades', label: 'Gerir Notas (Lançar, Editar)' },
-    { id: 'view:attendance', label: 'Visualizar Frequência' },
-    { id: 'manage:attendance', label: 'Gerir Frequência (Lançar, Editar)' },
-    { id: 'view:announcements', label: 'Visualizar Comunicados' },
-    { id: 'manage:announcements', label: 'Gerir Comunicados (Criar, Editar, Apagar)' },
-    { id: 'view:database', label: 'Visualizar Ferramentas de Base de Dados' },
-    { id: 'manage:database', label: 'Gerir Base de Dados (Importar, Exportar, Apagar)' },
-    { id: 'manage:cadastros', label: 'Gerir Cadastro de Servidores' },
-    { id: 'manage:migration', label: 'Gerir Migração de Ano Letivo' },
-    { id: 'manage:transcript', label: 'Gerir Históricos Escolares' },
-    { id: 'manage:occurrences', label: 'Gerir Registro de Ocorrências' },
+    { id: 'manage:students', label: 'Gestão de Alunos (Fichas, Documentos e Listas)' },
+    { id: 'manage:attendance', label: 'Gestão de Frequência (Chamada e Relatórios)' },
+    { id: 'manage:grades', label: 'Gestão de Notas (Lançamento e Boletins)' },
+    { id: 'manage:occurrences', label: 'Gestão de Ocorrências Disciplinares' },
+    { id: 'manage:transcript', label: 'Gestão de Históricos Escolares' },
+    { id: 'manage:announcements', label: 'Gestão de Comunicados' },
+    { id: 'manage:cadastros', label: 'Gestão de Servidores (RH)' },
+    { id: 'manage:users', label: 'Gestão de Utilizadores e Perfis' },
+    { id: 'manage:migration', label: 'Gestão de Anos Letivos (Transição)' },
+    { id: 'manage:database', label: 'Gestão de Sistema e Base de Dados' },
 ];
 
 
@@ -101,7 +93,6 @@ export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: 
   }, [profile, isOpen, form]);
 
   const onSubmit = (data: ProfileFormValues) => {
-    // Garantimos que todas as permissões enviadas sejam booleanas puras
     const cleanedPermissions: Record<string, boolean> = {};
     if (data.permissions) {
         Object.keys(data.permissions).forEach(key => {
@@ -117,17 +108,17 @@ export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: 
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-lg h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{profile?.id ? 'Editar Perfil' : 'Criar Novo Perfil'}</DialogTitle>
           <DialogDescription>
-            Defina o nome, a descrição e as permissões para este perfil.
+            Defina o nome, a descrição e as permissões unificadas para este perfil.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
              <ScrollArea className="flex-1 pr-6 -mr-6">
-               <div className="space-y-4">
+               <div className="space-y-4 py-2">
                   <FormField
                     control={form.control}
                     name="name"
@@ -169,7 +160,7 @@ export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: 
                       <FormItem>
                         <FormLabel>Descrição</FormLabel>
                         <FormControl>
-                          <Textarea {...field} value={field.value ?? ''} placeholder="Descreva a responsabilidade deste perfil..." />
+                          <Textarea {...field} value={field.value ?? ''} placeholder="Descreva a responsabilidade deste perfil..." className="min-h-[60px]" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -178,26 +169,26 @@ export default function ProfileEditDialog({ isOpen, onClose, profile, onSave }: 
 
                 <FormItem>
                     <div className="mb-4">
-                        <FormLabel className="text-base">Permissões</FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                        Selecione as ações que os utilizadores com este perfil podem realizar.
+                        <FormLabel className="text-base">Permissões Unificadas</FormLabel>
+                        <p className="text-xs text-muted-foreground">
+                        Cada opção abaixo concede acesso total (visualização e gestão) ao respetivo módulo.
                         </p>
                     </div>
-                    <div className="space-y-2">
+                    <div className="grid gap-3 p-4 border rounded-lg bg-muted/20">
                     {allPermissions.map((item) => (
                         <FormField
                             key={item.id}
                             control={form.control}
                             name={`permissions.${item.id}`}
                             render={({ field }) => (
-                                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
                                     <FormControl>
                                         <Checkbox
                                             checked={!!field.value}
                                             onCheckedChange={field.onChange}
                                         />
                                     </FormControl>
-                                    <FormLabel className="font-normal cursor-pointer">
+                                    <FormLabel className="font-normal cursor-pointer text-sm">
                                         {item.label}
                                     </FormLabel>
                                 </FormItem>

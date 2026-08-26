@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -54,13 +53,6 @@ export function UserNav() {
     
     if (userProfile.profileId === 'Administrador' || userProfile.profileId === 'Administrador(a)') {
       return true;
-    }
-    
-    if (permission.startsWith('view:')) {
-        const managePermission = permission.replace('view:', 'manage:');
-        if (profileDetails?.permissions?.[managePermission] || userProfile.customPermissions?.includes(managePermission)) {
-            return true;
-        }
     }
     
     if (profileDetails?.permissions?.[permission]) {
@@ -120,7 +112,7 @@ export function UserNav() {
             <Link href="/dashboard/database" passHref>
               <DropdownMenuItem>
                 <Database className="mr-2 h-4 w-4" />
-                <span>Gestão da BD</span>
+                <span>Administração</span>
               </DropdownMenuItem>
             </Link>
           )}

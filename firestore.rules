@@ -43,7 +43,7 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // Regras específicas para outros perfis
+    // Regras específicas baseadas em permissões unificadas
     match /users/{userId} {
       allow read, list: if isSignedIn();
       allow create, update: if request.auth.uid == userId || hasPermission('manage:users');
@@ -52,37 +52,31 @@ service cloud.firestore {
     
     match /profiles/{profileId} {
         allow read, list: if isSignedIn();
-        allow write: if hasPermission('manage:profiles');
+        allow write: if hasPermission('manage:users');
     }
 
     match /servidores/{servidorId} {
-      allow read, list: if hasPermission('manage:cadastros');
-      allow write: if hasPermission('manage:cadastros');
+      allow read, list, write: if hasPermission('manage:cadastros');
     }
 
     match /alunos/{alunoId} {
-      allow read, list: if hasPermission('view:students');
-      allow write: if hasPermission('manage:students') || hasPermission('manage:migration');
+      allow read, list, write: if hasPermission('manage:students') || hasPermission('manage:migration');
     }
     
     match /exalunos/{alunoId} {
-      allow read, list: if hasPermission('view:students');
-      allow write: if hasPermission('manage:migration');
+      allow read, list, write: if hasPermission('manage:students') || hasPermission('manage:migration');
     }
 
     match /ocorrencias/{ocorrenciaId} {
-      allow read, list: if hasPermission('manage:occurrences');
-      allow write: if hasPermission('manage:occurrences');
+      allow read, list, write: if hasPermission('manage:occurrences');
     }
 
     match /grades/{gradeId} {
-       allow read, list: if hasPermission('view:grades');
-       allow write: if hasPermission('manage:grades');
+       allow read, list, write: if hasPermission('manage:grades');
     }
 
     match /attendance/{attendanceId} {
-       allow read, list: if hasPermission('view:attendance');
-       allow write: if hasPermission('manage:attendance');
+       allow read, list, write: if hasPermission('manage:attendance');
     }
     
     match /announcements/{announcementId} {

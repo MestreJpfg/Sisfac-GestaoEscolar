@@ -52,7 +52,7 @@ export default function DashboardPage() {
   const [occurrenceCount, setOccurrenceCount] = useState<number | string | React.ReactNode>(<Loader2 className="h-4 w-4 animate-spin" />);
   const [cardOrder, setCardOrder] = useState<CardId[]>([]);
 
-  // 1. Permissões e Perfil - Prioridade para Administrador direto
+  // 1. Permissões e Perfil
   const userDocRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return doc(firestore, 'users', user.uid);
@@ -76,19 +76,21 @@ export default function DashboardPage() {
   const hasPermission = (permission: string) => {
     if (isAdmin) return true;
     if (!userProfile) return false;
+    
+    // Compatibilidade: se a permissão pedida for view: e só tivermos manage:, permitimos
+    if (permission.startsWith('view:')) {
+        const unified = permission.replace('view:', 'manage:');
+        if (profileDetails?.permissions?.[unified] === true || userProfile.customPermissions?.includes(unified)) return true;
+    }
+
     if (userProfile.customPermissions?.includes(permission)) return true;
     if (profileDetails?.permissions?.[permission] === true) return true;
     
-    // View fallback for manage permissions
-    if (permission.startsWith('view:')) {
-        const managePermission = permission.replace('view:', 'manage:');
-        if (profileDetails?.permissions?.[managePermission] === true || userProfile.customPermissions?.includes(managePermission)) return true;
-    }
     return false;
   };
   
   const permissions = useMemo(() => ({
-    students: hasPermission('view:students'),
+    students: hasPermission('manage:students'),
     servidores: hasPermission('manage:cadastros'),
     attendance: hasPermission('manage:attendance'),
     grades: hasPermission('manage:grades'),
@@ -466,7 +468,7 @@ export default function DashboardPage() {
 
                                 {hasPermission('manage:database') && (
                                     <Button variant="secondary" className="justify-start" onClick={() => router.push('/dashboard/database')}>
-                                        <Database className="mr-2 h-4 w-4" /> Manutenção
+                                        <Database className="mr-2 h-4 w-4" /> Administração
                                     </Button>
                                 )}
                              </div>

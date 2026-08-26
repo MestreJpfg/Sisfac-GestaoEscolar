@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -38,10 +37,7 @@ export default function AttendancePage() {
         if (userProfile.profileId === 'Administrador' || userProfile.profileId === 'Administrador(a)') {
             return true;
         }
-        // Check for specific permission 'view:attendance' or the managing one 'manage:attendance'
-        const hasViewPermission = profileDetails?.permissions?.['view:attendance'] || userProfile.customPermissions?.includes('view:attendance');
-        const hasManagePermission = profileDetails?.permissions?.['manage:attendance'] || userProfile.customPermissions?.includes('manage:attendance');
-        return hasViewPermission || hasManagePermission;
+        return profileDetails?.permissions?.['manage:attendance'] || userProfile.customPermissions?.includes('manage:attendance');
     }, [userProfile, profileDetails, firestore]);
     
     return (
