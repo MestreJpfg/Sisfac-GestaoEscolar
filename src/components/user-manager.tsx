@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query, doc, getDocs } from 'firebase/firestore';
+import { collection, query, doc, getDocs, deleteDoc } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import UserTable from './user-table';
 import UserEditDialog from './user-edit-dialog';
@@ -15,12 +15,14 @@ import { Button } from './ui/button';
 import { X, Search, Loader2 } from 'lucide-react';
 import { useDebounce } from '@/hooks/use-debounce';
 import type { SortConfig } from './user-table';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 
 export default function UserManager() {
   const firestore = useFirestore();
   const { toast } = useToast();
   
   const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [deletingUser, setDeletingUser] = useState<any | null>(null);
   const [filters, setFilters] = useState({
     search: '',
     profileId: '',
@@ -115,6 +117,30 @@ export default function UserManager() {
     setEditingUser(user);
   };
 
+  const handleDeleteRequest = (user: any) => {
+    setDeletingUser(user);
+  };
+
+  const confirmDelete = async () => {
+    if (!firestore || !deletingUser) return;
+    try {
+        await deleteDoc(doc(firestore, 'users', deletingUser.uid));
+        toast({
+            title: "Utilizador Eliminado",
+            description: `O registo de ${deletingUser.name} foi removido com sucesso.`
+        });
+        setAllUsers(prev => prev.filter(u => u.uid !== deletingUser.uid));
+    } catch (error) {
+        toast({
+            variant: 'destructive',
+            title: 'Erro ao Eliminar',
+            description: 'Não foi possível eliminar o utilizador. Tente novamente.'
+        });
+    } finally {
+        setDeletingUser(null);
+    }
+  };
+
   const handleCloseDialog = () => {
     setEditingUser(null);
   };
@@ -191,6 +217,7 @@ export default function UserManager() {
                 users={filteredAndSortedUsers}
                 profiles={allProfiles || []}
                 onEdit={handleEditUser} 
+                onDelete={handleDeleteRequest}
                 onSort={handleSort}
                 sortConfig={sortConfig}
             />
@@ -204,6 +231,24 @@ export default function UserManager() {
           profiles={allProfiles}
           onSave={handleSaveChanges}
         />
+      )}
+
+      {deletingUser && (
+        <AlertDialog open={!!deletingUser} onOpenChange={() => setDeletingUser(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Tem a certeza?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Esta ação não pode ser desfeita. Isto irá eliminar permanentemente o registo do utilizador
+                        <strong className="text-foreground"> {deletingUser.name}</strong> ({deletingUser.email}) do sistema.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
       )}
     </div>
   );

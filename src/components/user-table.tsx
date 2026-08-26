@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardFooter } from "./ui/card";
-import { User, Search, Edit, ArrowUpDown, Loader2 } from "lucide-react";
+import { User, Search, Edit, ArrowUpDown, Loader2, Trash2 } from "lucide-react";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -27,6 +27,7 @@ interface UserTableProps {
   users: any[];
   profiles: any[];
   onEdit: (user: any) => void;
+  onDelete: (user: any) => void;
   onSort: (key: string) => void;
   sortConfig: SortConfig;
 }
@@ -51,7 +52,7 @@ const isColorLight = (hexColor: string) => {
 };
 
 
-export default function UserTable({ users, profiles, onEdit, onSort, sortConfig }: UserTableProps) {
+export default function UserTable({ users, profiles, onEdit, onDelete, onSort, sortConfig }: UserTableProps) {
   
   const SortableHeader = ({ sortKey, children, className }: { sortKey: string, children: React.ReactNode, className?: string }) => {
     const isSorted = sortConfig.key === sortKey;
@@ -148,9 +149,14 @@ export default function UserTable({ users, profiles, onEdit, onSort, sortConfig 
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-muted-foreground hidden lg:table-cell">{formatDate(user.createdAt)}</TableCell>
                     <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => onEdit(user)}>
-                            <Edit className="h-4 w-4" />
-                        </Button>
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => onEdit(user)}>
+                              <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => onDelete(user)} className="text-destructive hover:text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                     </TableCell>
                     </TableRow>
                 );
