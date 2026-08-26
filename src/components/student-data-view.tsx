@@ -1,13 +1,11 @@
-
-
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { useFirestore } from '@/firebase';
-import { collection, getDocs, query } from 'firebase/firestore';
+import { useState, useMemo } from 'react';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection, query } from 'firebase/firestore';
 
 import StudentTable from './student-table';
-import { Filter, X, ChevronDown } from 'lucide-react';
+import { Filter, X, ChevronDown, Loader2 } from 'lucide-react';
 import StudentDetailSheet from './student-detail-sheet';
 import { Input } from './ui/input';
 import { Card, CardContent } from './ui/card';
@@ -21,7 +19,6 @@ import { Switch } from './ui/switch';
 import { Label } from './ui/label';
 import StudentReportCardDialog from './student-report-card-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
 
 export default function StudentDataView() {
   const { toast } = useToast();
@@ -42,37 +39,24 @@ export default function StudentDataView() {
   const debouncedNome = useDebounce(filters.nome, 300);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'nome', direction: 'ascending' });
 
-  const [allStudents, setAllStudents] = useState<any[]>([]);
-  const [isLoadingFilters, setIsLoadingFilters] = useState(true);
-  const [totalStudentCount, setTotalStudentCount] = useState(0);
+  const studentsQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'alunos'));
+  }, [firestore]);
 
+  const { data: allStudentsData, isLoading: isLoadingAllStudents } = useCollection(studentsQuery);
 
-  useEffect(() => {
-    const fetchFilterData = async () => {
-      if (!firestore) return;
-      setIsLoadingFilters(true);
-      try {
-        const studentsQuery = query(collection(firestore, 'alunos'));
-        const studentsSnapshot = await getDocs(studentsQuery);
-        const studentsData = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setAllStudents(studentsData);
-        setTotalStudentCount(studentsData.length);
+  const allStudents = useMemo(() => {
+    return (allStudentsData || []).filter(s => !s.status || s.status === 'ATIVO');
+  }, [allStudentsData]);
 
-      } catch (error) {
-        console.error("Error fetching data for filters:", error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao carregar dados",
-          description: "Não foi possível carregar os dados para preencher os filtros."
-        });
-      } finally {
-        setIsLoadingFilters(false);
-      }
-    };
-
-    fetchFilterData();
-  }, [firestore, toast]);
-
+  // Normalização agressiva incluindo remoção de acentos para matching perfeito
+  const normalize = (val: any) => 
+    String(val || '')
+        .trim()
+        .toUpperCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
 
   const uniqueFilterOptions = useMemo(() => {
     if (!allStudents || allStudents.length === 0) {
@@ -80,30 +64,25 @@ export default function StudentDataView() {
     }
 
     const getUniqueValues = (key: string, data: any[]) =>
-      [...new Set(data.map(s => s[key]).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
+      [...new Set(data.map(s => String(s[key] || '').trim().toUpperCase()).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
-    // Nível 1: Ensino (baseado em todos os alunos)
-    let studentsForEnsinos = allStudents;
-    const ensinos = getUniqueValues('ensino', studentsForEnsinos);
+    const ensinos = getUniqueValues('ensino', allStudents);
     
-    // Nível 2: Série (baseado apenas no ensino selecionado)
     let studentsForSeries = allStudents;
     if (filters.ensino) {
-        studentsForSeries = studentsForSeries.filter(s => s.ensino === filters.ensino);
+        studentsForSeries = studentsForSeries.filter(s => normalize(s.ensino) === normalize(filters.ensino));
     }
     const series = getUniqueValues('serie', studentsForSeries);
     
-    // Nível 3: Classe (baseado no ensino E série selecionados)
     let studentsForClasses = studentsForSeries;
     if (filters.serie) {
-        studentsForClasses = studentsForClasses.filter(s => s.serie === filters.serie);
+        studentsForClasses = studentsForClasses.filter(s => normalize(s.serie) === normalize(filters.serie));
     }
     const classes = getUniqueValues('classe', studentsForClasses);
     
-    // Nível 4: Turno (baseado em ensino, série E classe selecionados)
     let studentsForTurnos = studentsForClasses;
     if (filters.classe) {
-        studentsForTurnos = studentsForTurnos.filter(s => s.classe === filters.classe);
+        studentsForTurnos = studentsForTurnos.filter(s => normalize(s.classe) === normalize(filters.classe));
     }
     const turnos = getUniqueValues('turno', studentsForTurnos);
 
@@ -119,19 +98,18 @@ export default function StudentDataView() {
   const filteredAndSortedStudents = useMemo(() => {
     if (!isAnyFilterActive) return [];
     
-    const searchLower = debouncedNome.trim().toLowerCase();
+    const searchLower = normalize(debouncedNome);
 
     const filtered = allStudents.filter(student => {
-        if (filters.ensino && student.ensino !== filters.ensino) return false;
-        if (filters.serie && student.serie !== filters.serie) return false;
-        if (filters.classe && student.classe !== filters.classe) return false;
-        if (filters.turno && student.turno !== filters.turno) return false;
+        if (filters.ensino && normalize(student.ensino) !== normalize(filters.ensino)) return false;
+        if (filters.serie && normalize(student.serie) !== normalize(filters.serie)) return false;
+        if (filters.classe && normalize(student.classe) !== normalize(filters.classe)) return false;
+        if (filters.turno && normalize(student.turno) !== normalize(filters.turno)) return false;
         if (filters.nee && !student.nee) return false;
-        if (searchLower.length >= 3 && !student.nome?.toLowerCase().includes(searchLower)) return false;
+        if (searchLower.length >= 3 && !normalize(student.nome).includes(searchLower)) return false;
         return true;
     });
     
-    // Apply sorting
     return [...filtered].sort((a, b) => {
       const aValue = a[sortConfig.key] || '';
       const bValue = b[sortConfig.key] || '';
@@ -152,7 +130,6 @@ export default function StudentDataView() {
   const handleFilterChange = (name: string, value: string | boolean) => {
     setFilters(prev => {
         const newFilters = { ...prev, [name]: (typeof value === 'string' && value === 'all' ? '' : value) };
-        // Reset dependent filters
         if (name === 'ensino') {
             newFilters.serie = '';
             newFilters.classe = '';
@@ -191,11 +168,7 @@ export default function StudentDataView() {
   };
 
   const handleStudentUpdate = (updatedStudentData: any) => {
-    setAllStudents(prevStudents => 
-        prevStudents.map(student => 
-            student.id === updatedStudentData.id ? updatedStudentData : student
-        )
-    );
+    // A sincronização em tempo real cuida disso automaticamente via useCollection
   };
     
   return (
@@ -219,36 +192,36 @@ export default function StudentDataView() {
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-4 pt-4 data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <Select value={filters.ensino || ''} onValueChange={(value) => handleFilterChange('ensino', value)} disabled={isLoadingFilters}>
+                  <Select value={filters.ensino || ''} onValueChange={(value) => handleFilterChange('ensino', value)} disabled={isLoadingAllStudents}>
                     <SelectTrigger>
-                      <SelectValue placeholder={isLoadingFilters ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por ensino..."} />
+                      <SelectValue placeholder={isLoadingAllStudents ? "A carregar..." : "Filtrar por ensino..."} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os ensinos</SelectItem>
                       {uniqueFilterOptions.ensinos.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Select value={filters.serie || ''} onValueChange={(value) => handleFilterChange('serie', value)} disabled={isLoadingFilters || !filters.ensino}>
+                  <Select value={filters.serie || ''} onValueChange={(value) => handleFilterChange('serie', value)} disabled={isLoadingAllStudents || !filters.ensino}>
                     <SelectTrigger>
-                       <SelectValue placeholder={isLoadingFilters ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por série..."} />
+                       <SelectValue placeholder={isLoadingAllStudents ? "A carregar..." : "Filtrar por série..."} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as séries</SelectItem>
                       {uniqueFilterOptions.series.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Select value={filters.classe || ''} onValueChange={(value) => handleFilterChange('classe', value)} disabled={isLoadingFilters || !filters.serie}>
+                  <Select value={filters.classe || ''} onValueChange={(value) => handleFilterChange('classe', value)} disabled={isLoadingAllStudents || !filters.serie}>
                     <SelectTrigger>
-                       <SelectValue placeholder={isLoadingFilters ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por classe..."} />
+                       <SelectValue placeholder={isLoadingAllStudents ? "A carregar..." : "Filtrar por classe..."} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as classes</SelectItem>
                       {uniqueFilterOptions.classes.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Select value={filters.turno || ''} onValueChange={(value) => handleFilterChange('turno', value)} disabled={isLoadingFilters || !filters.classe}>
+                  <Select value={filters.turno || ''} onValueChange={(value) => handleFilterChange('turno', value)} disabled={isLoadingAllStudents || !filters.classe}>
                     <SelectTrigger>
-                       <SelectValue placeholder={isLoadingFilters ? <div className='flex items-center gap-2'><Loader2 className="h-4 w-4 animate-spin"/> A carregar...</div> : "Filtrar por turno..."} />
+                       <SelectValue placeholder={isLoadingAllStudents ? "A carregar..." : "Filtrar por turno..."} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os turnos</SelectItem>
@@ -283,8 +256,8 @@ export default function StudentDataView() {
       </Card>
       
       <div className="text-sm text-muted-foreground h-5">
-         {isAnyFilterActive && !isLoadingFilters && (
-          `A exibir ${filteredAndSortedStudents.length} de ${totalStudentCount} aluno(s).`
+         {isAnyFilterActive && !isLoadingAllStudents && (
+          `A exibir ${filteredAndSortedStudents.length} de ${allStudents.length} aluno(s) ativos.`
         )}
       </div>
       
@@ -294,7 +267,7 @@ export default function StudentDataView() {
           onReportCardClick={handleOpenReportCard}
           onSort={handleSort}
           sortConfig={sortConfig}
-          isLoading={isLoadingFilters && isAnyFilterActive}
+          isLoading={isLoadingAllStudents && isAnyFilterActive}
           isSearchActive={isAnyFilterActive}
       />
       
@@ -303,7 +276,7 @@ export default function StudentDataView() {
         allStudents={allStudents}
         isOpen={!!selectedStudent}
         onClose={handleCloseSheet}
-        onUpdate={handleStudentUpdate}
+        onUpdate={() => {}}
       />
 
       {reportCardStudent && (

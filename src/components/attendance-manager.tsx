@@ -46,16 +46,26 @@ export default function AttendanceManager() {
     }, [firestore]);
 
     const { data: allStudentsData, isLoading: isLoadingOptions } = useCollection(studentsQuery);
-    const allStudents = useMemo(() => allStudentsData || [], [allStudentsData]);
+    
+    // Filtro rigoroso para alunos ativos
+    const allStudents = useMemo(() => {
+        return (allStudentsData || []).filter(s => !s.status || s.status === 'ATIVO');
+    }, [allStudentsData]);
     
     const [studentsInClass, setStudentsInClass] = useState<any[]>([]);
     const [isLoadingStudents, setIsLoadingStudents] = useState(false);
 
-    const normalize = (val: any) => String(val || '').trim().toUpperCase();
+    // Normalização agressiva incluindo remoção de acentos para matching perfeito
+    const normalize = (val: any) => 
+        String(val || '')
+            .trim()
+            .toUpperCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "");
 
     const uniqueFilterOptions = useMemo(() => {
         const getUniqueValues = (key: string, data: any[]) =>
-            [...new Set(data.map(s => normalize(s[key])).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
+            [...new Set(data.map(s => String(s[key] || '').trim().toUpperCase()).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
         let filteredForOptions = allStudents;
         const ensinos = getUniqueValues('ensino', filteredForOptions);

@@ -65,7 +65,10 @@ export default function ClassListGenerator() {
   }, [firestore]);
 
   const { data: allStudentsData, isLoading: isLoadingAllStudents } = useCollection(studentsQuery);
-  const allStudents = useMemo(() => allStudentsData || [], [allStudentsData]);
+  
+  const allStudents = useMemo(() => {
+    return (allStudentsData || []).filter(s => !s.status || s.status === 'ATIVO');
+  }, [allStudentsData]);
 
   const [headerColor, setHeaderColor] = useState('#e6e6e6');
   const [useAlternateRowColors, setUseAlternateRowColors] = useState(true);
@@ -79,7 +82,12 @@ export default function ClassListGenerator() {
     classe: '',
   });
 
-  const normalize = (val: any) => String(val || '').trim().toUpperCase();
+  const normalize = (val: any) => 
+    String(val || '')
+        .trim()
+        .toUpperCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
 
   const availableYears = useMemo(() => {
     const years = new Set<string>();
@@ -105,7 +113,7 @@ export default function ClassListGenerator() {
 
   const uniqueOptions = useMemo(() => {
       const getUniqueValues = (key: string, data: any[]) =>
-        [...new Set(data.map(s => normalize(s[key])).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
+        [...new Set(data.map(s => String(s[key] || '').trim().toUpperCase()).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'pt-BR', { numeric: true }));
 
       const ensinos = getUniqueValues('ensino', allStudents);
       const series = getUniqueValues('serie', filters.ensino ? allStudents.filter(s => normalize(s.ensino) === normalize(filters.ensino)) : allStudents);
