@@ -9,11 +9,13 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && (
-        request.auth.token.email.lower() in ['mestrejpfg@gmail.com', 'fortalezaem@gmail.com'] ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('profileId', '') in ['Administrador', 'Administrador(a)'])
-      );
+      if (!isSignedIn()) return false;
+      // Super-admins por email (acesso imediato)
+      if (request.auth.token.email.lower() in ['mestrejpfg@gmail.com', 'fortalezaem@gmail.com']) return true;
+      
+      // Admin por perfil no Firestore
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(userPath) && get(userPath).data.get('profileId', '') in ['Administrador', 'Administrador(a)'];
     }
     
     function hasPermission(permission) {
@@ -24,41 +26,42 @@ service cloud.firestore {
       if (!exists(userPath)) return false;
       
       let userData = get(userPath).data;
+      
+      // 1. Verificar em permissões customizadas (Array)
       if (permission in userData.get('customPermissions', [])) return true;
 
+      // 2. Verificar via Perfil (Mapa de booleanos)
       let pId = userData.get('profileId', '');
       if (pId != '') {
         let profilePath = /databases/$(database)/documents/profiles/$(pId);
         if (exists(profilePath)) {
-          let permissions = get(profilePath).data.get('permissions', {});
-          return permissions.get(permission, false) == true;
+          let perms = get(profilePath).data.get('permissions', {});
+          return perms.get(permission, false) == true;
         }
       }
 
       return false;
     }
 
-    // Regra Mestra: Administradores têm acesso TOTAL
+    // Regra Mestra: Administradores têm acesso total
     match /{document=**} {
       allow read, write: if isAdmin();
     }
 
-    // Regras específicas baseadas em permissões unificadas
+    // Usuários
     match /users/{userId} {
-      allow read, list: if isSignedIn();
-      allow create, update: if request.auth.uid == userId || hasPermission('manage:users');
-      allow delete: if hasPermission('manage:users');
+      // Usuário sempre pode ler e atualizar seu próprio perfil. Gestores podem listar.
+      allow get, create, update: if isSignedIn() && (request.auth.uid == userId || hasPermission('manage:users'));
+      allow list, delete: if hasPermission('manage:users') || hasPermission('manage:database');
     }
     
+    // Perfis de Acesso
     match /profiles/{profileId} {
-        allow read, list: if isSignedIn();
-        allow write: if hasPermission('manage:users');
+      allow read, list: if isSignedIn();
+      allow write: if hasPermission('manage:users') || hasPermission('manage:database');
     }
 
-    match /servidores/{servidorId} {
-      allow read, list, write: if hasPermission('manage:cadastros');
-    }
-
+    // Alunos e Ex-Alunos
     match /alunos/{alunoId} {
       allow read, list, write: if hasPermission('manage:students') || hasPermission('manage:migration');
     }
@@ -67,18 +70,27 @@ service cloud.firestore {
       allow read, list, write: if hasPermission('manage:students') || hasPermission('manage:migration');
     }
 
+    // Funcionários (RH)
+    match /servidores/{servidorId} {
+      allow read, list, write: if hasPermission('manage:cadastros');
+    }
+
+    // Registro de Ocorrências
     match /ocorrencias/{ocorrenciaId} {
       allow read, list, write: if hasPermission('manage:occurrences');
     }
 
+    // Notas e Desempenho
     match /grades/{gradeId} {
        allow read, list, write: if hasPermission('manage:grades');
     }
 
+    // Registro de Frequência
     match /attendance/{attendanceId} {
        allow read, list, write: if hasPermission('manage:attendance');
     }
     
+    // Mural de Comunicados
     match /announcements/{announcementId} {
       allow read, list: if isSignedIn();
       allow write: if hasPermission('manage:announcements');

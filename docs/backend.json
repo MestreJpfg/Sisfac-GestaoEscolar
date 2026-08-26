@@ -6,145 +6,14 @@
       "type": "object",
       "description": "Represents a user in the system, with an assigned profile and permissions.",
       "properties": {
-        "uid": {
-          "type": "string",
-          "description": "The unique identifier from Firebase Authentication."
-        },
-        "name": {
-          "type": "string",
-          "description": "The user's full name."
-        },
-        "email": {
-          "type": "string",
-          "format": "email",
-          "description": "The user's email address."
-        },
-        "profileId": {
-          "type": "string",
-          "description": "The ID of the profile assigned to this user, linking to the 'profiles' collection."
-        },
-        "customPermissions": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Specific individual permissions that override the profile's defaults."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "photoURL": {
-          "type": "string",
-          "format": "uri"
-        },
-        "position": {
-            "type": "string",
-            "description": "The user's job title or position (e.g., 'Professor de Matemática')."
-        },
-        "phoneNumber": {
-            "type": "string",
-            "description": "The user's contact phone number."
-        },
-        "dateOfBirth": {
-            "type": "string",
-            "format": "date",
-            "description": "The user's date of birth."
-        },
-        "bio": {
-            "type": "string",
-            "description": "A short biography or professional summary."
-        },
-        "profileCompleted": {
-            "type": "boolean",
-            "description": "Flag indicating if the user has completed their initial profile setup."
-        }
-      },
-      "required": ["uid", "name", "email", "profileId"]
-    },
-    "Aluno": {
-      "title": "Aluno",
-      "type": "object",
-      "description": "Represents a student in the system with all their academic and personal data.",
-      "properties": {
-        "id": { "type": "string", "description": "Unique student identifier, typically the RM." },
-        "rm": { "type": "string", "description": "Registro do Aluno (Student ID)." },
-        "nome": { "type": "string", "description": "Student's full name." },
-        "ensino": { "type": "string" },
-        "serie": { "type": "string" },
-        "classe": { "type": "string" },
-        "turno": { "type": "string" },
-        "filiacao_1": { "type": "string" },
-        "filiacao_2": { "type": "string" },
-        "rg": { "type": "string" },
-        "nis": { "type": "string" },
-        "id_censo": { "type": "string" },
-        "cpf_aluno": { "type": "string" },
-        "cpffiliacao1": { "type": "string" },
-        "data_nascimento": { "type": "string", "format": "date" },
-        "endereco": { "type": "string" },
-        "telefones": { "type": "array", "items": { "type": "string" } },
-        "transporte_escolar": { "type": "boolean" },
-        "carteira_estudante": { "type": "boolean" },
-        "nee": { "type": ["string", "null"] },
-        "boletim": {
-          "type": "object",
-          "description": "A map where keys are the school year (e.g., '2024') and values are the student's report card for that year.",
-          "additionalProperties": {
-            "$ref": "#/entities/Boletim"
-          }
-        }
-      },
-       "required": ["id", "rm", "nome"]
-    },
-    "Ocorrencia": {
-      "title": "Ocorrência",
-      "type": "object",
-      "description": "Registra um evento disciplinar ou administrativo relacionado a um aluno.",
-      "properties": {
-        "id": { "type": "string" },
-        "studentId": { "type": "string", "description": "RM do aluno principal." },
-        "studentName": { "type": "string" },
-        "studentClass": { "type": "string" },
-        "type": { "type": "string", "enum": ["Indisciplina", "Atraso", "Briga", "Ofensa", "Falta", "Uso de Celular", "Outros"] },
-        "description": { "type": "string" },
-        "date": { "type": "string", "format": "date-time" },
-        "reportedBy": { "type": "string", "description": "Nome do professor ou funcionário que relatou." },
-        "involvedStudents": { "type": "array", "items": { "type": "string" }, "description": "Nomes ou RMs de outros alunos envolvidos." },
-        "penalty": { "type": "string", "enum": ["Advertência Verbal", "Advertência Escrita", "Suspensão", "Convocação de Responsáveis", "Nenhuma"] },
-        "status": { "type": "string", "enum": ["Ativa", "Em Análise", "Resolvida", "Arquivada"] },
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "profileId": { "type": "string" },
+        "customPermissions": { "type": "array", "items": { "type": "string" } },
+        "profileCompleted": { "type": "boolean" },
         "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "studentId", "type", "description", "date", "status"]
-    },
-    "Servidor": {
-      "title": "Servidor",
-      "type": "object",
-      "description": "Representa um funcionário ou servidor da instituição.",
-      "properties": {
-        "id": { "type": "string", "description": "Identificador único do servidor." },
-        "nomeCompleto": { "type": "string", "description": "Nome completo do servidor." },
-        "dataNascimento": { "type": "string", "format": "date", "description": "Data de nascimento." },
-        "cpf": { "type": "string", "description": "CPF do servidor." },
-        "rg": { "type": "string", "description": "RG do servidor." },
-        "endereco": { "type": "string", "description": "Endereço completo." },
-        "telefone": { "type": "string", "description": "Número de telefone para contato." },
-        "email": { "type": "string", "format": "email", "description": "E-mail de contato." },
-        "cargo": { "type": "string", "description": "Cargo atual do servidor." },
-        "departamento": { "type": "string", "description": "Departamento de atuação." },
-        "dataAdmissao": { "type": "string", "format": "date", "description": "Data de admissão." },
-        "salario": { "type": "number", "description": "Salário bruto." },
-        "dadosBancarios": {
-          "type": "object",
-          "properties": {
-            "banco": { "type": "string" },
-            "agencia": { "type": "string" },
-            "conta": { "type": "string" }
-          }
-        },
-        "status": { "type": "string", "enum": ["Ativo", "Inativo", "Férias", "Licença"] }
-      },
-      "required": ["id", "nomeCompleto", "cpf", "cargo", "dataAdmissao"]
+      }
     },
     "Profile": {
       "title": "Profile",
@@ -152,170 +21,24 @@
       "description": "Defines a user role and its set of default permissions.",
       "properties": {
         "id": { "type": "string" },
-        "name": {
-          "type": "string",
-          "description": "The name of the profile (e.g., Administrador, Professor)."
-        },
-        "description": {
-          "type": "string",
-          "description": "A brief description of the profile's responsibilities."
-        },
-        "color": {
-            "type": "string",
-            "description": "A hex color code to associate with the profile for UI elements."
-        },
+        "name": { "type": "string" },
+        "color": { "type": "string" },
         "permissions": {
           "type": "object",
-          "description": "A map of permission keys granted to this profile.",
           "properties": {
-            "view:students": { "type": "boolean" },
             "manage:students": { "type": "boolean" },
-            "view:users": { "type": "boolean" },
-            "manage:users": { "type": "boolean" },
-            "view:profiles": { "type": "boolean" },
-            "manage:profiles": { "type": "boolean" },
-            "view:grades": { "type": "boolean" },
-            "manage:grades": { "type": "boolean" },
-            "view:attendance": { "type": "boolean" },
             "manage:attendance": { "type": "boolean" },
-            "view:announcements": { "type": "boolean" },
-            "manage:announcements": { "type": "boolean" },
-            "view:database": { "type": "boolean" },
-            "manage:database": { "type": "boolean" },
-            "manage:cadastros": { "type": "boolean" },
-            "manage:migration": { "type": "boolean" },
+            "manage:grades": { "type": "boolean" },
+            "manage:occurrences": { "type": "boolean" },
             "manage:transcript": { "type": "boolean" },
-            "manage:occurrences": { "type": "boolean" }
-          },
-          "additionalProperties": false
-        }
-      },
-      "required": ["id", "name", "permissions"]
-    },
-    "Grade": {
-      "title": "Grade",
-      "type": "object",
-      "description": "Represents a student's grade in a specific subject.",
-      "properties": {
-        "id": { "type": "string" },
-        "studentId": { "type": "string" },
-        "classId": { "type": "string" },
-        "subject": { "type": "string" },
-        "grade": { "type": "number" },
-        "term": { "type": "string", "description": "The grading period (e.g., '1st Trimester')." }
-      },
-      "required": ["id", "studentId", "classId", "subject", "grade", "term"]
-    },
-    "Attendance": {
-      "title": "Attendance",
-      "type": "object",
-      "description": "Represents a student's attendance on a specific date.",
-      "properties": {
-        "id": { "type": "string" },
-        "studentId": { "type": "string" },
-        "classId": { "type": "string" },
-        "date": { "type": "string", "format": "date" },
-        "status": {
-          "type": "string",
-          "enum": ["Presente", "Ausente", "Justificado"]
-        }
-      },
-      "required": ["id", "studentId", "classId", "date", "status"]
-    },
-    "Announcement": {
-      "title": "Announcement",
-      "type": "object",
-      "description": "Represents a school-wide or class-specific announcement.",
-      "properties": {
-        "id": { "type": "string" },
-        "title": { "type": "string" },
-        "content": { "type": "string" },
-        "targetAudience": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Array of profile IDs or class IDs to target."
-        },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["id", "title", "content", "targetAudience", "createdAt"]
-    },
-     "Nota": {
-      "title": "Nota",
-      "type": "object",
-      "description": "Armazena as notas de um aluno para uma disciplina específica ao longo do ano.",
-      "properties": {
-        "etapa1": { "type": ["number", "null"], "description": "Nota da Etapa 1." },
-        "etapa2": { "type": ["number", "null"], "description": "Nota da Etapa 2." },
-        "etapa3": { "type": ["number", "null"], "description": "Nota da Etapa 3." },
-        "etapa4": { "type": ["number", "null"], "description": "Nota da Etapa 4." },
-        "mediaFinal": { "type": ["number", "null"], "description": "Média final da disciplina." }
-      }
-    },
-    "InfoTurma": {
-        "title": "Info Turma",
-        "type": "object",
-        "description": "Armazena a série, classe e turno de um aluno para um ano letivo específico.",
-        "properties": {
-            "serie": { "type": "string" },
-            "classe": { "type": "string" },
-            "turno": { "type": "string" }
-        }
-    },
-    "Boletim": {
-      "title": "Boletim",
-      "type": "object",
-      "description": "Agrupa as informações da turma e as notas de um aluno para um ano específico.",
-      "properties": {
-          "info": {
-              "$ref": "#/entities/InfoTurma"
-          },
-          "notas": {
-              "type": "object",
-              "description": "Um mapa de disciplinas e suas respectivas notas para o ano.",
-              "additionalProperties": {
-                "$ref": "#/entities/Nota"
-              }
+            "manage:announcements": { "type": "boolean" },
+            "manage:cadastros": { "type": "boolean" },
+            "manage:users": { "type": "boolean" },
+            "manage:migration": { "type": "boolean" },
+            "manage:database": { "type": "boolean" }
           }
+        }
       }
     }
-  },
-  "auth": {
-    "providers": ["password", "google.com"]
-  },
-  "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": { "schema": { "$ref": "#/entities/User" } }
-      },
-       {
-        "path": "/servidores/{servidorId}",
-        "definition": { "schema": { "$ref": "#/entities/Servidor" } }
-      },
-      {
-        "path": "/alunos/{alunoId}",
-        "definition": { "schema": { "$ref": "#/entities/Aluno" } }
-      },
-      {
-        "path": "/ocorrencias/{ocorrenciaId}",
-        "definition": { "schema": { "$ref": "#/entities/Ocorrencia" } }
-      },
-      {
-        "path": "/profiles/{profileId}",
-        "definition": { "schema": { "$ref": "#/entities/Profile" } }
-      },
-      {
-        "path": "/grades/{gradeId}",
-        "definition": { "schema": { "$ref": "#/entities/Grade" } }
-      },
-      {
-        "path": "/attendance/{attendanceId}",
-        "definition": { "schema": { "$ref": "#/entities/Attendance" } }
-      },
-      {
-        "path": "/announcements/{announcementId}",
-        "definition": { "schema": { "$ref": "#/entities/Announcement" } }
-      }
-    ]
   }
 }
