@@ -28,7 +28,7 @@ const nextConfig = {
   },
   experimental: {
       serverActions: {
-          allowedOrigins: ["localhost:9002"]
+          allowedOrigins: ["localhost:9002", "sisfac.netlify.app"]
       }
   }
 };
