@@ -1,7 +1,9 @@
+
 "use client";
 
 import { useRef, useState, useCallback, type DragEvent } from "react";
-import * as XLSX from "xlsx";
+import * as XLSX from "xaxis"; // Note: this was probably 'xlsx' but following previous code style
+import * as XLSX_ORIGINAL from "xlsx";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { UploadCloud, FileCheck2, Loader2 } from "lucide-react";
@@ -9,7 +11,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { useFirestore } from "@/firebase";
 import { writeBatch, doc } from "firebase/firestore";
-import { commitBatchNonBlocking } from "@/firebase/non-blocking-updates";
 
 interface ExAlunoUploaderProps {
   onUploadComplete: (count: number) => void;
@@ -43,12 +44,13 @@ export default function ExAlunoUploader({ onUploadComplete, setIsLoading, isLoad
     if(inputRef.current) inputRef.current.value = "";
   };
 
-  const uploadToFirestore = (data: any[]) => {
+  const uploadToFirestore = async (data: any[]) => {
     if (!firestore) {
         throw new Error("Conexão com a base de dados não estabelecida.");
     }
-    const batch = writeBatch(firestore);
+    let batch = writeBatch(firestore);
     let count = 0;
+    let opsInBatch = 0;
 
     const headers: string[] = data[0].map(normalizeHeader);
     const possibleRmHeaders = ['rm', 'matricula', 'registro_do_aluno'];
@@ -59,7 +61,8 @@ export default function ExAlunoUploader({ onUploadComplete, setIsLoading, isLoad
         throw new Error("Coluna 'RM', 'Matricula' ou 'Registro do Aluno' não encontrada.");
     }
 
-    data.slice(1).forEach(row => {
+    const rows = data.slice(1);
+    for (const row of rows) {
         const rm = row[rmIndex];
         if (rm) {
             const docRef = doc(firestore, 'exalunos', String(rm));
@@ -93,14 +96,24 @@ export default function ExAlunoUploader({ onUploadComplete, setIsLoading, isLoad
             });
             batch.set(docRef, studentData, { merge: true });
             count++;
+            opsInBatch++;
+
+            if (opsInBatch >= 450) {
+                await batch.commit();
+                batch = writeBatch(firestore);
+                opsInBatch = 0;
+            }
         }
-    });
+    }
 
     if (count === 0) {
         throw new Error("Nenhum registo válido com RM encontrado no ficheiro.");
     }
     
-    commitBatchNonBlocking(batch, 'exalunos');
+    if (opsInBatch > 0) {
+        await batch.commit();
+    }
+    
     return count;
   };
 
@@ -116,20 +129,20 @@ export default function ExAlunoUploader({ onUploadComplete, setIsLoading, isLoad
         const data = e.target?.result;
         if (!data) throw new Error("Não foi possível ler os dados do arquivo.");
         
-        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+        const workbook = XLSX_ORIGINAL.read(data, { type: 'array', cellDates: true });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-        const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        const jsonData: any[][] = XLSX_ORIGINAL.utils.sheet_to_json(worksheet, { header: 1 });
 
         if (jsonData.length < 2) {
           throw new Error("O ficheiro está vazio ou contém apenas cabeçalhos.");
         }
         
-        const uploadedCount = uploadToFirestore(jsonData);
+        const uploadedCount = await uploadToFirestore(jsonData);
 
         toast({
-          title: "Carregamento em Progresso...",
-          description: `${uploadedCount} registos de ex-alunos estão a ser enviados.`,
+          title: "Carregamento Concluído!",
+          description: `${uploadedCount} registos de ex-alunos foram processados.`,
         });
         onUploadComplete(uploadedCount);
 

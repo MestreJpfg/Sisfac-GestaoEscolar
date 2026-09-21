@@ -33,7 +33,7 @@ export default function DataRecoveryTool() {
             const activeStudentsMap = new Map();
             activeSnapshot.forEach(d => activeStudentsMap.set(String(d.id), { ref: d.ref, data: d.data() }));
 
-            const batch = writeBatch(firestore);
+            let batch = writeBatch(firestore);
             let restoredCount = 0;
             let operationsInBatch = 0;
 
@@ -67,9 +67,10 @@ export default function DataRecoveryTool() {
                     restoredCount++;
                     operationsInBatch += 2;
 
-                    // Firestore limit is 500 per batch
+                    // Firestore limit is 500 per batch. We use 450 to be safe.
                     if (operationsInBatch >= 450) {
                         await batch.commit();
+                        batch = writeBatch(firestore);
                         operationsInBatch = 0;
                     }
                 }
@@ -116,7 +117,7 @@ export default function DataRecoveryTool() {
                     <AlertDialogTitle className="flex items-center gap-2">
                         <AlertTriangle className="h-5 w-5 text-yellow-500" />
                         Confirmar Reconciliação de Notas
-                    </AlertDialogTitle>
+                    </AlertTriangle>
                     <AlertDialogDescription>
                         Esta ação irá procurar alunos que aparecem tanto na lista de **Ativos** quanto na de **Transferidos**.
                         <br /><br />

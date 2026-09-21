@@ -9,8 +9,7 @@ import { UploadCloud, FileCheck2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { useFirestore } from "@/firebase";
-import { writeBatch, doc, collection, getDoc } from "firebase/firestore";
-import { commitBatchNonBlocking } from "@/firebase/non-blocking-updates";
+import { writeBatch, doc, getDoc } from "firebase/firestore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Label } from "./ui/label";
 
@@ -127,9 +126,10 @@ export default function GradesUploader() {
     }
 
     const gradesData = data.slice(headerRowIndex + 1);
-    const batch = writeBatch(firestore);
+    let batch = writeBatch(firestore);
     let updatedCount = 0;
     let newExAlunosCount = 0;
+    let opsInBatch = 0;
 
     for (const row of gradesData) {
         const rm = String(row[rmIndex]);
@@ -199,10 +199,20 @@ export default function GradesUploader() {
         
         batch.set(targetCollectionRef, { ...docData, boletim }, { merge: true });
         updatedCount++;
+        opsInBatch++;
+
+        if (opsInBatch >= 450) {
+            await batch.commit();
+            batch = writeBatch(firestore);
+            opsInBatch = 0;
+        }
     }
     
+    if (opsInBatch > 0) {
+        await batch.commit();
+    }
+
     if (updatedCount > 0) {
-        commitBatchNonBlocking(batch, 'alunos'); // Use a representative path
         toast({
             title: "Processamento Concluído!",
             description: `${updatedCount} registos de notas foram processados. ${newExAlunosCount > 0 ? `${newExAlunosCount} novos ex-alunos foram criados.` : ''}`.trim(),
@@ -346,5 +356,3 @@ export default function GradesUploader() {
     </Card>
   );
 }
-
-    
