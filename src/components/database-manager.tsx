@@ -12,10 +12,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from './ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Loader2, Upload, NotebookText, HardDriveDownload, Trash2, Users, Shield, Sparkles } from 'lucide-react';
+import { Loader2, Upload, NotebookText, HardDriveDownload, Trash2, Users, Shield, Sparkles, RefreshCcw } from 'lucide-react';
 import UserManager from './user-manager';
 import ProfileManager from './profile-manager';
 import ExAlunoUploaderSheet from './ex-aluno-uploader-sheet';
+import DataRecoveryTool from './data-recovery-tool';
 
 export default function DatabaseManager() {
     const firestore = useFirestore();
@@ -206,11 +207,12 @@ export default function DatabaseManager() {
                                     <CardDescription>Ações permanentes que podem afetar a base de dados. Use com extrema cautela.</CardDescription>
                                 </CardHeader>
                                 <CardFooter className="flex-col items-start gap-4">
-                                     <Button variant="destructive" onClick={() => setIsCleanupAlertOpen(true)} disabled={isCleaning}>
+                                     <DataRecoveryTool />
+                                     <Button variant="destructive" onClick={() => setIsCleanupAlertOpen(true)} disabled={isCleaning} className="w-full">
                                         {isCleaning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
                                         Limpar Estrutura de Boletins
                                     </Button>
-                                    <Button variant="destructive" onClick={() => setIsDeleteAlertOpen(true)} disabled={isDeleting}>
+                                    <Button variant="destructive" onClick={() => setIsDeleteAlertOpen(true)} disabled={isDeleting} className="w-full">
                                         {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                                         Apagar Base de Dados de Alunos
                                     </Button>
@@ -280,5 +282,3 @@ export default function DatabaseManager() {
        </div>
     );
 }
-
-    
