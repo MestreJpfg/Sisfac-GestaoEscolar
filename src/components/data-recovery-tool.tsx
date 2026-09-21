@@ -49,7 +49,6 @@ export default function DataRecoveryTool() {
                     const activeData = activeRecord.data;
                     
                     // Mesclar o boletim do ex-aluno para o ativo
-                    // Priorizamos o que está em ex-alunos pois é onde as notas "pararam"
                     const mergedBoletim = { 
                         ...(activeData.boletim || {}), 
                         ...exData.boletim 
@@ -117,7 +116,7 @@ export default function DataRecoveryTool() {
                     <AlertDialogTitle className="flex items-center gap-2">
                         <AlertTriangle className="h-5 w-5 text-yellow-500" />
                         Confirmar Reconciliação de Notas
-                    </AlertTriangle>
+                    </AlertDialogTitle>
                     <AlertDialogDescription>
                         Esta ação irá procurar alunos que aparecem tanto na lista de **Ativos** quanto na de **Transferidos**.
                         <br /><br />
