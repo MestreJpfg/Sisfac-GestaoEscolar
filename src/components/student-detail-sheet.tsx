@@ -19,7 +19,7 @@ import StudentDeclaration from "./student-declaration";
 import StudentTransferDeclaration from "./student-transfer-declaration";
 import ParentAttendanceDeclaration from "./parent-attendance-declaration";
 import StudentEditDialog from "./student-edit-dialog";
-import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Loader2, Share2, Pencil, Printer, MapPin, BookCheck, Award, GraduationCap, UserMinus, UserCheck, AlertCircle, Clock9, Info, ShieldAlert } from "lucide-react";
+import { User, Calendar, Book, Clock, Users, Phone, Bus, CreditCard, AlertTriangle, FileText, Hash, Loader2, Share2, Pencil, Printer, MapPin, BookCheck, Award, GraduationCap, UserMinus, UserCheck, AlertCircle, Clock9, Info, ShieldAlert, Trash2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
@@ -106,6 +106,7 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
   const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
   const [isTransferAlertOpen, setIsTransferAlertOpen] = useState(false);
   const [isReactivateAlertOpen, setIsReactivateAlertOpen] = useState(false);
+  const [isPermanentDeleteAlertOpen, setIsPermanentDeleteAlertOpen] = useState(false);
   const [isActionLoading, setIsActionLoading] = useState(false);
   
   const { toast } = useToast();
@@ -176,6 +177,25 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
     } finally {
         setIsActionLoading(false);
         setIsReactivateAlertOpen(false);
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!firestore || !student) return;
+    setIsActionLoading(true);
+    try {
+        const studentId = String(student.id);
+        const exRef = doc(firestore, 'exalunos', studentId);
+        deleteDocumentNonBlocking(exRef);
+        toast({ title: "Aluno Excluído", description: "O registro foi removido permanentemente da base de dados." });
+        // Envia um sinal para o componente pai atualizar a lista
+        onUpdate(null);
+        onClose();
+    } catch (e) {
+        toast({ variant: 'destructive', title: "Erro ao excluir" });
+    } finally {
+        setIsActionLoading(false);
+        setIsPermanentDeleteAlertOpen(false);
     }
   };
   
@@ -347,12 +367,20 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
                         <TooltipContent><p>Transferir Aluno</p></TooltipContent>
                     </Tooltip>
                   ) : (
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="text-green-600" onClick={() => setIsReactivateAlertOpen(true)}><UserCheck className="w-4 h-4" /></Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Reativar Matrícula</p></TooltipContent>
-                    </Tooltip>
+                    <div className="flex items-center gap-2">
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-green-600" onClick={() => setIsReactivateAlertOpen(true)}><UserCheck className="w-4 h-4" /></Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Reativar Matrícula</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setIsPermanentDeleteAlertOpen(true)}><Trash2 className="w-4 h-4" /></Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Excluir Permanentemente</p></TooltipContent>
+                        </Tooltip>
+                    </div>
                   )}
                 
                 <DropdownMenu>
@@ -415,6 +443,27 @@ export default function StudentDetailSheet({ student, allStudents, isOpen, onClo
             <AlertDialogDescription>Retornar <strong>{student.nome}</strong> para a lista de matriculados ativos?</AlertDialogDescription></AlertDialogHeader>
             <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleReactivate} className="bg-green-600" disabled={isActionLoading}>Reativar</AlertDialogAction></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isPermanentDeleteAlertOpen} onOpenChange={setIsPermanentDeleteAlertOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle className="text-destructive flex items-center gap-2">
+                    <Trash2 className="h-5 w-5" />
+                    Excluir Permanentemente?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                    Esta ação apagará <strong className="text-foreground">{student.nome}</strong> de forma irreversível da base de dados. Use isto apenas para registos criados por erro ou sem qualquer vínculo com a escola.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel disabled={isActionLoading}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handlePermanentDelete} className="bg-destructive hover:bg-destructive/90" disabled={isActionLoading}>
+                    {isActionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Confirmar Exclusão
+                </AlertDialogAction>
+            </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
       

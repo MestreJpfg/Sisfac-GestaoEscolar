@@ -78,10 +78,10 @@ export default function ExStudentDataView() {
       return true;
     }).sort((a, b) => {
       const aVal = a[sortConfig.key] || '';
-      const bVal = b[sortConfig.key] || '';
+      const bValue = b[sortConfig.key] || '';
       return sortConfig.direction === 'ascending' 
-        ? String(aVal).localeCompare(String(bVal)) 
-        : String(bVal).localeCompare(String(aVal));
+        ? String(aVal).localeCompare(String(bValue)) 
+        : String(bValue).localeCompare(String(aVal));
     });
   }, [allExStudents, debouncedNome, filters, sortConfig]);
 
@@ -168,7 +168,14 @@ export default function ExStudentDataView() {
           allStudents={[]}
           isOpen={!!selectedStudent}
           onClose={() => setSelectedStudent(null)}
-          onUpdate={() => {}} // No update needed for ex-students list as they are moved or edited via active
+          onUpdate={(updated) => {
+            if (updated === null) {
+              // Sinal de exclusão permanente vindo da Sheet
+              setAllExStudents(prev => prev.filter(s => s.id !== selectedStudent.id));
+            } else {
+              setAllExStudents(prev => prev.map(s => s.id === updated.id ? updated : s));
+            }
+          }}
         />
       )}
 
